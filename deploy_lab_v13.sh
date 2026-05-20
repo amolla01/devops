@@ -34,7 +34,13 @@
 #   real_hardware    Physical-switch profile; no KVM lab deployment
 #
 # USAGE:
-#   bash deploy_lab_v13.sh [--profile <name>] <action> [targets]
+#   bash deploy_lab_v13.sh [OPTIONS] <action> [targets]
+#
+#   Options:
+#     --profile <name>      Set automation profile
+#     --no-proxy            Bypass corporate proxy (direct internet)
+#     --proxy-url <url>     Use custom proxy URL
+#     --proxy               Force corporate proxy (default)
 #
 #   Actions:
 #     deploy    [targets] — Full lab build (idempotent)
@@ -46,17 +52,52 @@
 #     console   <vm>      — Attach virsh console to a VM
 #     status              — Show VM states and connectivity
 #     images              — Download/verify images only
+#     tools               — Download/install platform tools (Helm, kubectl, etc.)
 #
 #   Targets (optional, default=all):
 #     Single:   Spine_S1, Leaf_L2, Host12_1
 #     Multiple: Spine_S1,Leaf_L1  (comma-separated)
 #     Groups:   spines, leafs, border_leafs, switches, servers, router, all
 #
-# PROXY: Uses corporate proxy (AT&T) for all downloads.
+# PROXY: Uses corporate proxy (AT&T) for all downloads by default.
+#        Use --no-proxy to bypass (e.g., home lab, direct internet).
+#        Use --proxy-url <url> to override the default corporate proxy.
 # ============================================================================
 set -euo pipefail
 
 # ======================= PROXY CONFIGURATION ================================
+# Proxy mode: "corporate" (default) | "direct" (--no-proxy) | "custom" (--proxy-url)
+PROXY_MODE="${PROXY_MODE:-corporate}"
+PROXY_CUSTOM_URL=""
+
+configure_proxy() {
+    case "$PROXY_MODE" in
+        direct)
+            # Bypass all proxies — direct internet access
+            unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy WSL_PAC_URL
+            export no_proxy="*"
+            log "Proxy: DISABLED (direct internet access)"
+            ;;
+        custom)
+            export HTTP_PROXY="$PROXY_CUSTOM_URL"
+            export HTTPS_PROXY="$PROXY_CUSTOM_URL"
+            export http_proxy="$HTTP_PROXY"
+            export https_proxy="$HTTPS_PROXY"
+            export no_proxy="localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+            log "Proxy: CUSTOM ($PROXY_CUSTOM_URL)"
+            ;;
+        corporate|*)
+            export WSL_PAC_URL="http://autoproxy.sbc.com/autoproxy.cgi"
+            export HTTP_PROXY="${HTTP_PROXY:-http://cso.proxy.att.com:8080}"
+            export HTTPS_PROXY="${HTTPS_PROXY:-http://cso.proxy.att.com:8080}"
+            export http_proxy="$HTTP_PROXY"
+            export https_proxy="$HTTPS_PROXY"
+            export no_proxy="localhost,127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+            ;;
+    esac
+}
+
+# Apply default proxy immediately (may be overridden by CLI flags in main())
 export WSL_PAC_URL="http://autoproxy.sbc.com/autoproxy.cgi"
 export HTTP_PROXY="${HTTP_PROXY:-http://cso.proxy.att.com:8080}"
 export HTTPS_PROXY="${HTTPS_PROXY:-http://cso.proxy.att.com:8080}"
@@ -489,23 +530,34 @@ check_sha256() {
 }
 
 download_safe() {
-    # Proxy-aware download with wget/curl fallback and retry
+    # Proxy-aware download with wget/curl fallback and retry.
+    # Respects PROXY_MODE: corporate/custom (use proxy), direct (no proxy).
     local url="$1" dest="$2" desc="${3:-file}"
     local attempt=1 max_retries=3
 
     [[ -f "$dest" ]] && check_integrity "$dest" && { ok "$desc already present."; return 0; }
     [[ -f "$dest" ]] && { warn "Removing corrupt $desc..."; rm -f "$dest"; }
 
+    # Build proxy arguments based on PROXY_MODE
+    local wget_proxy_args="" curl_proxy_args=""
+    if [[ "$PROXY_MODE" == "direct" ]]; then
+        wget_proxy_args="--no-proxy"
+        curl_proxy_args="--noproxy '*'"
+    else
+        wget_proxy_args="-e use_proxy=yes -e http_proxy=${HTTP_PROXY:-} -e https_proxy=${HTTPS_PROXY:-}"
+        curl_proxy_args="-x ${HTTP_PROXY:-}"
+    fi
+
     while [[ $attempt -le $max_retries ]]; do
-        log "Downloading $desc (attempt $attempt/$max_retries)..."
+        log "Downloading $desc (attempt $attempt/$max_retries) [proxy=$PROXY_MODE]..."
         if command -v wget &>/dev/null; then
-            if wget -e use_proxy=yes -e http_proxy="$HTTP_PROXY" -e https_proxy="$HTTPS_PROXY" \
+            if wget $wget_proxy_args \
                     --no-check-certificate -q --show-progress --content-disposition \
                     --timeout=120 --tries=2 -O "$dest" "$url" 2>&1; then
                 check_integrity "$dest" && { ok "$desc downloaded."; return 0; }
             fi
         elif command -v curl &>/dev/null; then
-            if curl -x "$HTTP_PROXY" -L --insecure -o "$dest" --connect-timeout 60 "$url" 2>&1; then
+            if eval curl $curl_proxy_args -L --insecure -o \"\$dest\" --connect-timeout 60 \"\$url\" 2>&1; then
                 check_integrity "$dest" && { ok "$desc downloaded."; return 0; }
             fi
         else
@@ -1680,6 +1732,334 @@ status_report() {
     log "OVS bridges: $(sudo ovs-vsctl list-br 2>/dev/null | wc -l) active"
 }
 
+# ======================= PHASE T: PLATFORM TOOLS DOWNLOAD ===================
+# Downloads and installs all platform software required for the full-stack
+# deployment pipeline (Kubernetes, Helm, Ceph, OpenStack, MaaS, Ansible, etc.)
+#
+# This phase is proxy-aware and respects --no-proxy / --proxy-url flags.
+# All binaries are installed to /usr/local/bin (system-wide).
+# Helm repos and Kubespray are placed in $PROJECT_ROOT.
+# ==========================================================================
+
+# --- Platform Tool Versions (pinned for reproducibility) ---
+KUBECTL_VERSION="${KUBECTL_VERSION:-v1.30.2}"
+HELM_VERSION="${HELM_VERSION:-v3.15.2}"
+KUBESPRAY_VERSION="${KUBESPRAY_VERSION:-v2.25.0}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-v2.11.3}"
+ROOK_VERSION="${ROOK_VERSION:-v1.14.7}"
+CEPH_CSI_VERSION="${CEPH_CSI_VERSION:-v3.11.0}"
+YQ_VERSION="${YQ_VERSION:-v4.44.2}"
+K9S_VERSION="${K9S_VERSION:-v0.32.5}"
+
+# --- Download URLs ---
+KUBECTL_URL="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+KUBECTL_SHA_URL="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+HELM_URL="https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz"
+KUBESPRAY_URL="https://github.com/kubernetes-sigs/kubespray/archive/refs/tags/${KUBESPRAY_VERSION}.tar.gz"
+ARGOCD_URL="https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+YQ_URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+K9S_URL="https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz"
+
+# --- Helm Chart Repositories (added after Helm install) ---
+declare -A HELM_REPOS
+HELM_REPOS[bitnami]="https://charts.bitnami.com/bitnami"
+HELM_REPOS[openstack-helm]="https://tarballs.opendev.org/openstack/openstack-helm"
+HELM_REPOS[openstack-helm-infra]="https://tarballs.opendev.org/openstack/openstack-helm-infra"
+HELM_REPOS[rook-release]="https://charts.rook.io/release"
+HELM_REPOS[ingress-nginx]="https://kubernetes.github.io/ingress-nginx"
+HELM_REPOS[jetstack]="https://charts.jetstack.io"
+HELM_REPOS[prometheus-community]="https://prometheus-community.github.io/helm-charts"
+HELM_REPOS[grafana]="https://grafana.github.io/helm-charts"
+HELM_REPOS[argo]="https://argoproj.github.io/argo-helm"
+HELM_REPOS[airship]="https://airship-treasuremap.github.io/treasuremap"
+
+# --- APT packages needed for full-stack pipeline ---
+FULLSTACK_APT_PKGS=(
+    ansible python3-pip python3-venv python3-jinja2 python3-yaml
+    python3-netaddr python3-cryptography
+    git make gcc python3-dev libffi-dev libssl-dev
+    nfs-common open-iscsi lvm2 thin-provisioning-tools
+    ethtool ipvsadm conntrack socat
+)
+
+install_kubectl() {
+    local version="$KUBECTL_VERSION"
+    if command -v kubectl &>/dev/null; then
+        local current
+        current=$(kubectl version --client --short 2>/dev/null | awk '{print $3}' || echo "unknown")
+        if [[ "$current" == "$version" ]]; then
+            ok "kubectl $version already installed."
+            return 0
+        fi
+    fi
+
+    log "Installing kubectl $version..."
+    download_safe "$KUBECTL_URL" "$TMP_DIR/kubectl" "kubectl $version"
+    download_safe "$KUBECTL_SHA_URL" "$TMP_DIR/kubectl.sha256" "kubectl SHA256"
+
+    # Verify SHA256
+    local expected actual
+    expected=$(cat "$TMP_DIR/kubectl.sha256")
+    actual=$(sha256sum "$TMP_DIR/kubectl" | awk '{print $1}')
+    if [[ "$actual" != "$expected" ]]; then
+        die "kubectl SHA256 mismatch! Expected: $expected Got: $actual"
+    fi
+    sudo install -o root -g root -m 0755 "$TMP_DIR/kubectl" /usr/local/bin/kubectl
+    rm -f "$TMP_DIR/kubectl" "$TMP_DIR/kubectl.sha256"
+    ok "kubectl $version installed."
+}
+
+install_helm() {
+    local version="$HELM_VERSION"
+    if command -v helm &>/dev/null; then
+        local current
+        current=$(helm version --short 2>/dev/null | cut -d'+' -f1 || echo "unknown")
+        if [[ "$current" == "$version" ]]; then
+            ok "Helm $version already installed."
+            return 0
+        fi
+    fi
+
+    log "Installing Helm $version..."
+    download_safe "$HELM_URL" "$TMP_DIR/helm.tar.gz" "Helm $version"
+    tar -xzf "$TMP_DIR/helm.tar.gz" -C "$TMP_DIR" linux-amd64/helm
+    sudo install -o root -g root -m 0755 "$TMP_DIR/linux-amd64/helm" /usr/local/bin/helm
+    rm -rf "$TMP_DIR/linux-amd64" "$TMP_DIR/helm.tar.gz"
+    ok "Helm $version installed."
+}
+
+install_helm_repos() {
+    log "Adding Helm chart repositories..."
+    local added=0
+    for repo_name in "${!HELM_REPOS[@]}"; do
+        local repo_url="${HELM_REPOS[$repo_name]}"
+        if ! helm repo list 2>/dev/null | grep -q "^${repo_name}"; then
+            helm repo add "$repo_name" "$repo_url" 2>/dev/null && added=$((added + 1)) || \
+                warn "Failed to add Helm repo: $repo_name ($repo_url)"
+        fi
+    done
+    if [[ $added -gt 0 ]]; then
+        helm repo update 2>/dev/null || warn "Helm repo update had warnings."
+        ok "$added Helm repos added and updated."
+    else
+        ok "All Helm repos already configured."
+    fi
+}
+
+install_kubespray() {
+    local dest="$PROJECT_ROOT/kubespray"
+    if [[ -d "$dest" && -f "$dest/cluster.yml" ]]; then
+        ok "Kubespray already present at $dest"
+        return 0
+    fi
+
+    log "Downloading Kubespray $KUBESPRAY_VERSION..."
+    download_safe "$KUBESPRAY_URL" "$TMP_DIR/kubespray.tar.gz" "Kubespray $KUBESPRAY_VERSION"
+    mkdir -p "$dest"
+    tar -xzf "$TMP_DIR/kubespray.tar.gz" --strip-components=1 -C "$dest"
+    rm -f "$TMP_DIR/kubespray.tar.gz"
+
+    # Install Kubespray Python dependencies (in a venv to avoid system conflicts)
+    log "Installing Kubespray Python dependencies..."
+    if [[ ! -d "$dest/.venv" ]]; then
+        python3 -m venv "$dest/.venv"
+    fi
+    # shellcheck disable=SC1091
+    source "$dest/.venv/bin/activate"
+    pip install --quiet --upgrade pip 2>/dev/null
+    pip install --quiet -r "$dest/requirements.txt" 2>/dev/null || \
+        warn "Some Kubespray pip dependencies failed (check proxy)."
+    deactivate
+    ok "Kubespray $KUBESPRAY_VERSION installed at $dest"
+}
+
+install_argocd_cli() {
+    if command -v argocd &>/dev/null; then
+        ok "ArgoCD CLI already installed."
+        return 0
+    fi
+    log "Installing ArgoCD CLI $ARGOCD_VERSION..."
+    download_safe "$ARGOCD_URL" "$TMP_DIR/argocd" "ArgoCD CLI $ARGOCD_VERSION"
+    sudo install -o root -g root -m 0755 "$TMP_DIR/argocd" /usr/local/bin/argocd
+    rm -f "$TMP_DIR/argocd"
+    ok "ArgoCD CLI installed."
+}
+
+install_yq() {
+    if command -v yq &>/dev/null; then
+        ok "yq already installed."
+        return 0
+    fi
+    log "Installing yq $YQ_VERSION..."
+    download_safe "$YQ_URL" "$TMP_DIR/yq" "yq $YQ_VERSION"
+    sudo install -o root -g root -m 0755 "$TMP_DIR/yq" /usr/local/bin/yq
+    rm -f "$TMP_DIR/yq"
+    ok "yq installed."
+}
+
+install_k9s() {
+    if command -v k9s &>/dev/null; then
+        ok "k9s already installed."
+        return 0
+    fi
+    log "Installing k9s $K9S_VERSION..."
+    download_safe "$K9S_URL" "$TMP_DIR/k9s.tar.gz" "k9s $K9S_VERSION"
+    tar -xzf "$TMP_DIR/k9s.tar.gz" -C "$TMP_DIR" k9s
+    sudo install -o root -g root -m 0755 "$TMP_DIR/k9s" /usr/local/bin/k9s
+    rm -f "$TMP_DIR/k9s" "$TMP_DIR/k9s.tar.gz"
+    ok "k9s installed."
+}
+
+install_fullstack_apt_packages() {
+    log "Checking full-stack APT packages..."
+    local to_install=()
+    for pkg in "${FULLSTACK_APT_PKGS[@]}"; do
+        if ! dpkg -l "$pkg" 2>/dev/null | grep -q "^ii"; then
+            to_install+=("$pkg")
+        fi
+    done
+    if [[ ${#to_install[@]} -gt 0 ]]; then
+        log "Installing ${#to_install[@]} additional packages: ${to_install[*]}"
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq "${to_install[@]}" 2>&1 | tail -5
+        ok "Full-stack packages installed."
+    else
+        ok "All full-stack packages already present."
+    fi
+}
+
+install_openstack_client() {
+    if command -v openstack &>/dev/null; then
+        ok "OpenStack CLI (python-openstackclient) already installed."
+        return 0
+    fi
+    log "Installing python-openstackclient..."
+    pip install --quiet python-openstackclient python-heatclient python-neutronclient \
+        python-cinderclient python-glanceclient 2>/dev/null || \
+        { warn "OpenStack client pip install failed (check proxy). Trying with --user...";
+          pip install --user --quiet python-openstackclient 2>/dev/null || \
+            warn "OpenStack client install failed."; }
+    ok "OpenStack CLI installed."
+}
+
+install_maas_cli() {
+    if command -v maas &>/dev/null; then
+        ok "MAAS CLI already installed."
+        return 0
+    fi
+    log "Installing MAAS CLI..."
+    sudo apt-get install -y -qq maas-cli 2>/dev/null || \
+        { pip install --quiet python-libmaas 2>/dev/null || \
+            warn "MAAS CLI install failed (not critical for KVM lab)."; }
+    if command -v maas &>/dev/null; then
+        ok "MAAS CLI installed."
+    fi
+}
+
+install_ceph_tools() {
+    if command -v ceph &>/dev/null; then
+        ok "Ceph CLI tools already installed."
+        return 0
+    fi
+    log "Installing Ceph CLI tools..."
+    sudo apt-get install -y -qq ceph-common 2>/dev/null || \
+        warn "Ceph CLI install failed (not critical — Rook deploys its own tools)."
+    if command -v ceph &>/dev/null; then
+        ok "Ceph CLI tools installed."
+    fi
+}
+
+phase_tools_download() {
+    header "PHASE T: Download & Install Platform Tools"
+    log "Proxy mode: $PROXY_MODE"
+    [[ "$PROXY_MODE" == "custom" ]] && log "Custom proxy: $PROXY_CUSTOM_URL"
+    echo ""
+
+    # --- Core infrastructure tools ---
+    log "── Core Infrastructure Tools ──"
+    install_kubectl
+    install_helm
+    install_yq
+    install_k9s
+    install_argocd_cli
+    echo ""
+
+    # --- Helm chart repositories ---
+    log "── Helm Chart Repositories ──"
+    install_helm_repos
+    echo ""
+
+    # --- Kubespray (Kubernetes installer) ---
+    log "── Kubespray (Kubernetes Installer) ──"
+    install_kubespray
+    echo ""
+
+    # --- Full-stack APT dependencies ---
+    log "── Full-Stack APT Packages ──"
+    install_fullstack_apt_packages
+    echo ""
+
+    # --- Cloud platform CLIs ---
+    log "── Cloud Platform CLIs ──"
+    install_openstack_client
+    install_maas_cli
+    install_ceph_tools
+    echo ""
+
+    # --- Summary ---
+    header "TOOLS INSTALLATION SUMMARY"
+    printf "  ${BLD}%-25s %-12s %-40s${RST}\n" "TOOL" "STATUS" "VERSION/PATH"
+    printf "  %-25s %-12s %-40s\n" "─────────────────────────" "────────────" "────────────────────────────────────────"
+
+    local tools_list=(
+        "kubectl:kubectl version --client --short 2>/dev/null | awk '{print \$3}'"
+        "helm:helm version --short 2>/dev/null | cut -d+ -f1"
+        "yq:yq --version 2>/dev/null | awk '{print \$NF}'"
+        "k9s:k9s version --short 2>/dev/null | head -1"
+        "argocd:argocd version --client --short 2>/dev/null"
+        "ansible:ansible --version 2>/dev/null | head -1 | awk '{print \$NF}'"
+        "openstack:openstack --version 2>/dev/null | awk '{print \$2}'"
+        "maas:maas --version 2>/dev/null || echo N/A"
+        "ceph:ceph --version 2>/dev/null | awk '{print \$3}'"
+        "jq:jq --version 2>/dev/null"
+        "python3:python3 --version 2>/dev/null | awk '{print \$2}'"
+    )
+
+    for entry in "${tools_list[@]}"; do
+        local tool_name="${entry%%:*}"
+        local version_cmd="${entry#*:}"
+        local status version
+        if command -v "$tool_name" &>/dev/null; then
+            status="${GRN}INSTALLED${RST}"
+            version=$(eval "$version_cmd" 2>/dev/null || echo "unknown")
+        else
+            status="${YLW}MISSING${RST}"
+            version="—"
+        fi
+        printf "  %-25s ${status}  %-40s\n" "$tool_name" "$version"
+    done
+
+    # Check Kubespray
+    local ks_status ks_ver
+    if [[ -f "$PROJECT_ROOT/kubespray/cluster.yml" ]]; then
+        ks_status="${GRN}INSTALLED${RST}"
+        ks_ver="$PROJECT_ROOT/kubespray/"
+    else
+        ks_status="${YLW}MISSING${RST}"
+        ks_ver="—"
+    fi
+    printf "  %-25s ${ks_status}  %-40s\n" "kubespray" "$ks_ver"
+
+    # Helm repos
+    echo ""
+    log "Helm Repositories:"
+    helm repo list 2>/dev/null | head -15 || echo "  (none configured)"
+    echo ""
+
+    ok "Platform tools phase complete."
+    log "All tools respect proxy mode '$PROXY_MODE'. Re-run with --no-proxy if behind no firewall."
+}
+
 # ======================= MAIN ===============================================
 main() {
     echo "============================================================================"
@@ -1697,14 +2077,39 @@ main() {
                 AUTOMATION_PROFILE="$2"
                 shift 2
                 ;;
+            --no-proxy|--direct)
+                PROXY_MODE="direct"
+                shift
+                ;;
+            --proxy-url)
+                [[ $# -lt 2 ]] && die "--proxy-url requires a URL value"
+                PROXY_MODE="custom"
+                PROXY_CUSTOM_URL="$2"
+                shift 2
+                ;;
+            --proxy)
+                PROXY_MODE="corporate"
+                shift
+                ;;
             *)
                 break
                 ;;
         esac
     done
 
+    # Apply proxy configuration based on CLI flags
+    configure_proxy
+
     local action="${1:-deploy}"
     [[ $# -gt 0 ]] && shift
+
+    # 'tools' action doesn't need a profile — skip profile/VM initialization
+    if [[ "$action" == "tools" ]]; then
+        mkdir -p "$TMP_DIR" "$PROJECT_ROOT"
+        phase0_setup
+        phase_tools_download
+        return 0
+    fi
 
     if [[ -n "$AUTOMATION_PROFILE" ]]; then
         apply_profile_settings "$AUTOMATION_PROFILE"
@@ -2019,12 +2424,13 @@ main() {
             fi
             ;;
         *)
-            echo "Usage: $0 [--profile <name>] <action> [vm1,vm2,...|group]"
+            echo "Usage: $0 [OPTIONS] <action> [vm1,vm2,...|group]"
             echo ""
-            echo "Profiles:"
-            echo "  win11_kvm        Windows 11 / WSL lab sizing"
-            echo "  ubuntu_r620_kvm  Ubuntu / Dell R620 high-RAM lab sizing"
-            echo "  real_hardware    Physical-switch workflow; skips KVM lab deployment"
+            echo "Options:"
+            echo "  --profile <name>    Set automation profile (win11_kvm, ubuntu_r620_kvm, real_hardware)"
+            echo "  --no-proxy          Bypass corporate proxy (direct internet access)"
+            echo "  --proxy-url <url>   Use custom proxy URL instead of corporate default"
+            echo "  --proxy             Force corporate proxy (default behavior)"
             echo ""
             echo "Actions:"
             echo "  deploy    [targets] — Build VMs (idempotent, skips existing)"
@@ -2036,23 +2442,25 @@ main() {
             echo "  console   <vm>      — Attach virsh console to a VM"
             echo "  status              — Show all VM states + resource usage"
             echo "  images              — Download and verify images only"
+            echo "  tools               — Download/install platform tools (Helm, kubectl, Kubespray, etc.)"
             echo ""
             echo "Targets (optional, default=all):"
             echo "  Single:   Spine_S1, Leaf_L2, Host12_1, Exit_Router1"
             echo "  Multiple: Spine_S1,Leaf_L1,Host12_1  (comma-separated)"
             echo "  Groups:   spines, leafs, border_leafs, switches, servers, routers, all"
             echo ""
+            echo "Proxy examples:"
+            echo "  $0 --no-proxy --profile win11_kvm deploy          # Direct internet (home lab)"
+            echo "  $0 --proxy-url http://myproxy:3128 deploy         # Custom proxy"
+            echo "  $0 --profile win11_kvm deploy                     # Corporate proxy (default)"
+            echo ""
             echo "Examples:"
-            echo "  $0 --profile win11_kvm deploy                    # Deploy all 16 VMs"
-            echo "  $0 --profile ubuntu_r620_kvm redeploy spines     # Redeploy only Spine_S1 + Spine_S2"
-            echo "  $0 --profile win11_kvm validate Leaf_L1,Leaf_L2  # Validate specific leafs"
-            echo "  $0 --profile win11_kvm destroy servers           # Destroy only Ubuntu servers"
-            echo "  $0 --profile ubuntu_r620_kvm deploy routers      # Deploy Exit_Router1 + Exit_Router2"
-            echo "  $0 --profile win11_kvm test sonic                # Deploy single SONiC for testing"
-            echo "  $0 --profile win11_kvm test ubuntu               # Deploy single Ubuntu for testing"
-            echo "  $0 --profile win11_kvm test chr                  # Deploy single MikroTik for testing"
-            echo "  $0 --profile win11_kvm ssh Spine_S1              # SSH into Spine_S1"
-            echo "  $0 --profile win11_kvm console Exit_Router1      # Console into Exit_Router1"
+            echo "  $0 --profile win11_kvm deploy                     # Deploy all 17 VMs"
+            echo "  $0 --profile ubuntu_r620_kvm redeploy spines      # Redeploy only spines"
+            echo "  $0 --no-proxy --profile win11_kvm tools           # Download platform tools (no proxy)"
+            echo "  $0 --profile win11_kvm validate Leaf_L1,Leaf_L2   # Validate specific leafs"
+            echo "  $0 --profile win11_kvm test sonic                 # Deploy single SONiC for testing"
+            echo "  $0 --profile win11_kvm ssh Spine_S1               # SSH into Spine_S1"
             exit 1
             ;;
     esac
