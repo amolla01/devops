@@ -1,0 +1,207 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# SSH Configuration — DC CLOS KVM Lab (ProxyJump via Ubuntu Hypervisor)
+# ═══════════════════════════════════════════════════════════════════════════
+# Purpose:  Enable transparent SSH from Windows laptop to all lab VMs
+# Install:  Copy this file to C:\Users\nh4134\.ssh\config (Windows)
+#           Or symlink in WSL:  ln -sf /mnt/c/Users/nh4134/.ssh/config ~/.ssh/config
+#
+# Architecture:
+#   Laptop (192.168.9.x) → Hypervisor (192.168.9.200) → VMs (172.16.2.x)
+#   The 172.16.2.0/24 subnet is an OVS bridge internal to the hypervisor.
+#   ProxyJump tunnels SSH through the hypervisor to reach VMs transparently.
+#
+# Usage:
+#   ssh dc-hypervisor          # Direct to hypervisor
+#   ssh spine-s1               # Transparent jump to SONiC switch
+#   ssh 172.16.2.45            # Transparent jump to any VM by IP
+#   ssh hostb12-1              # Named alias for HostB12_1
+#   ssh storage-ssd-01         # Named alias for Storage_Server_SSD_01
+#
+# Key file: ~/.ssh/id_dc_lab (ED25519)
+#   Generate: ssh-keygen -t ed25519 -f ~/.ssh/id_dc_lab -C "dc-lab-ansible" -N ""
+#
+# Last updated: May 2026
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# HYPERVISOR — Direct access from laptop (no jump needed)
+# ─────────────────────────────────────────────────────────────────────────
+Host dc-hypervisor dc-hyp ubuntu-r620 192.168.9.200
+    HostName 192.168.9.200
+    User user
+    IdentityFile ~/.ssh/id_dc_lab
+    ForwardAgent yes
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# SONiC SWITCHES — Spines (Celestica DX010 Seastone)
+# ─────────────────────────────────────────────────────────────────────────
+Host spine-s1 Spine_S1
+    HostName 172.16.2.11
+    User admin
+
+Host spine-s2 Spine_S2
+    HostName 172.16.2.12
+    User admin
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# SONiC SWITCHES — Leafs (Accton AS5712-54X: L1,L2 | Arista 7050QX: L3,L4)
+# ─────────────────────────────────────────────────────────────────────────
+Host leaf-l1 Leaf_L1
+    HostName 172.16.2.21
+    User admin
+
+Host leaf-l2 Leaf_L2
+    HostName 172.16.2.22
+    User admin
+
+Host leaf-l3 Leaf_L3
+    HostName 172.16.2.23
+    User admin
+
+Host leaf-l4 Leaf_L4
+    HostName 172.16.2.24
+    User admin
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# SONiC SWITCHES — Border Leafs (Arista 7050QX-32S)
+# ─────────────────────────────────────────────────────────────────────────
+Host border-leaf1 Border_Leaf1
+    HostName 172.16.2.31
+    User admin
+
+Host border-leaf2 Border_Leaf2
+    HostName 172.16.2.32
+    User admin
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# EXIT ROUTERS — MikroTik CHR CRS326
+# ─────────────────────────────────────────────────────────────────────────
+Host exit-router1 Exit_Router1
+    HostName 172.16.2.98
+    User admin
+
+Host exit-router2 Exit_Router2
+    HostName 172.16.2.99
+    User admin
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# COMPUTE SERVERS — Ubuntu (K8s Controllers + Workers + OpenStack)
+# ─────────────────────────────────────────────────────────────────────────
+Host host12-1 Host12_1
+    HostName 172.16.2.40
+    User ubuntu
+
+Host host12-2 Host12_2
+    HostName 172.16.2.41
+    User ubuntu
+
+Host host12-3 Host12_3
+    HostName 172.16.2.42
+    User ubuntu
+
+Host host34-1 Host34_1
+    HostName 172.16.2.43
+    User ubuntu
+
+Host host34-2 Host34_2
+    HostName 172.16.2.44
+    User ubuntu
+
+Host hostb12-1 HostB12_1 k8s-master
+    HostName 172.16.2.45
+    User ubuntu
+
+Host hostb12-2 HostB12_2
+    HostName 172.16.2.46
+    User ubuntu
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# MONITORING SERVER — Prometheus, Grafana, Loki, Syslog
+# ─────────────────────────────────────────────────────────────────────────
+Host monitor-srv MonitorSrv
+    HostName 172.16.2.47
+    User ubuntu
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# DEDICATED CEPH STORAGE SERVERS — HDD tier (Leaf_L3/L4 column)
+# ─────────────────────────────────────────────────────────────────────────
+Host storage-hdd-01 Storage_Server_HDD_01
+    HostName 172.16.2.50
+    User ubuntu
+
+Host storage-hdd-02 Storage_Server_HDD_02
+    HostName 172.16.2.51
+    User ubuntu
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# DEDICATED CEPH STORAGE SERVERS — SSD/NVMe tier (Border-Leaf column)
+# ─────────────────────────────────────────────────────────────────────────
+Host storage-ssd-01 Storage_Server_SSD_01
+    HostName 172.16.2.52
+    User ubuntu
+
+Host storage-ssd-02 Storage_Server_SSD_02
+    HostName 172.16.2.53
+    User ubuntu
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# WILDCARD: All 172.16.2.x VMs — ProxyJump through hypervisor
+# ─────────────────────────────────────────────────────────────────────────
+# This catches any IP not matched by a named Host block above.
+# Ensures all VM traffic routes through the hypervisor SSH tunnel.
+Host 172.16.2.*
+    ProxyJump dc-hypervisor
+    IdentityFile ~/.ssh/id_dc_lab
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ConnectTimeout 10
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# WILDCARD: iDRAC / MaaS PXE subnet (192.168.255.0/25) — real hardware OOB
+# ─────────────────────────────────────────────────────────────────────────
+# Only relevant when targeting physical Dell servers (real_hardware profile).
+# iDRAC web UI: https://192.168.255.x (access via SSH tunnel or SOCKS proxy).
+Host 192.168.255.*
+    ProxyJump dc-hypervisor
+    User root
+    IdentityFile ~/.ssh/id_dc_lab
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ConnectTimeout 10
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# WILDCARD: Named host patterns — inherit ProxyJump + key settings
+# ─────────────────────────────────────────────────────────────────────────
+# Matches all named aliases defined above that use hostnames (not IPs).
+# Required because named hosts need explicit ProxyJump (not inherited from IP wildcard).
+Host spine-* Spine_* leaf-* Leaf_* border-* Border_* exit-* Exit_* host* Host* monitor-* Monitor* storage-* Storage_*
+    ProxyJump dc-hypervisor
+    IdentityFile ~/.ssh/id_dc_lab
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    ConnectTimeout 10
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# GLOBAL DEFAULTS
+# ─────────────────────────────────────────────────────────────────────────
+Host *
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    ServerAliveInterval 120
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
