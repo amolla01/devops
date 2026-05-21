@@ -1,0 +1,488 @@
+---
+# preflight_monolithic_backup.yml
+#
+# Backup of the last known-working monolithic preflight flow before the role
+# was split into smaller phase files. Keep this file as a reference copy when
+# comparing future regressions in day-0 or fabric runs.
+
+# Always kill any stale OS-level ControlMaster process before connecting.
+# meta: reset_connection only clears Ansible's internal cache; it does NOT
+# kill the ControlMaster process or remove the socket file. A dead master
+# process leaves a socket that causes SSH to fail with an empty error message.
+# ssh -O stop sends SIGTERM to the master, ssh -O exit does a clean exit.
+# We suppress errors (|| true) because the socket may not exist on first run.
+- name: "preflight | Kill any stale SSH ControlMaster process"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  tags: [always]
+
+- name: "preflight | Reset Ansible connection cache"
+  ansible.builtin.meta: reset_connection
+
+# Stage 1: Wait for TCP port 22 to accept connections.
+# This is a cheap network-level check that does NOT do an SSH handshake, so
+# it never triggers MaxStartups saturation. On KVM VS, sshd may restart
+# multiple times during a service cascade — wait until TCP is stable before
+# attempting a full SSH connection.
+- name: "preflight | Wait for SSH port 22 to accept connections"
+  ansible.builtin.shell: |
+    for i in $(seq 1 60); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 300s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_mono
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_mono.stdout"
+
+# Stage 1.5: Determine which password works. We prefer the shared admin
+# password used by inventory/hardening, but fresh SONiC VS images may still be
+# on the factory default. Probe from localhost with sshpass and switch only
+# when the hardened password fails.
+- name: "preflight | Probe SSH password (primary)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _pw_primary
+  changed_when: false
+  failed_when: false
+  retries: 6
+  delay: 15
+  until: >-
+    'ok' in (_pw_primary.stdout | default(''))
+    or 'Permission denied' in (_pw_primary.stdout | default(''))
+    or 'Permission denied' in (_pw_primary.stderr | default(''))
+
+- name: "preflight | Try alternate password (factory default)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ sonic_factory_password }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _pw_alt
+  changed_when: false
+  failed_when: false
+  when: >-
+    'ok' not in (_pw_primary.stdout | default(''))
+
+- name: "preflight | Switch to alternate password"
+  ansible.builtin.set_fact:
+    ansible_ssh_pass: "{{ sonic_factory_password }}"
+    ansible_become_password: "{{ sonic_factory_password }}"
+  when: >-
+    'ok' not in (_pw_primary.stdout | default(''))
+    and 'ok' in (_pw_alt.stdout | default(''))
+  no_log: true
+
+# One successful sshpass probe is not enough on 2GB VS nodes; sshd can still
+# flap for another minute while SONiC services settle. Confirm stability with
+# the same handshake pattern that already proved the current password works.
+- name: "preflight | Confirm raw SSH is stable before Ansible session"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_ready
+  changed_when: false
+  retries: 6
+  delay: 15
+  until: "'ok' in (_ssh_ready.stdout | default(''))"
+
+# Stage 2: Avoid Ansible's ping-based wait_for_connection during first touch.
+# On 2GB VS nodes that managed handshake is the piece that still hangs during
+# banner exchange, even when raw SSH is already working. Use the proven
+# sshpass handshake locally, then let the next command task open Ansible's
+# first managed session.
+- name: "preflight | Confirm SSH is reachable for Ansible handoff"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_handoff_ready
+  changed_when: false
+  retries: 20
+  delay: 15
+  until: "'ok' in (_ssh_handoff_ready.stdout | default(''))"
+
+# On KVM VS, port 22 can be open while SONiC services (swss, syncd, database)
+# are still restarting and causing sshd to bounce. Check that critical services
+# are active before running any command tasks. This is the stable gate.
+- name: "preflight | Wait for critical SONiC services to be active"
+  ansible.builtin.command: >
+    bash -c 'systemctl is-active swss syncd database 2>&1'
+  register: _svc_ready
+  become: false
+  vars:
+    ansible_become: "false"
+    ansible_ssh_common_args: >-
+      -o ControlMaster=no -o ControlPath=none
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3
+      -o LogLevel=ERROR -o PreferredAuthentications=password
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no
+  changed_when: false
+  retries: 12
+  delay: 15
+  until: (_svc_ready.rc | default(-1)) == 0
+  failed_when: (_svc_ready.rc | default(-1)) != 0
+
+# SONiC services being active does not guarantee sshd is stable — a bgpd or
+# swss event can still restart sshd seconds later. Kill the ControlMaster and
+# wait for a fresh stable connection before running any command tasks.
+- name: "preflight | Kill stale ControlMaster after services gate"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+
+- name: "preflight | Reset connection cache after services gate"
+  ansible.builtin.meta: reset_connection
+
+- name: "preflight | Wait for SSH port 22 to stabilize after services gate"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_mono_svc
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_mono_svc.stdout"
+
+- name: "preflight | Re-establish SSH after services gate"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_services_gate
+  changed_when: false
+  retries: 10
+  delay: 10
+  until: "'ok' in (_ssh_after_services_gate.stdout | default(''))"
+
+# On 2GB KVM VS nodes, sonic-cfggen triggers Redis reads that cause memory
+# pressure, and the OOM killer takes out sshd. We must have swap active before
+# running any memory-intensive commands. Check now and activate/create if needed.
+- name: "preflight | Check if swap is already active"
+  ansible.builtin.command: swapon --show --noheadings
+  register: _preflight_swap
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+
+- name: "preflight | Check if /swapfile exists"
+  ansible.builtin.stat:
+    path: /swapfile
+  register: _swapfile_stat
+  become: false
+  vars:
+    ansible_become: "false"
+
+# Fast path: /swapfile exists (created by a previous run) but not yet active.
+# After a hard reset (virsh reset), the swapfile may be corrupt. If swapon
+# fails, we detect it and fall through to recreation below.
+- name: "preflight | Activate existing swapfile"
+  ansible.builtin.shell: |
+    /sbin/swapon /swapfile && echo "SWAP_OK" || echo "SWAP_FAIL"
+  register: _swap_activate
+  when:
+    - _preflight_swap.stdout | trim | length == 0
+    - _swapfile_stat.stat.exists | default(false)
+  changed_when: "'SWAP_OK' in (_swap_activate.stdout | default(''))"
+  failed_when: false
+
+# Verify swap is now active after activation attempt
+- name: "preflight | Re-check swap status"
+  ansible.builtin.command: swapon --show --noheadings
+  register: _preflight_swap
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+  when: _preflight_swap.stdout | trim | length == 0
+
+# Recreate swapfile if: (a) doesn't exist, or (b) exists but activation
+# failed (corrupt after hard reset). Either way, create fresh 1GB.
+- name: "preflight | Create 1GB swap for OOM protection"
+  ansible.builtin.shell: |
+    /sbin/swapoff /swapfile 2>/dev/null || true
+    rm -f /swapfile
+    dd if=/dev/zero of=/swapfile bs=1M count=1024 oflag=direct status=none
+    chmod 600 /swapfile
+    mkswap /swapfile
+    /sbin/swapon /swapfile
+  when:
+    - _preflight_swap.stdout | trim | length == 0
+  changed_when: true
+  failed_when: false
+
+# After any disk I/O, sshd may have bounced. Reconnect if swap was just set up.
+- name: "preflight | Kill stale ControlMaster after swap setup"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _preflight_swap.stdout | trim | length == 0
+
+- name: "preflight | Reset connection after swap setup"
+  ansible.builtin.meta: reset_connection
+
+- name: "preflight | Wait for SSH port 22 after swap setup"
+  ansible.builtin.shell: |
+    for i in $(seq 1 12); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 60s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_mono_swap
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_mono_swap.stdout"
+  when: _preflight_swap.stdout | trim | length == 0
+
+- name: "preflight | Re-establish SSH after swap setup"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_swap_setup
+  changed_when: false
+  retries: 8
+  delay: 10
+  until: "'ok' in (_ssh_after_swap_setup.stdout | default(''))"
+  when: _preflight_swap.stdout | trim | length == 0
+
+# Ansible's retry loop aborts immediately when the host becomes UNREACHABLE,
+# even if retries remain. We split this into two phases:
+#   Phase 1 — fire once with ignore_unreachable + failed_when: false so
+#             Ansible keeps the host in the play regardless of outcome.
+#   Phase 2 — socket-kill + TCP probe + reconnect ONLY when Phase 1 failed.
+#             If the probe succeeded, we leave the working ControlMaster alone.
+#   Phase 3 — conditional retry using the fresh connection from Phase 2.
+- name: "preflight | Gather SONiC build version (probe)"
+  ansible.builtin.command: >-
+    timeout 20 sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hostname"]'
+  register: _sonic_hostname
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+  ignore_unreachable: true
+
+- name: "preflight | Mark whether SONiC probe needs recovery"
+  ansible.builtin.set_fact:
+    _sonic_probe_failed: >-
+      {{
+        (_sonic_hostname.unreachable | default(false))
+        or ((_sonic_hostname.rc | default(1) | int) != 0)
+        or ((_sonic_hostname.stdout | default('') | trim | length) == 0)
+      }}
+
+# Recovery path — only triggered when the probe was unreachable or failed.
+# When the probe succeeds we leave the working ControlMaster undisturbed.
+- name: "preflight | Kill stale ControlMaster (recovery after probe failure)"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Wait for SSH port 22 (recovery after probe failure)"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_mono_recovery
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_mono_recovery.stdout"
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Re-establish SSH (recovery after probe failure)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_probe_recovery
+  changed_when: false
+  retries: 10
+  delay: 10
+  until: "'ok' in (_ssh_after_probe_recovery.stdout | default(''))"
+  when: _sonic_probe_failed | bool
+
+# Phase 3: retry only when Phase 1 failed; fresh connection guaranteed by Phase 2.
+# Use a separate register so the skipped-task dict never overwrites the probe result.
+- name: "preflight | Gather SONiC build version (retry)"
+  ansible.builtin.command: >-
+    timeout 20 sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hostname"]'
+  register: _sonic_hostname_retry
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  retries: 4
+  delay: 15
+  until: (_sonic_hostname_retry.rc | default(-1)) == 0
+  failed_when: (_sonic_hostname_retry.rc | default(-1)) != 0
+  when: _sonic_probe_failed | bool
+
+# Normalize: use retry result when it ran successfully, otherwise probe result.
+- name: "preflight | Set sonic hostname fact"
+  ansible.builtin.set_fact:
+    _sonic_hostname_stdout: >-
+      {{ _sonic_hostname_retry.stdout
+         if (_sonic_hostname_retry is defined
+             and not (_sonic_hostname_retry.skipped | default(true))
+             and (_sonic_hostname_retry.rc | default(-1)) == 0)
+         else (_sonic_hostname.stdout | default('unknown')) }}
+
+- name: "preflight | Gather platform identity from ConfigDB"
+  ansible.builtin.command: >-
+    timeout 20 sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]'
+  register: _platform_info
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+
+- name: "preflight | Display platform identity"
+  ansible.builtin.debug:
+    msg: "hostname={{ _sonic_hostname_stdout }} | metadata={{ _platform_info.stdout }}"
+
+- name: "preflight | Verify config_db.json exists"
+  ansible.builtin.stat:
+    path: "{{ sonic_config_db_path }}"
+  register: _config_db_stat
+
+- name: "preflight | Report config_db.json status"
+  ansible.builtin.debug:
+    msg: >-
+      config_db.json {{ 'exists' if _config_db_stat.stat.exists else 'NOT FOUND' }}
+      at {{ sonic_config_db_path }}

@@ -1,0 +1,152 @@
+---
+# preflight_identity.yml
+#
+# Phase 3 of shared preflight: non-privileged reads from ConfigDB to confirm
+# that the node is usable for the calling playbook.
+
+- name: "preflight | Gather SONiC build version (probe)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "timeout 60 sonic-cfggen -d -v 'DEVICE_METADATA[\"localhost\"][\"hostname\"]'" 2>&1
+  delegate_to: localhost
+  register: _sonic_hostname
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+
+- name: "preflight | Mark whether SONiC probe needs recovery"
+  ansible.builtin.set_fact:
+    _sonic_probe_failed: >-
+      {{
+        ((_sonic_hostname.rc | default(1) | int) != 0)
+        or ((_sonic_hostname.stdout | default('') | trim | length) == 0)
+      }}
+
+- name: "preflight | Kill stale ControlMaster (recovery after probe failure)"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Wait for SSH port 22 (recovery after probe failure)"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_recovery
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_recovery.stdout"
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Re-establish SSH (recovery after probe failure)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_probe_recovery
+  changed_when: false
+  retries: 10
+  delay: 10
+  until: "'ok' in (_ssh_after_probe_recovery.stdout | default(''))"
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Gather SONiC build version (retry)"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "timeout 60 sonic-cfggen -d -v 'DEVICE_METADATA[\"localhost\"][\"hostname\"]'" 2>&1
+  delegate_to: localhost
+  register: _sonic_hostname_retry
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  retries: 4
+  delay: 15
+  until: (_sonic_hostname_retry.rc | default(-1)) == 0
+  failed_when: (_sonic_hostname_retry.rc | default(-1)) != 0
+  when: _sonic_probe_failed | bool
+
+- name: "preflight | Set sonic hostname fact"
+  ansible.builtin.set_fact:
+    _sonic_hostname_stdout: >-
+      {{ _sonic_hostname_retry.stdout
+         if (_sonic_hostname_retry is defined
+             and not (_sonic_hostname_retry.skipped | default(true))
+             and (_sonic_hostname_retry.rc | default(-1)) == 0)
+         else (_sonic_hostname.stdout | default('unknown')) }}
+
+- name: "preflight | Gather platform identity from ConfigDB"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "timeout 60 sonic-cfggen -d -v 'DEVICE_METADATA[\"localhost\"]'" 2>&1
+  delegate_to: localhost
+  register: _platform_info
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+
+- name: "preflight | Display platform identity"
+  ansible.builtin.debug:
+    msg: "hostname={{ _sonic_hostname_stdout }} | metadata={{ _platform_info.stdout }}"
+
+- name: "preflight | Verify config_db.json exists"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "test -f {{ sonic_config_db_path }} && echo EXISTS || echo MISSING" 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _config_db_stat
+  changed_when: false
+
+- name: "preflight | Report config_db.json status"
+  ansible.builtin.debug:
+    msg: >-
+      config_db.json {{ 'exists' if 'EXISTS' in (_config_db_stat.stdout | default('')) else 'NOT FOUND' }}
+      at {{ sonic_config_db_path }}

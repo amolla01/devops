@@ -1,0 +1,128 @@
+---
+# preflight_host_prep.yml
+#
+# Phase 2 of shared preflight: swap detection and swap creation. This file is
+# intentionally mixed privilege because read-only swap inspection must not use
+# sudo, while swap activation/creation still requires root on first-touch VMs.
+
+# After the connectivity phase's meta: reset_connection, Ansible's internal
+# SSH connection is torn down. On a resource-constrained KVM VS that has been
+# under I/O or Docker load, the module push (sftp/scp for Python module
+# transfer) can fail immediately with an empty SSH error. Use
+# wait_for_connection — it exercises the full Ansible module path with built-in
+# retries using the same play-level SSH settings as all subsequent tasks.
+- name: "preflight | Wait for Ansible connection to stabilise before host prep"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    sleep: 10
+    timeout: 120
+
+- name: "preflight | Check if swap is already active"
+  ansible.builtin.command: swapon --show --noheadings
+  register: _preflight_swap
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+
+- name: "preflight | Check if /swapfile exists"
+  ansible.builtin.stat:
+    path: /swapfile
+  register: _swapfile_stat
+  become: false
+  vars:
+    ansible_become: "false"
+
+- name: "preflight | Activate existing swapfile"
+  ansible.builtin.shell: |
+    /sbin/swapon /swapfile && echo "SWAP_OK" || echo "SWAP_FAIL"
+  register: _swap_activate
+  when:
+    - _preflight_swap.stdout | trim | length == 0
+    - _swapfile_stat.stat.exists | default(false)
+  changed_when: "'SWAP_OK' in (_swap_activate.stdout | default(''))"
+  failed_when: false
+
+- name: "preflight | Re-check swap status"
+  ansible.builtin.command: swapon --show --noheadings
+  register: _preflight_swap
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  failed_when: false
+  when: _preflight_swap.stdout | trim | length == 0
+
+- name: "preflight | Create 1GB swap for OOM protection"
+  ansible.builtin.shell: |
+    /sbin/swapoff /swapfile 2>/dev/null || true
+    rm -f /swapfile
+    dd if=/dev/zero of=/swapfile bs=1M count=1024 oflag=direct status=none
+    chmod 600 /swapfile
+    mkswap /swapfile
+    /sbin/swapon /swapfile
+  when:
+    - _preflight_swap.stdout | trim | length == 0
+  changed_when: true
+  failed_when: false
+
+- name: "preflight | Kill stale ControlMaster after swap setup"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _preflight_swap.stdout | trim | length == 0
+
+- name: "preflight | Reset connection after swap setup"
+  ansible.builtin.meta: reset_connection
+
+- name: "preflight | Wait for SSH port 22 after swap setup"
+  ansible.builtin.shell: |
+    for i in $(seq 1 12); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 60s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_swap
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_swap.stdout"
+  when: _preflight_swap.stdout | trim | length == 0
+
+- name: "preflight | Re-establish SSH after swap setup"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_swap_setup
+  changed_when: false
+  retries: 8
+  delay: 10
+  until: "'ok' in (_ssh_after_swap_setup.stdout | default(''))"
+  when: _preflight_swap.stdout | trim | length == 0
