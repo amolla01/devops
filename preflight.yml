@@ -1,0 +1,75 @@
+---
+# server_base/tasks/preflight.yml
+# Pre-flight connectivity check for Ubuntu bare-metal servers.
+
+- name: "preflight | Wait for SSH port 22 to accept connections"
+  ansible.builtin.shell: |
+    for i in $(seq 1 60); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 300s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_srv
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_srv.stdout"
+
+- name: "preflight | Probe SSH connectivity"
+  ansible.builtin.shell: |
+    {% if ansible_ssh_pass | default('') | length > 0 %}
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+    {% else %}
+    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o BatchMode=yes \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+    {% endif %}
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _server_ssh_probe
+  changed_when: false
+  failed_when: false
+  retries: 6
+  delay: 15
+  until: >-
+    'ok' in (_server_ssh_probe.stdout | default(''))
+
+- name: "preflight | Assert SSH connectivity succeeded"
+  ansible.builtin.assert:
+    that:
+      - "'ok' in (_server_ssh_probe.stdout | default(''))"
+    fail_msg: >-
+      Cannot reach {{ inventory_hostname }} ({{ ansible_host }}) via SSH.
+      Last output: {{ _server_ssh_probe.stdout | default('') }}
+      Stderr: {{ _server_ssh_probe.stderr | default('') }}
+    success_msg: "SSH to {{ inventory_hostname }} ({{ ansible_host }}) — OK"
+
+- name: "preflight | Gather OS facts"
+  ansible.builtin.setup:
+    gather_subset:
+      - distribution
+      - network
+  register: _server_facts
+
+- name: "preflight | Display server identity"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }}: {{ ansible_distribution }} {{ ansible_distribution_version }}
+      | Kernel: {{ ansible_kernel | default('unknown') }}
