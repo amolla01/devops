@@ -1,3 +1,4 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd claude-opus-4.6-v1/
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ AUTOMATION_PROFILE=${AUTOMATION_PROFILE:-ubuntu_r620_kvm} ansible-playbook playbooks/deploy_day0.yml --limit servers -i inventory/hosts.yml
 
 PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
@@ -283,3 +284,49 @@ fatal: [Host12_1]: FAILED! =>
     msg: |-
         Command failed rc=1, out=, err=Hint: static hostname is already set, so the specified transient hostname will not be used.
         Could not set transient hostname: Invalid hostname 'Host12_1'
+
+TASK [server_base : preflight | Wait for SSH port 22 to accept connections] *************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:5:3
+
+3 # Pre-flight connectivity check for Ubuntu bare-metal servers.
+4
+5 - name: "preflight | Wait for SSH port 22 to accept connections"
+    ^ column 3
+
+fatal: [MonitorSrv -> localhost]: FAILED! =>
+    changed: false
+    cmd: |-
+        for i in $(seq 1 60); do
+          output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null           -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR           ubuntu@172.16.2.47 echo ok 2>&1)
+          rc=$?
+          if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+            echo "PORT_OPEN"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "TIMEOUT after 300s waiting for 172.16.2.47:22"
+        exit 1
+    delta: '0:08:26.923122'
+    end: '2026-05-21 15:25:54.303719'
+    failed_when_result: true
+    msg: non-zero return code
+    rc: 1
+    start: '2026-05-21 15:17:27.380597'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: TIMEOUT after 300s waiting for 172.16.2.47:22
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=8    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host12_2                   : ok=8    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host12_3                   : ok=8    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=8    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=8    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=5    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_2                  : ok=5    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonitorSrv                 : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
