@@ -176,6 +176,7 @@
     <li><a href="#inventory">Ansible Inventory</a></li>
     <li><a href="#playbook-examples">Playbook Execution Examples</a></li>
     <li><a href="#deploy-script">Running deploy_lab_v13.sh Remotely</a></li>
+    <li><a href="#lab-root-permissions">LAB_ROOT &amp; Libvirt Permissions</a></li>
     <li><a href="#kubectl-remote">Remote kubectl Access</a></li>
     <li><a href="#troubleshooting">Troubleshooting</a></li>
   </ol>
@@ -952,9 +953,95 @@ rsync -avz --delete \
 ssh -t dc-hypervisor "cd ~/dc-lab &amp;&amp; bash deploy_lab_v13.sh --profile ubuntu_r620_kvm deploy"</code></pre>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- 13. KUBECTL                                                            -->
+<!-- 12b. LAB_ROOT & LIBVIRT PERMISSIONS                                    -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<h2 id="kubectl-remote"><span class="step-num">13</span>Remote kubectl Access</h2>
+<h2 id="lab-root-permissions"><span class="step-num">13</span>LAB_ROOT &amp; Libvirt Permissions</h2>
+
+<div class="callout danger">
+  <div class="callout-title">Critical: libvirt-qemu Permission Denied on /root</div>
+  If you run <code>deploy_lab_v13.sh</code> as root (with <code>sudo</code>), the default <code>LAB_ROOT</code> becomes
+  <code>/root/dc_lab</code>. The <code>libvirt-qemu</code> process (uid:64055, gid:993) <strong>cannot traverse <code>/root</code></strong>
+  because it has mode <code>700</code>. All 17 VMs will fail with:<br>
+  <code>Cannot access storage file '/root/dc_lab/disks/Spine_S1.qcow2' (as uid:64055, gid:993): Permission denied</code>
+</div>
+
+<h3>Recommended: Move LAB_ROOT to /var/lib/libvirt/dc_lab</h3>
+<p>
+  The <code>/var/lib/libvirt/</code> directory is already owned and traversable by the libvirt-qemu user.
+  This completely eliminates the permission issue.
+</p>
+<pre><code># Move existing lab data (if you already ran deploy once under /root)
+sudo mv /root/dc_lab /var/lib/libvirt/dc_lab
+
+# Deploy with explicit LAB_ROOT
+sudo LAB_ROOT=/var/lib/libvirt/dc_lab ./deploy_lab_v13.sh --no-proxy --profile ubuntu_r620_kvm redeploy
+
+# Make it permanent in .bashrc (so future runs default to the new path)
+echo 'export LAB_ROOT=/var/lib/libvirt/dc_lab' >> ~/.bashrc
+source ~/.bashrc</code></pre>
+
+<div class="callout info">
+  <div class="callout-title">How LAB_ROOT works in the script</div>
+  Line 110 of <code>deploy_lab_v13.sh</code>: <code>LAB_ROOT="${LAB_ROOT:-$HOME/dc_lab}"</code><br>
+  If the environment variable is set, it uses that value. Otherwise it defaults to <code>$HOME/dc_lab</code>.
+  Under <code>sudo</code>, <code>$HOME=/root</code>, hence the problem. The <code>sudo LAB_ROOT=... cmd</code> syntax
+  passes the variable correctly on Ubuntu (sudo 1.9+).
+</div>
+
+<h3>Alternative: Quick fix (chmod 711 /root)</h3>
+<p>
+  If you don't want to relocate, grant traverse-only permission on <code>/root</code>.
+  This allows any user to <em>enter</em> the directory but <strong>not list or read</strong> its contents.
+</p>
+<pre><code># Grant traverse (execute) permission — does NOT expose file listings
+sudo chmod 711 /root
+
+# Also ensure disk and cloud-init dirs are readable by qemu
+sudo chmod -R o+rX /root/dc_lab/disks /root/dc_lab/cloud-init</code></pre>
+
+<h3>Recovering VMs after fixing permissions</h3>
+<p>
+  If VMs were defined but failed to start due to the permission error, you don't need a full redeploy.
+  Just fix the permissions and start them:
+</p>
+<pre><code># After applying chmod 711 /root (or moving to /var/lib/libvirt)
+for vm in Spine_S1 Spine_S2 Leaf_L1 Leaf_L2 Leaf_L3 Leaf_L4 \
+          Border_Leaf1 Border_Leaf2 Exit_Router1 Exit_Router2 \
+          Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 \
+          HostB12_1 HostB12_2; do
+  sudo virsh start "$vm" 2>/dev/null && echo "✓ $vm started" || echo "✗ $vm"
+done
+
+# Verify all running
+sudo virsh list --all</code></pre>
+
+<div class="callout warn">
+  <div class="callout-title">Note: If you moved LAB_ROOT, you MUST redeploy</div>
+  After <code>sudo mv /root/dc_lab /var/lib/libvirt/dc_lab</code>, the existing libvirt VM XML definitions
+  still reference the old disk paths (<code>/root/dc_lab/disks/...</code>). Use <code>redeploy</code> to destroy the old
+  definitions and create new ones with the correct <code>/var/lib/libvirt/dc_lab/disks/</code> paths.
+  The <code>virsh start</code> loop above only works if you used the <code>chmod 711</code> approach (same path).
+</div>
+
+<h3>Verification: Can qemu access the disks?</h3>
+<pre><code># Test if libvirt-qemu can read the disk directory
+sudo -u libvirt-qemu test -r /var/lib/libvirt/dc_lab/disks && echo "OK" || echo "BLOCKED"
+
+# Check parent directory permissions
+namei -l /var/lib/libvirt/dc_lab/disks
+
+# Expected output — all dirs must have at least 'x' in the "other" column:
+# drwxr-xr-x /
+# drwxr-xr-x var
+# drwxr-xr-x lib
+# drwxr-xr-x libvirt
+# drwxr-xr-x dc_lab
+# drwxr-xr-x disks</code></pre>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- 14. KUBECTL                                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<h2 id="kubectl-remote"><span class="step-num">14</span>Remote kubectl Access</h2>
 
 <p>After Kubernetes is deployed on <code>HostB12_1</code> (172.16.2.45), you can access it from your laptop:</p>
 
@@ -991,10 +1078,15 @@ HTTPS_PROXY=socks5://127.0.0.1:1080 kubectl get nodes</code></pre>
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- 14. TROUBLESHOOTING                                                    -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<h2 id="troubleshooting"><span class="step-num">14</span>Troubleshooting</h2>
+<h2 id="troubleshooting"><span class="step-num">15</span>Troubleshooting</h2>
 
 <table>
   <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+  <tr>
+    <td><code>Cannot access storage file '...qcow2' (as uid:64055, gid:993): Permission denied</code></td>
+    <td><code>libvirt-qemu</code> cannot traverse parent directories (e.g., <code>/root</code> has mode 700)</td>
+    <td>Move LAB_ROOT: <code>sudo mv /root/dc_lab /var/lib/libvirt/dc_lab</code> then <code>redeploy</code>.<br>Or quick fix: <code>sudo chmod 711 /root; sudo chmod -R o+rX /root/dc_lab/disks</code></td>
+  </tr>
   <tr>
     <td><code>ssh: connect to host 172.16.2.x: Connection timed out</code></td>
     <td>ProxyJump not configured or hypervisor unreachable</td>

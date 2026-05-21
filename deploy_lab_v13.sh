@@ -672,6 +672,34 @@ phase0_setup() {
     # --- Permissions (user-centric approach from v8+) ---
     sudo chown -R "$USER":"$USER" "$IMG_DIR" "$TMP_DIR" "$DISK_DIR" "$CLOUD_INIT_DIR" 2>/dev/null || true
     chmod -R u+rwX "$IMG_DIR" "$TMP_DIR" "$DISK_DIR" "$CLOUD_INIT_DIR" 2>/dev/null || true
+
+    # --- Ensure libvirt-qemu can traverse parent directories to reach disk/cloud-init ---
+    # libvirt-qemu (uid:64055) needs execute (search) permission on every directory
+    # in the path from / to $LAB_ROOT. Without this, virt-install fails with:
+    #   "Cannot access storage file ... Permission denied"
+    local dir="$LAB_ROOT"
+    while [[ "$dir" != "/" ]]; do
+        local perms
+        perms=$(stat -c '%a' "$dir" 2>/dev/null)
+        if [[ "${perms: -1}" -lt 1 ]]; then
+            log "    Granting traverse (o+x) on $dir for libvirt-qemu access"
+            sudo chmod o+x "$dir"
+        fi
+        dir=$(dirname "$dir")
+    done
+    # Also ensure the parent of LAB_ROOT itself is traversable (e.g., /root)
+    local lab_parent
+    lab_parent=$(dirname "$LAB_ROOT")
+    if [[ "$lab_parent" == "/root" ]] || [[ "$lab_parent" == "$HOME" && "$HOME" == "/root" ]]; then
+        local root_perms
+        root_perms=$(stat -c '%a' /root 2>/dev/null)
+        if [[ "${root_perms: -1}" -lt 1 ]]; then
+            log "    Granting traverse (o+x) on /root for libvirt-qemu access"
+            sudo chmod o+x /root
+        fi
+    fi
+    # Ensure LAB_ROOT subdirs are world-readable for qemu
+    sudo chmod -R o+rX "$DISK_DIR" "$CLOUD_INIT_DIR" 2>/dev/null || true
     ok "Permissions configured."
 }
 
@@ -2422,6 +2450,11 @@ main() {
                 echo "  Destroy when done:"
                 echo "    sudo virsh destroy $test_vm && sudo virsh undefine $test_vm --remove-all-storage"
             fi
+            ;;
+        tools)
+            # Download and install all platform tools (Helm, kubectl, Kubespray, etc.)
+            phase0_setup
+            phase_tools_download
             ;;
         *)
             echo "Usage: $0 [OPTIONS] <action> [vm1,vm2,...|group]"
