@@ -1,0 +1,28 @@
+---
+# sonic_base/tasks/preflight_v2.yml
+#
+# Fixed version: references preflight_connectivity_v2.yml which replaces
+# ansible.builtin.pause (incompatible with strategy: free) with a per-host
+# shell sleep command.
+#
+# To use: in deploy_day1.yml (or any playbook using strategy: free),
+# change the include from preflight.yml to preflight_v2.yml, OR
+# rename this file to preflight.yml after backing up the original.
+
+- name: "preflight | Connectivity phase"
+  ansible.builtin.include_tasks: preflight_connectivity_v2.yml
+
+- name: "preflight | Pin conservative SSH transport for remaining preflight"
+  ansible.builtin.set_fact:
+    ansible_pipelining: false
+    ansible_ssh_common_args: "{{ sonic_conservative_ssh_common_args }}"
+  when: sonic_use_conservative_ssh_transport | bool
+
+- name: "preflight | Reset SSH transport after connectivity phase"
+  ansible.builtin.meta: reset_connection
+
+- name: "preflight | Host prep phase"
+  ansible.builtin.include_tasks: preflight_host_prep.yml
+
+- name: "preflight | Identity phase"
+  ansible.builtin.include_tasks: preflight_identity.yml
