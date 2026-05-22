@@ -46,8 +46,13 @@
         tasks_from: preflight_v2.yml
       tags: [preflight, day1]
 
-  roles:
-    - role: sonic_fabric
+  tasks:
+    # FIX: Use main_v2.yml which includes exit_interfaces + downlink_interfaces
+    # in the unified link list so --limit border_leaves,exit_routers works
+    - name: "Phase 1 | Fabric integration (sonic_fabric)"
+      ansible.builtin.include_role:
+        name: sonic_fabric
+        tasks_from: main_v2.yml
       tags: [deploy, interfaces, bgp, day1]
 
   post_tasks:
