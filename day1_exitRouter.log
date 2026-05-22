@@ -1,0 +1,85 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day1.yml -i inventory/hosts.yml --limit border_leaves,exit_routers
+
+PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
+[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
+
+TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost] =>
+    changed: false
+    msg: automation_profile=win11_kvm (QEMU/KVM on Windows 11)
+ok: [Border_Leaf1 -> localhost] =>
+    changed: false
+    msg: automation_profile=win11_kvm (QEMU/KVM on Windows 11)
+
+TASK [Phase 0 | Pre-flight connectivity] ************************************************************************************************************************************************************************
+included: sonic_base for Border_Leaf2, Border_Leaf1
+
+TASK [sonic_base : preflight | Connectivity phase] **************************************************************************************************************************************************************
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_connectivity.yml for Border_Leaf1
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_connectivity.yml for Border_Leaf2
+
+TASK [sonic_base : preflight | Kill any stale SSH ControlMaster process] ****************************************************************************************************************************************
+ok: [Border_Leaf1 -> localhost]
+
+TASK [sonic_base : preflight | Kill any stale SSH ControlMaster process] ****************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost]
+
+TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
+ok: [Border_Leaf1 -> localhost]
+
+TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost]
+
+TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
+ok: [Border_Leaf1 -> localhost]
+
+TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_base : preflight | Confirm raw SSH is stable before Ansible session] ********************************************************************************************************************************
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=1)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=2)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=3)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=4)
+
+TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost]
+
+TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_base : preflight | Confirm raw SSH is stable before Ansible session] ********************************************************************************************************************************
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=1)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=2)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=3)
+included: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=4)
+
+TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
+ok: [Border_Leaf1 -> localhost]
+
+TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
+skipping: [Border_Leaf1]
+[ERROR]: The 'ansible.builtin.pause' module bypasses the host loop, which is currently not supported in the free strategy and would instead execute for every host in the inventory list.
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml:38:3
+
+36   when: not (_preflight_probe_ok | bool)
+37
+38 - name: "preflight | Wait before retrying {{ preflight_probe_name }}"
+     ^ column 3
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
