@@ -1,568 +1,73 @@
-venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_leaf_server_bgp.yml   -i inventory/hosts.yml
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day0.yml   -i inventory/hosts.yml --limit MonitorSrv
 
-PLAY [Configure Leaf-to-Server BGP Peers (eBGP Unnumbered)] *****************************************************************************************************************************************************
+PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
+skipping: no hosts matched
 
-TASK [preflight | Verify SSH to switch] *************************************************************************************************************************************************************************
-ok: [Leaf_L3]
-ok: [Leaf_L2]
-ok: [Border_Leaf2]
-ok: [Leaf_L1]
-ok: [Leaf_L4]
-ok: [Border_Leaf1]
+PLAY [Day-0 Base Provisioning — MikroTik Exit Routers] **********************************************************************************************************************************************************
+skipping: no hosts matched
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Leaf_L1]
+PLAY [Day-0 Base Provisioning — Ubuntu Servers] *****************************************************************************************************************************************************************
+[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Leaf_L2]
+TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
+ok: [MonitorSrv -> localhost] =>
+    changed: false
+    msg: automation_profile=win11_kvm (QEMU/KVM on Windows 11)
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Leaf_L3]
+TASK [Phase 0 | Pre-flight connectivity (Ubuntu server)] ********************************************************************************************************************************************************
+[ERROR]: YAML parsing failed: Colons in unquoted values must be followed by a non-space character.
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:149:15
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Leaf_L4]
+147     - automation_profile == 'real_hardware'
+148     - _root_free_gb.stdout is defined
+149       | Kernel: {{ ansible_kernel | default('unknown') }}
+                  ^ column 15
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Border_Leaf1]
 
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Border_Leaf2]
+For example:
 
-TASK [plan | Show server BGP peers to configure] ****************************************************************************************************************************************************************
-ok: [Leaf_L1] =>
-    msg: |-
-        === Leaf_L1 — Server BGP Peers ===
-        Local ASN: 65011
-        • Ethernet0 → Host12_1 (ASN 65101)
-        • Ethernet1 → Host12_2 (ASN 65102)
-        • Ethernet2 → Host12_3 (ASN 65103)
-ok: [Leaf_L2] =>
-    msg: |-
-        === Leaf_L2 — Server BGP Peers ===
-        Local ASN: 65012
-        • Ethernet0 → Host12_1 (ASN 65101)
-        • Ethernet1 → Host12_2 (ASN 65102)
-        • Ethernet2 → Host12_3 (ASN 65103)
-ok: [Leaf_L3] =>
-    msg: |-
-        === Leaf_L3 — Server BGP Peers ===
-        Local ASN: 65013
-        • Ethernet0 → Host34_1 (ASN 65104)
-        • Ethernet1 → Host34_2 (ASN 65105)
-ok: [Leaf_L4] =>
-    msg: |-
-        === Leaf_L4 — Server BGP Peers ===
-        Local ASN: 65014
-        • Ethernet0 → Host34_1 (ASN 65104)
-        • Ethernet2 → Host34_2 (ASN 65105)
-ok: [Border_Leaf1] =>
-    msg: |-
-        === Border_Leaf1 — Server BGP Peers ===
-        Local ASN: 65021
-        • Ethernet20 → HostB12_1 (ASN 65106)
-        • Ethernet22 → MonitorSrv (ASN 65108)
-        • Ethernet21 → HostB12_2 (ASN 65107)
-ok: [Border_Leaf2] =>
-    msg: |-
-        === Border_Leaf2 — Server BGP Peers ===
-        Local ASN: 65022
-        • Ethernet20 → HostB12_1 (ASN 65106)
-        • Ethernet21 → HostB12_2 (ASN 65107)
-        • Ethernet22 → MonitorSrv (ASN 65108)
+    raw: echo 'name: ansible'
 
-TASK [config | Ensure server downlink ports are admin-up] *******************************************************************************************************************************************************
-changed: [Leaf_L1] => (item=Ethernet0 → Host12_1)
-changed: [Leaf_L3] => (item=Ethernet0 → Host34_1)
-changed: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
-changed: [Leaf_L2] => (item=Ethernet0 → Host12_1)
-changed: [Leaf_L4] => (item=Ethernet0 → Host34_1)
-changed: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
-changed: [Leaf_L1] => (item=Ethernet1 → Host12_2)
-changed: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
-changed: [Leaf_L4] => (item=Ethernet2 → Host34_2)
-changed: [Leaf_L3] => (item=Ethernet1 → Host34_2)
-changed: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
-changed: [Leaf_L2] => (item=Ethernet1 → Host12_2)
-changed: [Leaf_L1] => (item=Ethernet2 → Host12_3)
-changed: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
-changed: [Leaf_L2] => (item=Ethernet2 → Host12_3)
-changed: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
+Should be:
 
-TASK [config | Enable IPv6 on server downlink interfaces] *******************************************************************************************************************************************************
-changed: [Leaf_L1] => (item=Ethernet0)
-changed: [Leaf_L2] => (item=Ethernet0)
-changed: [Leaf_L3] => (item=Ethernet0)
-changed: [Leaf_L4] => (item=Ethernet0)
-changed: [Border_Leaf2] => (item=Ethernet20)
-changed: [Border_Leaf1] => (item=Ethernet20)
-changed: [Leaf_L1] => (item=Ethernet1)
-changed: [Leaf_L2] => (item=Ethernet1)
-changed: [Leaf_L3] => (item=Ethernet1)
-changed: [Leaf_L4] => (item=Ethernet2)
-changed: [Border_Leaf2] => (item=Ethernet21)
-changed: [Border_Leaf1] => (item=Ethernet22)
-changed: [Leaf_L1] => (item=Ethernet2)
-changed: [Leaf_L2] => (item=Ethernet2)
-changed: [Border_Leaf2] => (item=Ethernet22)
-changed: [Border_Leaf1] => (item=Ethernet21)
+    raw: "echo 'name: ansible'"
 
-TASK [config | Wait for FRR/bgpd to be responsive] **************************************************************************************************************************************************************
-ok: [Leaf_L2]
-ok: [Leaf_L1]
-ok: [Leaf_L4]
-ok: [Leaf_L3]
-ok: [Border_Leaf1]
-ok: [Border_Leaf2]
 
-TASK [config | Add server BGP peers via vtysh] ******************************************************************************************************************************************************************
-changed: [Leaf_L2]
-changed: [Leaf_L3]
-changed: [Leaf_L1]
-changed: [Leaf_L4]
-changed: [Border_Leaf1]
-changed: [Border_Leaf2]
 
-TASK [config | vtysh output] ************************************************************************************************************************************************************************************
-skipping: [Leaf_L1]
-skipping: [Leaf_L2]
-skipping: [Leaf_L3]
-skipping: [Leaf_L4]
-skipping: [Border_Leaf1]
-skipping: [Border_Leaf2]
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day0.yml  -i inventory/hosts.yml -e "automation_profile=ubuntu_r620_kvm" --limit MonitorSrv
 
-TASK [verify | Wait for BGP sessions to form (30s)] *************************************************************************************************************************************************************
-Pausing for 30 seconds
-(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
-ok: [Leaf_L1]
+PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
+skipping: no hosts matched
 
-TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
-ok: [Leaf_L1]
-ok: [Leaf_L2]
-ok: [Leaf_L4]
-ok: [Border_Leaf1]
-ok: [Leaf_L3]
-ok: [Border_Leaf2]
+PLAY [Day-0 Base Provisioning — MikroTik Exit Routers] **********************************************************************************************************************************************************
+skipping: no hosts matched
 
-TASK [verify | Display BGP summary] *****************************************************************************************************************************************************************************
-ok: [Leaf_L1] =>
-    msg: |4-
+PLAY [Day-0 Base Provisioning — Ubuntu Servers] *****************************************************************************************************************************************************************
+[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
 
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
-        BGP table version 51
-        RIB entries 19, using 4256 bytes of memory
-        Peers 5, using 3623 KiB of memory
+TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
+ok: [MonitorSrv -> localhost] =>
+    changed: false
+    msg: automation_profile=ubuntu_r620_kvm (QEMU/KVM on Ubuntu for Dell R620)
 
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-        Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-        Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-        Ethernet64      4      65000      2261      2274        0    0    0 02:41:31            8       10 Spine_S2
-        Ethernet68      4      65000      2266      2275        0    0    0 02:41:43            8       10 Spine_S1
+TASK [Phase 0 | Pre-flight connectivity (Ubuntu server)] ********************************************************************************************************************************************************
+[ERROR]: YAML parsing failed: Colons in unquoted values must be followed by a non-space character.
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:149:15
 
-        Total number of neighbors 5
+147     - automation_profile == 'real_hardware'
+148     - _root_free_gb.stdout is defined
+149       | Kernel: {{ ansible_kernel | default('unknown') }}
+                  ^ column 15
 
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
 
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-        Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-        Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-        Ethernet64      4      65000      2261      2274        0    0    0 02:41:31            0        0 Spine_S2
-        Ethernet68      4      65000      2266      2275        0    0    0 02:41:43            0        0 Spine_S1
+For example:
 
-        Total number of neighbors 5
-ok: [Leaf_L2] =>
-    msg: |4-
+    raw: echo 'name: ansible'
 
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
-        BGP table version 41
-        RIB entries 19, using 4256 bytes of memory
-        Peers 5, using 3623 KiB of memory
+Should be:
 
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-        Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-        Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-        Ethernet64      4      65000      2234      2239        0    0    0 02:41:34            8       10 Spine_S2
-        Ethernet68      4      65000      2232      2237        0    0    0 02:41:38            8       10 Spine_S1
-
-        Total number of neighbors 5
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-        Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-        Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-        Ethernet64      4      65000      2234      2239        0    0    0 02:41:34            0        0 Spine_S2
-        Ethernet68      4      65000      2232      2237        0    0    0 02:41:38            0        0 Spine_S1
-
-        Total number of neighbors 5
-ok: [Leaf_L3] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
-        BGP table version 49
-        RIB entries 19, using 4256 bytes of memory
-        Peers 4, using 2898 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65104        16        33        0    0    0    never         Idle        0 Host34_1
-        Ethernet1       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
-        Ethernet120     4      65000      2258      2267        0    0    0 02:41:34            8       10 Spine_S2
-        Ethernet124     4      65000      2260      2269        0    0    0 02:41:38            8       10 Spine_S1
-
-        Total number of neighbors 4
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 4, using 2898 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65104        16        33        0    0    0    never         Idle        0 Host34_1
-        Ethernet1       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
-        Ethernet120     4      65000      2258      2267        0    0    0 02:41:34            0        0 Spine_S2
-        Ethernet124     4      65000      2260      2269        0    0    0 02:41:38            0        0 Spine_S1
-
-        Total number of neighbors 4
-ok: [Leaf_L4] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
-        BGP table version 39
-        RIB entries 19, using 4256 bytes of memory
-        Peers 4, using 2898 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65104        24        46        0    0    0    never         Idle        0 Host34_1
-        Ethernet2       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
-        Ethernet120     4      65000      2227      2230        0    0    0 02:41:36            8       10 Spine_S2
-        Ethernet124     4      65000      2227      2229        0    0    0 02:41:45            8       10 Spine_S1
-
-        Total number of neighbors 4
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 4, using 2898 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet0       4      65104        24        46        0    0    0    never         Idle        0 Host34_1
-        Ethernet2       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
-        Ethernet120     4      65000      2227      2230        0    0    0 02:41:36            0        0 Spine_S2
-        Ethernet124     4      65000      2227      2229        0    0    0 02:41:45            0        0 Spine_S1
-
-        Total number of neighbors 4
-ok: [Border_Leaf1] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-        BGP table version 14
-        RIB entries 19, using 4256 bytes of memory
-        Peers 6, using 4348 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       172       175        0    0    0 02:41:33            7       10 Spine_S2
-        Ethernet124     4      65000       172       174        0    0    0 02:41:46            7       10 Spine_S1
-        10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-        Total number of neighbors 6
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       172       175        0    0    0 02:41:33            0        0 Spine_S2
-        Ethernet124     4      65000       172       174        0    0    0 02:41:46            0        0 Spine_S1
-
-        Total number of neighbors 5
-ok: [Border_Leaf2] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-        BGP table version 16
-        RIB entries 19, using 4256 bytes of memory
-        Peers 6, using 4348 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       153       156        0    0    0 02:22:40            7       10 Spine_S2
-        Ethernet124     4      65000       153       155        0    0    0 02:22:40            7       10 Spine_S1
-        10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
-
-        Total number of neighbors 6
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       153       156        0    0    0 02:22:40            0        0 Spine_S2
-        Ethernet124     4      65000       153       155        0    0    0 02:22:40            0        0 Spine_S1
-
-        Total number of neighbors 5
-
-TASK [verify | Check specific server peer status] ***************************************************************************************************************************************************************
-ok: [Leaf_L1] => (item=Ethernet0 → Host12_1)
-ok: [Leaf_L2] => (item=Ethernet0 → Host12_1)
-ok: [Leaf_L4] => (item=Ethernet0 → Host34_1)
-ok: [Leaf_L3] => (item=Ethernet0 → Host34_1)
-ok: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
-ok: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
-ok: [Leaf_L1] => (item=Ethernet1 → Host12_2)
-ok: [Leaf_L2] => (item=Ethernet1 → Host12_2)
-ok: [Leaf_L4] => (item=Ethernet2 → Host34_2)
-ok: [Leaf_L3] => (item=Ethernet1 → Host34_2)
-ok: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
-ok: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
-ok: [Leaf_L1] => (item=Ethernet2 → Host12_3)
-ok: [Leaf_L2] => (item=Ethernet2 → Host12_3)
-ok: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
-ok: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
-
-TASK [verify | Server peer status summary] **********************************************************************************************************************************************************************
-ok: [Leaf_L1] =>
-    msg: |-
-        === Leaf_L1 Server BGP Peer Status ===
-        Ethernet0 → Host12_1 (AS 65101): Idle
-        Ethernet1 → Host12_2 (AS 65102): Idle
-        Ethernet2 → Host12_3 (AS 65103): Idle
-ok: [Leaf_L2] =>
-    msg: |-
-        === Leaf_L2 Server BGP Peer Status ===
-        Ethernet0 → Host12_1 (AS 65101): Idle
-        Ethernet1 → Host12_2 (AS 65102): Idle
-        Ethernet2 → Host12_3 (AS 65103): Idle
-ok: [Leaf_L3] =>
-    msg: |-
-        === Leaf_L3 Server BGP Peer Status ===
-        Ethernet0 → Host34_1 (AS 65104): Idle
-        Ethernet1 → Host34_2 (AS 65105): Idle
-ok: [Leaf_L4] =>
-    msg: |-
-        === Leaf_L4 Server BGP Peer Status ===
-        Ethernet0 → Host34_1 (AS 65104): Idle
-        Ethernet2 → Host34_2 (AS 65105): Idle
-ok: [Border_Leaf1] =>
-    msg: |-
-        === Border_Leaf1 Server BGP Peer Status ===
-        Ethernet20 → HostB12_1 (AS 65106): Idle
-        Ethernet22 → MonitorSrv (AS 65108): Idle
-        Ethernet21 → HostB12_2 (AS 65107): Idle
-ok: [Border_Leaf2] =>
-    msg: |-
-        === Border_Leaf2 Server BGP Peer Status ===
-        Ethernet20 → HostB12_1 (AS 65106): Idle
-        Ethernet21 → HostB12_2 (AS 65107): Idle
-        Ethernet22 → MonitorSrv (AS 65108): Idle
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Border_Leaf2               : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Leaf_L1                    : ok=11   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Leaf_L2                    : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Leaf_L3                    : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Leaf_L4                    : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+    raw: "echo 'name: ansible'"
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
-
-
-ubuntu@Host121:~$ ls -al /etc/netplan
-total 20
-drwxr-xr-x   2 root root 4096 May 23 14:04 .
-drwxr-xr-x 107 root root 4096 May 23 14:12 ..
--rw-------   1 root root   85 May 23 14:04 10-loopback.yaml
--rw-------   1 root root  179 May 23 14:04 20-fabric.yaml
--rw-------   1 root root  116 May 21 02:10 50-cloud-init.yaml
-ubuntu@Host121:~$ cat /etc/netplan/10-loopback.yaml
-cat: /etc/netplan/10-loopback.yaml: Permission denied
-ubuntu@Host121:~$ sudo cat /etc/netplan/10-loopback.yaml
-network:
-  version: 2
-  ethernets:
-    lo:
-      addresses:
-        - 10.10.255.1/32
-ubuntu@Host121:~$ sudo cat /etc/netplan/20-loopback.yaml
-cat: /etc/netplan/20-loopback.yaml: No such file or directory
-ubuntu@Host121:~$ sudo cat /etc/netplan/20-fabric.yaml
-network:
-  version: 2
-  ethernets:
-    enp2s0:
-      dhcp4: false
-      link-local: [ipv6]
-      mtu: 9000
-    enp3s0:
-      dhcp4: false
-      link-local: [ipv6]
-      mtu: 9000
-ubuntu@Host121:~$ frr vtysh
-Command 'frr' not found, did you mean:
-  command 'frm' from deb mailutils (1:3.16-1build1)
-  command 'rr' from deb rr (5.7.0-2ubuntu0.24.04.1)
-Try: apt install <deb name>
-ubuntu@Host121:~$ sudo vtysh
-
-Hello, this is FRRouting (version 8.4.4).
-Copyright 1996-2005 Kunihiro Ishiguro, et al.
-
-Host121# show bgp summary
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
-BGP table version 2
-RIB entries 5, using 960 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-eth1            4      65011         0         0        0    0    0    never         Idle        0 Leaf_L1
-eth2            4      65012         0         0        0    0    0    never         Idle        0 Leaf_L2
-
-Total number of neighbors 2
-Host121# show bgp summary
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
-BGP table version 2
-RIB entries 5, using 960 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-eth1            4      65011         0         0        0    0    0    never         Idle        0 Leaf_L1
-eth2            4      65012         0         0        0    0    0    never         Idle        0 Leaf_L2
-
-Total number of neighbors 2
-Host121#
-
-
-admin@LeafL1:~$ show interfaces status
-sudo: unable to resolve host LeafL1: Temporary failure in name resolution
-  Interface            Lanes       Speed    MTU    FEC        Alias    Vlan    Oper    Admin    Type    Asym PFC
------------  ---------------  ----------  -----  -----  -----------  ------  ------  -------  ------  ----------
-  Ethernet0               13  4294967.3G   9100   none     tenGigE0  routed      up       up     N/A         N/A
-  Ethernet1               14  4294967.3G   9100   none     tenGigE1  routed      up       up     N/A         N/A
-  Ethernet2               15  4294967.3G   9100   none     tenGigE2  routed      up       up     N/A         N/A
-  Ethernet3               16         10G   9100   none     tenGigE3  routed    down     down     N/A         N/A
-  Ethernet4               21         10G   9100   none     tenGigE4  routed    down     down     N/A         N/A
-  Ethernet5               22         10G   9100   none     tenGigE5  routed    down     down     N/A         N/A
-  Ethernet6               23         10G   9100   none     tenGigE6  routed    down     down     N/A         N/A
-  Ethernet7               24         10G   9100   none     tenGigE7  routed    down     down     N/A         N/A
-  Ethernet8               25         10G   9100   none     tenGigE8  routed    down     down     N/A         N/A
-  Ethernet9               26         10G   9100   none     tenGigE9  routed    down     down     N/A         N/A
- Ethernet10               27         10G   9100   none    tenGigE10  routed    down     down     N/A         N/A
- Ethernet11               28         10G   9100   none    tenGigE11  routed    down     down     N/A         N/A
- Ethernet12               29         10G   9100   none    tenGigE12  routed    down     down     N/A         N/A
- Ethernet13               30         10G   9100   none    tenGigE13  routed    down     down     N/A         N/A
- Ethernet14               31         10G   9100   none    tenGigE14  routed    down     down     N/A         N/A
- Ethernet15               32         10G   9100   none    tenGigE15  routed    down     down     N/A         N/A
- Ethernet16               45         10G   9100   none    tenGigE16  routed    down     down     N/A         N/A
- Ethernet17               46         10G   9100   none    tenGigE17  routed    down     down     N/A         N/A
- Ethernet18               47         10G   9100   none    tenGigE18  routed    down     down     N/A         N/A
- Ethernet19               48         10G   9100   none    tenGigE19  routed    down     down     N/A         N/A
- Ethernet20               49         10G   9100   none    tenGigE20  routed    down     down     N/A         N/A
- Ethernet21               50         10G   9100   none    tenGigE21  routed    down     down     N/A         N/A
- Ethernet22               51         10G   9100   none    tenGigE22  routed    down     down     N/A         N/A
- Ethernet23               52         10G   9100   none    tenGigE23  routed    down     down     N/A         N/A
- Ethernet24               53         10G   9100   none    tenGigE24  routed    down     down     N/A         N/A
- Ethernet25               54         10G   9100   none    tenGigE25  routed    down     down     N/A         N/A
- Ethernet26               55         10G   9100   none    tenGigE26  routed    down     down     N/A         N/A
- Ethernet27               56         10G   9100   none    tenGigE27  routed    down     down     N/A         N/A
- Ethernet28               57         10G   9100   none    tenGigE28  routed    down     down     N/A         N/A
- Ethernet29               58         10G   9100   none    tenGigE29  routed    down     down     N/A         N/A
- Ethernet30               59         10G   9100   none    tenGigE30  routed    down     down     N/A         N/A
- Ethernet31               60         10G   9100   none    tenGigE31  routed    down     down     N/A         N/A
- Ethernet32               61         10G   9100   none    tenGigE32  routed    down     down     N/A         N/A
- Ethernet33               62         10G   9100   none    tenGigE33  routed    down     down     N/A         N/A
- Ethernet34               63         10G   9100   none    tenGigE34  routed    down     down     N/A         N/A
- Ethernet35               64         10G   9100   none    tenGigE35  routed    down     down     N/A         N/A
- Ethernet36               65         10G   9100   none    tenGigE36  routed    down     down     N/A         N/A
- Ethernet37               66         10G   9100   none    tenGigE37  routed    down     down     N/A         N/A
- Ethernet38               67         10G   9100   none    tenGigE38  routed    down     down     N/A         N/A
- Ethernet39               68         10G   9100   none    tenGigE39  routed    down     down     N/A         N/A
- Ethernet40               69         10G   9100   none    tenGigE40  routed    down     down     N/A         N/A
- Ethernet41               70         10G   9100   none    tenGigE41  routed    down     down     N/A         N/A
- Ethernet42               71         10G   9100   none    tenGigE42  routed    down     down     N/A         N/A
- Ethernet43               72         10G   9100   none    tenGigE43  routed    down     down     N/A         N/A
- Ethernet44               73         10G   9100   none    tenGigE44  routed    down     down     N/A         N/A
- Ethernet45               74         10G   9100   none    tenGigE45  routed    down     down     N/A         N/A
- Ethernet46               75         10G   9100   none    tenGigE46  routed    down     down     N/A         N/A
- Ethernet47               76         10G   9100   none    tenGigE47  routed    down     down     N/A         N/A
- Ethernet48     97,98,99,100         10G   9100   none  fortyGigE48  routed    down     down     N/A         N/A
- Ethernet52  101,102,103,104         10G   9100   none  fortyGigE52  routed    down     down     N/A         N/A
- Ethernet56      81,82,83,84         10G   9100   none  fortyGigE56  routed    down     down     N/A         N/A
- Ethernet60  105,106,107,108         10G   9100   none  fortyGigE60  routed    down     down     N/A         N/A
- Ethernet64              109  4294967.3G   9100   none  fortyGigE64  routed      up       up     N/A         N/A
- Ethernet68               77  4294967.3G   9100   none  fortyGigE68  routed      up       up     N/A         N/A
-admin@LeafL1:~$ vtysh
-
-Hello, this is FRRouting (version 8.5.4).
-Copyright 1996-2005 Kunihiro Ishiguro, et al.
-
-LeafL1# show bgp summary
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
-BGP table version 51
-RIB entries 19, using 4256 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-Ethernet64      4      65000      2262      2275        0    0    0 02:42:18            8       10 Spine_S2
-Ethernet68      4      65000      2267      2276        0    0    0 02:42:30            8       10 Spine_S1
-
-Total number of neighbors 5
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65101         0         0        0    0    0    never         Idle        0 Host12_1
-Ethernet1       4      65102         0         0        0    0    0    never         Idle        0 Host12_2
-Ethernet2       4      65103         0         0        0    0    0    never         Idle        0 Host12_3
-Ethernet64      4      65000      2262      2275        0    0    0 02:42:18            0        0 Spine_S2
-Ethernet68      4      65000      2267      2276        0    0    0 02:42:30            0        0 Spine_S1
-
-Total number of neighbors 5
-LeafL1#
