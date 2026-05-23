@@ -123,3 +123,18 @@ ssh ubuntu@Host34_1 "ping6 -c 2 -I enp2s0 ff02::1%enp2s0 2>&1 | tail -5; echo '-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@-6th-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ssh admin@Leaf_L3 "show interfaces status Ethernet0; show interfaces status Ethernet4; echo '---'; ip link show eth1; echo '---'; ip -6 addr show Ethernet0; echo '---'; ip -6 neigh show dev Ethernet0; echo '---'; sonic-db-cli CONFIG_DB HGETALL 'PORT|Ethernet0'"
+
+If breakout was applied and broke the VS SAI, try reverting it:
+
+ssh admin@Leaf_L3 "sudo config interface breakout Ethernet0 '1x40G[10G]' -y"
+ssh admin@Leaf_L4 "sudo config interface breakout Ethernet0 '1x40G[10G]' -y"
+
+
+Or if that doesn't work, restart syncd to rebuild the internal bridges:
+
+ssh admin@Leaf_L3 "sudo systemctl restart syncd"
+ssh admin@Leaf_L4 "sudo systemctl restart syncd"
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
