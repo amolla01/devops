@@ -110,3 +110,16 @@ ssh admin@Border_Leaf2 "docker exec bgp vtysh -c 'conf t' -c 'router bgp 65022' 
 ssh ubuntu@Host34_1 "systemctl is-active frr; sudo vtysh -c 'show bgp summary'; ip -6 addr show dev enp2s0; ip -6 addr show dev enp3s0; sudo vtysh -c 'show run' | grep -A5 'neighbor enp'"
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
+
+############################-5th-#######################################
+# Check MonitorSrv bridge wiring — are BL1 and BL2 on the same bridge?
+ssh nh1221@R620 "brctl show br-MS-BL1 2>/dev/null; echo '---'; brctl show br-MS-BL2 2>/dev/null; echo '---'; virsh domiflist MonitorSrv"
+
+# Check Host34_1 bridge — who is actually on it?
+ssh nh1221@R620 "brctl show br-H341-L3; echo '---'; brctl show br-H341-L4"
+
+# Test L2 reachability from Host34_1
+ssh ubuntu@Host34_1 "ping6 -c 2 -I enp2s0 ff02::1%enp2s0 2>&1 | tail -5; echo '---'; ip -6 neigh show dev enp2s0"
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
