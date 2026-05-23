@@ -1,41 +1,3 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day0.yml   -i inventory/hosts.yml --limit MonitorSrv
-
-PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY [Day-0 Base Provisioning — MikroTik Exit Routers] **********************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY [Day-0 Base Provisioning — Ubuntu Servers] *****************************************************************************************************************************************************************
-[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
-
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [MonitorSrv -> localhost] =>
-    changed: false
-    msg: automation_profile=win11_kvm (QEMU/KVM on Windows 11)
-
-TASK [Phase 0 | Pre-flight connectivity (Ubuntu server)] ********************************************************************************************************************************************************
-[ERROR]: YAML parsing failed: Colons in unquoted values must be followed by a non-space character.
-Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:149:15
-
-147     - automation_profile == 'real_hardware'
-148     - _root_free_gb.stdout is defined
-149       | Kernel: {{ ansible_kernel | default('unknown') }}
-                  ^ column 15
-
-
-For example:
-
-    raw: echo 'name: ansible'
-
-Should be:
-
-    raw: "echo 'name: ansible'"
-
-
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day0.yml  -i inventory/hosts.yml -e "automation_profile=ubuntu_r620_kvm" --limit MonitorSrv
 
 PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
@@ -53,21 +15,383 @@ ok: [MonitorSrv -> localhost] =>
     msg: automation_profile=ubuntu_r620_kvm (QEMU/KVM on Ubuntu for Dell R620)
 
 TASK [Phase 0 | Pre-flight connectivity (Ubuntu server)] ********************************************************************************************************************************************************
-[ERROR]: YAML parsing failed: Colons in unquoted values must be followed by a non-space character.
-Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:149:15
+included: server_base for MonitorSrv
 
-147     - automation_profile == 'real_hardware'
-148     - _root_free_gb.stdout is defined
-149       | Kernel: {{ ansible_kernel | default('unknown') }}
-                  ^ column 15
+TASK [server_base : preflight | Wait for SSH port 22 to accept connections] *************************************************************************************************************************************
+ok: [MonitorSrv -> localhost]
 
+TASK [server_base : preflight | Probe SSH connectivity] *********************************************************************************************************************************************************
+ok: [MonitorSrv -> localhost]
 
-For example:
+TASK [server_base : preflight | Assert SSH connectivity succeeded] **********************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    changed: false
+    msg: SSH to MonitorSrv (172.16.2.47) — OK
 
-    raw: echo 'name: ansible'
+TASK [server_base : preflight | Gather OS facts] ****************************************************************************************************************************************************************
+ok: [MonitorSrv]
 
-Should be:
+TASK [server_base : preflight | Display server identity] ********************************************************************************************************************************************************
+[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+[DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:79:10
 
-    raw: "echo 'name: ansible'"
+77 - name: "preflight | Display server identity"
+78   ansible.builtin.debug:
+79     msg: >-
+            ^ column 10
+
+Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
+
+ok: [MonitorSrv] =>
+    msg: 'MonitorSrv: Ubuntu 24.04'
+
+TASK [server_base : preflight_hw | Check BMC/iDRAC reachability] ************************************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [server_base : preflight_hw | Report BMC status] ***********************************************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [server_base : preflight_hw | Validate minimum CPU cores (real hardware)] **********************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [server_base : preflight_hw | Validate minimum RAM (real hardware)] ****************************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [server_base : preflight_hw | Validate minimum disk space on root (real hardware)] *************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [server_base : preflight_hw | Assert root partition has sufficient space] **********************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [Phase 1 | Day-0 provisioning (Ubuntu server)] *************************************************************************************************************************************************************
+included: server_base for MonitorSrv
+
+TASK [server_base : day0 | Derive valid Linux hostname] *********************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [server_base : day0 | Set hostname] ************************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Update /etc/hosts with hostname] *****************************************************************************************************************************************************
+[WARNING]: Module remote_tmp /root/.ansible/tmp did not exist and was created with a mode of 0700, this may cause issues when running as another user. To avoid this, create the remote_tmp dir with the correct permissions manually
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Set timezone to UTC] *****************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Install essential packages] **********************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Configure Chrony NTP] ****************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Configure DNS resolvers] *************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Disable password authentication in sshd] *********************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Disable root login in sshd] **********************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [server_base : day0 | Enable and start LLDP daemon] ********************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [server_base : day0 | Deployment summary] ******************************************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    msg: |-
+        ============================================================
+        Day-0 Deployment Complete: monitorsrv (Ubuntu Server)
+        ============================================================
+        Inventory name:  MonitorSrv
+        Linux hostname:  monitorsrv
+        PXE IP:       N/A
+        Bond IP:      10.10.100.3/24
+        Loopback:     10.10.255.102/32
+        NTP:          0.pool.ntp.org, 1.pool.ntp.org
+        DNS:          8.8.8.8, 8.8.4.4
+        Packages:     chrony, frr, lldpd, jq, net-tools
+        ============================================================
+        NEXT: deploy_day1.yml for Netplan + FRR BGP configuration
+        ============================================================
+
+RUNNING HANDLER [server_base : restart chrony] ******************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+RUNNING HANDLER [server_base : restart systemd-resolved] ********************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+RUNNING HANDLER [server_base : restart sshd] ********************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+MonitorSrv                 : ok=22   changed=11   unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ssh-copy-id ubuntu@MonitorSrv^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_server_networking.yml  -i inventory/hosts.yml --limit MonitorSrv -e "server_http_proxy='' server_https_proxy=''"
+
+PLAY [Deploy Server Fabric Networking (Netplan + FRR + Loopback)] ***********************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [preflight | Verify SSH connectivity] **********************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [preflight | Detect actual interface names] ****************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [preflight | Display detected interfaces] ******************************************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+
+TASK [virtio_fix | Disable TX checksum offload on fabric interfaces] ********************************************************************************************************************************************
+ok: [MonitorSrv] => (item=enp2s0)
+ok: [MonitorSrv] => (item=enp3s0)
+
+TASK [loopback | Add loopback IP to lo interface] ***************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [loopback | Deploy persistent loopback netplan] ************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [bond | Create bond0 for dual-homed fabric links] **********************************************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [bond | Apply bond configuration] **************************************************************************************************************************************************************************
+skipping: [MonitorSrv]
+
+TASK [netplan | Deploy fabric interface configuration] **********************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [netplan | Apply netplan configuration] ********************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [netplan | Bring fabric interfaces up] *********************************************************************************************************************************************************************
+ok: [MonitorSrv] => (item=enp2s0)
+ok: [MonitorSrv] => (item=enp3s0)
+
+TASK [preflight_hw | Verify fabric interfaces exist on host] ****************************************************************************************************************************************************
+skipping: [MonitorSrv] => (item=enp2s0)
+skipping: [MonitorSrv] => (item=enp3s0)
+skipping: [MonitorSrv]
+
+TASK [preflight_hw | Verify MTU 9000 support on fabric NICs] ****************************************************************************************************************************************************
+skipping: [MonitorSrv] => (item=enp2s0)
+skipping: [MonitorSrv] => (item=enp3s0)
+skipping: [MonitorSrv]
+
+TASK [mgmt_route | Read existing cloud-init netplan] ************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [mgmt_route | Detect management gateway] *******************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [mgmt_route | Deploy management netplan with high metric] **************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [mgmt_route | Set management default route metric immediately] *********************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [frr | Install FRR packages] *******************************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [frr | Enable BGP and Zebra daemons] ***********************************************************************************************************************************************************************
+changed: [MonitorSrv] => (item=bgpd)
+changed: [MonitorSrv] => (item=zebra)
+
+TASK [frr | Deploy FRR configuration] ***************************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+TASK [frr | Ensure FRR is enabled and running] ******************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [verify | Check loopback IP] *******************************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [verify | Display BGP status] ******************************************************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    msg: |-
+        === MonitorSrv Network Status ===
+        Loopback: 10.10.255.102/32
+        Router-ID: 10.10.255.102
+        ASN: 65108
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Border_Leaf1, Border_Leaf2
+        BGP output:
+
+RUNNING HANDLER [restart frr] ***********************************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+RUNNING HANDLER [apply netplan] *********************************************************************************************************************************************************************************
+changed: [MonitorSrv]
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+MonitorSrv                 : ok=23   changed=9    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_leaf_server_bgp.yml  -i inventory/hosts.yml --limit Border_Leaf1,Border_Leaf2
+
+PLAY [Configure Leaf-to-Server BGP Peers (eBGP Unnumbered)] *****************************************************************************************************************************************************
+
+TASK [preflight | Verify SSH to switch] *************************************************************************************************************************************************************************
+ok: [Border_Leaf1]
+ok: [Border_Leaf2]
+
+TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [plan | Show server BGP peers to configure] ****************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |-
+        === Border_Leaf1 — Server BGP Peers ===
+        Local ASN: 65021
+        • Ethernet20 → HostB12_1 (ASN 65106)
+        • Ethernet22 → MonitorSrv (ASN 65108)
+        • Ethernet21 → HostB12_2 (ASN 65107)
+ok: [Border_Leaf2] =>
+    msg: |-
+        === Border_Leaf2 — Server BGP Peers ===
+        Local ASN: 65022
+        • Ethernet20 → HostB12_1 (ASN 65106)
+        • Ethernet21 → HostB12_2 (ASN 65107)
+        • Ethernet22 → MonitorSrv (ASN 65108)
+
+TASK [config | Ensure server downlink ports are admin-up] *******************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
+changed: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
+changed: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
+changed: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
+changed: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
+changed: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
+
+TASK [config | Enable IPv6 on server downlink interfaces] *******************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet20)
+changed: [Border_Leaf2] => (item=Ethernet20)
+changed: [Border_Leaf1] => (item=Ethernet22)
+changed: [Border_Leaf2] => (item=Ethernet21)
+changed: [Border_Leaf1] => (item=Ethernet21)
+changed: [Border_Leaf2] => (item=Ethernet22)
+
+TASK [config | Wait for FRR/bgpd to be responsive] **************************************************************************************************************************************************************
+ok: [Border_Leaf1]
+ok: [Border_Leaf2]
+
+TASK [config | Add server BGP peers via vtysh] ******************************************************************************************************************************************************************
+changed: [Border_Leaf2]
+changed: [Border_Leaf1]
+
+TASK [config | vtysh output] ************************************************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+skipping: [Border_Leaf2]
+
+TASK [verify | Wait for BGP sessions to form (30s)] *************************************************************************************************************************************************************
+Pausing for 30 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [Border_Leaf1]
+
+TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
+ok: [Border_Leaf2]
+ok: [Border_Leaf1]
+
+TASK [verify | Display BGP summary] *****************************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |4-
+
+        IPv4 Unicast Summary (VRF default):
+        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+        BGP table version 37
+        RIB entries 29, using 6496 bytes of memory
+        Peers 6, using 4348 KiB of memory
+
+        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+        Ethernet20      4      65106       225       232        0    0    0 02:55:56            4       15 HostB12_1
+        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+        Ethernet120     4      65000       398       402        0    0    0 06:09:19           11       15 Spine_S2
+        Ethernet124     4      65000       398       401        0    0    0 06:09:32           11       15 Spine_S1
+        10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+        Total number of neighbors 6
+
+        IPv6 Unicast Summary (VRF default):
+        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+        BGP table version 0
+        RIB entries 0, using 0 bytes of memory
+        Peers 5, using 3623 KiB of memory
+
+        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+        Ethernet20      4      65106       225       232        0    0    0 02:55:56        NoNeg    NoNeg HostB12_1
+        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+        Ethernet120     4      65000       398       402        0    0    0 06:09:19            0        0 Spine_S2
+        Ethernet124     4      65000       398       401        0    0    0 06:09:32            0        0 Spine_S1
+
+        Total number of neighbors 5
+ok: [Border_Leaf2] =>
+    msg: |4-
+
+        IPv4 Unicast Summary (VRF default):
+        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+        BGP table version 38
+        RIB entries 29, using 6496 bytes of memory
+        Peers 6, using 4348 KiB of memory
+
+        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+        Ethernet20      4      65106       232       235        0    0    0 02:55:56           13       15 HostB12_1
+        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+        Ethernet120     4      65000       379       383        0    0    0 05:50:26           12       15 Spine_S2
+        Ethernet124     4      65000       379       382        0    0    0 05:50:26           12       15 Spine_S1
+        10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+        Total number of neighbors 6
+
+        IPv6 Unicast Summary (VRF default):
+        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+        BGP table version 0
+        RIB entries 0, using 0 bytes of memory
+        Peers 5, using 3623 KiB of memory
+
+        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+        Ethernet20      4      65106       232       235        0    0    0 02:55:56        NoNeg    NoNeg HostB12_1
+        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+        Ethernet120     4      65000       379       383        0    0    0 05:50:26            0        0 Spine_S2
+        Ethernet124     4      65000       379       382        0    0    0 05:50:26            0        0 Spine_S1
+
+        Total number of neighbors 5
+
+TASK [verify | Check specific server peer status] ***************************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
+ok: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
+ok: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
+ok: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
+ok: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
+ok: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
+
+TASK [verify | Server peer status summary] **********************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |-
+        === Border_Leaf1 Server BGP Peer Status ===
+        Ethernet20 → HostB12_1 (AS 65106): Established
+        Ethernet22 → MonitorSrv (AS 65108): Idle
+        Ethernet21 → HostB12_2 (AS 65107): Idle
+ok: [Border_Leaf2] =>
+    msg: |-
+        === Border_Leaf2 Server BGP Peer Status ===
+        Ethernet20 → HostB12_1 (AS 65106): Established
+        Ethernet21 → HostB12_2 (AS 65107): Idle
+        Ethernet22 → MonitorSrv (AS 65108): Idle
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Border_Leaf1               : ok=11   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Border_Leaf2               : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
