@@ -1,103 +1,263 @@
-C:\Users\nh1221>wsl -d Ubuntu-24.04
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ nc -zv 172.16.2.98 22
-^C
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh admin@172.16.2.98
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
-
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
-
-
-Press F1 for help
-
-[admin@Exit_Router1] > quit
-interrupted
-Connection to 172.16.2.98 closed.
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd data-center/
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ source venv/bin/activate
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd claude-opus-4.6-v1/
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_exit_routers.yml -i inventory/hosts.yml
+[WARNING]: Found duplicate mapping key 'changed_when'.
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_exit_routers.yml:98:7
+
+96       until: _identity.rc == 0
+97       changed_when: false
+98       changed_when: false
+         ^ column 7
+
+Using last defined value only.
+
 
 PLAY [Deploy MikroTik CHR Exit Routers] *************************************************************************************************************************************************************************
 
-TASK [preflight | Wait for SSH port] ****************************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.98:22
-Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_exit_routers.yml:90:7
+TASK [preflight | Verify SSH connectivity to RouterOS] **********************************************************************************************************************************************************
+ok: [Exit_Router1]
+ok: [Exit_Router2]
 
-88     # PHASE 1: PREFLIGHT
-89     # ═══════════════════════════════════════════════════════════════════════
-90     - name: "preflight | Wait for SSH port"
-         ^ column 7
+TASK [preflight | Get RouterOS version] *************************************************************************************************************************************************************************
+ok: [Exit_Router1]
+ok: [Exit_Router2]
 
-fatal: [Exit_Router1 -> localhost]: FAILED! =>
-    changed: false
-    elapsed: 121
-    msg: Timeout when waiting for 172.16.2.98:22
-[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.99:22
-Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_exit_routers.yml:90:7
+TASK [preflight | Report] ***************************************************************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: |-
+        Exit_Router2 (172.16.2.99): SSH OK
+                          version: 7.16 (stable)
+                      free-memory: 799.6MiB
+                        cpu-count: 1
+ok: [Exit_Router1] =>
+    msg: |-
+        Exit_Router1 (172.16.2.98): SSH OK
+                          version: 7.16 (stable)
+                      free-memory: 798.7MiB
+                        cpu-count: 1
 
-88     # PHASE 1: PREFLIGHT
-89     # ═══════════════════════════════════════════════════════════════════════
-90     - name: "preflight | Wait for SSH port"
-         ^ column 7
+TASK [base | Set system identity (hostname)] ********************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
 
-fatal: [Exit_Router2 -> localhost]: FAILED! =>
-    changed: false
-    elapsed: 121
-    msg: Timeout when waiting for 172.16.2.99:22
+TASK [base | Configure NTP client] ******************************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [base | Configure DNS] *************************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [base | Disable unnecessary services (security hardening)] *************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [base | Enable SSH only] ***********************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [base | Set router-id for BGP/OSPF] ************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [base | Configure management IP (if not already set by DHCP)] **********************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [base | Set default gateway for management] ****************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [bgp | Configure fabric-facing interface] ******************************************************************************************************************************************************************
+changed: [Exit_Router1] => (item=sfp-sfpplus1)
+changed: [Exit_Router2] => (item=sfp-sfpplus1)
+
+TASK [bgp | Add IP address to fabric interface] *****************************************************************************************************************************************************************
+changed: [Exit_Router1] => (item=sfp-sfpplus1 = 10.0.253.1/31)
+changed: [Exit_Router2] => (item=sfp-sfpplus1 = 10.0.253.3/31)
+
+TASK [bgp | Create BGP instance] ********************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [bgp | Configure BGP connection to border-leaf] ************************************************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
+changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
+
+TASK [bgp | Configure BGP input filter (honor GRACEFUL_SHUTDOWN)] ***********************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [bgp | Configure BGP output filter (advertise default route)] **********************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [bgp | Apply filters to BGP connections] *******************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [bgp | Add loopback address for router-id reachability] ****************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [bgp | Configure default route redistribution into BGP] ****************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [nat | Configure source NAT (masquerade) for fabric traffic] ***********************************************************************************************************************************************
+changed: [Exit_Router2] => (item=SNAT 10.0.0.0/8 → ether1)
+changed: [Exit_Router1] => (item=SNAT 10.0.0.0/8 → ether1)
+changed: [Exit_Router1] => (item=SNAT 172.16.2.0/24 → ether1)
+changed: [Exit_Router2] => (item=SNAT 172.16.2.0/24 → ether1)
+
+TASK [firewall | Accept established/related connections] ********************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Accept ICMP] ***********************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Accept SSH from management subnet] *************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [firewall | Accept BGP from fabric peers] ******************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Accept BFD from fabric peers] ******************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Drop all other input] **************************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Accept forward established/related] ************************************************************************************************************************************************************
+changed: [Exit_Router2]
+changed: [Exit_Router1]
+
+TASK [firewall | Accept forward from fabric to external] ********************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [firewall | Drop invalid forward] **************************************************************************************************************************************************************************
+changed: [Exit_Router1]
+changed: [Exit_Router2]
+
+TASK [verify | Check BGP sessions] ******************************************************************************************************************************************************************************
+ok: [Exit_Router1]
+ok: [Exit_Router2]
+
+TASK [verify | Check BGP received routes] ***********************************************************************************************************************************************************************
+ok: [Exit_Router1]
+ok: [Exit_Router2]
+
+TASK [verify | Check interface status] **************************************************************************************************************************************************************************
+ok: [Exit_Router2]
+ok: [Exit_Router1]
+
+TASK [verify | Check NAT rules] *********************************************************************************************************************************************************************************
+ok: [Exit_Router2]
+ok: [Exit_Router1]
+
+TASK [verify | Check firewall filter rules] *********************************************************************************************************************************************************************
+ok: [Exit_Router1]
+ok: [Exit_Router2]
+
+TASK [verify | Ping border-leaf neighbor IP] ********************************************************************************************************************************************************************
+ok: [Exit_Router1] => (item=ping 10.0.253.0 (Border_Leaf1))
+ok: [Exit_Router2] => (item=ping 10.0.253.2 (Border_Leaf2))
+
+TASK [verify | Display deployment status] ***********************************************************************************************************************************************************************
+ok: [Exit_Router1] =>
+    msg: |-
+        ═══════════════════════════════════════════════════════════════════
+        Exit_Router1 (172.16.2.98) — Exit Router Deployment Status
+        ═══════════════════════════════════════════════════════════════════
+
+        BGP Sessions:
+        Flags: E - established
+
+        BGP Routes Received:
+
+        Active Interfaces:
+        Flags: R - RUNNING
+        Columns: NAME, TYPE, ACTUAL-MTU, MAC-ADDRESS
+        #   NAME    TYPE      ACTUAL-MTU  MAC-ADDRESS
+        0 R ether1  ether           1500  52:54:00:09:95:29
+        1 R ether2  ether           1500  52:54:00:0F:CD:FB
+        2 R lo      loopback       65536  00:00:00:00:00:00
+
+        NAT Rules: 8 configured
+        Firewall Rules: 30 configured
+
+        Peer Connectivity:
+          10.0.253.0 (Border_Leaf1): OK
+        ═══════════════════════════════════════════════════════════════════
+ok: [Exit_Router2] =>
+    msg: |-
+        ═══════════════════════════════════════════════════════════════════
+        Exit_Router2 (172.16.2.99) — Exit Router Deployment Status
+        ═══════════════════════════════════════════════════════════════════
+
+        BGP Sessions:
+        Flags: E - established
+
+        BGP Routes Received:
+
+        Active Interfaces:
+        Flags: R - RUNNING
+        Columns: NAME, TYPE, ACTUAL-MTU, MAC-ADDRESS
+        #   NAME    TYPE      ACTUAL-MTU  MAC-ADDRESS
+        0 R ether1  ether           1500  52:54:00:41:CB:8D
+        1 R ether2  ether           1500  52:54:00:90:B6:46
+        2 R lo      loopback       65536  00:00:00:00:00:00
+
+        NAT Rules: 8 configured
+        Firewall Rules: 30 configured
+
+        Peer Connectivity:
+          10.0.253.2 (Border_Leaf2): OK
+        ═══════════════════════════════════════════════════════════════════
+
+PLAY [Exit Router Deployment Summary] ***************************************************************************************************************************************************************************
+
+TASK [Print deployment summary] *********************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        ═══════════════════════════════════════════════════════════════════
+        MikroTik CHR Exit Router Deployment Complete
+        ═══════════════════════════════════════════════════════════════════
+
+        Routers Deployed:
+          Exit_Router1: 172.16.2.98 (AS65253)
+            Peer: Border_Leaf1 (AS65021)
+            Link: 10.0.253.1/31
+          Exit_Router2: 172.16.2.99 (AS65254)
+            Peer: Border_Leaf2 (AS65022)
+            Link: 10.0.253.3/31
+
+        Features Configured:
+          ✓ System identity, NTP, DNS
+          ✓ Security hardening (SSH-only, disabled services)
+          ✓ BGP eBGP peering with border-leaves
+          ✓ GRACEFUL_SHUTDOWN community honored (RFC 8326)
+          ✓ Default route origination into fabric
+          ✓ Source NAT (masquerade) for fabric → external
+          ✓ Firewall input/forward chain protection
+          ✓ MTU 9216 on fabric-facing interfaces
+
+        Topology:
+          Border_Leaf1 (65021) ── 10.0.253.0/31 ── Exit_Router1 (65253)
+          Border_Leaf2 (65022) ── 10.0.253.2/31 ── Exit_Router2 (65254)
+
+        Verify:
+          ansible-playbook playbooks/deploy_exit_routers.yml -i inventory/hosts.yml --tags verify
+        ═══════════════════════════════════════════════════════════════════
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Exit_Router1               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Exit_Router2               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Exit_Router1               : ok=37   changed=27   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Exit_Router2               : ok=37   changed=27   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
