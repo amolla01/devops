@@ -138,3 +138,23 @@ Or if that doesn't work, restart syncd to rebuild the internal bridges:
 ssh admin@Leaf_L3 "sudo systemctl restart syncd"
 ssh admin@Leaf_L4 "sudo systemctl restart syncd"
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+#########################-7th-################################################
+
+Fix — restore correct PORT config and restart syncd:
+
+# Fix Ethernet0 CONFIG_DB on Leaf_L3
+ssh admin@Leaf_L3 "sonic-db-cli CONFIG_DB HMSET 'PORT|Ethernet0' lanes '125,126,127,128' speed '40000' index '1'; sudo systemctl restart syncd"
+
+# Fix Ethernet0 CONFIG_DB on Leaf_L4
+ssh admin@Leaf_L4 "sonic-db-cli CONFIG_DB HMSET 'PORT|Ethernet0' lanes '125,126,127,128' speed '40000' index '1'; sudo systemctl restart syncd"
+
+Note: restarting syncd will briefly drop ALL data-plane sessions on those switches (spine and Host34_2), but they'll re-establish in ~60-120 seconds.
+
+Then after ~2 minutes, verify:
+
+ssh admin@Leaf_L3 "docker exec bgp vtysh -c 'show bgp summary'"
+ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
+
+######################################################
