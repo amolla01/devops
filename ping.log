@@ -490,3 +490,337 @@ MonitorSrv                 : ok=0    changed=0    unreachable=1    failed=0    s
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+
+
+
+
+
+
+
+
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_server_networking.yml   -i inventory/hosts.yml -e "server_http_proxy='' server_https_proxy=''"
+
+PLAY [Deploy Server Fabric Networking (Netplan + FRR + Loopback)] ***********************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+[ERROR]: Task failed: Data could not be sent to remote host "172.16.2.47". Make sure this host can be reached over ssh:
+fatal: [MonitorSrv]: UNREACHABLE! =>
+    changed: false
+    msg: 'Task failed: Data could not be sent to remote host "172.16.2.47". Make sure
+        this host can be reached over ssh:'
+    unreachable: true
+
+TASK [preflight | Verify SSH connectivity] **********************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host34_2]
+ok: [Host12_2]
+ok: [HostB12_2]
+ok: [Host34_1]
+ok: [Host12_3]
+ok: [HostB12_1]
+
+TASK [preflight | Detect actual interface names] ****************************************************************************************************************************************************************
+ok: [Host34_1]
+ok: [Host12_1]
+ok: [Host34_2]
+ok: [HostB12_1]
+ok: [Host12_3]
+ok: [Host12_2]
+ok: [HostB12_2]
+
+TASK [preflight | Display detected interfaces] ******************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host12_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host12_3] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host34_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host34_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [HostB12_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [HostB12_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+
+TASK [virtio_fix | Disable TX checksum offload on fabric interfaces] ********************************************************************************************************************************************
+ok: [Host12_2] => (item=enp2s0)
+ok: [Host12_1] => (item=enp2s0)
+ok: [Host12_3] => (item=enp2s0)
+ok: [Host34_1] => (item=enp2s0)
+ok: [HostB12_2] => (item=enp2s0)
+ok: [Host34_2] => (item=enp2s0)
+ok: [HostB12_1] => (item=enp2s0)
+ok: [Host12_1] => (item=enp3s0)
+ok: [Host12_2] => (item=enp3s0)
+ok: [Host12_3] => (item=enp3s0)
+ok: [Host34_1] => (item=enp3s0)
+ok: [HostB12_2] => (item=enp3s0)
+ok: [HostB12_1] => (item=enp3s0)
+ok: [Host34_2] => (item=enp3s0)
+
+TASK [loopback | Add loopback IP to lo interface] ***************************************************************************************************************************************************************
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host34_1]
+changed: [Host12_3]
+changed: [Host34_2]
+changed: [HostB12_1]
+changed: [HostB12_2]
+
+TASK [loopback | Deploy persistent loopback netplan] ************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_2]
+ok: [HostB12_1]
+ok: [Host12_3]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [HostB12_2]
+
+TASK [bond | Create bond0 for dual-homed fabric links] **********************************************************************************************************************************************************
+skipping: [Host12_1]
+skipping: [Host12_2]
+skipping: [Host12_3]
+skipping: [Host34_1]
+skipping: [Host34_2]
+skipping: [HostB12_1]
+skipping: [HostB12_2]
+
+TASK [bond | Apply bond configuration] **************************************************************************************************************************************************************************
+skipping: [Host12_1]
+skipping: [Host12_2]
+skipping: [Host12_3]
+skipping: [Host34_1]
+skipping: [Host34_2]
+skipping: [HostB12_1]
+skipping: [HostB12_2]
+
+TASK [netplan | Deploy fabric interface configuration] **********************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_3]
+ok: [Host34_1]
+ok: [Host12_2]
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [Host34_2]
+
+TASK [netplan | Apply netplan configuration] ********************************************************************************************************************************************************************
+skipping: [Host12_1]
+skipping: [Host12_2]
+skipping: [Host12_3]
+skipping: [Host34_1]
+skipping: [Host34_2]
+skipping: [HostB12_1]
+skipping: [HostB12_2]
+
+TASK [netplan | Bring fabric interfaces up] *********************************************************************************************************************************************************************
+ok: [Host12_1] => (item=enp2s0)
+ok: [Host12_2] => (item=enp2s0)
+ok: [Host34_2] => (item=enp2s0)
+ok: [Host12_3] => (item=enp2s0)
+ok: [Host34_1] => (item=enp2s0)
+ok: [HostB12_1] => (item=enp2s0)
+ok: [HostB12_2] => (item=enp2s0)
+ok: [Host12_2] => (item=enp3s0)
+ok: [Host12_1] => (item=enp3s0)
+ok: [HostB12_2] => (item=enp3s0)
+ok: [Host34_2] => (item=enp3s0)
+ok: [HostB12_1] => (item=enp3s0)
+ok: [Host12_3] => (item=enp3s0)
+ok: [Host34_1] => (item=enp3s0)
+
+TASK [preflight_hw | Verify fabric interfaces exist on host] ****************************************************************************************************************************************************
+skipping: [Host12_1] => (item=enp2s0)
+skipping: [Host12_1] => (item=enp3s0)
+skipping: [Host12_1]
+skipping: [Host12_2] => (item=enp2s0)
+skipping: [Host12_2] => (item=enp3s0)
+skipping: [Host12_2]
+skipping: [Host12_3] => (item=enp2s0)
+skipping: [Host12_3] => (item=enp3s0)
+skipping: [Host12_3]
+skipping: [Host34_1] => (item=enp2s0)
+skipping: [Host34_2] => (item=enp2s0)
+skipping: [Host34_1] => (item=enp3s0)
+skipping: [Host34_1]
+skipping: [Host34_2] => (item=enp3s0)
+skipping: [Host34_2]
+skipping: [HostB12_1] => (item=enp2s0)
+skipping: [HostB12_1] => (item=enp3s0)
+skipping: [HostB12_1]
+skipping: [HostB12_2] => (item=enp2s0)
+skipping: [HostB12_2] => (item=enp3s0)
+skipping: [HostB12_2]
+
+TASK [preflight_hw | Verify MTU 9000 support on fabric NICs] ****************************************************************************************************************************************************
+skipping: [Host12_1] => (item=enp2s0)
+skipping: [Host12_1] => (item=enp3s0)
+skipping: [Host12_2] => (item=enp2s0)
+skipping: [Host12_1]
+skipping: [Host12_2] => (item=enp3s0)
+skipping: [Host12_2]
+skipping: [Host12_3] => (item=enp2s0)
+skipping: [Host12_3] => (item=enp3s0)
+skipping: [Host12_3]
+skipping: [Host34_1] => (item=enp2s0)
+skipping: [Host34_1] => (item=enp3s0)
+skipping: [Host34_1]
+skipping: [Host34_2] => (item=enp2s0)
+skipping: [Host34_2] => (item=enp3s0)
+skipping: [Host34_2]
+skipping: [HostB12_1] => (item=enp2s0)
+skipping: [HostB12_1] => (item=enp3s0)
+skipping: [HostB12_1]
+skipping: [HostB12_2] => (item=enp2s0)
+skipping: [HostB12_2] => (item=enp3s0)
+skipping: [HostB12_2]
+
+TASK [frr | Install FRR packages] *******************************************************************************************************************************************************************************
+changed: [Host34_1]
+changed: [Host12_3]
+changed: [HostB12_2]
+changed: [Host34_2]
+changed: [HostB12_1]
+changed: [Host12_2]
+changed: [Host12_1]
+
+TASK [frr | Enable BGP and Zebra daemons] ***********************************************************************************************************************************************************************
+[WARNING]: Module remote_tmp /root/.ansible/tmp did not exist and was created with a mode of 0700, this may cause issues when running as another user. To avoid this, create the remote_tmp dir with the correct permissions manually
+changed: [HostB12_2] => (item=bgpd)
+changed: [HostB12_1] => (item=bgpd)
+changed: [Host34_1] => (item=bgpd)
+changed: [Host12_1] => (item=bgpd)
+changed: [Host12_3] => (item=bgpd)
+changed: [Host34_2] => (item=bgpd)
+changed: [Host12_2] => (item=bgpd)
+changed: [HostB12_2] => (item=zebra)
+changed: [HostB12_1] => (item=zebra)
+changed: [Host12_1] => (item=zebra)
+changed: [Host34_1] => (item=zebra)
+changed: [Host34_2] => (item=zebra)
+changed: [Host12_2] => (item=zebra)
+changed: [Host12_3] => (item=zebra)
+
+TASK [frr | Deploy FRR configuration] ***************************************************************************************************************************************************************************
+changed: [Host34_2]
+changed: [Host34_1]
+changed: [HostB12_2]
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [HostB12_1]
+changed: [Host12_3]
+
+TASK [frr | Ensure FRR is enabled and running] ******************************************************************************************************************************************************************
+ok: [Host12_2]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [Host12_1]
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [Host12_3]
+
+TASK [verify | Check loopback IP] *******************************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_2]
+ok: [Host34_1]
+ok: [Host12_3]
+ok: [Host34_2]
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host34_2]
+ok: [Host12_2]
+ok: [HostB12_2]
+ok: [Host12_3]
+ok: [HostB12_1]
+ok: [Host34_1]
+
+TASK [verify | Display BGP status] ******************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: |-
+        === Host12_1 Network Status ===
+        Loopback: 10.10.255.1/32
+        Router-ID: 10.10.255.1
+        ASN: 65101
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Leaf_L1, Leaf_L2
+        BGP output:
+ok: [Host12_2] =>
+    msg: |-
+        === Host12_2 Network Status ===
+        Loopback: 10.10.255.2/32
+        Router-ID: 10.10.255.2
+        ASN: 65102
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Leaf_L1, Leaf_L2
+        BGP output:
+ok: [Host12_3] =>
+    msg: |-
+        === Host12_3 Network Status ===
+        Loopback: 10.10.255.3/32
+        Router-ID: 10.10.255.3
+        ASN: 65103
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Leaf_L1, Leaf_L2
+        BGP output:
+ok: [Host34_1] =>
+    msg: |-
+        === Host34_1 Network Status ===
+        Loopback: 10.10.255.11/32
+        Router-ID: 10.10.255.11
+        ASN: 65104
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Leaf_L3, Leaf_L4
+        BGP output:
+ok: [Host34_2] =>
+    msg: |-
+        === Host34_2 Network Status ===
+        Loopback: 10.10.255.12/32
+        Router-ID: 10.10.255.12
+        ASN: 65105
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Leaf_L3, Leaf_L4
+        BGP output:
+ok: [HostB12_1] =>
+    msg: |-
+        === HostB12_1 Network Status ===
+        Loopback: 10.10.255.100/32
+        Router-ID: 10.10.255.100
+        ASN: 65106
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Border_Leaf1, Border_Leaf2
+        BGP output:
+ok: [HostB12_2] =>
+    msg: |-
+        === HostB12_2 Network Status ===
+        Loopback: 10.10.255.101/32
+        Router-ID: 10.10.255.101
+        ASN: 65107
+        Fabric interfaces: enp2s0, enp3s0
+        BGP peers: Border_Leaf1, Border_Leaf2
+        BGP output:
+
+RUNNING HANDLER [restart frr] ***********************************************************************************************************************************************************************************
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host34_2]
+changed: [Host34_1]
+changed: [Host12_3]
+changed: [HostB12_2]
+changed: [HostB12_1]
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+Host12_2                   : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+Host12_3                   : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+Host34_1                   : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+Host34_2                   : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+HostB12_1                  : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+HostB12_2                  : ok=16   changed=5    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+MonitorSrv                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
