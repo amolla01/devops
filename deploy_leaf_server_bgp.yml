@@ -1,0 +1,207 @@
+---
+# =============================================================================
+# deploy_leaf_server_bgp.yml — Add Server-Facing BGP Peers on Leaf Switches
+# =============================================================================
+# Configures eBGP unnumbered peers on leaf/border-leaf switches for server
+# downlink interfaces. This enables fabric-routed communication between
+# servers and the rest of the CLOS topology.
+#
+# PREREQUISITE:
+#   - Leaf switches must have Day-1 fabric (spine-facing) BGP already running
+#   - Servers must have FRR configured (deploy_server_networking.yml)
+#   - Server downlink ports must be admin-up on the leaf (done by Day-1 config)
+#
+# USAGE:
+#   # All leaves + border-leaves:
+#   ansible-playbook playbooks/deploy_leaf_server_bgp.yml -i inventory/hosts.yml
+#
+#   # Single leaf:
+#   ansible-playbook playbooks/deploy_leaf_server_bgp.yml -i inventory/hosts.yml \
+#     --limit Leaf_L1
+#
+#   # Border-leaves only:
+#   ansible-playbook playbooks/deploy_leaf_server_bgp.yml -i inventory/hosts.yml \
+#     --limit border_leaves
+#
+#   # Dry-run (show what would be configured):
+#   ansible-playbook playbooks/deploy_leaf_server_bgp.yml -i inventory/hosts.yml \
+#     --tags plan
+#
+#   # Verify only (check existing BGP sessions):
+#   ansible-playbook playbooks/deploy_leaf_server_bgp.yml -i inventory/hosts.yml \
+#     --tags verify
+#
+# HOW IT WORKS:
+#   1. Reads downlink_interfaces from each leaf's host_vars
+#   2. Looks up server ASN from server_asn_map (group_vars/all.yml)
+#   3. Ensures downlink ports are admin-up (SONiC config)
+#   4. Adds BGP unnumbered peer via vtysh in the bgp docker container
+#   5. Verifies BGP session establishment
+#
+# INTERFACE NAMING:
+#   - Leaf_L1/L2 (Accton 5712): Ethernet0, Ethernet1, Ethernet2 (SFP+ 10G)
+#   - Leaf_L3/L4 (Arista 7050QX-32): Ethernet0, Ethernet1 (QSFP sub-ports)
+#   - Border_Leaf1/2 (Arista 7050QX-32S): Ethernet20, Ethernet21 (breakout)
+# =============================================================================
+
+- name: "Configure Leaf-to-Server BGP Peers (eBGP Unnumbered)"
+  hosts: leaves:border_leaves
+  gather_facts: false
+  serial: "{{ leaf_serial | default('100%') }}"
+
+  vars:
+    # Build list of server peers for this leaf from downlink_interfaces
+    _server_peers: >-
+      {{ downlink_interfaces | default([])
+         | selectattr('neighbor', 'defined')
+         | list }}
+
+  tasks:
+    # ─── Pre-flight ─────────────────────────────────────────────────────
+    - name: "preflight | Verify SSH to switch"
+      ansible.builtin.ping:
+      tags: [always]
+
+    - name: "preflight | Skip if no downlink_interfaces defined"
+      ansible.builtin.meta: end_host
+      when: _server_peers | length == 0
+      tags: [always]
+
+    # ─── Plan (display what will be configured) ─────────────────────────
+    - name: "plan | Show server BGP peers to configure"
+      ansible.builtin.debug:
+        msg: |
+          === {{ inventory_hostname }} — Server BGP Peers ===
+          Local ASN: {{ bgp_local_asn }}
+          {% for peer in _server_peers %}
+          • {{ peer.port }} → {{ peer.neighbor }} (ASN {{ server_asn_map[peer.neighbor] | default('UNKNOWN') }})
+          {% endfor %}
+      tags: [plan, deploy]
+
+    # ─── Ensure downlink ports are admin-up in SONiC ────────────────────
+    - name: "config | Ensure server downlink ports are admin-up"
+      ansible.builtin.shell: |
+        sonic-db-cli CONFIG_DB HSET "PORT|{{ item.port }}" "admin_status" "up"
+      loop: "{{ _server_peers }}"
+      loop_control:
+        label: "{{ item.port }} → {{ item.neighbor }}"
+      changed_when: true
+      tags: [deploy]
+
+    - name: "config | Enable IPv6 on server downlink interfaces"
+      ansible.builtin.shell: |
+        # Remove from any VLAN to ensure layer-3 mode
+        sonic-db-cli CONFIG_DB KEYS "VLAN_MEMBER|*|{{ item.port }}" | while read key; do
+          sonic-db-cli CONFIG_DB DEL "$key" 2>/dev/null || true
+        done
+        # Set interface to IPv6-enabled (for link-local BGP unnumbered)
+        sonic-db-cli CONFIG_DB HSET "INTERFACE|{{ item.port }}" "NULL" "NULL" 2>/dev/null || true
+        sonic-db-cli CONFIG_DB HSET "INTERFACE|{{ item.port }}" "ipv6_use_link_local_only" "enable"
+      loop: "{{ _server_peers }}"
+      loop_control:
+        label: "{{ item.port }}"
+      changed_when: true
+      tags: [deploy]
+
+    # ─── Wait for bgpd to be ready ─────────────────────────────────────
+    - name: "config | Wait for FRR/bgpd to be responsive"
+      ansible.builtin.shell: |
+        docker exec bgp vtysh -c "show version" > /dev/null 2>&1
+      register: _bgpd_ready
+      retries: 12
+      delay: 5
+      until: _bgpd_ready.rc == 0
+      changed_when: false
+      tags: [deploy]
+
+    # ─── Configure BGP unnumbered peers via vtysh ───────────────────────
+    - name: "config | Add server BGP peers via vtysh"
+      ansible.builtin.shell: |
+        docker exec bgp vtysh \
+          -c "configure terminal" \
+          -c "router bgp {{ bgp_local_asn }}" \
+        {% for peer in _server_peers %}
+        {% set remote_asn = server_asn_map[peer.neighbor] | default(0) %}
+        {% if remote_asn | int > 0 %}
+          -c "neighbor {{ peer.port }} interface v6only" \
+          -c "neighbor {{ peer.port }} remote-as {{ remote_asn }}" \
+          -c "neighbor {{ peer.port }} description {{ peer.neighbor }}" \
+        {% endif %}
+        {% endfor %}
+          -c "address-family ipv4 unicast" \
+        {% for peer in _server_peers %}
+        {% set remote_asn = server_asn_map[peer.neighbor] | default(0) %}
+        {% if remote_asn | int > 0 %}
+          -c "neighbor {{ peer.port }} activate" \
+          -c "neighbor {{ peer.port }} soft-reconfiguration inbound" \
+        {% endif %}
+        {% endfor %}
+          -c "exit-address-family" \
+          -c "address-family ipv6 unicast" \
+        {% for peer in _server_peers %}
+        {% set remote_asn = server_asn_map[peer.neighbor] | default(0) %}
+        {% if remote_asn | int > 0 %}
+          -c "neighbor {{ peer.port }} activate" \
+        {% endif %}
+        {% endfor %}
+          -c "exit-address-family" \
+          -c "end" \
+          -c "write"
+      register: _vtysh_server_bgp
+      retries: 3
+      delay: 10
+      until: _vtysh_server_bgp.rc == 0
+      changed_when: true
+      tags: [deploy]
+
+    - name: "config | vtysh output"
+      ansible.builtin.debug:
+        msg: "{{ _vtysh_server_bgp.stdout_lines | default([]) }}"
+        verbosity: 1
+      tags: [deploy]
+
+    # ─── Verify BGP sessions ───────────────────────────────────────────
+    - name: "verify | Wait for BGP sessions to form (30s)"
+      ansible.builtin.pause:
+        seconds: 30
+      tags: [verify]
+      run_once: true
+
+    - name: "verify | Check BGP summary"
+      ansible.builtin.shell: |
+        docker exec bgp vtysh -c "show bgp summary"
+      register: _bgp_summary
+      changed_when: false
+      tags: [verify]
+
+    - name: "verify | Display BGP summary"
+      ansible.builtin.debug:
+        msg: "{{ _bgp_summary.stdout }}"
+      tags: [verify]
+
+    - name: "verify | Check specific server peer status"
+      ansible.builtin.shell: |
+        docker exec bgp vtysh -c "show bgp neighbor {{ item.port }} json" 2>/dev/null | \
+          python3 -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        for k, v in data.items():
+            state = v.get('bgpState', 'Unknown')
+            remote = v.get('remoteAs', '?')
+            print(f'{{ item.port }} → {{ item.neighbor }} (AS {remote}): {state}')
+        " 2>/dev/null || echo "{{ item.port }} → {{ item.neighbor }}: NOT_CONFIGURED"
+      loop: "{{ _server_peers }}"
+      loop_control:
+        label: "{{ item.port }} → {{ item.neighbor }}"
+      register: _peer_status
+      changed_when: false
+      tags: [verify]
+
+    - name: "verify | Server peer status summary"
+      ansible.builtin.debug:
+        msg: |
+          === {{ inventory_hostname }} Server BGP Peer Status ===
+          {% for result in _peer_status.results %}
+          {{ result.stdout }}
+          {% endfor %}
+      tags: [verify]
