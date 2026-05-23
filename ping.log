@@ -1,33 +1,117 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible servers -i inventory/hosts.yml -m ping
-Host12_1 | SUCCESS =>
-    changed: false
-    ping: pong
-[ERROR]: Task failed: Data could not be sent to remote host "172.16.2.47". Make sure this host can be reached over ssh:
-Origin: <adhoc 'ping' task>
+nh1221@R620:~$ virsh list --all
+ Id   Name           State
+------------------------------
+ 1    Spine_S1       running
+ 2    Spine_S2       running
+ 3    Leaf_L1        running
+ 4    Leaf_L2        running
+ 5    Leaf_L3        running
+ 6    Leaf_L4        running
+ 7    Border_Leaf1   running
+ 8    Border_Leaf2   running
+ 9    Exit_Router1   running
+ 10   Exit_Router2   running
+ 11   Host12_1       running
+ 12   Host12_2       running
+ 13   Host12_3       running
+ 14   Host34_1       running
+ 15   Host34_2       running
+ 16   HostB12_1      running
+ 17   HostB12_2      running
 
-{'action': 'ping', 'args': {}, 'timeout': 0, 'async_val': 0, 'poll': 15}
+nh1221@R620:~$ sudo vtysh
+[sudo] password for nh1221:
 
-MonitorSrv | UNREACHABLE! =>
-    changed: false
-    msg: 'Task failed: Data could not be sent to remote host "172.16.2.47". Make sure
-        this host can be reached over ssh:'
-    unreachable: true
-Host12_2 | SUCCESS =>
-    changed: false
-    ping: pong
-HostB12_1 | SUCCESS =>
-    changed: false
-    ping: pong
-HostB12_2 | SUCCESS =>
-    changed: false
-    ping: pong
-Host12_3 | SUCCESS =>
-    changed: false
-    ping: pong
-Host34_1 | SUCCESS =>
-    changed: false
-    ping: pong
-Host34_2 | SUCCESS =>
-    changed: false
-    ping: pong
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+Hello, this is FRRouting (version 8.4.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+R620# show bgp summary
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 3.26.62.1, local AS number 65311 vrf-id 0
+BGP table version 3
+RIB entries 5, using 960 bytes of memory
+Peers 2, using 1448 KiB of memory
+Peer groups 1, using 64 bytes of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp5s0f0        4          0         0         0        0    0    0    never         Idle        0 N/A
+enp5s0f1        4          0         0         0        0    0    0    never         Idle        0 N/A
+
+Total number of neighbors 2
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 3.26.62.1, local AS number 65311 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1448 KiB of memory
+Peer groups 1, using 64 bytes of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp5s0f0        4          0         0         0        0    0    0    never         Idle        0 N/A
+enp5s0f1        4          0         0         0        0    0    0    never         Idle        0 N/A
+
+Total number of neighbors 2
+R620# exit
+nh1221@R620:~$ ssh ubuntu host12-1
+ssh: Could not resolve hostname ubuntu: Name or service not known
+nh1221@R620:~$
+nh1221@R620:~$ ssh ubuntu@host12-1
+ssh: Could not resolve hostname host12-1: Name or service not known
+nh1221@R620:~$ ssh ubuntu@Host12_1
+ssh: Could not resolve hostname host12_1: Name or service not known
+nh1221@R620:~$ ssh ubuntu@172.16.2.40
+ubuntu@172.16.2.40's password:
+Permission denied, please try again.
+ubuntu@172.16.2.40's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-106-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat May 23 13:49:17 UTC 2026
+
+  System load:  0.0                Processes:               157
+  Usage of /:   11.7% of 18.33GB   Users logged in:         0
+  Memory usage: 4%                 IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+30 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Sat May 23 11:49:50 2026 from 172.16.2.1
+ubuntu@Host121:~$ sudo vtysh
+sudo: vtysh: command not found
+ubuntu@Host121:~$ vtysh
+Command 'vtysh' not found, but can be installed with:
+apt install frr
+Please ask your administrator.
+ubuntu@Host121:~$ ls -al /etc/netplan
+total 12
+drwxr-xr-x   2 root root 4096 May 21 02:10 .
+drwxr-xr-x 106 root root 4096 May 22 06:08 ..
+-rw-------   1 root root  116 May 21 02:10 50-cloud-init.yaml
+ubuntu@Host121:~$ ping bbc.com
+PING bbc.com (151.101.0.81) 56(84) bytes of data.
+64 bytes from 151.101.0.81: icmp_seq=1 ttl=54 time=9.71 ms
+64 bytes from 151.101.0.81: icmp_seq=2 ttl=54 time=8.36 ms
+64 bytes from 151.101.0.81: icmp_seq=3 ttl=54 time=7.36 ms
+64 bytes from 151.101.0.81: icmp_seq=4 ttl=54 time=7.63 ms
+^C
+--- bbc.com ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3006ms
+rtt min/avg/max/mdev = 7.358/8.264/9.712/0.912 ms
+ubuntu@Host121:~$
