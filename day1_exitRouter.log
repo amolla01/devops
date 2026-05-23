@@ -172,3 +172,139 @@ Exit_Router1               : ok=0    changed=0    unreachable=0    failed=1    s
 Exit_Router2               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_exit_routers.yml -i inventory/hosts.yml
+
+PLAY [Deploy MikroTik CHR Exit Routers] *************************************************************************************************************************************************************************
+
+TASK [preflight | Wait for SSH port] ****************************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.98:22
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_exit_routers.yml:90:7
+
+88     # PHASE 1: PREFLIGHT
+89     # ═══════════════════════════════════════════════════════════════════════
+90     - name: "preflight | Wait for SSH port"
+         ^ column 7
+
+fatal: [Exit_Router1 -> localhost]: FAILED! =>
+    changed: false
+    elapsed: 122
+    msg: Timeout when waiting for 172.16.2.98:22
+[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.99:22
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_exit_routers.yml:90:7
+
+88     # PHASE 1: PREFLIGHT
+89     # ═══════════════════════════════════════════════════════════════════════
+90     - name: "preflight | Wait for SSH port"
+         ^ column 7
+
+fatal: [Exit_Router2 -> localhost]: FAILED! =>
+    changed: false
+    elapsed: 122
+    msg: Timeout when waiting for 172.16.2.99:22
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Exit_Router1               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Exit_Router2               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ nc -zv 172.16.2.98 22
+^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ip route | grep 172.16
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ WINHOST=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ sudo ip route add 172.16.2.0/24 via $WINHOST
+[sudo] password for nh1221:
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ nc -zv 172.16.2.98 22
+^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ sudo iptables -I FORWARD -i vEthernet* -d 172.16.2.0/24 -j ACCEPT
+sudo: iptables: command not found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ apt install iptables
+E: Could not open lock file /var/lib/dpkg/lock-frontend - open (13: Permission denied)
+E: Unable to acquire the dpkg frontend lock (/var/lib/dpkg/lock-frontend), are you root?
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ sudo apt install iptables
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following package was automatically installed and is no longer required:
+  libllvm19
+Use 'sudo apt autoremove' to remove it.
+The following additional packages will be installed:
+  libip4tc2 libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftables1 libnftnl11 nftables
+Suggested packages:
+  firewalld
+The following NEW packages will be installed:
+  iptables libip4tc2 libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftables1 libnftnl11 nftables
+0 upgraded, 8 newly installed, 0 to remove and 64 not upgraded.
+Need to get 983 kB of archives.
+After this operation, 4274 kB of additional disk space will be used.
+Do you want to continue? [Y/n] y
+Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libip4tc2 amd64 1.8.10-3ubuntu2 [23.3 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 libip6tc2 amd64 1.8.10-3ubuntu2 [23.7 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libnfnetlink0 amd64 1.0.2-2build1 [14.8 kB]
+Get:4 http://archive.ubuntu.com/ubuntu noble/main amd64 libnetfilter-conntrack3 amd64 1.0.9-6build1 [45.2 kB]
+Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 libnftnl11 amd64 1.2.6-2build1 [66.0 kB]
+Get:6 http://archive.ubuntu.com/ubuntu noble/main amd64 iptables amd64 1.8.10-3ubuntu2 [381 kB]
+Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnftables1 amd64 1.0.9-1ubuntu0.1 [359 kB]
+Get:8 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 nftables amd64 1.0.9-1ubuntu0.1 [69.8 kB]
+Fetched 983 kB in 1s (1218 kB/s)
+Selecting previously unselected package libip4tc2:amd64.
+(Reading database ... 47788 files and directories currently installed.)
+Preparing to unpack .../0-libip4tc2_1.8.10-3ubuntu2_amd64.deb ...
+Unpacking libip4tc2:amd64 (1.8.10-3ubuntu2) ...
+Selecting previously unselected package libip6tc2:amd64.
+Preparing to unpack .../1-libip6tc2_1.8.10-3ubuntu2_amd64.deb ...
+Unpacking libip6tc2:amd64 (1.8.10-3ubuntu2) ...
+Selecting previously unselected package libnfnetlink0:amd64.
+Preparing to unpack .../2-libnfnetlink0_1.0.2-2build1_amd64.deb ...
+Unpacking libnfnetlink0:amd64 (1.0.2-2build1) ...
+Selecting previously unselected package libnetfilter-conntrack3:amd64.
+Preparing to unpack .../3-libnetfilter-conntrack3_1.0.9-6build1_amd64.deb ...
+Unpacking libnetfilter-conntrack3:amd64 (1.0.9-6build1) ...
+Selecting previously unselected package libnftnl11:amd64.
+Preparing to unpack .../4-libnftnl11_1.2.6-2build1_amd64.deb ...
+Unpacking libnftnl11:amd64 (1.2.6-2build1) ...
+Selecting previously unselected package iptables.
+Preparing to unpack .../5-iptables_1.8.10-3ubuntu2_amd64.deb ...
+Unpacking iptables (1.8.10-3ubuntu2) ...
+Selecting previously unselected package libnftables1:amd64.
+Preparing to unpack .../6-libnftables1_1.0.9-1ubuntu0.1_amd64.deb ...
+Unpacking libnftables1:amd64 (1.0.9-1ubuntu0.1) ...
+Selecting previously unselected package nftables.
+Preparing to unpack .../7-nftables_1.0.9-1ubuntu0.1_amd64.deb ...
+Unpacking nftables (1.0.9-1ubuntu0.1) ...
+Setting up libip4tc2:amd64 (1.8.10-3ubuntu2) ...
+Setting up libip6tc2:amd64 (1.8.10-3ubuntu2) ...
+Setting up libnftnl11:amd64 (1.2.6-2build1) ...
+Setting up libnfnetlink0:amd64 (1.0.2-2build1) ...
+Setting up libnftables1:amd64 (1.0.9-1ubuntu0.1) ...
+Setting up nftables (1.0.9-1ubuntu0.1) ...
+Setting up libnetfilter-conntrack3:amd64 (1.0.9-6build1) ...
+Setting up iptables (1.8.10-3ubuntu2) ...
+update-alternatives: using /usr/sbin/iptables-legacy to provide /usr/sbin/iptables (iptables) in auto mode
+update-alternatives: using /usr/sbin/ip6tables-legacy to provide /usr/sbin/ip6tables (ip6tables) in auto mode
+update-alternatives: using /usr/sbin/iptables-nft to provide /usr/sbin/iptables (iptables) in auto mode
+update-alternatives: using /usr/sbin/ip6tables-nft to provide /usr/sbin/ip6tables (ip6tables) in auto mode
+update-alternatives: using /usr/sbin/arptables-nft to provide /usr/sbin/arptables (arptables) in auto mode
+update-alternatives: using /usr/sbin/ebtables-nft to provide /usr/sbin/ebtables (ebtables) in auto mode
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ sudo iptables -I FORWARD -i vEthernet* -d 172.16.2.0/24 -j ACCEPT
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ nc -zv 172.16.2.98 22
+^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
