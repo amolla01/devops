@@ -115,3 +115,378 @@ PING bbc.com (151.101.0.81) 56(84) bytes of data.
 4 packets transmitted, 4 received, 0% packet loss, time 3006ms
 rtt min/avg/max/mdev = 7.358/8.264/9.712/0.912 ms
 ubuntu@Host121:~$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_server_networking.yml   -i inventory/hosts.yml
+
+
+PLAY [Deploy Server Fabric Networking (Netplan + FRR + Loopback)] ***********************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+[ERROR]: Task failed: Data could not be sent to remote host "172.16.2.47". Make sure this host can be reached over ssh:
+fatal: [MonitorSrv]: UNREACHABLE! =>
+    changed: false
+    msg: 'Task failed: Data could not be sent to remote host "172.16.2.47". Make sure
+        this host can be reached over ssh:'
+    unreachable: true
+ok: [Host34_2]
+ok: [Host34_1]
+ok: [HostB12_1]
+ok: [Host12_2]
+ok: [Host12_3]
+ok: [HostB12_2]
+
+TASK [preflight | Verify SSH connectivity] **********************************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [Host12_3]
+ok: [Host12_1]
+ok: [HostB12_2]
+ok: [Host12_2]
+
+TASK [preflight | Detect actual interface names] ****************************************************************************************************************************************************************
+ok: [Host34_1]
+ok: [Host12_2]
+ok: [Host12_3]
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [Host34_2]
+ok: [Host12_1]
+
+TASK [preflight | Display detected interfaces] ******************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host12_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host12_3] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host34_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [Host34_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [HostB12_1] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+ok: [HostB12_2] =>
+    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
+
+TASK [virtio_fix | Disable TX checksum offload on fabric interfaces] ********************************************************************************************************************************************
+ok: [Host12_1] => (item=enp2s0)
+ok: [Host12_2] => (item=enp2s0)
+ok: [Host12_3] => (item=enp2s0)
+ok: [Host34_2] => (item=enp2s0)
+ok: [Host34_1] => (item=enp2s0)
+ok: [HostB12_1] => (item=enp2s0)
+ok: [HostB12_2] => (item=enp2s0)
+ok: [Host12_1] => (item=enp3s0)
+ok: [Host12_2] => (item=enp3s0)
+ok: [Host12_3] => (item=enp3s0)
+ok: [Host34_1] => (item=enp3s0)
+ok: [Host34_2] => (item=enp3s0)
+ok: [HostB12_2] => (item=enp3s0)
+ok: [HostB12_1] => (item=enp3s0)
+
+TASK [loopback | Add loopback IP to lo interface] ***************************************************************************************************************************************************************
+changed: [Host12_2]
+changed: [Host12_1]
+changed: [Host12_3]
+changed: [Host34_1]
+changed: [Host34_2]
+changed: [HostB12_1]
+changed: [HostB12_2]
+
+TASK [loopback | Deploy persistent loopback netplan] ************************************************************************************************************************************************************
+changed: [Host12_2]
+changed: [Host12_3]
+changed: [HostB12_2]
+changed: [Host34_1]
+changed: [HostB12_1]
+changed: [Host12_1]
+changed: [Host34_2]
+
+TASK [bond | Create bond0 for dual-homed fabric links] **********************************************************************************************************************************************************
+skipping: [Host12_1]
+skipping: [Host12_2]
+skipping: [Host12_3]
+skipping: [Host34_1]
+skipping: [Host34_2]
+skipping: [HostB12_1]
+skipping: [HostB12_2]
+
+TASK [bond | Apply bond configuration] **************************************************************************************************************************************************************************
+skipping: [Host12_1]
+skipping: [Host12_2]
+skipping: [Host12_3]
+skipping: [Host34_1]
+skipping: [Host34_2]
+skipping: [HostB12_1]
+skipping: [HostB12_2]
+
+TASK [netplan | Deploy fabric interface configuration] **********************************************************************************************************************************************************
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host34_1]
+changed: [HostB12_1]
+changed: [Host12_3]
+changed: [Host34_2]
+changed: [HostB12_2]
+
+TASK [netplan | Apply netplan configuration] ********************************************************************************************************************************************************************
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host12_3]
+changed: [Host34_1]
+changed: [Host34_2]
+changed: [HostB12_2]
+changed: [HostB12_1]
+
+TASK [netplan | Bring fabric interfaces up] *********************************************************************************************************************************************************************
+ok: [Host12_2] => (item=enp2s0)
+ok: [Host12_1] => (item=enp2s0)
+ok: [Host34_1] => (item=enp2s0)
+ok: [Host12_3] => (item=enp2s0)
+ok: [HostB12_1] => (item=enp2s0)
+ok: [Host34_2] => (item=enp2s0)
+ok: [HostB12_2] => (item=enp2s0)
+ok: [Host12_1] => (item=enp3s0)
+ok: [Host12_2] => (item=enp3s0)
+ok: [Host34_1] => (item=enp3s0)
+ok: [Host12_3] => (item=enp3s0)
+ok: [HostB12_1] => (item=enp3s0)
+ok: [Host34_2] => (item=enp3s0)
+ok: [HostB12_2] => (item=enp3s0)
+
+TASK [preflight_hw | Verify fabric interfaces exist on host] ****************************************************************************************************************************************************
+skipping: [Host12_1] => (item=enp2s0)
+skipping: [Host12_2] => (item=enp2s0)
+skipping: [Host12_1] => (item=enp3s0)
+skipping: [Host12_1]
+skipping: [Host12_2] => (item=enp3s0)
+skipping: [Host12_2]
+skipping: [Host12_3] => (item=enp2s0)
+skipping: [Host12_3] => (item=enp3s0)
+skipping: [Host12_3]
+skipping: [Host34_1] => (item=enp2s0)
+skipping: [Host34_1] => (item=enp3s0)
+skipping: [Host34_1]
+skipping: [Host34_2] => (item=enp2s0)
+skipping: [Host34_2] => (item=enp3s0)
+skipping: [Host34_2]
+skipping: [HostB12_1] => (item=enp2s0)
+skipping: [HostB12_1] => (item=enp3s0)
+skipping: [HostB12_1]
+skipping: [HostB12_2] => (item=enp2s0)
+skipping: [HostB12_2] => (item=enp3s0)
+skipping: [HostB12_2]
+
+TASK [preflight_hw | Verify MTU 9000 support on fabric NICs] ****************************************************************************************************************************************************
+skipping: [Host12_1] => (item=enp2s0)
+skipping: [Host12_1] => (item=enp3s0)
+skipping: [Host12_1]
+skipping: [Host12_2] => (item=enp2s0)
+skipping: [Host12_2] => (item=enp3s0)
+skipping: [Host12_2]
+skipping: [Host12_3] => (item=enp2s0)
+skipping: [Host12_3] => (item=enp3s0)
+skipping: [Host12_3]
+skipping: [Host34_1] => (item=enp2s0)
+skipping: [Host34_1] => (item=enp3s0)
+skipping: [Host34_1]
+skipping: [Host34_2] => (item=enp2s0)
+skipping: [Host34_2] => (item=enp3s0)
+skipping: [Host34_2]
+skipping: [HostB12_1] => (item=enp2s0)
+skipping: [HostB12_1] => (item=enp3s0)
+skipping: [HostB12_1]
+skipping: [HostB12_2] => (item=enp2s0)
+skipping: [HostB12_2] => (item=enp3s0)
+skipping: [HostB12_2]
+
+TASK [frr | Install FRR packages] *******************************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'frr=8.4.4-1.1ubuntu6.6' 'frr-pythontools=8.4.4-1.1ubuntu6.6'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr_8.4.4-1.1ubuntu6.6_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr-pythontools_8.4.4-1.1ubuntu6.6_all.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_server_networking.yml:198:7
+
+196
+197     # ---- FRR Installation ----
+198     - name: "frr | Install FRR packages"
+          ^ column 7
+
+fatal: [Host12_3]: FAILED! =>
+    cache_update_time: 1779544288
+    cache_updated: false
+    changed: false
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'frr=8.4.4-1.1ubuntu6.6' 'frr-pythontools=8.4.4-1.1ubuntu6.6'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr_8.4.4-1.1ubuntu6.6_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr-pythontools_8.4.4-1.1ubuntu6.6_all.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr_8.4.4-1.1ubuntu6.6_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr-pythontools_8.4.4-1.1ubuntu6.6_all.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following additional packages will be installed:
+          libcares2 libyang2t64
+        Suggested packages:
+          frr-doc
+        The following NEW packages will be installed:
+          frr frr-pythontools libcares2 libyang2t64
+        0 upgraded, 4 newly installed, 0 to remove and 31 not upgraded.
+        Need to get 4911 kB of archives.
+        After this operation, 22.6 MB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Err:3 http://security.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Err:4 http://security.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+    stdout_lines: <omitted>
+fatal: [Host34_1]: FAILED! =>
+    cache_update_time: 1779541968
+    cache_updated: false
+    changed: false
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'frr=8.4.4-1.1ubuntu6.6' 'frr-pythontools=8.4.4-1.1ubuntu6.6'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr_8.4.4-1.1ubuntu6.6_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr-pythontools_8.4.4-1.1ubuntu6.6_all.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/c-ares/libcares2_1.27.0-1.0ubuntu1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/liby/libyang2/libyang2t64_2.1.30-2.1ubuntu0.1_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr_8.4.4-1.1ubuntu6.6_amd64.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/f/frr/frr-pythontools_8.4.4-1.1ubuntu6.6_all.deb  Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following additional packages will be installed:
+          libcares2 libyang2t64
+        Suggested packages:
+          frr-doc
+        The following NEW packages will be installed:
+          frr frr-pythontools libcares2 libyang2t64
+        0 upgraded, 4 newly installed, 0 to remove and 31 not upgraded.
+        Need to get 4911 kB of archives.
+        After this operation, 22.6 MB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libcares2 amd64 1.27.0-1.0ubuntu1
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+        Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 libyang2t64 amd64 2.1.30-2.1ubuntu0.1
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Ign:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+        Err:3 http://security.ubuntu.com/ubuntu noble-updates/main amd64 frr amd64 8.4.4-1.1ubuntu6.6
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+        Err:4 http://security.ubuntu.com/ubuntu noble-updates/main amd64 frr-pythontools all 8.4.4-1.1ubuntu6.6
+          Something wicked happened resolving 'cso.proxy.att.com:8080' (-5 - No address associated with hostname)
+    stdout_lines: <omitted>
+[WARNING]: Failed to update cache after 1 retries due to , retrying
+[WARNING]: Sleeping for 1 seconds, before attempting to refresh the cache again
+[WARNING]: Failed to update cache after 2 retries due to , retrying
+[WARNING]: Sleeping for 2 seconds, before attempting to refresh the cache again
+[WARNING]: Failed to update cache after 3 retries due to , retrying
+[WARNING]: Sleeping for 4 seconds, before attempting to refresh the cache again
+[WARNING]: Failed to update cache after 4 retries due to , retrying
+[WARNING]: Sleeping for 8 seconds, before attempting to refresh the cache again
+[WARNING]: Failed to update cache after 5 retries due to , retrying
+[WARNING]: Sleeping for 12 seconds, before attempting to refresh the cache again
+[ERROR]: Task failed: Module failed: Failed to update apt cache after 5 retries:
+Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/playbooks/deploy_server_networking.yml:198:7
+
+196
+197     # ---- FRR Installation ----
+198     - name: "frr | Install FRR packages"
+          ^ column 7
+
+fatal: [HostB12_1]: FAILED! =>
+    changed: false
+    msg: 'Failed to update apt cache after 5 retries: '
+fatal: [Host34_2]: FAILED! =>
+    changed: false
+    msg: 'Failed to update apt cache after 5 retries: '
+fatal: [Host12_1]: FAILED! =>
+    changed: false
+    msg: 'Failed to update apt cache after 5 retries: '
+fatal: [HostB12_2]: FAILED! =>
+    changed: false
+    msg: 'Failed to update apt cache after 5 retries: '
+[WARNING]: Sleeping for 3 seconds, before attempting to refresh the cache again
+[WARNING]: Sleeping for 5 seconds, before attempting to refresh the cache again
+[WARNING]: Sleeping for 9 seconds, before attempting to refresh the cache again
+[WARNING]: Sleeping for 13 seconds, before attempting to refresh the cache again
+fatal: [Host12_2]: FAILED! =>
+    changed: false
+    msg: 'Failed to update apt cache after 5 retries: '
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+Host12_2                   : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+Host12_3                   : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+Host34_1                   : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+Host34_2                   : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+HostB12_1                  : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+HostB12_2                  : ok=10   changed=4    unreachable=0    failed=1    skipped=4    rescued=0    ignored=0
+MonitorSrv                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
