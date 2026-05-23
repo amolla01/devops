@@ -1,0 +1,325 @@
+---
+# =============================================================================
+# deploy_server_networking.yml — Configure Ubuntu Host Server Fabric Networking
+# =============================================================================
+# Deploys: Netplan (fabric interfaces), FRR (eBGP to leaf pair), Loopback IP
+#
+# After this playbook completes, each server's loopback IP is routable from
+# anywhere in the CLOS fabric via BGP.
+#
+# USAGE:
+#   # All servers:
+#   ansible-playbook playbooks/deploy_server_networking.yml -i inventory/hosts.yml
+#
+#   # Single server:
+#   ansible-playbook playbooks/deploy_server_networking.yml -i inventory/hosts.yml \
+#     --limit HostB12_1
+#
+#   # Dry-run (check mode):
+#   ansible-playbook playbooks/deploy_server_networking.yml -i inventory/hosts.yml \
+#     --check --diff
+#
+# ARGUMENTS:
+#   --limit <host>          Target specific server(s)
+#   --tags netplan          Only apply netplan configuration
+#   --tags frr              Only apply FRR/BGP configuration
+#   --tags loopback         Only configure loopback interface
+#   --tags virtio_fix       Only apply virtio TX checksum fix (KVM lab)
+#   --tags verify           Only run verification tasks
+#   --skip-tags hardening   Skip SSH hardening (useful for lab)
+#   -e "automation_profile=win11_kvm"  Set KVM lab profile
+#
+# PREREQUISITES:
+#   - Server SSH-accessible via management IP (phase5_validate passed)
+#   - For KVM lab: NAT masquerade enabled on hypervisor
+#   - For KVM lab: Corporate proxy configured for apt
+#
+# INTERFACE NAMING (KVM vs Physical):
+#   KVM Lab:  enp1s0 (mgmt), enp2s0 (fabric0), enp3s0 (fabric1)
+#   Physical: eth0 (mgmt), eth1 (fabric0), eth2 (fabric1)
+#   The playbook auto-detects based on automation_profile.
+# =============================================================================
+
+- name: "Deploy Server Fabric Networking (Netplan + FRR + Loopback)"
+  hosts: servers
+  gather_facts: true
+  become: true
+  vars:
+    # Determine interface names based on profile
+    _is_kvm: "{{ automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] }}"
+    _fab0: "{{ kvm_interface_map.fabric0 if _is_kvm | bool else physical_interface_map.fabric0 }}"
+    _fab1: "{{ kvm_interface_map.fabric1 if _is_kvm | bool else physical_interface_map.fabric1 }}"
+    _mgmt: "{{ kvm_interface_map.mgmt if _is_kvm | bool else physical_interface_map.mgmt }}"
+
+  tasks:
+    # ---- Pre-flight ----
+    - name: "preflight | Verify SSH connectivity"
+      ansible.builtin.ping:
+      tags: [always]
+
+    - name: "preflight | Detect actual interface names"
+      ansible.builtin.shell: |
+        ip -o link show | grep -v lo | awk -F': ' '{print $2}' | head -3
+      register: _detected_interfaces
+      changed_when: false
+      tags: [always]
+
+    - name: "preflight | Display detected interfaces"
+      ansible.builtin.debug:
+        msg: "Detected NICs: {{ _detected_interfaces.stdout_lines | join(', ') }}"
+      tags: [always]
+
+    # ---- Virtio TX Checksum Fix (KVM Lab Only) ----
+    - name: "virtio_fix | Disable TX checksum offload on fabric interfaces"
+      ansible.builtin.command: "ethtool -K {{ item }} tx off"
+      loop:
+        - "{{ _fab0 }}"
+        - "{{ _fab1 }}"
+      when: _is_kvm | bool
+      failed_when: false
+      changed_when: false
+      tags: [virtio_fix]
+
+    # ---- Loopback Configuration ----
+    - name: "loopback | Add loopback IP to lo interface"
+      ansible.builtin.command: "ip addr add {{ loopback_ip }} dev lo"
+      register: _lo_add
+      failed_when: false
+      changed_when: "'RTNETLINK answers: File exists' not in _lo_add.stderr"
+      tags: [loopback]
+
+    - name: "loopback | Deploy persistent loopback netplan"
+      ansible.builtin.copy:
+        dest: /etc/netplan/10-loopback.yaml
+        mode: "0600"
+        content: |
+          network:
+            version: 2
+            ethernets:
+              lo:
+                addresses:
+                  - {{ loopback_ip }}
+      tags: [loopback]
+
+    # ---- Bond Interface Setup (Real Hardware Only) ----
+    - name: "bond | Create bond0 for dual-homed fabric links"
+      ansible.builtin.copy:
+        dest: /etc/netplan/15-bond-fabric.yaml
+        mode: "0600"
+        content: |
+          network:
+            version: 2
+            bonds:
+              bond0:
+                interfaces:
+                  - {{ _fab0 }}
+                  - {{ _fab1 }}
+                parameters:
+                  mode: active-backup
+                  primary: {{ _fab0 }}
+                  mii-monitor-interval: 100
+                mtu: 9000
+                dhcp4: false
+                link-local: [ipv6]
+      when: not (_is_kvm | bool)
+      register: _bond_created
+      tags: [netplan, bond]
+
+    - name: "bond | Apply bond configuration"
+      ansible.builtin.command: netplan apply
+      when:
+        - not (_is_kvm | bool)
+        - _bond_created.changed | default(false)
+      tags: [netplan, bond]
+
+    # ---- Netplan Fabric Configuration ----
+    - name: "netplan | Deploy fabric interface configuration"
+      ansible.builtin.copy:
+        dest: /etc/netplan/20-fabric.yaml
+        mode: "0600"
+        content: |
+          network:
+            version: 2
+            ethernets:
+              {{ _fab0 }}:
+                dhcp4: false
+                link-local: [ipv6]
+                mtu: 9000
+              {{ _fab1 }}:
+                dhcp4: false
+                link-local: [ipv6]
+                mtu: 9000
+      register: _netplan_changed
+      tags: [netplan]
+
+    - name: "netplan | Apply netplan configuration"
+      ansible.builtin.command: netplan apply
+      when: _netplan_changed.changed
+      tags: [netplan]
+
+    - name: "netplan | Bring fabric interfaces up"
+      ansible.builtin.command: "ip link set {{ item }} up"
+      loop:
+        - "{{ _fab0 }}"
+        - "{{ _fab1 }}"
+      changed_when: false
+      tags: [netplan]
+
+    # ---- Real Hardware Pre-checks (bond / MTU / interface existence) ----
+    - name: "preflight_hw | Verify fabric interfaces exist on host"
+      ansible.builtin.shell: "ip link show {{ item }} 2>/dev/null"
+      loop:
+        - "{{ _fab0 }}"
+        - "{{ _fab1 }}"
+      register: _iface_exists
+      failed_when: _iface_exists.rc != 0
+      changed_when: false
+      when: not (_is_kvm | bool)
+      tags: [netplan, preflight]
+
+    - name: "preflight_hw | Verify MTU 9000 support on fabric NICs"
+      ansible.builtin.shell: |
+        max_mtu=$(ip -d link show {{ item }} | grep -oP 'maxmtu \K[0-9]+' || echo "0")
+        if [ "$max_mtu" -lt 9000 ] && [ "$max_mtu" -ne 0 ]; then
+          echo "FAIL: {{ item }} max_mtu=$max_mtu < 9000"
+          exit 1
+        fi
+        echo "OK: {{ item }} max_mtu=$max_mtu"
+      loop:
+        - "{{ _fab0 }}"
+        - "{{ _fab1 }}"
+      register: _mtu_check
+      changed_when: false
+      failed_when: _mtu_check.rc != 0
+      when: not (_is_kvm | bool)
+      tags: [netplan, preflight]
+
+    # ---- Management Route Metric (ensure fabric BGP default wins) ----
+    - name: "mgmt_route | Read existing cloud-init netplan"
+      ansible.builtin.slurp:
+        src: /etc/netplan/50-cloud-init.yaml
+      register: _cloud_init_raw
+      failed_when: false
+      tags: [netplan, mgmt_route]
+
+    - name: "mgmt_route | Detect management gateway"
+      ansible.builtin.shell: |
+        ip route show default | grep "dev {{ _mgmt }}" | awk '{print $3}' | head -1
+      register: _mgmt_gw
+      changed_when: false
+      tags: [netplan, mgmt_route]
+
+    - name: "mgmt_route | Deploy management netplan with high metric"
+      ansible.builtin.copy:
+        dest: /etc/netplan/50-cloud-init.yaml
+        mode: "0600"
+        content: |
+          network:
+            version: 2
+            ethernets:
+              {{ _mgmt }}:
+                dhcp4: false
+                addresses: {{ ((_cloud_init_raw.content | b64decode | from_yaml).network.ethernets[_mgmt].addresses | default([ansible_host + '/24'])) | to_json }}
+                routes:
+                  - to: default
+                    via: {{ _mgmt_gw.stdout | default(mgmt_gateway | default('192.168.255.1')) }}
+                    metric: 9999
+                  - to: {{ mgmt_subnet | default('192.168.255.0/24') }}
+                    via: {{ _mgmt_gw.stdout | default(mgmt_gateway | default('192.168.255.1')) }}
+                    metric: 100
+                nameservers:
+                  addresses: {{ dns_servers | default(['8.8.8.8', '8.8.4.4']) | to_json }}
+      when: _mgmt_gw.stdout | default('') | length > 0
+      register: _mgmt_netplan_changed
+      notify: apply netplan
+      tags: [netplan, mgmt_route]
+
+    - name: "mgmt_route | Set management default route metric immediately"
+      ansible.builtin.shell: |
+        # Get current default route via management interface
+        current_gw=$(ip route show default dev {{ _mgmt }} | awk '{print $3}' | head -1)
+        if [ -n "$current_gw" ]; then
+          # Replace default route with high metric version
+          ip route replace default via $current_gw dev {{ _mgmt }} metric 9999 2>/dev/null || true
+        fi
+      changed_when: false
+      tags: [netplan, mgmt_route]
+
+    # ---- FRR Installation ----
+    - name: "frr | Install FRR packages"
+      ansible.builtin.apt:
+        name:
+          - frr
+          - frr-pythontools
+        state: present
+        update_cache: yes
+        cache_valid_time: 3600
+      environment:
+        http_proxy: "{{ server_http_proxy | default(lookup('env', 'HTTP_PROXY') | default(omit, true)) }}"
+        https_proxy: "{{ server_https_proxy | default(lookup('env', 'HTTPS_PROXY') | default(omit, true)) }}"
+      tags: [frr]
+
+    - name: "frr | Enable BGP and Zebra daemons"
+      ansible.builtin.lineinfile:
+        path: /etc/frr/daemons
+        regexp: "^{{ item }}="
+        line: "{{ item }}=yes"
+        state: present
+      loop:
+        - bgpd
+        - zebra
+      notify: restart frr
+      tags: [frr]
+
+    - name: "frr | Deploy FRR configuration"
+      ansible.builtin.template:
+        src: "../roles/server_base/templates/frr.conf.j2"
+        dest: /etc/frr/frr.conf
+        mode: "0640"
+        owner: frr
+        group: frr
+        backup: yes
+      notify: restart frr
+      tags: [frr]
+
+    - name: "frr | Ensure FRR is enabled and running"
+      ansible.builtin.systemd:
+        name: frr
+        enabled: yes
+        state: started
+      tags: [frr]
+
+    # ---- Verification ----
+    - name: "verify | Check loopback IP"
+      ansible.builtin.command: "ip addr show lo"
+      register: _lo_check
+      changed_when: false
+      tags: [verify]
+
+    - name: "verify | Check BGP summary"
+      ansible.builtin.command: "vtysh -c 'show bgp summary json'"
+      register: _bgp_check
+      changed_when: false
+      failed_when: false
+      tags: [verify]
+
+    - name: "verify | Display BGP status"
+      ansible.builtin.debug:
+        msg: |
+          === {{ inventory_hostname }} Network Status ===
+          Loopback: {{ loopback_ip }}
+          Router-ID: {{ frr_bgp.router_id }}
+          ASN: {{ frr_bgp.local_asn }}
+          Fabric interfaces: {{ _fab0 }}, {{ _fab1 }}
+          BGP peers: {{ frr_bgp.neighbors | map(attribute='description') | join(', ') }}
+          BGP output: {{ _bgp_check.stdout | default('FRR not responding') | truncate(200) }}
+      tags: [verify]
+
+  handlers:
+    - name: restart frr
+      ansible.builtin.systemd:
+        name: frr
+        state: restarted
+
+    - name: apply netplan
+      ansible.builtin.command: netplan apply
