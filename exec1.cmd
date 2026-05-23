@@ -99,3 +99,14 @@ ansible-playbook playbooks/deploy_leaf_server_bgp.yml -t deploy --limit "Leaf_L3
 ansible-playbook playbooks/deploy_leaf_server_bgp.yml -t verify
 
 
+
+
+
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@4th@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'conf t' -c 'router bgp 65021' -c 'no neighbor Ethernet22'"
+ssh admin@Border_Leaf2 "docker exec bgp vtysh -c 'conf t' -c 'router bgp 65022' -c 'no neighbor Ethernet22'"
+
+ssh ubuntu@Host34_1 "systemctl is-active frr; sudo vtysh -c 'show bgp summary'; ip -6 addr show dev enp2s0; ip -6 addr show dev enp3s0; sudo vtysh -c 'show run' | grep -A5 'neighbor enp'"
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
