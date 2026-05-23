@@ -1,397 +1,419 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_day0.yml  -i inventory/hosts.yml -e "automation_profile=ubuntu_r620_kvm" --limit MonitorSrv
-
-PLAY [Day-0 Base Provisioning — SONiC Switches] *****************************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY [Day-0 Base Provisioning — MikroTik Exit Routers] **********************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY [Day-0 Base Provisioning — Ubuntu Servers] *****************************************************************************************************************************************************************
-[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
-
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [MonitorSrv -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r620_kvm (QEMU/KVM on Ubuntu for Dell R620)
-
-TASK [Phase 0 | Pre-flight connectivity (Ubuntu server)] ********************************************************************************************************************************************************
-included: server_base for MonitorSrv
-
-TASK [server_base : preflight | Wait for SSH port 22 to accept connections] *************************************************************************************************************************************
-ok: [MonitorSrv -> localhost]
-
-TASK [server_base : preflight | Probe SSH connectivity] *********************************************************************************************************************************************************
-ok: [MonitorSrv -> localhost]
-
-TASK [server_base : preflight | Assert SSH connectivity succeeded] **********************************************************************************************************************************************
-ok: [MonitorSrv] =>
-    changed: false
-    msg: SSH to MonitorSrv (172.16.2.47) — OK
-
-TASK [server_base : preflight | Gather OS facts] ****************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [server_base : preflight | Display server identity] ********************************************************************************************************************************************************
-[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
-[DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
-Origin: /mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1/roles/server_base/tasks/preflight.yml:79:10
-
-77 - name: "preflight | Display server identity"
-78   ansible.builtin.debug:
-79     msg: >-
-            ^ column 10
-
-Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
-
-ok: [MonitorSrv] =>
-    msg: 'MonitorSrv: Ubuntu 24.04'
-
-TASK [server_base : preflight_hw | Check BMC/iDRAC reachability] ************************************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [server_base : preflight_hw | Report BMC status] ***********************************************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [server_base : preflight_hw | Validate minimum CPU cores (real hardware)] **********************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [server_base : preflight_hw | Validate minimum RAM (real hardware)] ****************************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [server_base : preflight_hw | Validate minimum disk space on root (real hardware)] *************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [server_base : preflight_hw | Assert root partition has sufficient space] **********************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [Phase 1 | Day-0 provisioning (Ubuntu server)] *************************************************************************************************************************************************************
-included: server_base for MonitorSrv
-
-TASK [server_base : day0 | Derive valid Linux hostname] *********************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [server_base : day0 | Set hostname] ************************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Update /etc/hosts with hostname] *****************************************************************************************************************************************************
-[WARNING]: Module remote_tmp /root/.ansible/tmp did not exist and was created with a mode of 0700, this may cause issues when running as another user. To avoid this, create the remote_tmp dir with the correct permissions manually
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Set timezone to UTC] *****************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Install essential packages] **********************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Configure Chrony NTP] ****************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Configure DNS resolvers] *************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Disable password authentication in sshd] *********************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Disable root login in sshd] **********************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [server_base : day0 | Enable and start LLDP daemon] ********************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [server_base : day0 | Deployment summary] ******************************************************************************************************************************************************************
-ok: [MonitorSrv] =>
-    msg: |-
-        ============================================================
-        Day-0 Deployment Complete: monitorsrv (Ubuntu Server)
-        ============================================================
-        Inventory name:  MonitorSrv
-        Linux hostname:  monitorsrv
-        PXE IP:       N/A
-        Bond IP:      10.10.100.3/24
-        Loopback:     10.10.255.102/32
-        NTP:          0.pool.ntp.org, 1.pool.ntp.org
-        DNS:          8.8.8.8, 8.8.4.4
-        Packages:     chrony, frr, lldpd, jq, net-tools
-        ============================================================
-        NEXT: deploy_day1.yml for Netplan + FRR BGP configuration
-        ============================================================
-
-RUNNING HANDLER [server_base : restart chrony] ******************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-RUNNING HANDLER [server_base : restart systemd-resolved] ********************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-RUNNING HANDLER [server_base : restart sshd] ********************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-MonitorSrv                 : ok=22   changed=11   unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ssh-copy-id ubuntu@MonitorSrv^C
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_server_networking.yml  -i inventory/hosts.yml --limit MonitorSrv -e "server_http_proxy='' server_https_proxy=''"
-
-PLAY [Deploy Server Fabric Networking (Netplan + FRR + Loopback)] ***********************************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [preflight | Verify SSH connectivity] **********************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [preflight | Detect actual interface names] ****************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [preflight | Display detected interfaces] ******************************************************************************************************************************************************************
-ok: [MonitorSrv] =>
-    msg: 'Detected NICs: enp1s0, enp2s0, enp3s0'
-
-TASK [virtio_fix | Disable TX checksum offload on fabric interfaces] ********************************************************************************************************************************************
-ok: [MonitorSrv] => (item=enp2s0)
-ok: [MonitorSrv] => (item=enp3s0)
-
-TASK [loopback | Add loopback IP to lo interface] ***************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [loopback | Deploy persistent loopback netplan] ************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [bond | Create bond0 for dual-homed fabric links] **********************************************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [bond | Apply bond configuration] **************************************************************************************************************************************************************************
-skipping: [MonitorSrv]
-
-TASK [netplan | Deploy fabric interface configuration] **********************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [netplan | Apply netplan configuration] ********************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [netplan | Bring fabric interfaces up] *********************************************************************************************************************************************************************
-ok: [MonitorSrv] => (item=enp2s0)
-ok: [MonitorSrv] => (item=enp3s0)
-
-TASK [preflight_hw | Verify fabric interfaces exist on host] ****************************************************************************************************************************************************
-skipping: [MonitorSrv] => (item=enp2s0)
-skipping: [MonitorSrv] => (item=enp3s0)
-skipping: [MonitorSrv]
-
-TASK [preflight_hw | Verify MTU 9000 support on fabric NICs] ****************************************************************************************************************************************************
-skipping: [MonitorSrv] => (item=enp2s0)
-skipping: [MonitorSrv] => (item=enp3s0)
-skipping: [MonitorSrv]
-
-TASK [mgmt_route | Read existing cloud-init netplan] ************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [mgmt_route | Detect management gateway] *******************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [mgmt_route | Deploy management netplan with high metric] **************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [mgmt_route | Set management default route metric immediately] *********************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [frr | Install FRR packages] *******************************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [frr | Enable BGP and Zebra daemons] ***********************************************************************************************************************************************************************
-changed: [MonitorSrv] => (item=bgpd)
-changed: [MonitorSrv] => (item=zebra)
-
-TASK [frr | Deploy FRR configuration] ***************************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-TASK [frr | Ensure FRR is enabled and running] ******************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [verify | Check loopback IP] *******************************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
-ok: [MonitorSrv]
-
-TASK [verify | Display BGP status] ******************************************************************************************************************************************************************************
-ok: [MonitorSrv] =>
-    msg: |-
-        === MonitorSrv Network Status ===
-        Loopback: 10.10.255.102/32
-        Router-ID: 10.10.255.102
-        ASN: 65108
-        Fabric interfaces: enp2s0, enp3s0
-        BGP peers: Border_Leaf1, Border_Leaf2
-        BGP output:
-
-RUNNING HANDLER [restart frr] ***********************************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-RUNNING HANDLER [apply netplan] *********************************************************************************************************************************************************************************
-changed: [MonitorSrv]
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-MonitorSrv                 : ok=23   changed=9    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$ ansible-playbook playbooks/deploy_leaf_server_bgp.yml  -i inventory/hosts.yml --limit Border_Leaf1,Border_Leaf2
-
-PLAY [Configure Leaf-to-Server BGP Peers (eBGP Unnumbered)] *****************************************************************************************************************************************************
-
-TASK [preflight | Verify SSH to switch] *************************************************************************************************************************************************************************
-ok: [Border_Leaf1]
-ok: [Border_Leaf2]
-
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [preflight | Skip if no downlink_interfaces defined] *******************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [plan | Show server BGP peers to configure] ****************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |-
-        === Border_Leaf1 — Server BGP Peers ===
-        Local ASN: 65021
-        • Ethernet20 → HostB12_1 (ASN 65106)
-        • Ethernet22 → MonitorSrv (ASN 65108)
-        • Ethernet21 → HostB12_2 (ASN 65107)
-ok: [Border_Leaf2] =>
-    msg: |-
-        === Border_Leaf2 — Server BGP Peers ===
-        Local ASN: 65022
-        • Ethernet20 → HostB12_1 (ASN 65106)
-        • Ethernet21 → HostB12_2 (ASN 65107)
-        • Ethernet22 → MonitorSrv (ASN 65108)
-
-TASK [config | Ensure server downlink ports are admin-up] *******************************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
-changed: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
-changed: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
-changed: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
-changed: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
-changed: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
-
-TASK [config | Enable IPv6 on server downlink interfaces] *******************************************************************************************************************************************************
-changed: [Border_Leaf1] => (item=Ethernet20)
-changed: [Border_Leaf2] => (item=Ethernet20)
-changed: [Border_Leaf1] => (item=Ethernet22)
-changed: [Border_Leaf2] => (item=Ethernet21)
-changed: [Border_Leaf1] => (item=Ethernet21)
-changed: [Border_Leaf2] => (item=Ethernet22)
-
-TASK [config | Wait for FRR/bgpd to be responsive] **************************************************************************************************************************************************************
-ok: [Border_Leaf1]
-ok: [Border_Leaf2]
-
-TASK [config | Add server BGP peers via vtysh] ******************************************************************************************************************************************************************
-changed: [Border_Leaf2]
-changed: [Border_Leaf1]
-
-TASK [config | vtysh output] ************************************************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-skipping: [Border_Leaf2]
-
-TASK [verify | Wait for BGP sessions to form (30s)] *************************************************************************************************************************************************************
-Pausing for 30 seconds
-(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
-ok: [Border_Leaf1]
-
-TASK [verify | Check BGP summary] *******************************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-ok: [Border_Leaf1]
-
-TASK [verify | Display BGP summary] *****************************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-        BGP table version 37
-        RIB entries 29, using 6496 bytes of memory
-        Peers 6, using 4348 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106       225       232        0    0    0 02:55:56            4       15 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       398       402        0    0    0 06:09:19           11       15 Spine_S2
-        Ethernet124     4      65000       398       401        0    0    0 06:09:32           11       15 Spine_S1
-        10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-        Total number of neighbors 6
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106       225       232        0    0    0 02:55:56        NoNeg    NoNeg HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       398       402        0    0    0 06:09:19            0        0 Spine_S2
-        Ethernet124     4      65000       398       401        0    0    0 06:09:32            0        0 Spine_S1
-
-        Total number of neighbors 5
-ok: [Border_Leaf2] =>
-    msg: |4-
-
-        IPv4 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-        BGP table version 38
-        RIB entries 29, using 6496 bytes of memory
-        Peers 6, using 4348 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106       232       235        0    0    0 02:55:56           13       15 HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       379       383        0    0    0 05:50:26           12       15 Spine_S2
-        Ethernet124     4      65000       379       382        0    0    0 05:50:26           12       15 Spine_S1
-        10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
-
-        Total number of neighbors 6
-
-        IPv6 Unicast Summary (VRF default):
-        BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-        BGP table version 0
-        RIB entries 0, using 0 bytes of memory
-        Peers 5, using 3623 KiB of memory
-
-        Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-        Ethernet20      4      65106       232       235        0    0    0 02:55:56        NoNeg    NoNeg HostB12_1
-        Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-        Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-        Ethernet120     4      65000       379       383        0    0    0 05:50:26            0        0 Spine_S2
-        Ethernet124     4      65000       379       382        0    0    0 05:50:26            0        0 Spine_S1
-
-        Total number of neighbors 5
-
-TASK [verify | Check specific server peer status] ***************************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet20 → HostB12_1)
-ok: [Border_Leaf1] => (item=Ethernet20 → HostB12_1)
-ok: [Border_Leaf2] => (item=Ethernet21 → HostB12_2)
-ok: [Border_Leaf1] => (item=Ethernet22 → MonitorSrv)
-ok: [Border_Leaf2] => (item=Ethernet22 → MonitorSrv)
-ok: [Border_Leaf1] => (item=Ethernet21 → HostB12_2)
-
-TASK [verify | Server peer status summary] **********************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |-
-        === Border_Leaf1 Server BGP Peer Status ===
-        Ethernet20 → HostB12_1 (AS 65106): Established
-        Ethernet22 → MonitorSrv (AS 65108): Idle
-        Ethernet21 → HostB12_2 (AS 65107): Idle
-ok: [Border_Leaf2] =>
-    msg: |-
-        === Border_Leaf2 Server BGP Peer Status ===
-        Ethernet20 → HostB12_1 (AS 65106): Established
-        Ethernet21 → HostB12_2 (AS 65107): Idle
-        Ethernet22 → MonitorSrv (AS 65108): Idle
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=11   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Border_Leaf2               : ok=10   changed=3    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/claude-opus-4.6-v1$
+Microsoft Windows [Version 10.0.26200.8457]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\nh1221>ssh admin@Spine_S1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.0.1, local AS number 65000 vrf-id 0
+BGP table version 30
+RIB entries 27, using 6048 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65011       531       528        0    0    0 08:19:23            5       14 Leaf_L1
+Ethernet4       4      65012       534       528        0    0    0 08:19:18            5       14 Leaf_L2
+Ethernet8       4      65013       529       528        0    0    0 08:19:18            1       14 Leaf_L3
+Ethernet12      4      65014       530       530        0    0    0 08:19:25            1       14 Leaf_L4
+Ethernet16      4      65021       531       529        0    0    0 08:19:26            4       14 Border_Leaf1
+Ethernet20      4      65022       512       510        0    0    0 08:00:20            4       14 Border_Leaf2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.0.1, local AS number 65000 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65011       531       528        0    0    0 08:19:23            0        0 Leaf_L1
+Ethernet4       4      65012       534       528        0    0    0 08:19:18            0        0 Leaf_L2
+Ethernet8       4      65013       529       528        0    0    0 08:19:18            0        0 Leaf_L3
+Ethernet12      4      65014       530       530        0    0    0 08:19:25            0        0 Leaf_L4
+Ethernet16      4      65021       531       529        0    0    0 08:19:26            0        0 Border_Leaf1
+Ethernet20      4      65022       512       510        0    0    0 08:00:20            0        0 Border_Leaf2
+
+Total number of neighbors 6
+
+C:\Users\nh1221>ssh admin@Spine_S2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.
+sudo: unable to resolve host SpineS2: Temporary failure in name resolution
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.0.2, local AS number 65000 vrf-id 0
+BGP table version 30
+RIB entries 27, using 6048 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65011       531       528        0    0    0 08:19:43            5       14 Leaf_L1
+Ethernet4       4      65012       534       528        0    0    0 08:19:46            5       14 Leaf_L2
+Ethernet8       4      65013       529       528        0    0    0 08:19:46            1       14 Leaf_L3
+Ethernet12      4      65014       529       528        0    0    0 08:19:49            1       14 Leaf_L4
+Ethernet16      4      65021       531       528        0    0    0 08:19:46            4       14 Border_Leaf1
+Ethernet20      4      65022       512       509        0    0    0 08:00:52            4       14 Border_Leaf2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.0.2, local AS number 65000 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65011       531       528        0    0    0 08:19:43            0        0 Leaf_L1
+Ethernet4       4      65012       534       528        0    0    0 08:19:46            0        0 Leaf_L2
+Ethernet8       4      65013       529       528        0    0    0 08:19:46            0        0 Leaf_L3
+Ethernet12      4      65014       529       528        0    0    0 08:19:49            0        0 Leaf_L4
+Ethernet16      4      65021       531       528        0    0    0 08:19:46            0        0 Border_Leaf1
+Ethernet20      4      65022       512       509        0    0    0 08:00:52            0        0 Border_Leaf2
+
+Total number of neighbors 6
+
+C:\Users\nh1221>ssh admin@Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+sudo: unable to resolve host LeafL1: Temporary failure in name resolution
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 74
+RIB entries 29, using 6496 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101       355       359        0    0    0 05:06:46            3       15 Host12_1
+Ethernet1       4      65102       356       359        0    0    0 05:06:46            3       15 Host12_2
+Ethernet2       4      65103       355       360        0    0    0 05:06:46            3       15 Host12_3
+Ethernet64      4      65000      2618      2633        0    0    0 08:20:07            9       15 Spine_S2
+Ethernet68      4      65000      2623      2634        0    0    0 08:20:19            9       15 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101       355       359        0    0    0 05:06:46        NoNeg    NoNeg Host12_1
+Ethernet1       4      65102       356       359        0    0    0 05:06:46        NoNeg    NoNeg Host12_2
+Ethernet2       4      65103       355       360        0    0    0 05:06:46        NoNeg    NoNeg Host12_3
+Ethernet64      4      65000      2618      2633        0    0    0 08:20:07            0        0 Spine_S2
+Ethernet68      4      65000      2623      2634        0    0    0 08:20:19            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh admin@Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 67
+RIB entries 29, using 6496 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101       356       360        0    0    0 05:07:13           14       15 Host12_1
+Ethernet1       4      65102       357       361        0    0    0 05:07:13           14       15 Host12_2
+Ethernet2       4      65103       356       361        0    0    0 05:07:13           14       15 Host12_3
+Ethernet64      4      65000      2591      2601        0    0    0 08:20:36           13       15 Spine_S2
+Ethernet68      4      65000      2589      2599        0    0    0 08:20:40           13       15 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101       356       360        0    0    0 05:07:13        NoNeg    NoNeg Host12_1
+Ethernet1       4      65102       357       361        0    0    0 05:07:13        NoNeg    NoNeg Host12_2
+Ethernet2       4      65103       356       361        0    0    0 05:07:13        NoNeg    NoNeg Host12_3
+Ethernet64      4      65000      2591      2601        0    0    0 08:20:36            0        0 Spine_S2
+Ethernet68      4      65000      2589      2599        0    0    0 08:20:40            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh admin@Leaf_L3 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.
+sudo: unable to resolve host LeafL3: Temporary failure in name resolution
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
+BGP table version 70
+RIB entries 29, using 6496 bytes of memory
+Peers 4, using 2898 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65104       213       419        0    0    0    never         Idle        0 Host34_1
+Ethernet1       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
+Ethernet120     4      65000      2616      2625        0    0    0 08:21:09           13       15 Spine_S2
+Ethernet124     4      65000      2618      2627        0    0    0 08:21:13           13       15 Spine_S1
+
+Total number of neighbors 4
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 4, using 2898 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65104       213       419        0    0    0    never         Idle        0 Host34_1
+Ethernet1       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
+Ethernet120     4      65000      2616      2625        0    0    0 08:21:09            0        0 Spine_S2
+Ethernet124     4      65000      2618      2627        0    0    0 08:21:13            0        0 Spine_S1
+
+Total number of neighbors 4
+
+C:\Users\nh1221>ssh admin@Leaf_L4 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.
+sudo: unable to resolve host LeafL4: Temporary failure in name resolution
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
+BGP table version 60
+RIB entries 29, using 6496 bytes of memory
+Peers 4, using 2898 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65104       207       408        0    0    0    never         Idle        0 Host34_1
+Ethernet2       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
+Ethernet120     4      65000      2585      2588        0    0    0 08:21:29           13       15 Spine_S2
+Ethernet124     4      65000      2585      2587        0    0    0 08:21:38           13       15 Spine_S1
+
+Total number of neighbors 4
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 4, using 2898 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65104       207       408        0    0    0    never         Idle        0 Host34_1
+Ethernet2       4      65105         0         0        0    0    0    never         Idle        0 Host34_2
+Ethernet120     4      65000      2585      2588        0    0    0 08:21:29            0        0 Spine_S2
+Ethernet124     4      65000      2585      2587        0    0    0 08:21:38            0        0 Spine_S1
+
+Total number of neighbors 4
+
+C:\Users\nh1221>ssh admin@Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+sudo: unable to resolve host BorderLeaf1: Temporary failure in name resolution
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 37
+RIB entries 29, using 6496 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       358       365        0    0    0 05:08:31            4       15 HostB12_1
+Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       530       534        0    0    0 08:21:54           11       15 Spine_S2
+Ethernet124     4      65000       531       534        0    0    0 08:22:07           11       15 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       358       365        0    0    0 05:08:31        NoNeg    NoNeg HostB12_1
+Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       530       534        0    0    0 08:21:54            0        0 Spine_S2
+Ethernet124     4      65000       531       534        0    0    0 08:22:07            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh admin@Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 38
+RIB entries 29, using 6496 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       365       368        0    0    0 05:08:43           13       15 HostB12_1
+Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       512       516        0    0    0 08:03:13           12       15 Spine_S2
+Ethernet124     4      65000       512       515        0    0    0 08:03:13           12       15 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       365       368        0    0    0 05:08:43        NoNeg    NoNeg HostB12_1
+Ethernet21      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       512       516        0    0    0 08:03:13            0        0 Spine_S2
+Ethernet124     4      65000       512       515        0    0    0 08:03:13            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh admin@Exit_Router1 "/routing/bgp/session/print"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: E - established
+ 0   remote.address=10.0.253.0 .as=0 .hold-time=infinity
+     local.address=10.0.253.1 .as=0 ebgp
+     prefix-count=0
+
+
+C:\Users\nh1221>ssh admin@Exit_Router2 "/routing/bgp/session/print"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: E - established
+ 0   remote.address=10.0.253.2 .as=0 .hold-time=infinity
+     local.address=10.0.253.3 .as=0 ebgp
+     prefix-count=0
+
+
+C:\Users\nh1221>ssh admin@Exit_Router1 "/routing/bgp/advertisements/print"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+
+
+C:\Users\nh1221>ssh admin@Exit_Router2 "/routing/bgp/advertisements/print"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+
+
+C:\Users\nh1221>ssh ubuntu@Host12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 55
+RIB entries 31, using 5952 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011       367       364        0    0    0 05:15:36           13       15 Leaf_L1
+enp3s0          4      65012       367       364        0    0    0 05:15:36           13       15 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@Host12_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.41' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.2, local AS number 65102 vrf-id 0
+BGP table version 56
+RIB entries 31, using 5952 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011       367       365        0    0    0 05:15:49           14       15 Leaf_L1
+enp3s0          4      65012       368       365        0    0    0 05:15:49           14       15 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@Host12_3 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.42' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.3, local AS number 65103 vrf-id 0
+BGP table version 56
+RIB entries 31, using 5952 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011       369       365        0    0    0 05:16:03           14       15 Leaf_L1
+enp3s0          4      65012       369       365        0    0    0 05:16:03           14       15 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@Host34_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.43' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.11, local AS number 65104 vrf-id 0
+BGP table version 4
+RIB entries 5, using 960 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65013         0         0        0    0    0    never         Idle        0 Leaf_L3
+enp3s0          4      65014         0         0        0    0    0    never         Idle        0 Leaf_L4
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@Host34_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.44' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.12, local AS number 65105 vrf-id 0
+BGP table version 4
+RIB entries 5, using 960 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65013         0         0        0    0    0    never         Idle        0 Leaf_L3
+enp3s0          4      65014         0         0        0    0    0    never         Idle        0 Leaf_L4
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@HostB12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.45' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.100, local AS number 65106 vrf-id 0
+BGP table version 63
+RIB entries 31, using 5952 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021       373       367        0    0    0 05:17:19           13       15 Border_Leaf1
+enp3s0          4      65022       376       374        0    0    0 05:17:19           13       15 Border_Leaf2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@HostB12_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.46' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.101, local AS number 65107 vrf-id 0
+BGP table version 4
+RIB entries 5, using 960 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
+enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh ubuntu@MonitorSrv "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.102, local AS number 65108 vrf-id 0
+BGP table version 4
+RIB entries 5, using 960 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
+enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>
