@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# Border_Leaf2 - Arista 7050QX-32S (Border Leaf #2)
+# =============================================================================
+# Platform:   x86_64-arista_7050_qx32s / Arista-7050QX-32S
+# ASIC:       Broadcom Trident II BCM56854
+# Ports:      32x40G QSFP+ (4 lanes per port, 128 SerDes total)
+# Management: 172.16.2.32 (Management Switch port40)
+# Loopback:   10.0.2.2/32
+# ASN:        65022
+#
+# Source: TopologyRequirements.txt — "Border-Leaf: Arista-7050QX-32S to be used"
+#
+# Fabric Wiring (KVM VS index mapping — same as Border_Leaf1):
+#   Ethernet124 (Ethernet36, index 36) ↔ Spine_S1 Ethernet20 (uplink, 40G)
+#   Ethernet120 (Ethernet35, index 35) ↔ Spine_S2 Ethernet20 (uplink, 40G)
+#
+#   KVM NIC 32 → Spine_S1 bridge (br-BL2-S1)
+#   KVM NIC 31 → Spine_S2 bridge (br-BL2-S2)
+#
+# Exit Router Wiring:
+#   Ethernet0   (Ethernet1/1, QSFP+1 breakout sub0) ↔ Exit_Router2 sfp+port1 (10G)
+#   (QSFP+ Ethernet0 broken out 4x10G; lanes 13,14,15,16)
+#
+# Server Wiring:
+#   Ethernet20  (Ethernet6/1, QSFP+6 breakout sub0) ↔ HostB12_1 eth2 (10G)
+#   (QSFP+ Ethernet20 broken out 4x10G; lanes 29,30,31,32)
+# =============================================================================
+
+hostname: "Border_Leaf2"
+router_id: "10.0.2.2"
+loopback_ip: "10.0.2.2/32"
+mgmt_ip: "172.16.2.32/24"
+mgmt_gateway: "172.16.2.1"
+mac_address: "00:e0:ec:57:12:02"
+
+# Platform selection is now driven by automation_profile.
+
+bgp_local_asn: "{{ border_leaf_asn_map[inventory_hostname] }}"
+
+# ---- Uplink interfaces (to spines, native 40G QSFP+) ----
+# Ethernet124 → index 36 → KVM NIC32 → br-BL2-S1 (Spine_S1)
+# Ethernet120 → index 35 → KVM NIC31 → br-BL2-S2 (Spine_S2)
+uplink_interfaces:
+  - port: "Ethernet124"
+    alias: "Ethernet36"
+    lanes: "5,6,7,8"
+    index: "36"
+    speed: "40000"
+    neighbor: "Spine_S1"
+    neighbor_port: "Ethernet20"
+    neighbor_asn: "{{ spine_asn }}"
+    description: "Border_Leaf2 → Spine_S1 (Celestica DX010)"
+
+  - port: "Ethernet120"
+    alias: "Ethernet35"
+    lanes: "1,2,3,4"
+    index: "35"
+    speed: "40000"
+    neighbor: "Spine_S2"
+    neighbor_port: "Ethernet20"
+    neighbor_asn: "{{ spine_asn }}"
+    description: "Border_Leaf2 → Spine_S2 (Celestica DX010)"
+
+# ---- Exit router downlink (QSFP+ port 1 broken out 4x10G, using sub-port 0) ----
+exit_interfaces:
+  - port: "Ethernet0"
+    alias: "Ethernet5/1"
+    lanes: "9,10,11,12"
+    index: "5"
+    speed: "10000"
+    neighbor: "Exit_Router2"
+    neighbor_port: "ether2"
+    neighbor_asn: 65254
+    local_ip: "10.0.253.2/31"
+    neighbor_ip: "10.0.253.3"
+    description: "Border_Leaf2 → Exit_Router2 CRS326 sfp+port1 (10G breakout)"
+
+# ---- Server downlink (QSFP+ port 6 broken out 4x10G) ----
+# ---- Server downlinks ----
+# NOTE: SONiC VS does not support QSFP breakout sub-ports for data-plane.
+# KVM VS maps vNIC position → port_config.ini index → native QSFP port.
+#   Position 6 (NIC6) → index 6 → Ethernet20  (br-HB-BL2)   ← HostB12_1
+#   Position 7 (NIC7) → index 7 → Ethernet24  (br-HB2-BL2)  ← HostB12_2
+#   Position 8 (NIC8) → index 8 → Ethernet28  (br-MS-BL2)   ← MonitorSrv
+# On physical hardware, these would be Ethernet20/21/22 (4x10G breakout of QSFP+6).
+downlink_interfaces:
+  - port: "Ethernet20"
+    alias: "Ethernet6/1"
+    lanes: "21,22,23,24"
+    index: "6"
+    speed: "40000"
+    neighbor: "HostB12_1"
+    neighbor_port: "eth2"
+    description: "Border_Leaf2 → HostB12_1 eth2 (QSFP+6, VS native port)"
+
+  - port: "Ethernet24"
+    alias: "Ethernet7/1"
+    lanes: "25,26,27,28"
+    index: "7"
+    speed: "40000"
+    neighbor: "HostB12_2"
+    neighbor_port: "eth2"
+    description: "Border_Leaf2 → HostB12_2 eth2 (QSFP+7, VS native port)"
+
+  - port: "Ethernet28"
+    alias: "Ethernet8/1"
+    lanes: "29,30,31,32"
+    index: "8"
+    speed: "40000"
+    neighbor: "MonitorSrv"
+    neighbor_port: "eth2"
+    description: "Border_Leaf2 → MonitorSrv eth2 (QSFP+8, VS native port)"
+
+# ---- Breakout config (physical hardware only; NOT applied in VS mode) ----
+breakout_cfg:
+  Ethernet0:   { brkout_mode: "4x10G" }
+  # Ethernet20: { brkout_mode: "4x10G" }  # VS: use native Ethernet20/24/28 instead
+  Ethernet124: { brkout_mode: "1x40G" }
+  Ethernet120: { brkout_mode: "1x40G" }
+
+# ---- All ports reference ----
+all_ports: "{{ qx32s_all_ports }}"
