@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cheat Sheet — Entry/Exit to Outside World (Real Hardware Profile)</title>
+  <style>
+    :root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;--text:#c9d1d9;--text-muted:#8b949e;--accent:#58a6ff;--accent-dim:#1f6feb;--green:#3fb950;--yellow:#d29922;--red:#f85149;--orange:#db6d28;--purple:#bc8cff;--code-bg:#0d1117;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;padding:2rem 2rem 4rem;max-width:1180px;margin:0 auto;}
+    .page-header{border-bottom:1px solid var(--border);padding-bottom:1.5rem;margin-bottom:2rem;}
+    .breadcrumb{font-size:.82rem;color:var(--text-muted);margin-bottom:.5rem;}.breadcrumb a{color:var(--accent);text-decoration:none;}
+    h1{color:#fff;font-size:2rem;margin-bottom:.3rem;}.subtitle{color:var(--text-muted);font-size:.95rem;}
+    .toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.4rem;margin-bottom:2rem;}
+    .toc h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);border:none;margin:0 0 .75rem;}
+    .toc ol{padding-left:1.25rem;}.toc li{margin:.25rem 0;font-size:.92rem;}.toc a{color:var(--accent);text-decoration:none;}
+    h2{color:var(--accent);font-size:1.45rem;margin-top:2.5rem;margin-bottom:.75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+    h3{color:#fff;font-size:1.06rem;margin-top:1.5rem;margin-bottom:.5rem;}
+    h4{color:var(--text-muted);font-size:.88rem;margin-top:1.2rem;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em;}
+    p{margin-bottom:.85rem;}strong{color:#fff;}a{color:var(--accent);text-decoration:none;}
+    ul,ol{margin:.5rem 0 .85rem 1.5rem;}li{margin:.3rem 0;}
+    code{font-family:'Cascadia Code','Fira Code',Consolas,monospace;background:var(--code-bg);border:1px solid var(--border);border-radius:4px;padding:.15em .4em;font-size:.875em;color:#e6edf3;}
+    pre{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;overflow-x:auto;margin:.75rem 0 1.5rem;font-size:.87rem;line-height:1.55;}
+    pre code{background:none;border:none;padding:0;font-size:inherit;color:#e6edf3;}
+    table{width:100%;border-collapse:collapse;margin:.75rem 0 1.5rem;font-size:.88rem;}
+    th{background:var(--surface2);color:var(--text-muted);font-weight:600;text-align:left;padding:.6rem .9rem;border:1px solid var(--border);font-size:.8rem;text-transform:uppercase;letter-spacing:.05em;}
+    td{padding:.55rem .9rem;border:1px solid var(--border);vertical-align:top;}tr:nth-child(even) td{background:var(--surface);}td code{font-size:.82em;}
+    .callout{border-left:4px solid var(--accent-dim);background:var(--surface);border-radius:0 6px 6px 0;padding:.9rem 1.05rem;margin:1rem 0 1.5rem;font-size:.92rem;}
+    .callout.warn{border-left-color:var(--yellow);}.callout.tip{border-left-color:var(--green);}.callout.danger{border-left-color:var(--red);}
+    .callout-title{font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;color:var(--accent);}
+    .callout.warn .callout-title{color:var(--yellow);}.callout.tip .callout-title{color:var(--green);}.callout.danger .callout-title{color:var(--red);}
+    .meta-row{display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;}.meta-row span strong{color:var(--text);}
+    .diagram{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem;margin:1rem 0 1.4rem;font-family:'Cascadia Code','Fira Code',Consolas,monospace;font-size:.8rem;line-height:1.6;white-space:pre;overflow-x:auto;}
+    .step-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;margin:.75rem 0;}
+    .step-num{display:inline-block;background:var(--accent-dim);color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;font-size:.75rem;font-weight:700;line-height:22px;margin-right:.5rem;}
+    .profile-banner{background:#1a1f28;border:2px solid var(--orange);border-radius:8px;padding:1rem 1.4rem;margin-bottom:1.75rem;display:flex;align-items:center;gap:1rem;}
+    .profile-banner .picon{font-size:1.6rem;}.profile-banner .ptitle{color:var(--orange);font-weight:700;font-size:1.05rem;}.profile-banner .pdesc{color:var(--text-muted);font-size:.88rem;margin-top:.2rem;}
+    .diff-table td.same{color:var(--text-muted);}.diff-table td.diff{color:var(--green);font-weight:600;}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="breadcrumb"><a href="./">cheat-sheet</a> / CS-EXIT-ROUTER-OUTSIDE-WORLD-Real_Hardware.html</div>
+  <h1>Entry &amp; Exit to the Outside World</h1>
+  <p class="subtitle">How servers reach the internet (egress) and how external users access services deployed inside (ingress) — <strong>Real Hardware Profile</strong>. Complete wiring, BGP, NAT, firewall, and operational procedure for physical switches.</p>
+  <div class="meta-row">
+    <span><strong>Profile:</strong> <code>real_hardware</code></span>
+    <span><strong>Playbook:</strong> <code>deploy_exit_routers.yml</code></span>
+    <span><strong>Exit Routers:</strong> MikroTik CRS326-24G-2S+RM × 2</span>
+    <span><strong>Border Leaves:</strong> Arista 7050QX-32S × 2</span>
+    <span><strong>Updated:</strong> 2026-05-22</span>
+  </div>
+</header>
+
+<div class="profile-banner">
+  <div class="picon">🔧</div>
+  <div>
+    <div class="ptitle">AUTOMATION_PROFILE = real_hardware</div>
+    <div class="pdesc">Physical switch hardware. No KVM workarounds. Native platform strings (e.g., <code>x86_64-arista_7050_qx32s</code>). Standard SSH. <code>enable_sshd_tuning: false</code>, <code>enable_swap_hardening: false</code>.</div>
+  </div>
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#profile">Profile Differences vs win11_kvm</a></li>
+    <li><a href="#overview">Overview &amp; Traffic Flow</a></li>
+    <li><a href="#wiring">Physical Wiring</a></li>
+    <li><a href="#topology">Logical Topology &amp; ASN Map</a></li>
+    <li><a href="#procedure">Deployment Procedure (Step-by-Step)</a></li>
+    <li><a href="#bgp">BGP Configuration</a></li>
+    <li><a href="#nat">NAT — Source NAT (Masquerade)</a></li>
+    <li><a href="#firewall">Firewall Rules</a></li>
+    <li><a href="#inbound">Inbound Access (Port Forwarding / DNAT)</a></li>
+    <li><a href="#verification">Verification Commands</a></li>
+    <li><a href="#tags">Tag Reference</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a></li>
+  </ol>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="profile">1. Profile Differences vs win11_kvm</h2>
+
+<p>When <code>export AUTOMATION_PROFILE=real_hardware</code> is set, the following behaviors change across all playbooks:</p>
+
+<table class="diff-table">
+  <tr><th>Aspect</th><th>win11_kvm (Lab)</th><th class="diff">real_hardware (Physical)</th></tr>
+  <tr><td>Platform string</td><td><code>x86_64-kvm_x86_64-r0</code> override</td><td class="diff">Physical strings from inventory (e.g., <code>x86_64-arista_7050_qx32s</code>, <code>x86_64-cel_seastone-r0</code>)</td></tr>
+  <tr><td>SSH transport</td><td>Conservative (password auth, no pubkey)</td><td class="diff">Standard SSH — no extra <code>ssh_common_args</code></td></tr>
+  <tr><td>SSHD tuning</td><td><code>enable_sshd_tuning: true</code></td><td class="diff"><code>enable_sshd_tuning: false</code></td></tr>
+  <tr><td>Swap hardening</td><td><code>enable_swap_hardening: true</code></td><td class="diff"><code>enable_swap_hardening: false</code></td></tr>
+  <tr><td>Backup transport workaround</td><td>Enabled</td><td class="diff">Disabled</td></tr>
+  <tr><td>VM management</td><td>Creates/manages KVM VMs, bridges, virtual disks</td><td class="diff">No VM management — physical hardware already present</td></tr>
+  <tr><td>SONiC RAM config</td><td>2–4 GB cap</td><td class="diff">No RAM cap — full physical RAM</td></tr>
+  <tr><td>Fabric NICs</td><td>Virtual eth0–eth32 per VM</td><td class="diff">Real physical ports per device model</td></tr>
+  <tr><td>Exit router connectivity</td><td>May use KVM bridge proxy</td><td class="diff">Direct SSH via 172.16.2.98/99</td></tr>
+</table>
+
+<div class="callout tip">
+  <div class="callout-title">How to activate</div>
+  <pre><code>export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/deploy_exit_routers.yml -i inventory/hosts.yml</code></pre>
+  <p>The profile variable is read in <code>inventory/group_vars/all.yml</code> and cascades to every role through the <code>automation_profile</code> fact.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="overview">2. Overview &amp; Traffic Flow</h2>
+
+<h3>2.1 Egress (Host downloads from the internet)</h3>
+<div class="diagram">Host12_1 (10.10.255.1) — FRR default route via BGP
+   │
+   ▼
+Leaf_L1 (Accton AS5712, AS65011) / Leaf_L2 (AS65012)
+   │  Ethernet68/64 → 40G QSFP+
+   ▼
+Spine_S1 (Celestica DX010, AS65000) / Spine_S2 (AS65000)
+   │  Ethernet16/20 → 100G→40G breakout
+   ▼
+Border_Leaf1 (Arista 7050QX-32S, AS65021) / Border_Leaf2 (AS65022)
+   │  Ethernet0 — 10G breakout sub-port 0
+   ▼
+Exit_Router1 (MikroTik CRS326, AS65253)  /  Exit_Router2 (AS65254)
+   │  ether1 — MASQUERADE (SNAT)
+   ▼
+Internet / WAN
+</div>
+
+<h3>2.2 Ingress (External user accesses a service inside)</h3>
+<div class="diagram">Internet / User
+   │
+   ▼
+Exit_Router ether1  ── DST-NAT (DNAT port forward) ──  translate to internal IP:port
+   │
+   ▼
+Border_Leaf ── eBGP ──  Spine ── eBGP ──  Leaf
+                                             │
+                                             ▼
+                                  Host (VM/bare-metal service)
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="wiring">3. Physical Wiring</h2>
+
+<h3>3.1 Border Leaf ↔ Exit Router (fabric data links)</h3>
+<table>
+  <tr><th>From</th><th>Port</th><th>Speed</th><th>Subnet</th><th>To</th><th>Port</th></tr>
+  <tr>
+    <td>Border_Leaf1<br><small>Arista 7050QX-32S</small></td>
+    <td><code>Ethernet0</code><br><small>QSFP+ port 1, 4×10G breakout, sub0</small></td>
+    <td>10G</td>
+    <td>10.0.253.0/31<br><small>BL1=.0, ER1=.1</small></td>
+    <td>Exit_Router1<br><small>MikroTik CRS326</small></td>
+    <td><code>sfp-sfpplus1</code></td>
+  </tr>
+  <tr>
+    <td>Border_Leaf2<br><small>Arista 7050QX-32S</small></td>
+    <td><code>Ethernet0</code><br><small>QSFP+ port 1, 4×10G breakout, sub0</small></td>
+    <td>10G</td>
+    <td>10.0.253.2/31<br><small>BL2=.2, ER2=.3</small></td>
+    <td>Exit_Router2<br><small>MikroTik CRS326</small></td>
+    <td><code>sfp-sfpplus1</code></td>
+  </tr>
+</table>
+
+<h3>3.2 Border Leaf ↔ Spine (fabric uplinks)</h3>
+<table>
+  <tr><th>From</th><th>Port</th><th>To</th><th>Port</th><th>Speed</th></tr>
+  <tr><td>Border_Leaf1</td><td>Ethernet124</td><td>Spine_S1</td><td>Ethernet16</td><td>40G</td></tr>
+  <tr><td>Border_Leaf1</td><td>Ethernet120</td><td>Spine_S2</td><td>Ethernet16</td><td>40G</td></tr>
+  <tr><td>Border_Leaf2</td><td>Ethernet124</td><td>Spine_S1</td><td>Ethernet20</td><td>40G</td></tr>
+  <tr><td>Border_Leaf2</td><td>Ethernet120</td><td>Spine_S2</td><td>Ethernet20</td><td>40G</td></tr>
+</table>
+
+<h3>3.3 Exit Router management &amp; internet ports</h3>
+<table>
+  <tr><th>Device</th><th>Port</th><th>Connected To</th><th>Purpose</th></tr>
+  <tr><td>Exit_Router1</td><td>ether1</td><td>ISP / Campus uplink</td><td>Internet-facing (masquerade on this interface)</td></tr>
+  <tr><td>Exit_Router2</td><td>ether1</td><td>ISP / Campus uplink</td><td>Internet-facing (masquerade on this interface)</td></tr>
+  <tr><td>Exit_Router1</td><td>ether24</td><td>Management Switch port48</td><td>OOB management (172.16.2.98)</td></tr>
+  <tr><td>Exit_Router2</td><td>ether24</td><td>Management Switch port49</td><td>OOB management (172.16.2.99)</td></tr>
+  <tr><td>Exit_Router1</td><td>ether2</td><td>CRS125 ether1</td><td>Admin WiFi access</td></tr>
+  <tr><td>Exit_Router2</td><td>ether2</td><td>CRS125 ether2</td><td>Admin WiFi access</td></tr>
+</table>
+
+<div class="callout warn">
+  <div class="callout-title">Breakout — Real Hardware Consideration</div>
+  <p>On physical Arista 7050QX-32S, the QSFP+ breakout must be configured before the port comes up as 10G sub-interfaces. This is done in the border-leaf <code>breakout_cfg</code> within <code>host_vars/Border_Leaf1.yml</code>. The breakout configuration is applied by the SONiC role during day-0 provisioning — not by <code>deploy_exit_routers.yml</code>. Confirm the physical cable (DAC or AOC) is seated before running the fabric day-1 playbook.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="topology">4. Logical Topology &amp; ASN Map</h2>
+
+<div class="diagram">                           ┌──────────────┐
+                           │   INTERNET   │
+                           └──────┬───────┘
+                                  │ ether1
+                    ┌─────────────┴─────────────┐
+                    │                             │
+           ┌────────┴────────┐          ┌────────┴────────┐
+           │  Exit_Router1   │          │  Exit_Router2   │
+           │  MikroTik CRS326│          │  MikroTik CRS326│
+           │  AS 65253       │          │  AS 65254       │
+           │  172.16.2.98    │          │  172.16.2.99    │
+           │  router-id      │          │  router-id      │
+           │  10.0.99.1      │          │  10.0.99.2      │
+           └───┬─────────────┘          └───┬─────────────┘
+               │ sfp+1                      │ sfp+1
+               │ 10.0.253.1/31             │ 10.0.253.3/31
+               │                            │
+               │ 10.0.253.0/31             │ 10.0.253.2/31
+               │ Ethernet0                  │ Ethernet0
+           ┌───┴─────────────┐          ┌───┴─────────────┐
+           │  Border_Leaf1   │          │  Border_Leaf2   │
+           │  Arista 7050QX  │          │  Arista 7050QX  │
+           │  -32S            │          │  -32S            │
+           │  AS 65021       │          │  AS 65022       │
+           │  172.16.2.31    │          │  172.16.2.32    │
+           └───┬─────────────┘          └───┬─────────────┘
+               │ Eth124(S1) Eth120(S2)      │ Eth124(S1) Eth120(S2)
+               │                            │
+        ┌──────┴────────────────────────────┴──────┐
+        │       Spine_S1 (Celestica DX010, AS65000)│
+        │       Spine_S2 (Celestica DX010, AS65000)│
+        └──────┬────────────────────────────┬──────┘
+               │                            │
+    ┌──────────┴──────────┐      ┌──────────┴──────────┐
+    │ Leaf_L1 (AS65011)   │      │ Leaf_L3 (AS65013)   │
+    │ Leaf_L2 (AS65012)   │      │ Leaf_L4 (AS65014)   │
+    │ Accton AS5712-54X   │      │ Arista 7050-QX32    │
+    └──────────┬──────────┘      └──────────┬──────────┘
+               │                            │
+  Host12_1/2/3                      Host34_1/2
+  (AS65101-103)                     (AS65104-105)
+               │                            │
+  HostB12_1/2 ─────────────────────────────┘ (connected to Border_Leaf1/2)
+  (AS65106-107)
+</div>
+
+<h3>Full Device IP Reference</h3>
+<table>
+  <tr><th>Device</th><th>Model</th><th>ASN</th><th>Management IP</th><th>Router-ID / P2P IP</th></tr>
+  <tr><td>Exit_Router1</td><td>MikroTik CRS326-24G-2S+RM</td><td>65253</td><td>172.16.2.98</td><td>router-id 10.0.99.1 / sfp+1 = 10.0.253.1/31</td></tr>
+  <tr><td>Exit_Router2</td><td>MikroTik CRS326-24G-2S+RM</td><td>65254</td><td>172.16.2.99</td><td>router-id 10.0.99.2 / sfp+1 = 10.0.253.3/31</td></tr>
+  <tr><td>Border_Leaf1</td><td>Arista 7050QX-32S</td><td>65021</td><td>172.16.2.31</td><td>Eth0 = 10.0.253.0/31</td></tr>
+  <tr><td>Border_Leaf2</td><td>Arista 7050QX-32S</td><td>65022</td><td>172.16.2.32</td><td>Eth0 = 10.0.253.2/31</td></tr>
+  <tr><td>Spine_S1</td><td>Celestica DX010 (Seastone)</td><td>65000</td><td>172.16.2.11</td><td>—</td></tr>
+  <tr><td>Spine_S2</td><td>Celestica DX010 (Seastone)</td><td>65000</td><td>172.16.2.12</td><td>—</td></tr>
+  <tr><td>Leaf_L1</td><td>Accton AS5712-54X</td><td>65011</td><td>172.16.2.21</td><td>—</td></tr>
+  <tr><td>Leaf_L2</td><td>Accton AS5712-54X</td><td>65012</td><td>172.16.2.22</td><td>—</td></tr>
+  <tr><td>Leaf_L3</td><td>Arista 7050-QX32</td><td>65013</td><td>172.16.2.23</td><td>—</td></tr>
+  <tr><td>Leaf_L4</td><td>Arista 7050-QX32</td><td>65014</td><td>172.16.2.24</td><td>—</td></tr>
+  <tr><td>Host12_1</td><td>Bare metal</td><td>65101</td><td>172.16.2.x / iDRAC 192.168.255.11</td><td>—</td></tr>
+  <tr><td>Host34_1</td><td>Bare metal</td><td>65104</td><td>172.16.2.x / iDRAC 192.168.255.21</td><td>—</td></tr>
+  <tr><td>HostB12_1</td><td>Bare metal (K8s control + MaaS)</td><td>65106</td><td>172.16.2.x / iDRAC 192.168.255.31</td><td>—</td></tr>
+</table>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="procedure">5. Deployment Procedure (Step-by-Step)</h2>
+
+<h3>5.1 Prerequisites — Real Hardware Specific</h3>
+<ul>
+  <li>All physical cables seated and confirmed (especially border-leaf Ethernet0 ↔ exit router sfp+1).</li>
+  <li>Border-leaf QSFP+ port 1 already broken out as <code>4×10G</code> (done by SONiC day-0 playbook).</li>
+  <li>Exit routers powered on; RouterOS 7.x running; reachable via SSH at 172.16.2.98/99 through management network.</li>
+  <li>External interface (<code>ether1</code>) connected and ISP/campus uplink live.</li>
+  <li><strong>Profile exported:</strong> <code>export AUTOMATION_PROFILE=real_hardware</code></li>
+</ul>
+
+<h3>5.2 Execution Order</h3>
+
+<div class="step-box">
+  <span class="step-num">1</span>
+  <strong>Configure the /31 fabric link (SONiC side)</strong><br>
+  <pre style="margin:.5rem 0 0;"><code>export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/deploy_day1_v2.yml \
+  -i inventory/hosts.yml \
+  --limit border_leaves,exit_routers</code></pre>
+  <em>Configures eBGP P2P link on Border_Leaf Ethernet0. Uses <code>sonic_fabric/tasks/main_v2.yml</code> which includes <code>exit_interfaces</code> in <code>_fabric_links</code> even when spines are not in the limit.</em>
+</div>
+
+<div class="step-box">
+  <span class="step-num">2</span>
+  <strong>Deploy full exit router configuration</strong><br>
+  <pre style="margin:.5rem 0 0;"><code>ansible-playbook playbooks/deploy_exit_routers.yml \
+  -i inventory/hosts.yml</code></pre>
+  <em>Runs all 6 phases: preflight → base → BGP → NAT → firewall → verify.</em>
+</div>
+
+<div class="step-box">
+  <span class="step-num">3</span>
+  <strong>Verify end-to-end reachability from a host</strong><br>
+  <pre style="margin:.5rem 0 0;"><code>ssh admin@172.16.2.x "ping -c 3 8.8.8.8"</code></pre>
+  <em>If successful, the default route and masquerade are working end-to-end on physical hardware.</em>
+</div>
+
+<div class="step-box">
+  <span class="step-num">4</span>
+  <strong>(Optional) Add inbound port forwards</strong><br>
+  <em>Add DNAT rules for services you want externally accessible. See <a href="#inbound">Section 9</a>.</em>
+</div>
+
+<div class="callout warn">
+  <div class="callout-title">No KVM proxy needed</div>
+  <p>Unlike <code>win11_kvm</code>, there is no SSH proxy command or jump host for exit router access. The deployer machine connects directly to 172.16.2.98/99 via the management network (<code>172.16.2.0/24</code>).</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="bgp">6. BGP Configuration</h2>
+
+<h3>6.1 Exit router BGP settings</h3>
+<table>
+  <tr><th>Setting</th><th>Exit_Router1</th><th>Exit_Router2</th></tr>
+  <tr><td>BGP ASN</td><td>65253</td><td>65254</td></tr>
+  <tr><td>Router-ID</td><td>10.0.99.1</td><td>10.0.99.2</td></tr>
+  <tr><td>Fabric interface</td><td>sfp-sfpplus1 @ 10.0.253.1/31</td><td>sfp-sfpplus1 @ 10.0.253.3/31</td></tr>
+  <tr><td>Peer IP</td><td>10.0.253.0 (Border_Leaf1)</td><td>10.0.253.2 (Border_Leaf2)</td></tr>
+  <tr><td>Peer ASN</td><td>65021</td><td>65022</td></tr>
+  <tr><td>Default route</td><td><code>output.default-originate=always</code></td><td><code>output.default-originate=always</code></td></tr>
+  <tr><td>Redistribute</td><td><code>connected,static</code></td><td><code>connected,static</code></td></tr>
+  <tr><td>MTU on sfp+1</td><td>9216 (jumbo)</td><td>9216 (jumbo)</td></tr>
+</table>
+
+<h3>6.2 Default route propagation path (physical fabric)</h3>
+<pre><code>Exit_Router1 (AS65253) → Border_Leaf1 (AS65021)
+  → Spine_S1/S2 (AS65000)
+    → Leaf_L1 (AS65011), Leaf_L2 (AS65012), Leaf_L3 (AS65013), Leaf_L4 (AS65014)
+      → Host12_1/2/3, Host34_1/2, HostB12_1/2 (FRR: via eBGP)
+
+Exit_Router2 (AS65254) → Border_Leaf2 (AS65022)
+  → Spine_S1/S2 (AS65000)
+    → all leaves → all hosts</code></pre>
+
+<p>Every host receives <strong>two ECMP default routes</strong> — one per exit router. BGP failover is automatic if one exit router goes down. On physical hardware, BGP timers are not inflated by KVM vCPU scheduling lag, so convergence is faster.</p>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="nat">7. NAT — Source NAT (Masquerade)</h2>
+
+<h3>7.1 Rules applied to each exit router</h3>
+<pre><code>/ip firewall nat add chain=srcnat out-interface=ether1 \
+  src-address=10.0.0.0/8 action=masquerade comment=fabric-snat-10.0.0.0_8
+
+/ip firewall nat add chain=srcnat out-interface=ether1 \
+  src-address=172.16.2.0/24 action=masquerade comment=fabric-snat-172.16.2.0_24</code></pre>
+
+<h3>7.2 What each range covers in the physical fabric</h3>
+<table>
+  <tr><th>SNAT Source Range</th><th>Covers</th></tr>
+  <tr><td><code>10.0.0.0/8</code></td><td>All loopbacks (10.0.x.x), host BGP loopbacks (10.10.255.x), P2P fabric links (10.0.253.x), VTEPs</td></tr>
+  <tr><td><code>172.16.2.0/24</code></td><td>Management IPs of all switches (Spines, Leaves, Border Leaves, Exit Routers) and host management</td></tr>
+</table>
+
+<div class="callout tip">
+  <div class="callout-title">Physical MTU path</div>
+  <p>All fabric links and <code>sfp-sfpplus1</code> are configured for jumbo frames (MTU 9216). Ensure the upstream ISP link on <code>ether1</code> can handle the MTU or that MSS clamping is in place to avoid fragmentation on egress.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="firewall">8. Firewall Rules</h2>
+
+<h3>8.1 Input chain (protect the exit router)</h3>
+<table>
+  <tr><th>#</th><th>Chain</th><th>Action</th><th>Match</th><th>Comment</th></tr>
+  <tr><td>1</td><td>input</td><td>accept</td><td>connection-state=established,related</td><td>Return traffic</td></tr>
+  <tr><td>2</td><td>input</td><td>accept</td><td>protocol=icmp</td><td>Ping</td></tr>
+  <tr><td>3</td><td>input</td><td>accept</td><td>tcp/22 from 172.16.2.0/24</td><td>SSH from management network</td></tr>
+  <tr><td>4</td><td>input</td><td>accept</td><td>tcp/179 from 10.0.253.0/24</td><td>BGP from border-leaf P2P range</td></tr>
+  <tr><td>5</td><td>input</td><td>accept</td><td>udp/3784,3785 from 10.0.253.0/24</td><td>BFD from border-leaves</td></tr>
+  <tr><td>6</td><td>input</td><td>drop</td><td>everything else</td><td>Default deny</td></tr>
+</table>
+
+<h3>8.2 Forward chain (traffic through the router)</h3>
+<table>
+  <tr><th>#</th><th>Chain</th><th>Action</th><th>Match</th><th>Comment</th></tr>
+  <tr><td>1</td><td>forward</td><td>accept</td><td>connection-state=established,related</td><td>Return traffic</td></tr>
+  <tr><td>2</td><td>forward</td><td>accept</td><td>src=10.0.0.0/8, out-interface=ether1</td><td>Fabric → internet (physical host/switch traffic)</td></tr>
+  <tr><td>3</td><td>forward</td><td>drop</td><td>connection-state=invalid</td><td>Block invalid</td></tr>
+</table>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="inbound">9. Inbound Access (Port Forwarding / DNAT)</h2>
+
+<p>To expose an internal service to the outside world, add a DNAT rule on the exit router. Not automated by default — add manually or extend the playbook with a DNAT task.</p>
+
+<h3>9.1 Example: Expose Horizon dashboard (Host12_1)</h3>
+<pre><code>/ip firewall nat add chain=dstnat in-interface=ether1 \
+  protocol=tcp dst-port=8080 \
+  action=dst-nat to-addresses=10.10.255.1 to-ports=80 \
+  comment="Inbound: Horizon → Host12_1:80"</code></pre>
+
+<h3>9.2 Example: MaaS UI (HostB12_1)</h3>
+<pre><code>/ip firewall nat add chain=dstnat in-interface=ether1 \
+  protocol=tcp dst-port=5240 \
+  action=dst-nat to-addresses=192.168.255.31 to-ports=5240 \
+  comment="Inbound: MaaS → HostB12_1:5240"</code></pre>
+
+<h3>9.3 Firewall addition for DNAT</h3>
+<pre><code>/ip firewall filter add chain=forward action=accept \
+  in-interface=ether1 connection-state=new connection-nat-state=dstnat \
+  comment="Allow DNAT forwarded connections" \
+  place-before=2</code></pre>
+
+<div class="callout warn">
+  <div class="callout-title">Security Warning</div>
+  <p>Each DNAT rule directly exposes an internal host to the internet. On physical hardware the risk is real. Restrict to the minimum ports needed and ensure the target service has its own authentication.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="verification">10. Verification Commands</h2>
+
+<h3>10.1 From the deployer machine</h3>
+<pre><code># Full verification pass:
+export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/deploy_exit_routers.yml \
+  -i inventory/hosts.yml --tags verify
+
+# Single router:
+ansible-playbook playbooks/deploy_exit_routers.yml \
+  -i inventory/hosts.yml --tags verify --limit Exit_Router1</code></pre>
+
+<h3>10.2 From the exit router (RouterOS CLI)</h3>
+<pre><code># BGP session state:
+/routing bgp session print detail
+
+# Routes received from border-leaf:
+/ip route print where bgp
+
+# Verify default route is being advertised:
+/routing bgp advertisement print
+
+# NAT rules:
+/ip firewall nat print stats
+
+# Firewall counters:
+/ip firewall filter print stats
+
+# Ping internet from router:
+/ping 8.8.8.8 count=3
+
+# Ping border-leaf fabric IP:
+/ping 10.0.253.0 count=3</code></pre>
+
+<h3>10.3 From a physical host server</h3>
+<pre><code># Test egress (internet):
+ping -c 3 8.8.8.8
+curl -s -o /dev/null -w "%{http_code}" https://google.com
+
+# Trace path to internet (should show 2 physical switch hops → exit router → internet):
+traceroute -n 8.8.8.8
+
+# Check FRR default routes (should show 2 ECMP paths — one per exit router):
+vtysh -c "show ip route 0.0.0.0/0"
+ip route show default</code></pre>
+
+<h3>10.4 SONiC border-leaf BGP check</h3>
+<pre><code>ssh admin@172.16.2.31
+vtysh
+  show bgp summary
+  show bgp neighbors 10.0.253.1
+  show ip route 0.0.0.0/0</code></pre>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="tags">11. Tag Reference</h2>
+
+<table>
+  <tr><th>Tag</th><th>Scope</th><th>What it runs</th></tr>
+  <tr><td><code>preflight</code></td><td>deploy_exit_routers.yml</td><td>SSH check, RouterOS version probe</td></tr>
+  <tr><td><code>base</code></td><td>deploy_exit_routers.yml</td><td>Hostname, NTP, DNS, service hardening, management IP</td></tr>
+  <tr><td><code>bgp</code></td><td>deploy_exit_routers.yml</td><td>Interface IP on sfp+1, BGP instance, peers, default-originate</td></tr>
+  <tr><td><code>nat</code></td><td>deploy_exit_routers.yml</td><td>Source NAT masquerade rules for 10.0.0.0/8 and 172.16.2.0/24</td></tr>
+  <tr><td><code>firewall</code></td><td>deploy_exit_routers.yml</td><td>Input + forward chain rules</td></tr>
+  <tr><td><code>verify</code></td><td>deploy_exit_routers.yml</td><td>BGP sessions, routes, interfaces, NAT, firewall, ping</td></tr>
+</table>
+
+<h3>Partial run examples</h3>
+<pre><code># Re-apply only NAT (e.g., after adding a new tenant subnet):
+ansible-playbook playbooks/deploy_exit_routers.yml --tags nat
+
+# Re-establish BGP after maintenance window:
+ansible-playbook playbooks/deploy_exit_routers.yml --tags bgp
+
+# Single router only:
+ansible-playbook playbooks/deploy_exit_routers.yml --limit Exit_Router1</code></pre>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="troubleshooting">12. Troubleshooting</h2>
+
+<table>
+  <tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr>
+  <tr>
+    <td>Host cannot ping 8.8.8.8</td>
+    <td>BGP not established / no default route in FRR</td>
+    <td><code>vtysh -c "show bgp summary"</code> on border-leaf; check exit router BGP session</td>
+  </tr>
+  <tr>
+    <td>BGP stuck in Connect between border-leaf and exit router</td>
+    <td>Physical cable not seated, or port not up as 10G (breakout not applied)</td>
+    <td>Check <code>show interface Ethernet0</code> on border-leaf; confirm breakout config; re-seat cable</td>
+  </tr>
+  <tr>
+    <td>BGP established but no default route propagated</td>
+    <td><code>output.default-originate</code> not set, or exit router has no default route itself</td>
+    <td>Check <code>/routing bgp advertisement print</code> on exit router; confirm ether1 has a gateway</td>
+  </tr>
+  <tr>
+    <td>Host can ping 8.8.8.8 but TCP connections fail</td>
+    <td>MTU mismatch — jumbo MTU 9216 on fabric, ISP expects 1500</td>
+    <td>Add MSS clamping on ether1: <code>/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn action=change-mss new-mss=clamp-to-pmtu out-interface=ether1</code></td>
+  </tr>
+  <tr>
+    <td>Host gets response from internal but not external</td>
+    <td>NAT masquerade not matching or ether1 has no routable IP</td>
+    <td><code>/ip firewall nat print stats</code> — check byte counter on masquerade rules; verify ether1 IP</td>
+  </tr>
+  <tr>
+    <td>deploy_exit_routers.yml SSH connection refused</td>
+    <td>Exit router unreachable on 172.16.2.98/99</td>
+    <td>Verify management switch port48/49 uplinks; check <code>ether24</code> IP on exit router via console</td>
+  </tr>
+  <tr>
+    <td><code>deploy_day1_v2.yml --limit border_leaves,exit_routers</code> fails: no interfaces match</td>
+    <td>Using old <code>sonic_fabric/main.yml</code> which misses <code>exit_interfaces</code></td>
+    <td>Ensure you are running <code>deploy_day1_v2.yml</code> which references <code>sonic_fabric/tasks/main_v2.yml</code></td>
+  </tr>
+  <tr>
+    <td>Asymmetric path (in via Router1, out via Router2)</td>
+    <td>ECMP load balancing — expected behavior</td>
+    <td>Not a problem; connection tracking on RouterOS handles masquerade state correctly across asymmetric paths</td>
+  </tr>
+</table>
+
+<hr>
+<p style="text-align:center;color:var(--text-muted);font-size:.82rem;">
+  CS-EXIT-ROUTER-OUTSIDE-WORLD-Real_Hardware — GitHub Copilot (Claude Sonnet 4.6) — AUTOMATION_PROFILE=real_hardware — 2026-05-22
+</p>
+</body>
+</html>
