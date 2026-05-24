@@ -1,72 +1,170 @@
-[admin@Exit_Router1] > /routing/bgp/template/print
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main as=65530
+What is the documentation of First four 10GB port vs. the next 4o GB ports for Arista 7050QX-32S. How to make the 10GB ports to work. What configuration commands Arista needs to activate these ports vs. deactivate Ethernet5,please explain details.On the Arista DCS-7050QX-32S switch, the four dedicated 10GbE SFP+ ports (interfaces Ethernet1 through Ethernet4) are internally wired to share the same physical hardware lanes as the 40GbE QSFP+ Port 5 (interface Ethernet5).According to the official Arista documentation:Mutually Exclusive: You cannot use all of these ports at the same time. You must choose to activate either the four native 10GbE SFP+ ports (Et1-4) OR the 40GbE QSFP+ port (Et5).Default Behavior: By default, Arista EOS leaves the 40GbE port (Ethernet5) active. Consequently, the native 10GbE SFP+ ports (Ethernet1–4) will remain inactive and link-down until you modify the hardware port-group profile.Hardware Port-Group SelectionThe switch uses a global hardware layout command to route the internal Broadcom Trident II chip lanes to either the SFP+ cages or the QSFP+ cage.Desired ModeActive InterfacesDeactivated/Vanished Interfaces10GbE ModeEthernet1, Ethernet2, Ethernet3, Ethernet4Ethernet5 (Entirely disabled)40GbE Mode (Default)Ethernet5Ethernet1 through Ethernet4 (Entirely disabled)Configuration CommandsTo activate the native 10GbE ports and automatically deactivate Ethernet5, apply the hardware port-group mapping command.Step 1: Activate the 10GbE Ports (and Deactivate Ethernet5)Enter configuration mode and explicitly assign Hardware Port-Group 1 to select the SFP+ lanes:textswitch# configure terminal
+switch(config)# hardware port-group 1 select Et1-4
+Use code with caution.Note: As soon as you execute this, interface Ethernet5 will completely disappear from your running configuration, and Ethernet1 through Ethernet4 will become visible.Step 2: Bring the 10GbE Ports OnlineBy default, newly provisioned interfaces are administratively shut down. You must enable them manually:textswitch(config)# interface ethernet 1-4
+switch(config-if-Et1-4)# no shutdown
+switch(config-if-Et1-4)# exit
+Use code with caution.Step 3: Save and Reboot the SwitchUnlike a simple speed change, hardware port-group mappings on this platform architecture require a switch reboot to re-allocate ASIC resources.textswitch(config)# write memory
+switch(config)# reload
+Use code with caution.Reverting Back to 40GbE Mode (Activating Ethernet5)If you ever need to restore the 40GbE Ethernet5 port and deactivate the 10GbE ports, use the following sequence:textswitch# configure terminal
+switch(config)# hardware port-group 1 select Et5
+switch(config)# write memory
+switch(config)# reload
+Use code with caution.If your 10GbE interfaces still won't establish a link after performing this reboot, let me know. I can help you verify your transceiver compatibility matrix, check for unsupported optic error logs, or configure a 4x10G breakout cable on ports 1 through 24 if you need more 10GbE capacity
 
- 1    name="fabric" routing-table=main router-id=10.0.99.1 as=65253 address-families=ip
 
- 2    name="fabric" routing-table=main router-id=10.0.99.1 as=65253 address-families=ip
-[admin@Exit_Router1] > /routing/bgp/connection/print detail
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf1"
-     remote.address=10.0.253.0/32 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.99.1 templates=fabric as=65253 multihop=no address-families=ip
-     output.redistribute=connected,static .default-originate=always
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
- 0   remote.address=10.0.253.0 .as=0 .hold-time=infinity
-     local.address=10.0.253.1 .as=0 ebgp
-     prefix-count=0
-[admin@Exit_Router1] > /routing/bgp/connection/disable [find where remote.address~"10.0.253"]
-[admin@Exit_Router1] > /routing/bgp/connection/enable [find where remote.address~"10.0.253"]
-[admin@Exit_Router1] > delay 5s
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
- 0   name="to_Border_Leaf1-1"
-     remote.address=10.0.253.0 .as=0 .hold-time=infinity
-     local.address=10.0.253.1 .as=65253 .id=10.0.99.1 .cluster-id=10.0.99.1 .capabilities=mp,rr,gr,as4 .afi=ip
-     output.default-originate=always ebgp
-     prefix-count=0
+
+   221@Lab-ControlNode MINGW64 ~                                                                                                                                                                                                                                                 ssh admin@Border_Leaf1 "docker exec database redis-cli -n 4 keys 'INTERFACE|*253*'"
+
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+INTERFACE|Ethernet0|10.0.253.0/31
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf1 "ip addr show | grep 10.0.253"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+    inet 10.0.253.0/31 scope global Ethernet0
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf2 "docker exec database redis-cli -n 4 keys 'INTERFACE|*253*'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+INTERFACE|Ethernet0|10.0.253.2/31
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf2 "ip addr show | grep 10.0.253"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+    inet 10.0.253.2/31 scope global Ethernet0
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf1 "show interfaces status" | grep -i "Ethernet0\|Ethernet4"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+sudo: unable to resolve host BorderLeaf1: Temporary failure in name resolution
+  Ethernet0       9,10,11,12  4294967.3G   9100   none   Ethernet5/1  routed      up       up     N/A         N/A
+  Ethernet4      13,14,15,16        100G   9100   none   Ethernet6/1  routed    down     down     N/A         N/A
+ Ethernet40      49,50,51,52        100G   9100   none  Ethernet15/1  routed    down     down     N/A         N/A
+ Ethernet44      53,54,55,56        100G   9100   none  Ethernet16/1  routed    down     down     N/A         N/A
+ Ethernet48      69,70,71,72        100G   9100   none  Ethernet17/1  routed    down     down     N/A         N/A
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf1 "show ip interfaces"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+sudo: unable to resolve host BorderLeaf1: Temporary failure in name resolution
+sudo: unable to resolve host BorderLeaf1: Temporary failure in name resolution
+Interface    Master    IPv4 address/mask    Admin/Oper    BGP Neighbor    Neighbor IP
+-----------  --------  -------------------  ------------  --------------  -------------
+Ethernet0              10.0.253.0/31        up/up         Exit_Router1    10.0.253.1
+Loopback0              10.0.2.1/32          up/up         N/A             N/A
+docker0                240.127.1.1/24       up/down       N/A             N/A
+eth0         mgmt      172.16.2.31/24       up/up         N/A             N/A
+lo                     127.0.0.1/16         up/up         N/A             N/A
+lo-m         mgmt      127.0.0.1/16         up/up         N/A             N/A
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@172.16.2.98
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+
+
+Press F1 for help
+
+[admin@Exit_Router1] > /ping 10.0.253.0 count=3
+  SEQ HOST                                     SIZE TTL TIME       STATUS
+    0 10.0.253.0                                 56  64 4ms276us
+    1 10.0.253.0                                 56  64 983us
+    2 10.0.253.0                                 56  64 719us
+    sent=3 received=3 packet-loss=0% min-rtt=719us avg-rtt=1ms992us max-rtt=4ms276us
+
+[admin@Exit_Router1] > /interface/print where name~"sfp"
+
+[admin@Exit_Router1] > /interface/print
+Flags: R - RUNNING
+Columns: NAME, TYPE, ACTUAL-MTU, MAC-ADDRESS
+#   NAME    TYPE      ACTUAL-MTU  MAC-ADDRESS
+0 R ether1  ether           1500  52:54:00:09:95:29
+1 R ether2  ether           1500  52:54:00:0F:CD:FB
+2 R lo      loopback       65536  00:00:00:00:00:00
+[admin@Exit_Router1] > /ip/address/print where address~"10.0.253"
+Columns: ADDRESS, NETWORK, INTERFACE
+# ADDRESS        NETWORK     INTERFACE
+;;; fabric_Border_Leaf1
+0 10.0.253.1/31  10.0.253.0  ether2
+[admin@Exit_Router1] > /ip/address/print
+Flags: D - DYNAMIC
+Columns: ADDRESS, NETWORK, INTERFACE
+#   ADDRESS         NETWORK     INTERFACE
+0 D 172.16.2.98/24  172.16.2.0  ether1
+;;; loopback
+1   10.0.99.1/32    10.0.99.1   lo
+;;; fabric_Border_Leaf1
+2   10.0.253.1/31   10.0.253.0  ether2
 [admin@Exit_Router1] >
 
-[admin@Exit_Router2] > /routing/bgp/template/print
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main as=65530
 
- 1    name="fabric" routing-table=main router-id=10.0.99.2 as=65254 address-families=ip
-
- 2    name="fabric" routing-table=main router-id=10.0.99.2 as=65254 address-families=ip
-[admin@Exit_Router2] > /routing/bgp/connection/print detail
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf2"
-     remote.address=10.0.253.2/32 .as=65022
-     local.address=10.0.253.3 .role=ebgp
-     routing-table=main router-id=10.0.99.2 templates=fabric as=65254 multihop=no address-families=ip
-     output.redistribute=connected,static .default-originate=always
-[admin@Exit_Router2] > /routing/bgp/connection/disable [find where remote.address~"10.0.253"]
-[admin@Exit_Router2] > /routing/bgp/connection/enable [find where remote.address~"10.0.253"]
-[admin@Exit_Router2] > delay 5s
-[admin@Exit_Router2] > /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router2] >  /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router2] >
-
-C:\Users\nh1221>ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf1 "ping -c 3 10.0.253.1"
 Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+PING 10.0.253.1 (10.0.253.1) 56(84) bytes of data.
+64 bytes from 10.0.253.1: icmp_seq=1 ttl=64 time=2.91 ms
+64 bytes from 10.0.253.1: icmp_seq=2 ttl=64 time=0.609 ms
+64 bytes from 10.0.253.1: icmp_seq=3 ttl=64 time=0.700 ms
+
+--- 10.0.253.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2015ms
+rtt min/avg/max/mdev = 0.609/1.405/2.907/1.062 ms
+
+nh1221@Lab-ControlNode MINGW64 ~
+$ ssh admin@Border_Leaf1 "sudo vtysh 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+sudo: unable to resolve host BorderLeaf1: Temporary failure in name resolution
+
+Hello, this is FRRouting (version 8.5.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+BorderLeaf1# show bgp summary
+show bgp summary
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 696
+BGP table version 1515
 RIB entries 37, using 8288 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1213      1376        0    0    0 12:45:51            5       19 HostB12_1
-Ethernet24      4      65107       781      3493        0    0    0 00:00:58            0       19 HostB12_2
-Ethernet28      4      65108       942      2558        0    0    0 00:02:35            2       19 MonitorSrv
-Ethernet120     4      65000      1392      1546        0    0    0 15:59:14           12       19 Spine_S2
-Ethernet124     4      65000      1394      1545        0    0    0 15:59:27           14       19 Spine_S1
+Ethernet20      4      65106      2143      2439        0    0    0 19:25:54            5       19 HostB12_1
+Ethernet24      4      65107      1045      7424        0    0    0 00:02:49            0       19 HostB12_2
+Ethernet28      4      65108      2197      5882        0    0    0 00:01:25            2       19 MonitorSrv
+Ethernet120     4      65000      2346      2609        0    0    0 22:39:17           12       19 Spine_S2
+Ethernet124     4      65000      2324      2608        0    0    0 22:39:30           14       19 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -78,120 +176,16 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1213      1376        0    0    0 12:45:51        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       781      3493        0    0    0 00:00:58        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       942      2558        0    0    0 00:02:35        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000      1392      1546        0    0    0 15:59:14            0        0 Spine_S2
-Ethernet124     4      65000      1394      1545        0    0    0 15:59:27            0        0 Spine_S1
+Ethernet20      4      65106      2143      2439        0    0    0 19:25:54        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107      1045      7424        0    0    0 00:02:49        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108      2197      5882        0    0    0 00:01:25        NoNeg    NoNeg MonitorSrv
+Ethernet120     4      65000      2346      2609        0    0    0 22:39:17            0        0 Spine_S2
+Ethernet124     4      65000      2324      2608        0    0    0 22:39:30            0        0 Spine_S1
 
 Total number of neighbors 5
+BorderLeaf1#
 
-C:\Users\nh1221>ssh admin@Border_Leaf2 "docker exec bgp vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 649
-RIB entries 37, using 8288 bytes of memory
-Peers 6, using 4348 KiB of memory
 
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1222      1334        0    0    0 12:46:18           15       19 HostB12_1
-Ethernet24      4      65107       891       901        0    0    0 06:15:38            2       19 HostB12_2
-Ethernet28      4      65108       949      2549        0    0    0 00:02:39            2       19 MonitorSrv
-Ethernet120     4      65000      1374      1481        0    0    0 15:40:48           12       19 Spine_S2
-Ethernet124     4      65000      1376      1480        0    0    0 15:40:48           14       19 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1222      1334        0    0    0 12:46:18        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       891       901        0    0    0 06:15:38        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       949      2549        0    0    0 00:02:39        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000      1374      1481        0    0    0 15:40:48            0        0 Spine_S2
-Ethernet124     4      65000      1376      1480        0    0    0 15:40:48            0        0 Spine_S1
-
-Total number of neighbors 5
-
-C:\Users\nh1221>ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show ip bgp neighbors 10.0.253.1 received-routes'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-% Inbound soft reconfiguration not enabled
-
-C:\Users\nh1221>ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 708
-RIB entries 37, using 8288 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1227      1392        0    0    0 12:51:32            5       19 HostB12_1
-Ethernet24      4      65107       785      3553        0    0    0 00:00:37            0       19 HostB12_2
-Ethernet28      4      65108       960      2608        0    0    0 00:02:14            2       19 MonitorSrv
-Ethernet120     4      65000      1405      1561        0    0    0 16:04:55           12       19 Spine_S2
-Ethernet124     4      65000      1408      1561        0    0    0 16:05:08           14       19 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1227      1392        0    0    0 12:51:32        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       785      3553        0    0    0 00:00:37        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       960      2608        0    0    0 00:02:14        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000      1405      1561        0    0    0 16:04:55            0        0 Spine_S2
-Ethernet124     4      65000      1408      1561        0    0    0 16:05:08            0        0 Spine_S1
-
-Total number of neighbors 5
-
-C:\Users\nh1221>ssh admin@Border_Leaf2 "docker exec bgp vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 661
-RIB entries 37, using 8288 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1235      1350        0    0    0 12:52:04           16       19 HostB12_1
-Ethernet24      4      65107       907       917        0    0    0 06:21:24            2       19 HostB12_2
-Ethernet28      4      65108       969      2599        0    0    0 00:02:23            2       19 MonitorSrv
-Ethernet120     4      65000      1387      1497        0    0    0 15:46:34           13       19 Spine_S2
-Ethernet124     4      65000      1389      1496        0    0    0 15:46:34           15       19 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106      1235      1350        0    0    0 12:52:04        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       907       917        0    0    0 06:21:24        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       969      2599        0    0    0 00:02:23        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000      1387      1497        0    0    0 15:46:34            0        0 Spine_S2
-Ethernet124     4      65000      1389      1496        0    0    0 15:46:34            0        0 Spine_S1
-
-Total number of neighbors 5
-
-C:\Users\nh1221>
 
 
