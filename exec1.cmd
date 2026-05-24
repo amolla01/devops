@@ -272,3 +272,82 @@ ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show ip bgp neighbors 10.0.253
 Summary: The AS numbers on the MikroTik BGP connections are 0 instead of 65253/65254. The remote.as is also 0 instead of 65021/65022. Setting these values and bouncing the connection will establish the sessions.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&-9th-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+Step 1: Verify the link interface IP on Border_Leaf
+
+# What interface has 10.0.253.0 on Border_Leaf1?
+ssh admin@Border_Leaf1 "docker exec database redis-cli -n 4 keys 'INTERFACE|*253*'"
+ssh admin@Border_Leaf1 "ip addr show | grep 10.0.253"
+
+# Same for Border_Leaf2
+ssh admin@Border_Leaf2 "docker exec database redis-cli -n 4 keys 'INTERFACE|*253*'"
+ssh admin@Border_Leaf2 "ip addr show | grep 10.0.253"
+
+If no output → The exit-router-facing interface on Border_Leaf doesn't have an IP. This is the root cause. You need to assign it.
+
+Step 2: Check which physical port connects to the exit router
+# Check interface status on Border_Leaf1
+
+ssh admin@Border_Leaf1 "show interfaces status" | grep -i "Ethernet0\|Ethernet4"
+
+# Or check all interfaces for the one that SHOULD connect to exit router
+ssh admin@Border_Leaf1 "show ip interfaces"
+
+Based on the Arista 7050QX-32S layout (QSFP+1 = Ethernet0, lanes 9-12), the exit router link is likely Ethernet0.
+
+Step 3: Ping test from MikroTik side
+
+ssh admin@172.16.2.98   # Exit_Router1
+
+/ping 10.0.253.0 count=3
+/interface/print where name~"sfp"
+/ip/address/print where address~"10.0.253"
+
+Step 4: Ping test from Border_Leaf side
+
+ssh admin@Border_Leaf1 "ping -c 3 10.0.253.1"
+
+Most Likely Fix: Assign IP to Border_Leaf exit interface
+If Step 1 shows the IP isn't assigned, here's how to fix it:
+
+Border_Leaf1 (exit port = Ethernet0, IP = 10.0.253.0/31):
+
+ssh admin@Border_Leaf1
+
+# Add IP to the exit-facing interface in config_db
+sudo config interface ip add Ethernet0 10.0.253.0/31
+
+# Verify
+show ip interfaces | grep Ethernet0
+ping 10.0.253.1
+
+Border_Leaf2 (exit port = Ethernet0, IP = 10.0.253.2/31):
+
+ssh admin@Border_Leaf2
+
+sudo config interface ip add Ethernet0 10.0.253.2/31
+
+# Verify
+show ip interfaces | grep Ethernet0
+ping 10.0.253.3
+
+Step 5: If ping works but BGP still won't connect — check MikroTik firewall
+
+# On Exit_Router1:
+/ip/firewall/filter/print where chain=input action=drop
+# If there's a drop-all rule at the end, ensure BGP accept rule exists BEFORE it:
+/ip/firewall/filter/add chain=input action=accept protocol=tcp dst-port=179 \
+  src-address=10.0.253.0/24 place-before=[find where chain=input action=drop]
+  
+  Step 6: Clean up duplicate templates (cosmetic but avoids confusion)
+
+# Exit_Router1 — remove duplicate template #2
+/routing/bgp/template/remove 2
+
+# Exit_Router2 — same
+/routing/bgp/template/remove 2
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+
