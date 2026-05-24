@@ -402,4 +402,15 @@ done
 virsh list --all
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%-12th-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Before re-running, you'll want to clean up the stale CONFIG_DB-based BGP neighbor entry from the previous run. Run this on each border leaf first:
+
+ssh admin@Border_Leaf1 "sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR|10.0.253.1'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.1|ipv4'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.1|ipv6'"
+ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR|10.0.253.3'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.3|ipv4'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.3|ipv6'"
+Then also remove the stale IP/interface entries and restart BGP to get a clean slate:
+ssh admin@Border_Leaf1 "config interface ip remove Ethernet5/1 10.0.253.0/31 2>/dev/null; sudo systemctl restart bgp"
+ssh admin@Border_Leaf2 "config interface ip remove Ethernet5/1 10.0.253.2/31 2>/dev/null; sudo systemctl restart bgp"
+Then re-run:
+ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
