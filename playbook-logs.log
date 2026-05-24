@@ -44,102 +44,41 @@ skipping: [Border_Leaf1]
 TASK [sonic_breakout : breakout | Check if parent port exists in CONFIG_DB] *************************************************************************************************************************************
 ok: [Border_Leaf1] => (item=Ethernet0)
 
+TASK [sonic_breakout : breakout | Check if first child sub-port already exists] *********************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet0)
+
 TASK [sonic_breakout : breakout | Determine which ports need breakout] ******************************************************************************************************************************************
 ok: [Border_Leaf1]
 
 TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
 ok: [Border_Leaf1] =>
-    msg: 'Border_Leaf1 (Arista-7050QX-32S): Ports needing breakout: '
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): Ports needing breakout:  ,  ,  ,  ,  ,  ,  ,  ,
+        [, ]'
 
 TASK [sonic_breakout : breakout | Skip host if all ports already broken out] ************************************************************************************************************************************
-
-PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
-
-TASK [preflight | Wait for SSH connectivity] ********************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [preflight | Validate breakout_cfg is defined] *************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    changed: false
-    msg: All assertions passed
-
-TASK [preflight | Detect ports requiring breakout (split mode Nx > 1)] ******************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [preflight | Skip host if no split breakouts needed] *******************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [preflight | Display breakout plan] ************************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  BREAKOUT PLAN:                Border_Leaf2               ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  Switch Model:             Arista-7050QX-32S             ║
-        ║  Ports to break out: 1                                      ║
-        ║    Ethernet0 → 4x10G                            ║
-        ║  Exit interfaces: 1 (IP/BGP will be configured) ║
-        ╚══════════════════════════════════════════════════════════════╝
-
-TASK [sonic_breakout : breakout | Validate breakout_cfg is defined] *********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Filter ports needing actual split (Nx where N > 1)] ***************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Report breakout plan] *********************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): 1 port(s) need breakout — Ethernet0=4x10G'
-
-TASK [sonic_breakout : breakout | Skip host if no ports need breakout] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Check if parent port exists in CONFIG_DB] *************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet0)
-
-TASK [sonic_breakout : breakout | Determine which ports need breakout] ******************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): Ports needing breakout: Ethernet0'
-
-TASK [sonic_breakout : breakout | Skip host if all ports already broken out] ************************************************************************************************************************************
-skipping: [Border_Leaf2]
+skipping: [Border_Leaf1]
 
 TASK [sonic_breakout : breakout | Remove IP addresses from parent port before breakout] *************************************************************************************************************************
-changed: [Border_Leaf2]
+changed: [Border_Leaf1]
 
 TASK [sonic_breakout : breakout | Detect if running on KVM Virtual Switch] **************************************************************************************************************************************
-ok: [Border_Leaf2]
+ok: [Border_Leaf1]
 
 TASK [sonic_breakout : breakout | Apply port breakout (real hardware)] ******************************************************************************************************************************************
-skipping: [Border_Leaf2] => (item=Ethernet0 → 4x10G)
-skipping: [Border_Leaf2]
+[ERROR]: The `loop` value must resolve to a 'list', not 'str'.
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:172:9
 
-TASK [sonic_breakout : breakout | Apply software breakout on KVM (remove parent, add children)] *****************************************************************************************************************
-changed: [Border_Leaf2]
+170     timeout 180 config interface breakout {{ item }}
+171     {{ _breakout_modes[item].brkout_mode }} -f -l -v -y
+172   loop: "{{ _ports_needing_breakout }}"
+            ^ column 9
 
-TASK [sonic_breakout : breakout | Wait for port reconfiguration to settle] **************************************************************************************************************************************
-[ERROR]: Task failed: Premature end of stream waiting for become success.
->>> Standard Error
-sudo: a password is required
-Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:203:3
+Provide a list of items/templates, or a template resolving to a list.
 
-201   tags: [breakout]
-202
-203 - name: "breakout | Wait for port reconfiguration to settle"
-      ^ column 3
-
-fatal: [Border_Leaf2 -> localhost]: FAILED! =>
-    changed: false
-    msg: |-
-        Task failed: Premature end of stream waiting for become success.
-        >>> Standard Error
-        sudo: a password is required
+fatal: [Border_Leaf1]: FAILED! =>
+    msg: The `loop` value must resolve to a 'list', not 'str'.
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Border_Leaf2               : ok=13   changed=2    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+Border_Leaf1               : ok=13   changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
