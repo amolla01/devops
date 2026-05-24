@@ -348,6 +348,35 @@ Step 5: If ping works but BGP still won't connect — check MikroTik firewall
 # Exit_Router2 — same
 /routing/bgp/template/remove 2
 
-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&-10TH-&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+MikroTik firewall is correct — rule #3 explicitly allows TCP 179 from 10.0.253.0/24. (Side note: rules 9-17 are duplicates of 0-8, harmless but should be cleaned up later.)
+
+The problem is on the SONiC/Border_Leaf side. Run these next:
+
+Check 1: SONiC iptables on Border_Leaf1
+ssh admin@Border_Leaf1 "sudo iptables -L INPUT -n --line-numbers" | grep -A2 -B2 "179\|DROP\|REJECT"
+Or get the full chain:
+ssh admin@Border_Leaf1 "sudo iptables -L INPUT -n --line-numbers"
+
+Check 2: Direct TCP test from Border_Leaf1 → Exit_Router1 port 179
+ssh admin@Border_Leaf1 "bash -c 'echo | nc -zv -w3 10.0.253.1 179 2>&1'"
+
+If this says Connection refused → MikroTik BGP isn't listening (unlikely since session exists).
+If this hangs/times out → something is blocking in the return path.
+If this says succeeded/open → TCP works, issue is in BGP OPEN exchange.
+
+Check 3: TCP test from Exit_Router1 → Border_Leaf1 port 179
+# On Exit_Router1:
+/ip/firewall/connection/print where dst-address~"10.0.253.0"
+This shows if MikroTik's outbound TCP SYN to Border_Leaf1:179 is being tracked.
+
+Check 4: KVM host bridge netfilter
+# On your Dell R620 hypervisor (not a VM):
+sudo sysctl net.bridge.bridge-nf-call-iptables
+# On your Dell R620 hypervisor (not a VM):
+sudo sysctl net.bridge.bridge-nf-call-iptables
+If 1 → this is likely your culprit — the hypervisor is applying its own iptables to VM-to-VM traffic crossing the bridge, blocking TCP 179 even though ICMP passes (many host firewalls allow ICMP but drop unknown TCP).
+
 
 
