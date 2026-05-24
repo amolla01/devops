@@ -1,5 +1,19 @@
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf1 "sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR|10.0.253.1'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.1|ipv4'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.1|ipv6'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+1
+1
+1
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR|10.0.253.3'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.3|ipv4'; sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR_AF|10.0.253.3|ipv6'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+1
+1
+1
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf1 "config interface ip remove Ethernet5/1 10.0.253.0/31 2>/dev/null; sudo systemctl restart bgp"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf2 "config interface ip remove Ethernet5/1 10.0.253.2/31 2>/dev/null; sudo systemctl restart bgp"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
 
 PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
@@ -99,384 +113,68 @@ changed: [Border_Leaf1] => (item=Ethernet5/1=10000)
 TASK [sonic_breakout : breakout | Set exit sub-port MTU] ********************************************************************************************************************************************************
 changed: [Border_Leaf1] => (item=Ethernet5/1 mtu=1500)
 
-TASK [sonic_breakout : breakout | Set exit sub-port admin_status up] ********************************************************************************************************************************************
+TASK [sonic_breakout : breakout | Bring exit sub-port admin up] *************************************************************************************************************************************************
 changed: [Border_Leaf1] => (item=Ethernet5/1)
 
 TASK [sonic_breakout : breakout | Set exit sub-port description] ************************************************************************************************************************************************
 changed: [Border_Leaf1] => (item=Ethernet5/1)
 
-TASK [sonic_breakout : breakout | Configure IP on exit sub-port] ************************************************************************************************************************************************
+TASK [sonic_breakout : breakout | Assign IP to exit sub-port] ***************************************************************************************************************************************************
 changed: [Border_Leaf1] => (item=Ethernet5/1 = 10.0.253.0/31)
 
-TASK [sonic_breakout : breakout | Configure BGP neighbor for exit router] ***************************************************************************************************************************************
-changed: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
+TASK [sonic_breakout : breakout | Configure BGP neighbor via vtysh] *********************************************************************************************************************************************
+[ERROR]: Task failed: Finalization of task args for 'ansible.builtin.shell' failed: Error while resolving value for '_raw_params': 'bgp_asn' is undefined
 
-TASK [sonic_breakout : breakout | Persist config to /etc/sonic/config_db.json] **********************************************************************************************************************************
-changed: [Border_Leaf1]
+Task failed.
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:330:7
 
-TASK [sonic_breakout : breakout | Restart BGP container to pick up new config] **********************************************************************************************************************************
-changed: [Border_Leaf1]
+328         - "'already' not in (_ip_add_result.stderr | default(''))"
+329
+330     - name: "breakout | Configure BGP neighbor via vtysh"
+          ^ column 7
 
-TASK [sonic_breakout : breakout | Wait for BGP container to be ready] *******************************************************************************************************************************************
-FAILED - RETRYING: [Border_Leaf1]: breakout | Wait for BGP container to be ready (12 retries left).
-ok: [Border_Leaf1]
+<<< caused by >>>
 
-TASK [sonic_breakout : breakout | Wait for BGP session establishment (up to 60s)] *******************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
+Finalization of task args for 'ansible.builtin.shell' failed.
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:331:7
 
-TASK [sonic_breakout : breakout | Report BGP session status] ****************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Exit_Router1) =>
-    msg: 'NOT_ESTABLISHED after 60s - current state: Active'
+329
+330     - name: "breakout | Configure BGP neighbor via vtysh"
+331       ansible.builtin.shell: |
+          ^ column 7
 
-TASK [sonic_breakout : breakout | Deployment complete] **********************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: 'Border_Leaf1 (Arista-7050QX-32S): Breakout applied on . Exit BGP configured
-        on Ethernet5/1.'
+<<< caused by >>>
 
-TASK [post | Final BGP summary check] ***************************************************************************************************************************************************************************
-ok: [Border_Leaf1]
+Error while resolving value for '_raw_params': 'bgp_asn' is undefined
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:331:30
 
-TASK [post | Display final BGP status] **************************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg:
-    - ''
-    - 'IPv4 Unicast Summary (VRF default):'
-    - BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-    - BGP table version 1
-    - RIB entries 1, using 224 bytes of memory
-    - Peers 7, using 5072 KiB of memory
-    - ''
-    - Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
-        Desc
-    - Ethernet20      4      65106         0         0        0    0    0    never         Idle        0
-        HostB12_1
-    - Ethernet22      4      65108         0         0        0    0    0    never         Idle        0
-        MonitorSrv
-    - Ethernet24      4      65107         0         0        0    0    0    never         Idle        0
-        HostB12_2
-    - Ethernet28      4      65108         0         0        0    0    0    never         Idle        0
-        MonitorSrv
-    - Ethernet120     4          0         0         0        0    0    0    never         Idle        0
-        Spine_S2
-    - Ethernet124     4          0         0         0        0    0    0    never         Idle        0
-        Spine_S1
-    - 10.0.253.1      4      65253         0         0        0    0    0    never       Active        0
-        Exit_Router1
-    - ''
-    - Total number of neighbors 7
-    - ''
-    - 'IPv6 Unicast Summary (VRF default):'
-    - BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+329
+330     - name: "breakout | Configure BGP neighbor via vtysh"
+331       ansible.builtin.shell: |
+                                 ^ column 30
 
-TASK [post | Final interface status check (exit sub-ports)] *****************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet5/1)
-
-TASK [post | Display interface status] **************************************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet5/1) =>
-    msg:
-    - '  Interface    Lanes    Speed    MTU    FEC        Alias    Vlan    Oper    Admin    Type    Asym
-        PFC'
-    - '-----------  -------  -------  -----  -----  -----------  ------  ------  -------  ------  ----------'
-    - Ethernet5/1        9      10G   9100    N/A  Ethernet5/1  routed    down     down     N/A         N/A
-
-TASK [post | Ping exit router to verify L3] *********************************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
-
-TASK [post | Report ping result] ********************************************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Exit_Router1) =>
-    msg: 'Ping 10.0.253.1: FAILED — check physical link'
-
-TASK [post | Breakout deployment summary] ***********************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: 'Border_Leaf1 (Arista-7050QX-32S): Breakout complete. Exit BGP: 10.0.253.1'
-
-PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
-
-TASK [preflight | Wait for SSH connectivity] ********************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [preflight | Validate breakout_cfg is defined] *************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
+failed: [Border_Leaf1] (item=Exit_Router1 (10.0.253.1)) =>
+    ansible_loop_var: item
     changed: false
-    msg: All assertions passed
-
-TASK [preflight | Detect ports requiring breakout (split mode Nx > 1)] ******************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [preflight | Skip host if no split breakouts needed] *******************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [preflight | Display breakout plan] ************************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  BREAKOUT PLAN:                Border_Leaf2               ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  Switch Model:             Arista-7050QX-32S             ║
-        ║  Ports to break out: 1                                      ║
-        ║    Ethernet0 → 4x10G                            ║
-        ║  Exit interfaces: 1 (IP/BGP will be configured) ║
-        ╚══════════════════════════════════════════════════════════════╝
-
-TASK [sonic_breakout : breakout | Validate breakout_cfg is defined] *********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Filter ports needing actual split (Nx where N > 1)] ***************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Report breakout plan] *********************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): 1 port(s) need breakout — Ethernet0=4x10G'
-
-TASK [sonic_breakout : breakout | Skip host if no ports need breakout] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Check if parent port exists in CONFIG_DB] *************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet0)
-
-TASK [sonic_breakout : breakout | Check if first child sub-port already exists] *********************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet0)
-
-TASK [sonic_breakout : breakout | Determine which ports need breakout] ******************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): All ports already broken out — skipping to
-        post-breakout config'
-
-TASK [sonic_breakout : breakout | Set breakout-needed flag] *****************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Remove IP addresses from parent port before breakout] *************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Detect if running on KVM Virtual Switch] **************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Apply port breakout (real hardware)] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Apply software breakout on KVM (remove parent, add children)] *****************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Wait for port reconfiguration to settle] **************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Build child port verification list] *******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Verify child sub-ports exist after breakout] **********************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Display child port verification] **********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Build child port attribute list] **********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Set child sub-port speed] *****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Set child sub-port admin_status up] *******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Set exit sub-port speed] ******************************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet5/1=10000)
-
-TASK [sonic_breakout : breakout | Set exit sub-port MTU] ********************************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet5/1 mtu=1500)
-
-TASK [sonic_breakout : breakout | Set exit sub-port admin_status up] ********************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet5/1)
-
-TASK [sonic_breakout : breakout | Set exit sub-port description] ************************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet5/1)
-
-TASK [sonic_breakout : breakout | Configure IP on exit sub-port] ************************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Ethernet5/1 = 10.0.253.2/31)
-
-TASK [sonic_breakout : breakout | Configure BGP neighbor for exit router] ***************************************************************************************************************************************
-changed: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
-
-TASK [sonic_breakout : breakout | Persist config to /etc/sonic/config_db.json] **********************************************************************************************************************************
-changed: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Restart BGP container to pick up new config] **********************************************************************************************************************************
-changed: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Wait for BGP container to be ready] *******************************************************************************************************************************************
-FAILED - RETRYING: [Border_Leaf2]: breakout | Wait for BGP container to be ready (12 retries left).
-ok: [Border_Leaf2]
-
-TASK [sonic_breakout : breakout | Wait for BGP session establishment (up to 60s)] *******************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
-
-TASK [sonic_breakout : breakout | Report BGP session status] ****************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Exit_Router2) =>
-    msg: 'NOT_ESTABLISHED after 60s - current state: Active'
-
-TASK [sonic_breakout : breakout | Deployment complete] **********************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): Breakout applied on . Exit BGP configured
-        on Ethernet5/1.'
-
-TASK [post | Final BGP summary check] ***************************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [post | Display final BGP status] **************************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg:
-    - ''
-    - 'IPv4 Unicast Summary (VRF default):'
-    - BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-    - BGP table version 1
-    - RIB entries 1, using 224 bytes of memory
-    - Peers 7, using 5072 KiB of memory
-    - ''
-    - Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
-        Desc
-    - Ethernet20      4      65106         0         0        0    0    0    never         Idle        0
-        HostB12_1
-    - Ethernet22      4      65108         0         0        0    0    0    never         Idle        0
-        MonitorSrv
-    - Ethernet24      4      65107         0         0        0    0    0    never         Idle        0
-        HostB12_2
-    - Ethernet28      4      65108         0         0        0    0    0    never         Idle        0
-        MonitorSrv
-    - Ethernet120     4          0         0         0        0    0    0    never         Idle        0
-        Spine_S2
-    - Ethernet124     4          0         0         0        0    0    0    never         Idle        0
-        Spine_S1
-    - 10.0.253.3      4      65254         0         0        0    0    0    never       Active        0
-        Exit_Router2
-    - ''
-    - Total number of neighbors 7
-    - ''
-    - 'IPv6 Unicast Summary (VRF default):'
-    - BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-
-TASK [post | Final interface status check (exit sub-ports)] *****************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet5/1)
-
-TASK [post | Display interface status] **************************************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet5/1) =>
-    msg:
-    - '  Interface    Lanes    Speed    MTU    FEC        Alias    Vlan    Oper    Admin    Type    Asym
-        PFC'
-    - '-----------  -------  -------  -----  -----  -----------  ------  ------  -------  ------  ----------'
-    - Ethernet5/1        9      10G   9100    N/A  Ethernet5/1  routed    down     down     N/A         N/A
-
-TASK [post | Ping exit router to verify L3] *********************************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
-
-TASK [post | Report ping result] ********************************************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Exit_Router2) =>
-    msg: 'Ping 10.0.253.3: FAILED — check physical link'
-
-TASK [post | Breakout deployment summary] ***********************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 (Arista-7050QX-32S): Breakout complete. Exit BGP: 10.0.253.3'
+    item:
+        alias: Ethernet5/1
+        breakout_mode: 4x10G
+        description: Border_Leaf1 → Exit_Router1 (10G, breakout sub-port Ethernet5/1)
+        index: '5'
+        lanes: '9'
+        local_ip: 10.0.253.0/31
+        mtu: '1500'
+        neighbor: Exit_Router1
+        neighbor_asn: 65253
+        neighbor_ip: 10.0.253.1
+        neighbor_port: ether2
+        parent_port: Ethernet0
+        port: Ethernet5/1
+        speed: '10000'
+    msg: 'Task failed: Finalization of task args for ''ansible.builtin.shell'' failed:
+        Error while resolving value for ''_raw_params'': ''bgp_asn'' is undefined'
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=32   changed=8    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-Border_Leaf2               : ok=32   changed=8    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Border_Leaf1               : ok=18   changed=5    unreachable=0    failed=1    skipped=10   rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
-
-C:\Users\nh1221>ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 1
-RIB entries 1, using 224 bytes of memory
-Peers 7, using 5072 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
-Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never       Active        0 Exit_Router1
-
-Total number of neighbors 7
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
-Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
-
-Total number of neighbors 6
-
-C:\Users\nh1221>ssh admin@Border_Leaf2 "docker exec bgp vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 1
-RIB entries 1, using 224 bytes of memory
-Peers 7, using 5072 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
-Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 7
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
-Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
-
-Total number of neighbors 6
-
-C:\Users\nh1221>ssh admin@Exit_Router1 "/routing/bgp/connection/print"
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf1"
-     remote.address=10.0.253.0/32 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.99.1 templates=fabric as=65253
-     multihop=no address-families=ip
-     output.redistribute=connected,static .default-originate=always
-
-
-C:\Users\nh1221>ssh admin@Exit_Router2 "/routing/bgp/connection/print"
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf2"
-     remote.address=10.0.253.2/32 .as=65022
-     local.address=10.0.253.3 .role=ebgp
-     routing-table=main router-id=10.0.99.2 templates=fabric as=65254
-     multihop=no address-families=ip
-     output.redistribute=connected,static .default-originate=always
-
-
-C:\Users\nh1221>
-
