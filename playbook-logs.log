@@ -1,183 +1,98 @@
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd data-center/
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ source venv/bin/activate
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
-[ERROR]: the playbook: playbooks/deploy_breakout.yml could not be found
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd _v1
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
 
 PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
 
 TASK [preflight | Wait for SSH connectivity] ********************************************************************************************************************************************************************
-[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Data could not be sent to remote host "172.16.2.31". Make sure this host can be reached over ssh:
-Origin: /mnt/c/Users/nh1221/data-center/_v1/playbooks/deploy_breakout.yml:74:7
+ok: [Border_Leaf1]
 
-72
-73   pre_tasks:
-74     - name: "preflight | Wait for SSH connectivity"
-         ^ column 7
-
-fatal: [Border_Leaf1]: FAILED! =>
+TASK [preflight | Validate breakout_cfg is defined] *************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
     changed: false
-    elapsed: 63
-    msg: 'timed out waiting for ping module test: Data could not be sent to remote host
-        "172.16.2.31". Make sure this host can be reached over ssh:'
+    msg: All assertions passed
+
+TASK [preflight | Detect ports requiring breakout (split mode Nx > 1)] ******************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [preflight | Skip host if no split breakouts needed] *******************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [preflight | Display breakout plan] ************************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |-
+        ╔══════════════════════════════════════════════════════════════╗
+        ║  BREAKOUT PLAN:                Border_Leaf1               ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║  Switch Model:             Arista-7050QX-32S             ║
+        ║  Ports to break out: 1                                      ║
+        ║    Ethernet0 → 4x10G                            ║
+        ║  Exit interfaces: 1 (IP/BGP will be configured) ║
+        ╚══════════════════════════════════════════════════════════════╝
+
+TASK [sonic_breakout : breakout | Validate breakout_cfg is defined] *********************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Filter ports needing actual split (Nx where N > 1)] ***************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Report breakout plan] *********************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): 1 port(s) need breakout — Ethernet0=4x10G'
+
+TASK [sonic_breakout : breakout | Skip host if no ports need breakout] ******************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Check if parent port exists in CONFIG_DB] *************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Determine which ports need breakout] ******************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): Ports needing breakout: Ethernet0'
+
+TASK [sonic_breakout : breakout | Skip host if all ports already broken out] ************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Remove IP addresses from parent port before breakout] *************************************************************************************************************************
+changed: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Apply port breakout] **********************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:143:3
+
+141 #   -y = yes (skip confirmation)
+142 # ---------------------------------------------------------------------------
+143 - name: "breakout | Apply port breakout"
+      ^ column 3
+
+failed: [Border_Leaf1] (item=Ethernet0 → 4x10G) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - timeout
+    - '180'
+    - config
+    - interface
+    - breakout
+    - Ethernet0
+    - 4x10G
+    - -f
+    - -l
+    - -v
+    - -y
+    delta: '0:00:01.771337'
+    end: '2026-05-24 18:17:32.868767'
+    item: Ethernet0
+    msg: non-zero return code
+    rc: 1
+    start: '2026-05-24 18:17:31.097430'
+    stderr: Aborted!
+    stderr_lines: <omitted>
+    stdout: '[ERROR] Breakout feature is not available without platform.json file'
+    stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Border_Leaf1               : ok=11   changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
-nh1221@R620:~$ virsh list --all
- Id   Name           State
--------------------------------
- -    Border_Leaf1   shut off
- -    Border_Leaf2   shut off
- -    Exit_Router1   shut off
- -    Exit_Router2   shut off
- -    Host12_1       shut off
- -    Host12_2       shut off
- -    Host12_3       shut off
- -    Host34_1       shut off
- -    Host34_2       shut off
- -    HostB12_1      shut off
- -    HostB12_2      shut off
- -    Leaf_L1        shut off
- -    Leaf_L2        shut off
- -    Leaf_L3        shut off
- -    Leaf_L4        shut off
- -    MonitorSrv     shut off
- -    Spine_S1       shut off
- -    Spine_S2       shut off
-
-nh1221@R620:~$ for vm in $(virsh list --all --name); do virsh start "$vm"; done
-error: Failed to start domain 'Border_Leaf1'
-error: internal error: Unable to add port vnet1 to OVS bridge br-BL1-ER1: ovs-vsctl: "--may-exist add-port br-BL1-ER1 vnet1" but vnet1 is actually attached to bridge br-L1-S1
-
-
-error: Failed to start domain 'Border_Leaf2'
-error: internal error: Unable to add port vnet3 to OVS bridge br-BL2-ER2: ovs-vsctl: "--may-exist add-port br-BL2-ER2 vnet3" but vnet3 is actually attached to bridge br-L3-S1
-
-
-error: Failed to start domain 'Exit_Router1'
-error: internal error: Unable to add port vnet5 to OVS bridge br-BL1-ER1: ovs-vsctl: "--may-exist add-port br-BL1-ER1 vnet5" but vnet5 is actually attached to bridge br-BL1-S1
-
-
-Domain 'Exit_Router2' started
-
-error: Failed to start domain 'Host12_1'
-error: internal error: Unable to add port vnet9 to OVS bridge br-H121-L1: ovs-vsctl: "--may-exist add-port br-H121-L1 vnet9" but vnet9 is actually attached to bridge br-L2-S2
-
-
-error: Failed to start domain 'Host12_2'
-error: internal error: Unable to add port vnet11 to OVS bridge br-H122-L1: ovs-vsctl: "--may-exist add-port br-H122-L1 vnet11" but vnet11 is actually attached to bridge br-L4-S2
-
-
-error: Failed to start domain 'Host12_3'
-error: internal error: Unable to add port vnet13 to OVS bridge br-H123-L1: ovs-vsctl: "--may-exist add-port br-H123-L1 vnet13" but vnet13 is actually attached to bridge br-BL2-S2
-
-
-error: Failed to start domain 'Host34_1'
-error: internal error: Unable to add port vnet15 to OVS bridge br-H341-L3: ovs-vsctl: "--may-exist add-port br-H341-L3 vnet15" but vnet15 is actually attached to bridge br-H121-L1
-
-
-error: Failed to start domain 'Host34_2'
-error: internal error: Unable to add port vnet17 to OVS bridge br-H342-L3: ovs-vsctl: "--may-exist add-port br-H342-L3 vnet17" but vnet17 is actually attached to bridge br-H123-L1
-
-
-error: Failed to start domain 'HostB12_1'
-error: internal error: Unable to add port vnet19 to OVS bridge br-HB-BL1: ovs-vsctl: "--may-exist add-port br-HB-BL1 vnet19" but vnet19 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'HostB12_2'
-error: internal error: Unable to add port vnet21 to OVS bridge br-HB2-BL1: ovs-vsctl: "--may-exist add-port br-HB2-BL1 vnet21" but vnet21 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Leaf_L1'
-error: internal error: Unable to add port vnet23 to OVS bridge br-H121-L1: ovs-vsctl: "--may-exist add-port br-H121-L1 vnet23" but vnet23 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Leaf_L2'
-error: internal error: Unable to add port vnet25 to OVS bridge br-H121-L2: ovs-vsctl: "--may-exist add-port br-H121-L2 vnet25" but vnet25 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Leaf_L3'
-error: internal error: Unable to add port vnet27 to OVS bridge br-H341-L3: ovs-vsctl: "--may-exist add-port br-H341-L3 vnet27" but vnet27 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Leaf_L4'
-error: internal error: Unable to add port vnet29 to OVS bridge br-H341-L4: ovs-vsctl: "--may-exist add-port br-H341-L4 vnet29" but vnet29 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'MonitorSrv'
-error: internal error: Unable to add port vnet31 to OVS bridge br-MS-BL1: ovs-vsctl: "--may-exist add-port br-MS-BL1 vnet31" but vnet31 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Spine_S1'
-error: internal error: Unable to add port vnet33 to OVS bridge br-L1-S1: ovs-vsctl: "--may-exist add-port br-L1-S1 vnet33" but vnet33 is actually attached to bridge br-pad
-
-
-error: Failed to start domain 'Spine_S2'
-error: internal error: Unable to add port vnet35 to OVS bridge br-L1-S2: ovs-vsctl: "--may-exist add-port br-L1-S2 vnet35" but vnet35 is actually attached to bridge br-pad
-
-
-nh1221@R620:~$ virsh list --all
- Id   Name           State
--------------------------------
- 4    Exit_Router2   running
- -    Border_Leaf1   shut off
- -    Border_Leaf2   shut off
- -    Exit_Router1   shut off
- -    Host12_1       shut off
- -    Host12_2       shut off
- -    Host12_3       shut off
- -    Host34_1       shut off
- -    Host34_2       shut off
- -    HostB12_1      shut off
- -    HostB12_2      shut off
- -    Leaf_L1        shut off
- -    Leaf_L2        shut off
- -    Leaf_L3        shut off
- -    Leaf_L4        shut off
- -    MonitorSrv     shut off
- -    Spine_S1       shut off
- -    Spine_S2       shut off
-
-nh1221@R620:~$ ovsvsctl list-br
-Command 'ovsvsctl' not found, did you mean:
-  command 'ovs-vsctl' from deb openvswitch-switch (3.3.4-0ubuntu0.24.04.2)
-Try: sudo apt install <deb name>
-nh1221@R620:~$ ovs-vsctl list-br
-ovs-vsctl: unix:/var/run/openvswitch/db.sock: database connection failed (Permission denied)
-nh1221@R620:~$ sudo ovs-vsctl list-br
-[sudo] password for nh1221:
-br-BL1-ER1
-br-BL1-S1
-br-BL1-S2
-br-BL2-ER2
-br-BL2-S1
-br-BL2-S2
-br-H121-L1
-br-H121-L2
-br-H122-L1
-br-H122-L2
-br-H123-L1
-br-H123-L2
-br-H341-L3
-br-H341-L4
-br-H342-L3
-br-H342-L4
-br-HB-BL1
-br-HB-BL2
-br-HB2-BL1
-br-HB2-BL2
-br-L1-S1
-br-L1-S2
-br-L2-S1
-br-L2-S2
-br-L3-S1
-br-L3-S2
-br-L4-S1
-br-L4-S2
-br-MS-BL1
-br-MS-BL2
-br-pad
-nh1221@R620:~$
