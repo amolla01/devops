@@ -414,3 +414,34 @@ Then re-run:
 ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%==13th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Border_Leaf1: Reverse breakout, restore Ethernet0
+ssh admin@Border_Leaf1 bash -c '
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/1"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/2"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/3"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/4"
+  sonic-db-cli CONFIG_DB del "INTERFACE|Ethernet5/1"
+  sonic-db-cli CONFIG_DB del "INTERFACE|Ethernet5/1|10.0.253.0/31"
+  sonic-db-cli CONFIG_DB hmset "PORT|Ethernet0" lanes "9,10,11,12" speed "40000" alias "Ethernet5/1" index "5" admin_status "up" mtu "1500"
+  sonic-db-cli CONFIG_DB hset "INTERFACE|Ethernet0" "NULL" "NULL"
+  sonic-db-cli CONFIG_DB hset "INTERFACE|Ethernet0|10.0.253.0/31" "NULL" "NULL"
+  config save -y
+  sudo config reload -y
+'
+# Border_Leaf2: Same
+ssh admin@Border_Leaf2 bash -c '
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/1"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/2"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/3"
+  sonic-db-cli CONFIG_DB del "PORT|Ethernet5/4"
+  sonic-db-cli CONFIG_DB del "INTERFACE|Ethernet5/1"
+  sonic-db-cli CONFIG_DB del "INTERFACE|Ethernet5/1|10.0.253.2/31"
+  sonic-db-cli CONFIG_DB hmset "PORT|Ethernet0" lanes "9,10,11,12" speed "40000" alias "Ethernet5/1" index "5" admin_status "up" mtu "1500"
+  sonic-db-cli CONFIG_DB hset "INTERFACE|Ethernet0" "NULL" "NULL"
+  sonic-db-cli CONFIG_DB hset "INTERFACE|Ethernet0|10.0.253.2/31" "NULL" "NULL"
+  config save -y
+  sudo config reload -y
+'
+
+
