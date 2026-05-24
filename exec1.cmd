@@ -380,3 +380,26 @@ If 1 → this is likely your culprit — the hypervisor is applying its own ipta
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%-11th-%%%%%%%%%%%%%%%%%
+# Step 1: Remove all stale vnet ports from every OVS bridge
+sudo ovs-vsctl list-br | while read br; do
+  sudo ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read port; do
+    echo "Removing stale port $port from $br"
+    sudo ovs-vsctl --if-exists del-port "$br" "$port"
+  done
+done
+
+# Step 2: Verify no vnet ports remain
+sudo ovs-vsctl list-br | xargs -I{} sudo ovs-vsctl list-ports {} | grep vnet
+# (should return nothing)
+
+# Step 3: Start all VMs
+for vm in $(virsh list --all --name); do
+  virsh start "$vm" && echo "Started $vm" || echo "FAILED: $vm"
+done
+
+# Step 4: Verify
+virsh list --all
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
