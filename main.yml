@@ -104,12 +104,14 @@
   ansible.builtin.debug:
     msg: >-
       {{ inventory_hostname }} ({{ hwsku | default('unknown') }}):
-      Ports needing breakout: {{ _ports_needing_breakout | join(', ') | default('none (all already broken out)') }}
+      {{ 'Ports needing breakout: ' + _ports_needing_breakout | join(', ')
+         if _ports_needing_breakout | length > 0
+         else 'All ports already broken out — skipping to post-breakout config' }}
   tags: [breakout]
 
-- name: "breakout | Skip host if all ports already broken out"
-  ansible.builtin.meta: end_host
-  when: _ports_needing_breakout | length == 0
+- name: "breakout | Set breakout-needed flag"
+  ansible.builtin.set_fact:
+    _needs_breakout: "{{ _ports_needing_breakout | length > 0 }}"
   tags: [breakout]
 
 # ---------------------------------------------------------------------------
@@ -130,6 +132,7 @@
     {% endfor %}
     echo "Pre-cleanup complete for: {{ _ports_needing_breakout | join(', ') }}"
   changed_when: true
+  when: _needs_breakout | bool
   tags: [breakout]
 
 # ---------------------------------------------------------------------------
@@ -155,7 +158,7 @@
     label: "{{ item }} → {{ _breakout_modes[item].brkout_mode }}"
   register: _breakout_result
   changed_when: true
-  when: not (_is_kvm | bool)
+  when: (_needs_breakout | bool) and not (_is_kvm | bool)
   tags: [breakout]
 
 # --- KVM Virtual Switch path (software breakout via CONFIG_DB) ---
@@ -195,7 +198,7 @@
     {% endfor %}
     echo "Software breakout complete"
   changed_when: true
-  when: _is_kvm | bool
+  when: (_needs_breakout | bool) and (_is_kvm | bool)
   tags: [breakout]
 
 - name: "breakout | Wait for port reconfiguration to settle"
@@ -203,6 +206,7 @@
     timeout: 10
   delegate_to: localhost
   become: false
+  when: _needs_breakout | bool
   tags: [breakout]
 
 # ---------------------------------------------------------------------------
@@ -213,6 +217,7 @@
 - name: "breakout | Build child port verification list"
   ansible.builtin.set_fact:
     _verify_child_ports: "{{ _ports_needing_breakout | map('extract', _breakout_modes) | selectattr('child_ports', 'defined') | map(attribute='child_ports') | flatten | map(attribute='port') | list }}"
+  when: _needs_breakout | bool
   tags: [breakout]
 
 - name: "breakout | Verify child sub-ports exist after breakout"
@@ -224,7 +229,7 @@
   register: _child_port_check
   changed_when: false
   failed_when: _child_port_check.stdout | default('') | length == 0
-  when: _verify_child_ports | length > 0
+  when: (_needs_breakout | bool) and (_verify_child_ports | length > 0)
   tags: [breakout, validate]
 
 - name: "breakout | Display child port verification"
@@ -234,7 +239,7 @@
   loop: "{{ _child_port_check.results | default([]) }}"
   loop_control:
     label: "{{ item.item | default('n/a') }}"
-  when: _child_port_check.results is defined
+  when: (_needs_breakout | bool) and (_child_port_check.results is defined)
   tags: [breakout, validate]
 
 # ---------------------------------------------------------------------------
@@ -244,26 +249,27 @@
 - name: "breakout | Build child port attribute list"
   ansible.builtin.set_fact:
     _child_port_attrs: "{{ _ports_needing_breakout | map('extract', _breakout_modes) | selectattr('child_ports', 'defined') | map(attribute='child_ports') | flatten | list }}"
+  when: _needs_breakout | bool
   tags: [breakout]
 
 - name: "breakout | Set child sub-port speed"
   ansible.builtin.command: >-
     sonic-db-cli CONFIG_DB hset "PORT|{{ item.port }}" speed {{ item.speed }}
-  loop: "{{ _child_port_attrs }}"
+  loop: "{{ _child_port_attrs | default([]) }}"
   loop_control:
     label: "{{ item.port }}={{ item.speed }}"
   changed_when: true
-  when: _child_port_attrs | length > 0
+  when: (_needs_breakout | bool) and (_child_port_attrs | default([]) | length > 0)
   tags: [breakout]
 
 - name: "breakout | Set child sub-port admin_status up"
   ansible.builtin.command: >-
     sonic-db-cli CONFIG_DB hset "PORT|{{ item.port }}" admin_status up
-  loop: "{{ _child_port_attrs }}"
+  loop: "{{ _child_port_attrs | default([]) }}"
   loop_control:
     label: "{{ item.port }}"
   changed_when: true
-  when: _child_port_attrs | length > 0
+  when: (_needs_breakout | bool) and (_child_port_attrs | default([]) | length > 0)
   tags: [breakout]
 
 # ===========================================================================
