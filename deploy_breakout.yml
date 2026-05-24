@@ -1,0 +1,191 @@
+---
+# =============================================================================
+# playbooks/deploy_breakout.yml
+# Generic Port Breakout — All SONiC Switches (host_vars driven)
+# =============================================================================
+# Purpose:
+#   Applies port breakout configuration on any SONiC switch that has
+#   breakout_cfg defined in host_vars with split modes (4x10G, 2x50G, etc).
+#   Switches with only 1x* mode declarations (1x100G[40G], 1x40G) are
+#   automatically skipped — those are metadata handled by the day-0 template.
+#
+#   After breakout, parent ports are removed and child sub-ports are created.
+#   Optionally configures IP/BGP on sub-ports when exit_interfaces is defined.
+#
+# MUST be run AFTER:
+#   - deploy_day0.yml (day-0 base config applied)
+#
+# MUST be run BEFORE:
+#   - deploy_fabric_spine_leaf.yml (fabric patch references sub-port names)
+#   - deploy_exit_routers.yml (exit router expects BGP session on sub-port)
+#
+# Deployment Order:
+#   1. deploy_day0.yml              → Base config, all ports at native width
+#   2. deploy_breakout.yml          → THIS: split ports where needed ←
+#   3. deploy_fabric_spine_leaf.yml → eBGP unnumbered on uplinks
+#   4. deploy_exit_routers.yml      → MikroTik BGP config
+#   5. deploy_server_downlinks.yml  → Server-facing BGP
+#
+# Usage:
+#   # All switches with breakout_cfg (auto-skips switches without splits):
+#   ansible-playbook playbooks/deploy_breakout.yml
+#
+#   # Only border leaves:
+#   ansible-playbook playbooks/deploy_breakout.yml --limit border_leaves
+#
+#   # Only Leaf_L1 (uplink breakout):
+#   ansible-playbook playbooks/deploy_breakout.yml --limit Leaf_L1
+#
+#   # Specific switches:
+#   ansible-playbook playbooks/deploy_breakout.yml --limit "Border_Leaf1,Leaf_L1"
+#
+#   # Dry-run (validate only, no changes):
+#   ansible-playbook playbooks/deploy_breakout.yml --tags validate
+#
+# What it does per switch:
+#   1. Reads breakout_cfg from host_vars
+#   2. Filters to ports with split modes (Nx > 1) — skips 1x* declarations
+#   3. Checks if parent port still exists as multi-lane (idempotent)
+#   4. Removes stale IP/BGP config from parent port
+#   5. Runs: config interface breakout <port> <mode> -f -l -v -y
+#   6. Verifies child sub-ports were created
+#   7. Sets speed/admin_status on child ports from breakout_cfg.child_ports
+#   8. [If exit_interfaces defined] Configures IP, MTU, BGP neighbor
+#   9. Saves config and restarts BGP container
+#   10. [If exit_interfaces defined] Verifies BGP session establishment
+#
+# Supported switch models:
+#   - Arista 7050QX-32S  (border leaves): Ethernet0 → 4x10G for exit router
+#   - Arista 7050-QX32   (leaf L3/L4):    1x40G declarations (skipped)
+#   - Celestica DX010    (spines):         1x100G[40G] declarations (skipped)
+#   - Accton AS5712-54X  (leaf L1/L2):    Ethernet68/64 → 4x10G for uplinks
+# =============================================================================
+
+- name: "Port Breakout — SONiC Switches (host_vars driven)"
+  hosts: sonic_switches
+  become: true
+  serial: 1
+  gather_facts: false
+
+  vars:
+    ansible_command_timeout: 300
+
+  pre_tasks:
+    - name: "preflight | Wait for SSH connectivity"
+      ansible.builtin.wait_for_connection:
+        delay: 2
+        timeout: 60
+      tags: [preflight, breakout]
+
+    - name: "preflight | Validate breakout_cfg is defined"
+      ansible.builtin.assert:
+        that:
+          - breakout_cfg is defined
+          - breakout_cfg | length > 0
+        fail_msg: >-
+          {{ inventory_hostname }} ({{ hwsku | default('unknown') }}) has no breakout_cfg defined.
+          Skipping this host. Define breakout_cfg in host_vars to enable breakout.
+      tags: [preflight, validate, breakout]
+
+    - name: "preflight | Detect ports requiring breakout (split mode Nx > 1)"
+      ansible.builtin.set_fact:
+        _preflight_split_ports: >-
+          {{ breakout_cfg | dict2items
+             | selectattr('value.brkout_mode', 'match', '^[2-9]x')
+             | map(attribute='key') | list }}
+      tags: [preflight, breakout]
+
+    - name: "preflight | Skip host if no split breakouts needed"
+      ansible.builtin.meta: end_host
+      when: _preflight_split_ports | length == 0
+      tags: [preflight, breakout]
+
+    - name: "preflight | Display breakout plan"
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║  BREAKOUT PLAN: {{ inventory_hostname | center(42) }}║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║  Switch Model: {{ hwsku | default('unknown') | center(42) }}║
+          ║  Ports to break out: {{ _preflight_split_ports | length }}{{ ' ' * 38 }}║
+          {% for port in _preflight_split_ports %}
+          ║    {{ port }} → {{ breakout_cfg[port].brkout_mode }}{{ ' ' * (42 - port | length - breakout_cfg[port].brkout_mode | length) }}║
+          {% endfor %}
+          {% if exit_interfaces is defined %}
+          ║  Exit interfaces: {{ exit_interfaces | length }} (IP/BGP will be configured) ║
+          {% else %}
+          ║  Exit interfaces: none (pure breakout only)                ║
+          {% endif %}
+          ╚══════════════════════════════════════════════════════════════╝
+      tags: [preflight, breakout]
+
+  roles:
+    - role: sonic_breakout
+      tags: [breakout]
+
+  post_tasks:
+    - name: "post | Final BGP summary check"
+      ansible.builtin.shell: |
+        docker exec bgp vtysh -c "show bgp summary" | head -20
+      register: _final_bgp
+      changed_when: false
+      failed_when: false
+      tags: [verify, breakout]
+
+    - name: "post | Display final BGP status"
+      ansible.builtin.debug:
+        msg: "{{ _final_bgp.stdout_lines | default(['BGP check unavailable']) }}"
+      tags: [verify, breakout]
+
+    - name: "post | Final interface status check (exit sub-ports)"
+      ansible.builtin.command: >-
+        show interfaces status {{ item.port }}
+      loop: "{{ exit_interfaces | default([]) }}"
+      loop_control:
+        label: "{{ item.port }}"
+      register: _final_intf
+      changed_when: false
+      failed_when: false
+      when: exit_interfaces is defined
+      tags: [verify, breakout]
+
+    - name: "post | Display interface status"
+      ansible.builtin.debug:
+        msg: "{{ item.stdout_lines | default(['Interface check unavailable']) }}"
+      loop: "{{ _final_intf.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.port | default('n/a') }}"
+      when: _final_intf.results is defined
+      tags: [verify, breakout]
+
+    - name: "post | Ping exit router to verify L3"
+      ansible.builtin.command: >-
+        ping -c 3 -W 2 {{ item.neighbor_ip }}
+      loop: "{{ exit_interfaces | default([]) }}"
+      loop_control:
+        label: "{{ item.neighbor }} ({{ item.neighbor_ip }})"
+      register: _ping_exit
+      changed_when: false
+      failed_when: false
+      when: exit_interfaces is defined
+      tags: [verify, breakout]
+
+    - name: "post | Report ping result"
+      ansible.builtin.debug:
+        msg: >-
+          Ping {{ item.item.neighbor_ip }}:
+          {{ 'SUCCESS' if item.rc == 0 else 'FAILED — check physical link' }}
+      loop: "{{ _ping_exit.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.neighbor | default('n/a') }}"
+      when: _ping_exit.results is defined
+      tags: [verify, breakout]
+
+    - name: "post | Breakout deployment summary"
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} ({{ hwsku | default('unknown') }}):
+          Breakout complete.
+          {{ 'Exit BGP: ' + (exit_interfaces | map(attribute='neighbor_ip') | join(', '))
+             if exit_interfaces is defined else 'No exit interfaces (pure breakout).' }}
+      tags: [verify, breakout]
