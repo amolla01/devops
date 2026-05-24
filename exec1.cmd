@@ -158,3 +158,117 @@ ssh admin@Leaf_L3 "docker exec bgp vtysh -c 'show bgp summary'"
 ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
 
 ######################################################
+###############%%%%%%%%%%%%%%%-8th-%%%%%%%%%%%%%%%%%%%%%%%%
+
+Exit_Router1 (172.16.2.98)
+ssh admin@172.16.2.98
+
+# 1. Check current state
+/routing/bgp/template/print
+/routing/bgp/connection/print detail
+
+# 2. Fix the template (set local AS + router-id)
+/routing/bgp/template/set [find name="fabric"] as=65253 router-id=10.0.99.1
+
+# 3. Fix the connection (set remote AS and ensure template link)
+/routing/bgp/connection/set [find name~"Border"] \
+  remote.as=65021 \
+  templates=fabric \
+  local.role=ebgp \
+  output.redistribute=connected,static \
+  output.default-originate=always \
+  disabled=no
+
+# 4. If connection doesn't exist with that name, find and fix by address:
+/routing/bgp/connection/set [find where remote.address="10.0.253.0/32"] \
+  remote.as=65021 as=65253 \
+  templates=fabric \
+  local.role=ebgp \
+  output.redistribute=connected,static \
+  output.default-originate=always \
+  disabled=no
+
+# 5. Disable and re-enable to restart the session
+/routing/bgp/connection/disable [find where remote.address~"10.0.253"]
+/routing/bgp/connection/enable [find where remote.address~"10.0.253"]
+
+# 6. Verify
+:delay 5s
+/routing/bgp/session/print
+
+Expected output after fix:
+
+Flags: E - established
+ 0 E remote.address=10.0.253.0 .as=65021
+     local.address=10.0.253.1 .as=65253 ebgp
+     prefix-count=19
+	 
+	 
+Exit_Router2 (172.16.2.99)
+
+ssh admin@172.16.2.99	 
+
+# 1. Fix the template
+/routing/bgp/template/set [find name="fabric"] as=65254 router-id=10.0.99.2
+
+# 2. Fix the connection
+/routing/bgp/connection/set [find where remote.address~"10.0.253.2"] \
+  remote.as=65022 as=65254 \
+  templates=fabric \
+  local.role=ebgp \
+  output.redistribute=connected,static \
+  output.default-originate=always \
+  disabled=no
+
+# 3. Bounce the session
+/routing/bgp/connection/disable [find where remote.address~"10.0.253"]
+/routing/bgp/connection/enable [find where remote.address~"10.0.253"]
+
+# 4. Verify
+:delay 5s
+/routing/bgp/session/print
+
+If template "fabric" doesn't exist at all
+If /routing/bgp/template/print shows nothing or a differently-named template, create from scratch:
+
+Exit_Router1:
+
+/routing/bgp/template/remove [find]
+/routing/bgp/template/add name=fabric as=65253 router-id=10.0.99.1 \
+  address-families=ip disabled=no
+
+/routing/bgp/connection/remove [find]
+/routing/bgp/connection/add name=to_Border_Leaf1 \
+  remote.address=10.0.253.0/32 remote.as=65021 \
+  local.role=ebgp local.address=10.0.253.1 \
+  templates=fabric routing-table=main as=65253 multihop=no disabled=no \
+  output.redistribute=connected,static output.default-originate=always
+  
+  Exit_Router2:
+  
+  /routing/bgp/template/remove [find]
+/routing/bgp/template/add name=fabric as=65254 router-id=10.0.99.2 \
+  address-families=ip disabled=no
+
+/routing/bgp/connection/remove [find]
+/routing/bgp/connection/add name=to_Border_Leaf2 \
+  remote.address=10.0.253.2/32 remote.as=65022 \
+  local.role=ebgp local.address=10.0.253.3 \
+  templates=fabric routing-table=main as=65254 multihop=no disabled=no \
+  output.redistribute=connected,static output.default-originate=always
+  
+  Verification from Border_Leaf side
+After fixing, confirm from Border_Leaf1:
+
+ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'" | grep 10.0.253.1
+
+
+Expected: state changes from Connect → shows a prefix count (like 1 or more).
+
+Also verify routes are received:
+
+ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show ip bgp neighbors 10.0.253.1 received-routes'"
+
+Summary: The AS numbers on the MikroTik BGP connections are 0 instead of 65253/65254. The remote.as is also 0 instead of 65021/65022. Setting these values and bouncing the connection will establish the sessions.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
