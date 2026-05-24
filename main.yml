@@ -53,14 +53,8 @@
 # ---------------------------------------------------------------------------
 - name: "breakout | Filter ports needing actual split (Nx where N > 1)"
   ansible.builtin.set_fact:
-    _breakout_ports: >-
-      {{ breakout_cfg | dict2items
-         | selectattr('value.brkout_mode', 'match', '^[2-9]x')
-         | map(attribute='key') | list }}
-    _breakout_modes: >-
-      {{ breakout_cfg | dict2items
-         | selectattr('value.brkout_mode', 'match', '^[2-9]x')
-         | items2dict }}
+    _breakout_ports: "{{ breakout_cfg | dict2items | selectattr('value.brkout_mode', 'match', '^[2-9]x') | map(attribute='key') | list }}"
+    _breakout_modes: "{{ breakout_cfg | dict2items | selectattr('value.brkout_mode', 'match', '^[2-9]x') | items2dict }}"
   tags: [breakout]
 
 - name: "breakout | Report breakout plan"
@@ -103,18 +97,7 @@
 
 - name: "breakout | Determine which ports need breakout"
   ansible.builtin.set_fact:
-    _ports_needing_breakout: >-
-      {% set needs = [] %}
-      {% for result in _parent_port_lanes.results %}
-      {%   set parent = result.item %}
-      {%   set parent_has_lanes = (result.stdout | default('') is search(',')) %}
-      {%   set child_check = _child_port_exists.results | default([]) | selectattr('item', 'equalto', parent) | first | default({}) %}
-      {%   set child_exists = (child_check.stdout | default('') | length > 0) %}
-      {%   if parent_has_lanes or (not child_exists and result.stdout | default('') == '') %}
-      {%     set _ = needs.append(parent) %}
-      {%   endif %}
-      {% endfor %}
-      {{ needs }}
+    _ports_needing_breakout: "{{ _child_port_exists.results | selectattr('rc', 'defined') | selectattr('stdout', 'equalto', '') | map(attribute='item') | list }}"
   tags: [breakout]
 
 - name: "breakout | Report breakout status"
@@ -159,9 +142,7 @@
 # ---------------------------------------------------------------------------
 - name: "breakout | Detect if running on KVM Virtual Switch"
   ansible.builtin.set_fact:
-    _is_kvm: >-
-      {{ automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm']
-         or profile_sonic_platform | default('') == 'x86_64-kvm_x86_64-r0' }}
+    _is_kvm: "{{ automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] or profile_sonic_platform | default('') == 'x86_64-kvm_x86_64-r0' }}"
   tags: [breakout]
 
 # --- Real hardware path ---
@@ -231,20 +212,7 @@
 # ---------------------------------------------------------------------------
 - name: "breakout | Build child port verification list"
   ansible.builtin.set_fact:
-    _verify_child_ports: >-
-      {% set ports = [] %}
-      {% for parent in _ports_needing_breakout %}
-      {%   if _breakout_modes[parent].child_ports is defined %}
-      {%     for cp in _breakout_modes[parent].child_ports %}
-      {%       set _ = ports.append(cp.port) %}
-      {%     endfor %}
-      {%   elif exit_interfaces is defined %}
-      {%     for ei in exit_interfaces if ei.parent_port | default('') == parent %}
-      {%       set _ = ports.append(ei.port) %}
-      {%     endfor %}
-      {%   endif %}
-      {% endfor %}
-      {{ ports }}
+    _verify_child_ports: "{{ _ports_needing_breakout | map('extract', _breakout_modes) | selectattr('child_ports', 'defined') | map(attribute='child_ports') | flatten | map(attribute='port') | list }}"
   tags: [breakout]
 
 - name: "breakout | Verify child sub-ports exist after breakout"
@@ -275,16 +243,7 @@
 # ---------------------------------------------------------------------------
 - name: "breakout | Build child port attribute list"
   ansible.builtin.set_fact:
-    _child_port_attrs: >-
-      {% set attrs = [] %}
-      {% for parent in _ports_needing_breakout %}
-      {%   if _breakout_modes[parent].child_ports is defined %}
-      {%     for cp in _breakout_modes[parent].child_ports %}
-      {%       set _ = attrs.append(cp) %}
-      {%     endfor %}
-      {%   endif %}
-      {% endfor %}
-      {{ attrs }}
+    _child_port_attrs: "{{ _ports_needing_breakout | map('extract', _breakout_modes) | selectattr('child_ports', 'defined') | map(attribute='child_ports') | flatten | list }}"
   tags: [breakout]
 
 - name: "breakout | Set child sub-port speed"
