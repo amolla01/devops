@@ -1,151 +1,117 @@
-nh1221@R620:~$ ./fix_v1_bgp_v2.sh
-
-══════════════════════════════════════════════════
-  Phase 0 — Prerequisites
-══════════════════════════════════════════════════
-  ✓  sshpass present
-  ✓  expect present
-  ✓  virsh present
-  ✓  ovs-vsctl present
-  ✓  virsh accessible without sudo (libvirt group confirmed)
-  ✓  Key pair: /home/nh1221/id_dc_lab / /home/nh1221/id_dc_lab.pub
-  ▸  Public key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G...
-
-══════════════════════════════════════════════════
-  Phase 1 — Pre-flight Diagnostics
-══════════════════════════════════════════════════
-
-─────  BL1 (172.16.2.31) — interface oper state  ─────
-  Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
- Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
- Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
- Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
-Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
-Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
-
-─────  BL2 (172.16.2.32) — interface oper state  ─────
-  Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
- Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
- Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
- Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
-Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
-Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
-
-─────  BL1 BGP current state (before fixes)  ─────
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       161       160        0    0    0 02:20:37        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       157       171        0    0    0 02:20:20        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        78       156        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       156       162        0    0    0 02:24:55            0        0 Spine_S2
-Ethernet124     4      65000       156       162        0    0    0 02:24:53            0        0 Spine_S1
-
-Total number of neighbors 5
-
-─────  OVS br-BL2-ER2 ports (expect 2)  ─────
-  Ports: vnet372
-vnet70 (count=2)
-
-─────  OVS br-MS-BL1 / br-MS-BL2 ports (expect 2 each)  ─────
-  br-MS-BL1: 1 port(s)
-  br-MS-BL2: 1 port(s)
-
-─────  Exit_Router1 NIC list  ─────
- Interface   Type      Source       Model    MAC
-----------------------------------------------------------------
- vnet102     network   dc-mgmt      virtio   52:54:00:09:95:29
- vnet103     bridge    br-BL1-ER1   virtio   52:54:00:0f:cd:fb
+MikroTik 7.16 (stable)
+Exit_Router1 Login: admin
+Password:
 
 
-─────  Exit_Router2 NIC list  ─────
- Interface   Type      Source       Model    MAC
-----------------------------------------------------------------
- vnet371     network   dc-mgmt      virtio   52:54:00:41:cb:8d
- vnet372     bridge    br-BL2-ER2   virtio   52:54:00:cf:af:ef
 
 
-══════════════════════════════════════════════════
-  Phase 2 — BL1/BL2: Admin-up fabric/server ports (idempotent)
-══════════════════════════════════════════════════
-  ▸  Processing BL1 (172.16.2.31)...
-  ✓  BL1 Ethernet20: already up
-  ✓  BL1 Ethernet24: already up
-  ✓  BL1 Ethernet28: already up
-  ✓  BL1 Ethernet120: already up
-  ✓  BL1 Ethernet124: already up
-  ✓  BL1 config saved
-  ▸  Processing BL2 (172.16.2.32)...
-  ✓  BL2 Ethernet20: already up
-  ✓  BL2 Ethernet24: already up
-  ✓  BL2 Ethernet28: already up
-  ✓  BL2 Ethernet120: already up
-  ✓  BL2 Ethernet124: already up
-  ✓  BL2 config saved
 
-══════════════════════════════════════════════════
-  Phase 3 — Remove Ethernet22 phantom from FRR BGP (BL1 + BL2)
-══════════════════════════════════════════════════
-  ✓  BL1: Ethernet22 removed from FRR config
-  ✓  BL2: Ethernet22 removed from FRR config
 
-══════════════════════════════════════════════════
-  Phase 4 — Fix br-BL2-ER2: Hard destroy+start Exit_Router2
-══════════════════════════════════════════════════
-  ✓  br-BL2-ER2 already has 2 ports — skipping ER2 restart
 
-══════════════════════════════════════════════════
-  Phase 5 — Fix MonitorSrv: Ensure VM is running (br-MS-BL1/BL2)
-══════════════════════════════════════════════════
-  ▸  MonitorSrv state: running
-  ▸  Patching MonitorSrv XML: adding OVS virtualport to br-MS-BL1 and br-MS-BL2 NICs...
-br-MS-BL1: virtualport already present or bridge not found
-br-MS-BL2: virtualport already present or bridge not found
-  ✓  MonitorSrv: OVS virtualport already present in XML
-  ▸  Patching Border_Leaf1 XML: adding OVS virtualport to br-MS-BL1 NIC...
-br-MS-BL1: virtualport already present or bridge not found
-  ✓  Border_Leaf1: OVS virtualport already present in XML
-  ▸  Patching Border_Leaf2 XML: adding OVS virtualport to br-MS-BL2 NIC...
-br-MS-BL2: virtualport already present or bridge not found
-  ✓  Border_Leaf2: OVS virtualport already present in XML
-  ▸  Live-adding BL1/BL2 MonitorSrv vnets to OVS bridges (no restart needed)...
-  △  Border_Leaf1: no live vnet found for br-MS-BL1 (VM may need restart)
-  △  Border_Leaf2: no live vnet found for br-MS-BL2 (VM may need restart)
-  △  Bridges incomplete (br-MS-BL1=1, br-MS-BL2=1) — hard restarting MonitorSrv
-Domain 'MonitorSrv' destroyed
 
-Domain 'MonitorSrv' started
 
-  ✓  MonitorSrv started
-  △  br-MS-BL1: 1 port(s), br-MS-BL2: 1 port(s) — OVS ports:
-    br-MS-BL1: vnet386
-    br-MS-BL2: vnet387
 
-══════════════════════════════════════════════════
-  Phase 6 — Exit_Router1: SSH key inject + ether2 + BGP (virsh console)
-══════════════════════════════════════════════════
-  ▸  Configuring Exit_Router1 (172.16.2.98) via virsh serial console...
-  ▸  Key: /home/nh1221/id_dc_lab.pub
 
-spawn virsh console Exit_Router1
-Connected to domain 'Exit_Router1'
-Escape character is ^] (Ctrl + ])
-repeat new password>
-Try again, error: New passwords do not match!
-new password>
-repeat new password> ************************
-Try again, error: New passwords do not match!
-new password> invalid command name "/interface"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ^[[?64;1;2;4;6;9;15;21;22;28;29c^[[71;3R
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+
+
+Press F1 for help
+
+2026-05-25 14:58:00 system,error,critical login failure for user admin via local
+[admin@Exit_Router1] > invalid command name "/interface"
     while executing
 "/interface get ether2 disabled"
     invoked from within
 "send ":put \"[/interface get ether2 disabled] [/interface get ether2 running]\"\r""
-    (file "/tmp/ros_configure_Fu7uIT.exp" line 85)
+    (file "/tmp/ros_configure_F752bZ.exp" line 85)
 
   △  virsh console session for ER1 had non-zero exit — check output above
   ▸  Manual fallback: sudo virsh console Exit_Router1
@@ -165,16 +131,13 @@ new password> invalid command name "/interface"
 spawn virsh console Exit_Router2
 Connected to domain 'Exit_Router2'
 Escape character is ^] (Ctrl + ])
-new password>
-repeat new password>
-Try again, error: New password is the same as old one
-new password> ************************
-repeat new password> invalid command name "/interface"
+[admin@Exit_Router2] >
+[admin@Exit_Router2] > invalid command name "/interface"
     while executing
 "/interface get ether2 disabled"
     invoked from within
 "send ":put \"[/interface get ether2 disabled] [/interface get ether2 running]\"\r""
-    (file "/tmp/ros_configure_Fu7uIT.exp" line 85)
+    (file "/tmp/ros_configure_F752bZ.exp" line 85)
 
   △  virsh console session for ER2 had non-zero exit — check output above
   ▸  Manual fallback: sudo virsh console Exit_Router2
@@ -215,11 +178,11 @@ RIB entries 25, using 5600 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       167       166        0    0    0 02:26:53           10       13 HostB12_1
-Ethernet24      4      65107       163       177        0    0    0 02:26:36            4       13 HostB12_2
-Ethernet28      4      65108        81       162        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       163       169        0    0    0 02:31:11            7       13 Spine_S2
-Ethernet124     4      65000       163       169        0    0    0 02:31:09            7       13 Spine_S1
+Ethernet20      4      65106       195       195        0    0    0 02:55:31           10       13 HostB12_1
+Ethernet24      4      65107       192       206        0    0    0 02:55:14            4       13 HostB12_2
+Ethernet28      4      65108        95       190        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       191       197        0    0    0 02:59:49            7       13 Spine_S2
+Ethernet124     4      65000       191       197        0    0    0 02:59:47            7       13 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -231,11 +194,11 @@ RIB entries 25, using 5600 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       162       165        0    0    0 02:28:10            5       13 HostB12_1
-Ethernet24      4      65107       155       164        0    0    0 02:12:33           11       13 HostB12_2
-Ethernet28      4      65108        88       174        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       162       167        0    0    0 02:30:49            6       13 Spine_S2
-Ethernet124     4      65000       162       167        0    0    0 02:30:44            6       13 Spine_S1
+Ethernet20      4      65106       191       193        0    0    0 02:56:50            5       13 HostB12_1
+Ethernet24      4      65107       183       193        0    0    0 02:41:13           11       13 HostB12_2
+Ethernet28      4      65108       102       202        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       191       196        0    0    0 02:59:29            6       13 Spine_S2
+Ethernet124     4      65000       191       196        0    0    0 02:59:24            6       13 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
 
 Total number of neighbors 6
@@ -286,40 +249,6 @@ Flags: E - established
   If any session is still not Established, run:
     sudo virsh console Exit_Router1   (Ctrl+] to exit)
     sudo virsh console Exit_Router2
-nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.32's password:
-
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 16
-RIB entries 25, using 5600 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       167       169        0    0    0 02:32:44            5       13 HostB12_1
-Ethernet24      4      65107       159       169        0    0    0 02:17:07           11       13 HostB12_2
-Ethernet28      4      65108        90       178        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       167       172        0    0    0 02:35:23            6       13 Spine_S2
-Ethernet124     4      65000       167       172        0    0    0 02:35:18            6       13 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       167       169        0    0    0 02:32:44        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       159       169        0    0    0 02:17:07        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        90       178        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       167       172        0    0    0 02:35:23            0        0 Spine_S2
-Ethernet124     4      65000       167       172        0    0    0 02:35:18            0        0 Spine_S1
-
-Total number of neighbors 5
 nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
 admin@172.16.2.31's password:
 
@@ -330,11 +259,11 @@ RIB entries 25, using 5600 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       172       171        0    0    0 02:31:49           10       13 HostB12_1
-Ethernet24      4      65107       168       182        0    0    0 02:31:32            4       13 HostB12_2
-Ethernet28      4      65108        83       166        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       168       174        0    0    0 02:36:07            7       13 Spine_S2
-Ethernet124     4      65000       168       174        0    0    0 02:36:05            7       13 Spine_S1
+Ethernet20      4      65106       197       197        0    0    0 02:57:28           10       13 HostB12_1
+Ethernet24      4      65107       194       208        0    0    0 02:57:11            4       13 HostB12_2
+Ethernet28      4      65108        96       192        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       193       199        0    0    0 03:01:46            7       13 Spine_S2
+Ethernet124     4      65000       193       199        0    0    0 03:01:44            7       13 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -346,11 +275,796 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       172       171        0    0    0 02:31:49        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       168       182        0    0    0 02:31:32        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        83       166        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       168       174        0    0    0 02:36:07            0        0 Spine_S2
-Ethernet124     4      65000       168       174        0    0    0 02:36:05            0        0 Spine_S1
+Ethernet20      4      65106       197       197        0    0    0 02:57:28        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       194       208        0    0    0 02:57:11        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        96       192        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       193       199        0    0    0 03:01:46            0        0 Spine_S2
+Ethernet124     4      65000       193       199        0    0    0 03:01:44            0        0 Spine_S1
 
 Total number of neighbors 5
+nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.32's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 16
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       193       196        0    0    0 02:59:02            5       13 HostB12_1
+Ethernet24      4      65107       185       195        0    0    0 02:43:25           11       13 HostB12_2
+Ethernet28      4      65108       103       204        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       193       198        0    0    0 03:01:41            6       13 Spine_S2
+Ethernet124     4      65000       193       198        0    0    0 03:01:36            6       13 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       193       196        0    0    0 02:59:02        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       185       195        0    0    0 02:43:25        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108       103       204        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       193       198        0    0    0 03:01:41            0        0 Spine_S2
+Ethernet124     4      65000       193       198        0    0    0 03:01:36            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$ virsh domiflist MonitorSrv
+ Interface   Type      Source      Model    MAC
+---------------------------------------------------------------
+ vnet391     network   dc-mgmt     virtio   52:54:00:e9:4d:19
+ vnet392     bridge    br-MS-BL1   virtio   52:54:00:b2:f6:fe
+ vnet393     bridge    br-MS-BL2   virtio   52:54:00:ad:20:a0
+
+nh1221@R620:~$ virsh domiflist Exit_Router1
+ Interface   Type      Source       Model    MAC
+----------------------------------------------------------------
+ vnet102     network   dc-mgmt      virtio   52:54:00:09:95:29
+ vnet103     bridge    br-BL1-ER1   virtio   52:54:00:0f:cd:fb
+
+nh1221@R620:~$ virsh domiflist Exit_Router2
+ Interface   Type      Source       Model    MAC
+----------------------------------------------------------------
+ vnet371     network   dc-mgmt      virtio   52:54:00:41:cb:8d
+ vnet372     bridge    br-BL2-ER2   virtio   52:54:00:cf:af:ef
+
+nh1221@R620:~$ ovs-vsctl show
+ovs-vsctl: unix:/var/run/openvswitch/db.sock: database connection failed (Permission denied)
+nh1221@R620:~$ sudo ovs-vsctl show
+18ab640b-8fcc-456b-8739-ed95c8c408a3
+    Bridge br-H121-L2
+        Port vnet106
+            Interface vnet106
+        Port vnet199
+            Interface vnet199
+        Port br-H121-L2
+            Interface br-H121-L2
+                type: internal
+    Bridge br-L3-S2
+        Port vnet350
+            Interface vnet350
+        Port br-L3-S2
+            Interface br-L3-S2
+                type: internal
+        Port vnet302
+            Interface vnet302
+    Bridge br-L3-S1
+        Port vnet343
+            Interface vnet343
+        Port br-L3-S1
+            Interface br-L3-S1
+                type: internal
+        Port vnet303
+            Interface vnet303
+    Bridge br-H342-L3
+        Port vnet273
+            Interface vnet273
+        Port br-H342-L3
+            Interface br-H342-L3
+                type: internal
+        Port vnet117
+            Interface vnet117
+    Bridge br-L1-S1
+        Port vnet341
+            Interface vnet341
+        Port br-L1-S1
+            Interface br-L1-S1
+                type: internal
+        Port vnet194
+            Interface vnet194
+    Bridge br-BL1-S2
+        Port vnet67
+            Interface vnet67
+        Port vnet352
+            Interface vnet352
+        Port br-BL1-S2
+            Interface br-BL1-S2
+                type: internal
+    Bridge br-BL2-S2
+        Port vnet353
+            Interface vnet353
+        Port br-BL2-S2
+            Interface br-BL2-S2
+                type: internal
+        Port vnet100
+            Interface vnet100
+    Bridge br-H123-L1
+        Port vnet111
+            Interface vnet111
+        Port br-H123-L1
+            Interface br-H123-L1
+                type: internal
+        Port vnet128
+            Interface vnet128
+    Bridge br-H122-L2
+        Port br-H122-L2
+            Interface br-H122-L2
+                type: internal
+        Port vnet109
+            Interface vnet109
+        Port vnet200
+            Interface vnet200
+    Bridge br-H122-L1
+        Port br-H122-L1
+            Interface br-H122-L1
+                type: internal
+        Port vnet127
+            Interface vnet127
+        Port vnet108
+            Interface vnet108
+    Bridge br-L4-S2
+        Port vnet335
+            Interface vnet335
+        Port br-L4-S2
+            Interface br-L4-S2
+                type: internal
+        Port vnet351
+            Interface vnet351
+    Bridge br-MS-BL2
+        Port br-MS-BL2
+            Interface br-MS-BL2
+                type: internal
+        Port vnet393
+            Interface vnet393
+    Bridge br-HB2-BL1
+        Port br-HB2-BL1
+            Interface br-HB2-BL1
+                type: internal
+        Port vnet43
+            Interface vnet43
+        Port vnet123
+            Interface vnet123
+    Bridge br-BL1-S1
+        Port vnet68
+            Interface vnet68
+        Port br-BL1-S1
+            Interface br-BL1-S1
+                type: internal
+        Port vnet345
+            Interface vnet345
+    Bridge br-L2-S1
+        Port br-L2-S1
+            Interface br-L2-S1
+                type: internal
+        Port vnet342
+            Interface vnet342
+        Port vnet267
+            Interface vnet267
+    Bridge br-L1-S2
+        Port vnet348
+            Interface vnet348
+        Port vnet190
+            Interface vnet190
+        Port br-L1-S2
+            Interface br-L1-S2
+                type: internal
+    Bridge br-HB2-BL2
+        Port br-HB2-BL2
+            Interface br-HB2-BL2
+                type: internal
+        Port vnet124
+            Interface vnet124
+        Port vnet76
+            Interface vnet76
+    Bridge br-pad
+        Port vnet186
+            Interface vnet186
+        Port vnet175
+            Interface vnet175
+        Port vnet334
+            Interface vnet334
+        Port vnet260
+            Interface vnet260
+        Port vnet84
+            Interface vnet84
+        Port vnet82
+            Interface vnet82
+        Port vnet276
+            Interface vnet276
+        Port vnet165
+            Interface vnet165
+        Port vnet324
+            Interface vnet324
+        Port vnet258
+            Interface vnet258
+        Port vnet40
+            Interface vnet40
+        Port vnet79
+            Interface vnet79
+        Port vnet215
+            Interface vnet215
+        Port vnet226
+            Interface vnet226
+        Port vnet132
+            Interface vnet132
+        Port vnet277
+            Interface vnet277
+        Port vnet208
+            Interface vnet208
+        Port vnet247
+            Interface vnet247
+        Port vnet95
+            Interface vnet95
+        Port vnet210
+            Interface vnet210
+        Port vnet163
+            Interface vnet163
+        Port vnet196
+            Interface vnet196
+        Port vnet52
+            Interface vnet52
+        Port vnet205
+            Interface vnet205
+        Port vnet209
+            Interface vnet209
+        Port vnet63
+            Interface vnet63
+        Port vnet81
+            Interface vnet81
+        Port vnet261
+            Interface vnet261
+        Port vnet282
+            Interface vnet282
+        Port vnet242
+            Interface vnet242
+        Port vnet319
+            Interface vnet319
+        Port vnet268
+            Interface vnet268
+        Port vnet96
+            Interface vnet96
+        Port vnet131
+            Interface vnet131
+        Port vnet49
+            Interface vnet49
+        Port vnet239
+            Interface vnet239
+        Port vnet141
+            Interface vnet141
+        Port vnet39
+            Interface vnet39
+        Port vnet308
+            Interface vnet308
+        Port vnet297
+            Interface vnet297
+        Port vnet206
+            Interface vnet206
+        Port vnet41
+            Interface vnet41
+        Port vnet224
+            Interface vnet224
+        Port vnet192
+            Interface vnet192
+        Port vnet280
+            Interface vnet280
+        Port vnet256
+            Interface vnet256
+        Port vnet173
+            Interface vnet173
+        Port vnet217
+            Interface vnet217
+        Port vnet283
+            Interface vnet283
+        Port vnet253
+            Interface vnet253
+        Port vnet145
+            Interface vnet145
+        Port vnet152
+            Interface vnet152
+        Port vnet92
+            Interface vnet92
+        Port vnet299
+            Interface vnet299
+        Port vnet219
+            Interface vnet219
+        Port vnet143
+            Interface vnet143
+        Port vnet133
+            Interface vnet133
+        Port vnet203
+            Interface vnet203
+        Port vnet62
+            Interface vnet62
+        Port vnet220
+            Interface vnet220
+        Port vnet162
+            Interface vnet162
+        Port vnet48
+            Interface vnet48
+        Port vnet54
+            Interface vnet54
+        Port vnet138
+            Interface vnet138
+        Port vnet314
+            Interface vnet314
+        Port vnet86
+            Interface vnet86
+        Port vnet77
+            Interface vnet77
+        Port vnet89
+            Interface vnet89
+        Port vnet129
+            Interface vnet129
+        Port vnet243
+            Interface vnet243
+        Port br-pad
+            Interface br-pad
+                type: internal
+        Port vnet176
+            Interface vnet176
+        Port vnet326
+            Interface vnet326
+        Port vnet182
+            Interface vnet182
+        Port vnet316
+            Interface vnet316
+        Port vnet85
+            Interface vnet85
+        Port vnet325
+            Interface vnet325
+        Port vnet232
+            Interface vnet232
+        Port vnet188
+            Interface vnet188
+        Port vnet211
+            Interface vnet211
+        Port vnet207
+            Interface vnet207
+        Port vnet225
+            Interface vnet225
+        Port vnet64
+            Interface vnet64
+        Port vnet90
+            Interface vnet90
+        Port vnet146
+            Interface vnet146
+        Port vnet318
+            Interface vnet318
+        Port vnet269
+            Interface vnet269
+        Port vnet221
+            Interface vnet221
+        Port vnet285
+            Interface vnet285
+        Port vnet193
+            Interface vnet193
+        Port vnet286
+            Interface vnet286
+        Port vnet130
+            Interface vnet130
+        Port vnet60
+            Interface vnet60
+        Port vnet330
+            Interface vnet330
+        Port vnet254
+            Interface vnet254
+        Port vnet300
+            Interface vnet300
+        Port vnet255
+            Interface vnet255
+        Port vnet99
+            Interface vnet99
+        Port vnet151
+            Interface vnet151
+        Port vnet331
+            Interface vnet331
+        Port vnet204
+            Interface vnet204
+        Port vnet301
+            Interface vnet301
+        Port vnet245
+            Interface vnet245
+        Port vnet241
+            Interface vnet241
+        Port vnet296
+            Interface vnet296
+        Port vnet80
+            Interface vnet80
+        Port vnet291
+            Interface vnet291
+        Port vnet158
+            Interface vnet158
+        Port vnet88
+            Interface vnet88
+        Port vnet65
+            Interface vnet65
+        Port vnet157
+            Interface vnet157
+        Port vnet53
+            Interface vnet53
+        Port vnet310
+            Interface vnet310
+        Port vnet238
+            Interface vnet238
+        Port vnet147
+            Interface vnet147
+        Port vnet236
+            Interface vnet236
+        Port vnet244
+            Interface vnet244
+        Port vnet333
+            Interface vnet333
+        Port vnet170
+            Interface vnet170
+        Port vnet191
+            Interface vnet191
+        Port vnet281
+            Interface vnet281
+        Port vnet195
+            Interface vnet195
+        Port vnet179
+            Interface vnet179
+        Port vnet38
+            Interface vnet38
+        Port vnet187
+            Interface vnet187
+        Port vnet51
+            Interface vnet51
+        Port vnet240
+            Interface vnet240
+        Port vnet169
+            Interface vnet169
+        Port vnet279
+            Interface vnet279
+        Port vnet93
+            Interface vnet93
+        Port vnet149
+            Interface vnet149
+        Port vnet73
+            Interface vnet73
+        Port vnet212
+            Interface vnet212
+        Port vnet294
+            Interface vnet294
+        Port vnet311
+            Interface vnet311
+        Port vnet181
+            Interface vnet181
+        Port vnet315
+            Interface vnet315
+        Port vnet153
+            Interface vnet153
+        Port vnet230
+            Interface vnet230
+        Port vnet197
+            Interface vnet197
+        Port vnet172
+            Interface vnet172
+        Port vnet142
+            Interface vnet142
+        Port vnet59
+            Interface vnet59
+        Port vnet166
+            Interface vnet166
+        Port vnet168
+            Interface vnet168
+        Port vnet171
+            Interface vnet171
+        Port vnet50
+            Interface vnet50
+        Port vnet155
+            Interface vnet155
+        Port vnet295
+            Interface vnet295
+        Port vnet228
+            Interface vnet228
+        Port vnet257
+            Interface vnet257
+        Port vnet139
+            Interface vnet139
+        Port vnet174
+            Interface vnet174
+        Port vnet44
+            Interface vnet44
+        Port vnet222
+            Interface vnet222
+        Port vnet313
+            Interface vnet313
+        Port vnet213
+            Interface vnet213
+        Port vnet177
+            Interface vnet177
+        Port vnet262
+            Interface vnet262
+        Port vnet223
+            Interface vnet223
+        Port vnet233
+            Interface vnet233
+        Port vnet250
+            Interface vnet250
+        Port vnet159
+            Interface vnet159
+        Port vnet275
+            Interface vnet275
+        Port vnet164
+            Interface vnet164
+        Port vnet290
+            Interface vnet290
+        Port vnet46
+            Interface vnet46
+        Port vnet246
+            Interface vnet246
+        Port vnet97
+            Interface vnet97
+        Port vnet329
+            Interface vnet329
+        Port vnet134
+            Interface vnet134
+        Port vnet259
+            Interface vnet259
+        Port vnet160
+            Interface vnet160
+        Port vnet218
+            Interface vnet218
+        Port vnet320
+            Interface vnet320
+        Port vnet312
+            Interface vnet312
+        Port vnet327
+            Interface vnet327
+        Port vnet184
+            Interface vnet184
+        Port vnet287
+            Interface vnet287
+        Port vnet78
+            Interface vnet78
+        Port vnet180
+            Interface vnet180
+        Port vnet72
+            Interface vnet72
+        Port vnet161
+            Interface vnet161
+        Port vnet270
+            Interface vnet270
+        Port vnet248
+            Interface vnet248
+        Port vnet235
+            Interface vnet235
+        Port vnet328
+            Interface vnet328
+        Port vnet94
+            Interface vnet94
+        Port vnet321
+            Interface vnet321
+        Port vnet183
+            Interface vnet183
+        Port vnet167
+            Interface vnet167
+        Port vnet288
+            Interface vnet288
+        Port vnet140
+            Interface vnet140
+        Port vnet317
+            Interface vnet317
+        Port vnet55
+            Interface vnet55
+        Port vnet278
+            Interface vnet278
+        Port vnet214
+            Interface vnet214
+        Port vnet293
+            Interface vnet293
+        Port vnet251
+            Interface vnet251
+        Port vnet56
+            Interface vnet56
+        Port vnet137
+            Interface vnet137
+        Port vnet309
+            Interface vnet309
+        Port vnet322
+            Interface vnet322
+        Port vnet45
+            Interface vnet45
+        Port vnet91
+            Interface vnet91
+        Port vnet83
+            Interface vnet83
+        Port vnet289
+            Interface vnet289
+        Port vnet229
+            Interface vnet229
+        Port vnet284
+            Interface vnet284
+        Port vnet323
+            Interface vnet323
+        Port vnet148
+            Interface vnet148
+        Port vnet332
+            Interface vnet332
+        Port vnet57
+            Interface vnet57
+        Port vnet265
+            Interface vnet265
+        Port vnet249
+            Interface vnet249
+        Port vnet185
+            Interface vnet185
+        Port vnet216
+            Interface vnet216
+        Port vnet136
+            Interface vnet136
+        Port vnet135
+            Interface vnet135
+        Port vnet156
+            Interface vnet156
+        Port vnet234
+            Interface vnet234
+        Port vnet274
+            Interface vnet274
+        Port vnet202
+            Interface vnet202
+        Port vnet266
+            Interface vnet266
+        Port vnet74
+            Interface vnet74
+        Port vnet58
+            Interface vnet58
+        Port vnet150
+            Interface vnet150
+        Port vnet264
+            Interface vnet264
+        Port vnet292
+            Interface vnet292
+        Port vnet47
+            Interface vnet47
+        Port vnet307
+            Interface vnet307
+        Port vnet178
+            Interface vnet178
+        Port vnet98
+            Interface vnet98
+        Port vnet87
+            Interface vnet87
+        Port vnet189
+            Interface vnet189
+        Port vnet66
+            Interface vnet66
+        Port vnet154
+            Interface vnet154
+        Port vnet227
+            Interface vnet227
+        Port vnet252
+            Interface vnet252
+        Port vnet298
+            Interface vnet298
+        Port vnet237
+            Interface vnet237
+        Port vnet231
+            Interface vnet231
+        Port vnet61
+            Interface vnet61
+        Port vnet144
+            Interface vnet144
+        Port vnet71
+            Interface vnet71
+    Bridge br-BL2-ER2
+        Port vnet372
+            Interface vnet372
+        Port vnet70
+            Interface vnet70
+        Port br-BL2-ER2
+            Interface br-BL2-ER2
+                type: internal
+    Bridge br-L2-S2
+        Port vnet349
+            Interface vnet349
+        Port vnet263
+            Interface vnet263
+        Port br-L2-S2
+            Interface br-L2-S2
+                type: internal
+    Bridge br-H123-L2
+        Port vnet112
+            Interface vnet112
+        Port br-H123-L2
+            Interface br-H123-L2
+                type: internal
+        Port vnet201
+            Interface vnet201
+    Bridge br-L4-S1
+        Port vnet344
+            Interface vnet344
+        Port br-L4-S1
+            Interface br-L4-S1
+                type: internal
+        Port vnet336
+            Interface vnet336
+    Bridge br-H341-L3
+        Port vnet114
+            Interface vnet114
+        Port vnet272
+            Interface vnet272
+        Port br-H341-L3
+            Interface br-H341-L3
+                type: internal
+    Bridge br-BL2-S1
+        Port vnet346
+            Interface vnet346
+        Port br-BL2-S1
+            Interface br-BL2-S1
+                type: internal
+        Port vnet101
+            Interface vnet101
+    Bridge br-HB-BL2
+        Port br-HB-BL2
+            Interface br-HB-BL2
+                type: internal
+        Port vnet75
+            Interface vnet75
+        Port vnet121
+            Interface vnet121
+    Bridge br-H121-L1
+        Port vnet105
+            Interface vnet105
+        Port br-H121-L1
+            Interface br-H121-L1
+                type: internal
+        Port vnet126
+            Interface vnet126
+    Bridge br-H342-L4
+        Port br-H342-L4
+            Interface br-H342-L4
+                type: internal
+        Port vnet118
+            Interface vnet118
+        Port vnet306
+            Interface vnet306
+    Bridge br-BL1-ER1
+        Port vnet103
+            Interface vnet103
+        Port vnet37
+            Interface vnet37
+        Port br-BL1-ER1
+            Interface br-BL1-ER1
+                type: internal
+    Bridge br-HB-BL1
+        Port vnet120
+            Interface vnet120
+        Port vnet42
+            Interface vnet42
+        Port br-HB-BL1
+            Interface br-HB-BL1
+                type: internal
+    Bridge br-MS-BL1
+        Port vnet392
+            Interface vnet392
+        Port br-MS-BL1
+            Interface br-MS-BL1
+                type: internal
+    Bridge br-H341-L4
+        Port vnet115
+            Interface vnet115
+        Port br-H341-L4
+            Interface br-H341-L4
+                type: internal
+        Port vnet305
+            Interface vnet305
+    ovs_version: "3.3.4"
 nh1221@R620:~$
