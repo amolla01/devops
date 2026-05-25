@@ -452,7 +452,17 @@ ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; soni
 
 Step 2 — Run the breakout playbook:
 ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
-%%%%%%%%%%%%%%%%%%%%%%%%%%==14th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%==15th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The rejectattr('stdout', 'match', '^[0-9]+$') logic:
+
+'' (empty, port missing) → NOT a pure digit string → included → needs breakout ✓
+'9,10,11,12' (multi-lane, not broken out) → NOT pure digits → included → needs breakout ✓
+'9' (single lane, already broken out) → pure digits → excluded → skip ✓
+Now restore PORT|Ethernet0 on BL2 and re-run:
+
+ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB hmset 'PORT|Ethernet0' lanes '9,10,11,12' speed '40000' alias 'Ethernet5/1' index '5' admin_status 'down' mtu '9100'"
+ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit Border_Leaf2
+No reload needed — portsyncd picks up the live CONFIG_DB change within seconds. The playbook will detect 9,10,11,12 → needs breakout → KVM software breakout → wait 10s → configure exit interface on Ethernet0.
 '
 
 
