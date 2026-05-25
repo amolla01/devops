@@ -1,142 +1,44 @@
-nh1221@R620:~$ ./fix_v1_bgp_v2.sh
-
-══════════════════════════════════════════════════
-  Phase 0 — Prerequisites
-══════════════════════════════════════════════════
-  ✓  sshpass present
-  ✓  expect present
-  ✓  virsh present
-  ✓  ovs-vsctl present
-  ✓  Key pair: /home/nh1221/id_dc_lab / /home/nh1221/id_dc_lab.pub
-  ▸  Public key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G...
-
-══════════════════════════════════════════════════
-  Phase 1 — Pre-flight Diagnostics
-══════════════════════════════════════════════════
-
-─────  BL1 (172.16.2.31) — interface oper state  ─────
-  Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
- Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
- Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
- Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
-Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
-Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
-
-─────  BL2 (172.16.2.32) — interface oper state  ─────
-  Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
- Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
- Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
- Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
-Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
-Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
-
-─────  BL1 BGP current state (before fixes)  ─────
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        62        61        0    0    0 00:41:48        NoNeg    NoNeg HostB12_1
-Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet24      4      65107        58        72        0    0    0 00:41:31        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        28        56        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        58        64        0    0    0 00:46:06            0        0 Spine_S2
-Ethernet124     4      65000        58        64        0    0    0 00:46:04            0        0 Spine_S1
-
-Total number of neighbors 6
-
-─────  OVS br-BL2-ER2 ports (expect 2)  ─────
-  Ports: vnet70 (count=1)
-
-─────  OVS br-MS-BL1 / br-MS-BL2 ports (expect 2 each)  ─────
-  br-MS-BL1: 1 port(s)
-  br-MS-BL2: 1 port(s)
-
-─────  Exit_Router1 NIC list  ─────
- Interface   Type      Source       Model    MAC
-----------------------------------------------------------------
- vnet102     network   dc-mgmt      virtio   52:54:00:09:95:29
- vnet103     bridge    br-BL1-ER1   virtio   52:54:00:0f:cd:fb
+MikroTik 7.16 (stable)
+Exit_Router1 Login: admin
+Password:
 
 
-─────  Exit_Router2 NIC list  ─────
- Interface   Type      Source       Model    MAC
-----------------------------------------------------------------
- vnet6       network   dc-mgmt      virtio   52:54:00:41:cb:8d
- vnet7       bridge    br-BL2-ER2   virtio   52:54:00:90:b6:46
 
 
-══════════════════════════════════════════════════
-  Phase 2 — BL1/BL2: Admin-up fabric/server ports (idempotent)
-══════════════════════════════════════════════════
-  ▸  Processing BL1 (172.16.2.31)...
-  ✓  BL1 Ethernet20: already up
-  ✓  BL1 Ethernet24: already up
-  ✓  BL1 Ethernet28: already up
-  ✓  BL1 Ethernet120: already up
-  ✓  BL1 Ethernet124: already up
-  ✓  BL1 config saved
-  ▸  Processing BL2 (172.16.2.32)...
-  ✓  BL2 Ethernet20: already up
-  ✓  BL2 Ethernet24: already up
-  ✓  BL2 Ethernet28: already up
-  ✓  BL2 Ethernet120: already up
-  ✓  BL2 Ethernet124: already up
-  ✓  BL2 config saved
 
-══════════════════════════════════════════════════
-  Phase 3 — Remove Ethernet22 phantom from FRR BGP (BL1 + BL2)
-══════════════════════════════════════════════════
-  ✓  BL1: Ethernet22 removed from FRR config
-  ✓  BL2: Ethernet22 removed from FRR config
 
-══════════════════════════════════════════════════
-  Phase 4 — Fix br-BL2-ER2: Hard destroy+start Exit_Router2
-══════════════════════════════════════════════════
-  △  br-BL2-ER2 has only 1 port(s) — hard restarting Exit_Router2
-  ▸  Exit_Router2 state: running
-  ▸  Destroying Exit_Router2...
-Domain 'Exit_Router2' destroyed
+  ^[[?64;1;2;4;6;9;15;21;22;28;29c^[[71;3R
 
-  ✓  Exit_Router2 destroyed (hard stop)
-  ▸  Starting Exit_Router2...
-error: Failed to start domain 'Exit_Router2'
-error: Unable to add bridge br-BL2-ER2 port vnet357: Operation not supported
 
-  ▸  Waiting 10s for OVS to register new NIC...
-  △  br-BL2-ER2 still shows only 1 port(s) after start
-  ▸  Current ports: vnet70
-  ▸  Verify with: sudo virsh domiflist Exit_Router2
 
-══════════════════════════════════════════════════
-  Phase 5 — Fix MonitorSrv: Ensure VM is running (br-MS-BL1/BL2)
-══════════════════════════════════════════════════
-  ▸  MonitorSrv state: running
-  △  MonitorSrv running but bridges are incomplete (br-MS-BL1=1, br-MS-BL2=1)
-  ▸  Hard-restarting MonitorSrv to re-bind NICs to OVS...
-Domain 'MonitorSrv' destroyed
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
 
-Domain 'MonitorSrv' started
+  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
 
-  ✓  MonitorSrv restarted
-  ✓  br-MS-BL1: 1 port(s), br-MS-BL2: 1 port(s)
 
-══════════════════════════════════════════════════
-  Phase 6 — Exit_Router1: SSH key inject + ether2 + BGP (virsh console)
-══════════════════════════════════════════════════
-  ▸  Configuring Exit_Router1 (172.16.2.98) via virsh serial console...
-  ▸  Key: /home/nh1221/id_dc_lab.pub
+Press F1 for help
 
-spawn sudo virsh console Exit_Router1
-[sudo] password for nh1221: amolla01
+2026-05-21 13:10:11 system,error,critical router was rebooted without proper shut
+down
+2026-05-23 01:33:22 system,error,critical login failure for user nh1221 from 172.
+16.2.1 via ssh
+2026-05-24 18:14:20 system,error,critical router was rebooted without proper shut
+down
 
-Sorry, try again.
-[sudo] password for nh1221:
+Change your password
+new password> ************************
+repeat new password> invalid command name "/interface"
+    while executing
+"/interface get ether2 disabled"
+    invoked from within
+"send ":put \"[/interface get ether2 disabled] [/interface get ether2 running]\"\r""
+    (file "/tmp/ros_configure_p0yH7m.exp" line 55)
 
-Sorry, try again.
-[sudo] password for nh1221: ^C
   △  virsh console session for ER1 had non-zero exit — check output above
   ▸  Manual fallback: sudo virsh console Exit_Router1
   ▸    /interface enable ether2
@@ -175,17 +77,13 @@ Sorry, try again.
 
   ▸  Configuring Exit_Router2 (172.16.2.99) via virsh serial console...
 
-spawn sudo virsh console Exit_Router2
-[sudo] password for nh1221:
-Sorry, try again.
-[sudo] password for nh1221:
-Sorry, try again.
-[sudo] password for nh1221:
-sudo: 3 incorrect password attempts
+spawn virsh console Exit_Router2
+error: The domain is not running
+
 send: spawn id exp4 not open
     while executing
-"send "/interface enable ether2\r""
-    (file "/tmp/ros_configure_yiTiid.exp" line 50)
+"send "\r""
+    (file "/tmp/ros_configure_p0yH7m.exp" line 34)
 
   △  virsh console session for ER2 had non-zero exit — check output above
   ▸  Manual fallback: sudo virsh console Exit_Router2
@@ -226,11 +124,11 @@ RIB entries 25, using 5600 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        71        70        0    0    0 00:50:38           10       13 HostB12_1
-Ethernet24      4      65107        67        81        0    0    0 00:50:21            4       13 HostB12_2
-Ethernet28      4      65108        33        66        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        66        72        0    0    0 00:54:56            7       13 Spine_S2
-Ethernet124     4      65000        66        72        0    0    0 00:54:54            7       13 Spine_S1
+Ethernet20      4      65106       101       101        0    0    0 01:21:18           10       13 HostB12_1
+Ethernet24      4      65107        98       112        0    0    0 01:21:01            4       13 HostB12_2
+Ethernet28      4      65108        48        96        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000        97       103        0    0    0 01:25:36            7       13 Spine_S2
+Ethernet124     4      65000        97       103        0    0    0 01:25:34            7       13 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -242,11 +140,11 @@ RIB entries 25, using 5600 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        66        68        0    0    0 00:51:55            5       13 HostB12_1
-Ethernet24      4      65107        58        68        0    0    0 00:36:18           11       13 HostB12_2
-Ethernet28      4      65108        40        78        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        66        71        0    0    0 00:54:34            6       13 Spine_S2
-Ethernet124     4      65000        66        71        0    0    0 00:54:29            6       13 Spine_S1
+Ethernet20      4      65106        97        99        0    0    0 01:22:35            5       13 HostB12_1
+Ethernet24      4      65107        89        98        0    0    0 01:06:58           11       13 HostB12_2
+Ethernet28      4      65108        55       108        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000        97       102        0    0    0 01:25:14            6       13 Spine_S2
+Ethernet124     4      65000        97       102        0    0    0 01:25:09            6       13 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
 
 Total number of neighbors 6
@@ -297,74 +195,6 @@ ssh: connect to host 172.16.2.99 port 22: No route to host
   If any session is still not Established, run:
     sudo virsh console Exit_Router1   (Ctrl+] to exit)
     sudo virsh console Exit_Router2
-nh1221@R620:~$ ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
-ssh: Could not resolve hostname border_leaf1: Name or service not known
-nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.31's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 17
-RIB entries 25, using 5600 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        76        76        0    0    0 00:56:29           10       13 HostB12_1
-Ethernet24      4      65107        73        87        0    0    0 00:56:12            4       13 HostB12_2
-Ethernet28      4      65108        36        72        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        72        78        0    0    0 01:00:47            7       13 Spine_S2
-Ethernet124     4      65000        72        78        0    0    0 01:00:45            7       13 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        76        76        0    0    0 00:56:29        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107        73        87        0    0    0 00:56:12        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        36        72        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        72        78        0    0    0 01:00:47            0        0 Spine_S2
-Ethernet124     4      65000        72        78        0    0    0 01:00:45            0        0 Spine_S1
-
-Total number of neighbors 5
-nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.32's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 16
-RIB entries 25, using 5600 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        72        75        0    0    0 00:58:00            5       13 HostB12_1
-Ethernet24      4      65107        64        74        0    0    0 00:42:23           11       13 HostB12_2
-Ethernet28      4      65108        43        84        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        72        77        0    0    0 01:00:39            6       13 Spine_S2
-Ethernet124     4      65000        72        77        0    0    0 01:00:34            6       13 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        72        75        0    0    0 00:58:00        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107        64        74        0    0    0 00:42:23        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        43        84        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000        72        77        0    0    0 01:00:39            0        0 Spine_S2
-Ethernet124     4      65000        72        77        0    0    0 01:00:34            0        0 Spine_S1
-
-Total number of neighbors 5
 nh1221@R620:~$ virsh list --all
  Id   Name           State
 -------------------------------
@@ -384,28 +214,8 @@ nh1221@R620:~$ virsh list --all
  32   Leaf_L4        running
  34   Spine_S1       running
  35   Spine_S2       running
- 37   MonitorSrv     running
+ 40   MonitorSrv     running
  -    Exit_Router2   shut off
-
-nh1221@R620:~$ virsh start Exit_Router2
-error: Failed to start domain 'Exit_Router2'
-error: Unable to add bridge br-BL2-ER2 port vnet363: Operation not supported
-
-nh1221@R620:~$ virsh domifclist Exit_Router2
-error: unknown command: 'domifclist'
-nh1221@R620:~$ virsh domiflist Exit_Router2
- Interface   Type      Source       Model    MAC
-----------------------------------------------------------------
- -           network   dc-mgmt      virtio   52:54:00:41:cb:8d
- -           network   br-BL2-ER2   virtio   52:54:00:90:b6:46
- -           bridge    br-BL2-ER2   virtio   52:54:00:cf:af:ef
-
-nh1221@R620:~$ virsh domiflist MonitorSrv
- Interface   Type      Source      Model    MAC
----------------------------------------------------------------
- vnet358     network   dc-mgmt     virtio   52:54:00:e9:4d:19
- vnet359     bridge    br-MS-BL1   virtio   52:54:00:b2:f6:fe
- vnet360     bridge    br-MS-BL2   virtio   52:54:00:ad:20:a0
 
 nh1221@R620:~$ virsh domiflist Exit_Router1
  Interface   Type      Source       Model    MAC
@@ -413,4 +223,188 @@ nh1221@R620:~$ virsh domiflist Exit_Router1
  vnet102     network   dc-mgmt      virtio   52:54:00:09:95:29
  vnet103     bridge    br-BL1-ER1   virtio   52:54:00:0f:cd:fb
 
+nh1221@R620:~$ virsh domiflist Exit_Router2
+ Interface   Type      Source       Model    MAC
+----------------------------------------------------------------
+ -           network   dc-mgmt      virtio   52:54:00:41:cb:8d
+ -           bridge    br-BL2-ER2   virtio   52:54:00:cf:af:ef
+
+nh1221@R620:~$ virsh domiflist MonitorSrv
+ Interface   Type      Source      Model    MAC
+---------------------------------------------------------------
+ vnet366     network   dc-mgmt     virtio   52:54:00:e9:4d:19
+ vnet367     bridge    br-MS-BL1   virtio   52:54:00:b2:f6:fe
+ vnet368     bridge    br-MS-BL2   virtio   52:54:00:ad:20:a0
+
+nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.31's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 17
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       104       104        0    0    0 01:24:24           10       13 HostB12_1
+Ethernet24      4      65107       101       115        0    0    0 01:24:07            4       13 HostB12_2
+Ethernet28      4      65108        50       100        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       100       106        0    0    0 01:28:42            7       13 Spine_S2
+Ethernet124     4      65000       100       106        0    0    0 01:28:40            7       13 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       104       104        0    0    0 01:24:24        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       101       115        0    0    0 01:24:07        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        50       100        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       100       106        0    0    0 01:28:42            0        0 Spine_S2
+Ethernet124     4      65000       100       106        0    0    0 01:28:40            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.32's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 16
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       100       103        0    0    0 01:26:16            5       13 HostB12_1
+Ethernet24      4      65107        93       102        0    0    0 01:10:39           11       13 HostB12_2
+Ethernet28      4      65108        57       112        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       100       105        0    0    0 01:28:55            6       13 Spine_S2
+Ethernet124     4      65000       100       105        0    0    0 01:28:50            6       13 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       100       103        0    0    0 01:26:16        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107        93       102        0    0    0 01:10:39        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        57       112        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       100       105        0    0    0 01:28:55            0        0 Spine_S2
+Ethernet124     4      65000       100       105        0    0    0 01:28:50            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$ virsh start Exit_Router2
+error: Failed to start domain 'Exit_Router2'
+error: Unable to add bridge br-BL2-ER2 port vnet370: Operation not supported
+
+nh1221@R620:~$ virsh edit Exit_Router2
+
+Select an editor.  To change later, run 'select-editor'.
+  1. /bin/nano        <---- easiest
+  2. /usr/bin/vim.tiny
+  3. /bin/ed
+
+Choose 1-3 [1]: 1
+Domain 'Exit_Router2' XML configuration edited.
+
+nh1221@R620:~$ virsh start Exit_Router2
+Domain 'Exit_Router2' started
+
+nh1221@R620:~$ virsh list --all
+ Id   Name           State
+------------------------------
+ 19   Border_Leaf1   running
+ 20   Border_Leaf2   running
+ 21   Exit_Router1   running
+ 22   Host12_1       running
+ 23   Host12_2       running
+ 24   Host12_3       running
+ 25   Host34_1       running
+ 26   Host34_2       running
+ 27   HostB12_1      running
+ 28   HostB12_2      running
+ 29   Leaf_L1        running
+ 30   Leaf_L2        running
+ 31   Leaf_L3        running
+ 32   Leaf_L4        running
+ 34   Spine_S1       running
+ 35   Spine_S2       running
+ 40   MonitorSrv     running
+ 42   Exit_Router2   running
+
+nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.31's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 17
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       112       112        0    0    0 01:32:15           10       13 HostB12_1
+Ethernet24      4      65107       108       122        0    0    0 01:31:58            4       13 HostB12_2
+Ethernet28      4      65108        54       108        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       108       114        0    0    0 01:36:33            7       13 Spine_S2
+Ethernet124     4      65000       108       114        0    0    0 01:36:31            7       13 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       112       112        0    0    0 01:32:15        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       108       122        0    0    0 01:31:58        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        54       108        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       108       114        0    0    0 01:36:33            0        0 Spine_S2
+Ethernet124     4      65000       108       114        0    0    0 01:36:31            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.32's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 16
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       108       110        0    0    0 01:33:52            5       13 HostB12_1
+Ethernet24      4      65107       100       110        0    0    0 01:18:15           11       13 HostB12_2
+Ethernet28      4      65108        61       120        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       108       113        0    0    0 01:36:31            6       13 Spine_S2
+Ethernet124     4      65000       108       113        0    0    0 01:36:26            6       13 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       108       110        0    0    0 01:33:52        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       100       110        0    0    0 01:18:15        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        61       120        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       108       113        0    0    0 01:36:31            0        0 Spine_S2
+Ethernet124     4      65000       108       113        0    0    0 01:36:26            0        0 Spine_S1
+
+Total number of neighbors 5
 nh1221@R620:~$
