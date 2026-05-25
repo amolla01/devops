@@ -696,3 +696,23 @@ ssh -i ~/id_dc_lab admin@172.16.2.99
 
 
 The key difference: local.address=10.0.253.X tells RouterOS which IP to bind TCP:179 on. Without it, it can't accept inbound connections from BL1/BL2.
+
+
+YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY==20th==YYYYYYYYYYYYYYYYYYYYYYYYYY
+Two problems are clear:
+
+ER2: The script showed /interface enable ether2 → no such item. ER2 doesn't have ether2 — after the Phase 4 rebuild the interface may be named differently.
+ER1: Session shows remote.as=0 — meaning the TCP handshake from BL1 is reaching ER1 but something is wrong with the BGP negotiation, or the old stale session hasn't cleared.
+Run these diagnostics:
+
+ssh -i ~/id_dc_lab admin@172.16.2.98
+/interface print
+/ping 10.0.253.0 count=3
+/routing bgp session print detail
+quit
+
+ssh -i ~/id_dc_lab admin@172.16.2.99
+/interface print
+/ip address print
+quit
+ER2 likely has ether1 only (its data NIC might be named ether1 if the management NIC got renamed or removed during the rebuild). We need to see what interfaces exist and which one is connected to br-BL2-ER2, then add the IP to the correct interface.
