@@ -465,4 +465,54 @@ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit Bo
 No reload needed — portsyncd picks up the live CONFIG_DB change within seconds. The playbook will detect 9,10,11,12 → needs breakout → KVM software breakout → wait 10s → configure exit interface on Ethernet0.
 '
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%==16th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Confirm on BL1:
+ssh admin@172.16.2.31 "show interfaces status | grep -E 'Ethernet(20|22|24|28|120|124)'"
+
+Fix on both border leaves:
+for iface in Ethernet20 Ethernet22 Ethernet24 Ethernet28 Ethernet120 Ethernet124; do
+  sudo config interface startup $iface
+done
+sudo config save -y
+
+Root Cause 2 — BL2 → Exit_Router2 stuck at Active: ER2 NIC missing from bridge
+Look at the OVS output:
+Bridge br-BL1-ER1
+    Port vnet103    ← BL1 NIC
+    Port vnet37     ← Exit_Router1 NIC  ✓ Both sides present
+
+Bridge br-BL2-ER2
+    Port vnet70     ← BL2 NIC only
+                    ← Exit_Router2 NIC MISSING
+
+br-BL2-ER2 has only one vnet port. Exit_Router2's ether2 NIC is not attached to this bridge — BL2 sends ARP for 10.0.253.3, gets no reply, BGP stays Active forever.
+
+Check on R620:
+
+sudo virsh domiflist Exit_Router2
+# Look for which bridge ether2 is wired to — expect br-BL2-ER2
+If it's on the wrong bridge or detached, reattach:
+sudo virsh detach-interface Exit_Router2 bridge <wrong-bridge> --config
+sudo virsh attach-interface Exit_Router2 bridge br-BL2-ER2 --model virtio --config
+sudo virsh reboot Exit_Router2
+Root Cause 3 — BL1 → Exit_Router1 stuck at Connect: MikroTik ether2 is down
+Connect (not Idle or Active) means BL1 is successfully sending TCP SYN to 10.0.253.1 — the L2 bridge is OK (br-BL1-ER1 has both vnet103 + vnet37). But MikroTik is not responding on BGP port 179.
+
+Check on Exit_Router1:
+
+
+ssh admin@172.16.2.98   # or via -J admin@<R620>
+/interface print
+/interface enable [find where name=ether2]
+/ip address print
+
+ether2 is almost certainly admin-disabled. After enabling it, also verify the BGP peer config points back to BL1:
+
+
+/routing bgp peer print# expect: address=10.0.253.0, remote-as=65021
+/routing bgp peer print
+# expect: address=10.0.253.0, remote-as=65021
+The spine and server links are purely an admin-down problem — the OVS bridges all have correct two-port wiring (br-BL1-S1, br-BL2-S1, br-BL1-S2, br-BL2-S2 all show two vnet ports each). Once you bring the interfaces up, those BGP sessions should establish within seconds.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%==16th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
