@@ -1,4 +1,3 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit Border_Leaf2
 
 PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
@@ -93,50 +92,100 @@ TASK [sonic_breakout : breakout | Set exit sub-port speed] *********************
 changed: [Border_Leaf2] => (item=Ethernet0=10000)
 
 TASK [sonic_breakout : breakout | Set exit sub-port MTU] ********************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:287:7
+changed: [Border_Leaf2] => (item=Ethernet0 mtu=1500)
 
-285       failed_when: false
-286
-287     - name: "breakout | Set exit sub-port MTU"
-          ^ column 7
+TASK [sonic_breakout : breakout | Bring exit sub-port admin up] *************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet0)
 
-failed: [Border_Leaf2] (item=Ethernet0 mtu=1500) =>
-    ansible_loop_var: item
-    changed: true
-    cmd:
-    - config
-    - interface
-    - mtu
-    - Ethernet0
-    - '1500'
-    delta: '0:00:01.266240'
-    end: '2026-05-25 02:31:11.596177'
-    item:
-        alias: Ethernet5/1
-        breakout_mode: 4x10G
-        description: Border_Leaf2 → Exit_Router2 (10G, KVM breakout Ethernet0 lane9)
-        index: '5'
-        lanes: '9'
-        local_ip: 10.0.253.2/31
-        mtu: '1500'
-        neighbor: Exit_Router2
-        neighbor_asn: 65254
-        neighbor_ip: 10.0.253.3
-        neighbor_port: ether2
-        parent_port: Ethernet0
-        port: Ethernet0
-        speed: '10000'
-    msg: non-zero return code
-    rc: 1
-    start: '2026-05-25 02:31:10.329937'
-    stderr: Invalid port Ethernet0
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
+TASK [sonic_breakout : breakout | Set exit sub-port description] ************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Assign IP to exit sub-port] ***************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet0 = 10.0.253.2/31)
+
+TASK [sonic_breakout : breakout | Configure BGP neighbor via vtysh] *********************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
+
+TASK [sonic_breakout : breakout | Persist SONiC config to /etc/sonic/config_db.json] ****************************************************************************************************************************
+changed: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Persist FRR config (BGP neighbor)] ********************************************************************************************************************************************
+changed: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Wait for BGP container to be ready] *******************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Wait for BGP session establishment (up to 60s)] *******************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
+
+TASK [sonic_breakout : breakout | Report BGP session status] ****************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Exit_Router2) =>
+    msg: 'NOT_ESTABLISHED after 60s - current state: Active'
+
+TASK [sonic_breakout : breakout | Deployment complete] **********************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: 'Border_Leaf2 (Arista-7050QX-32S): Breakout applied on . Exit BGP configured
+        on Ethernet0.'
+
+TASK [post | Final BGP summary check] ***************************************************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [post | Display final BGP status] **************************************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg:
+    - ''
+    - 'IPv4 Unicast Summary (VRF default):'
+    - BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+    - BGP table version 2
+    - RIB entries 3, using 672 bytes of memory
+    - Peers 7, using 5072 KiB of memory
+    - ''
+    - Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
+        Desc
+    - Ethernet20      4      65106         0         0        0    0    0    never         Idle        0
+        HostB12_1
+    - Ethernet22      4      65108         0         0        0    0    0    never         Idle        0
+        MonitorSrv
+    - Ethernet24      4      65107         0         0        0    0    0    never         Idle        0
+        HostB12_2
+    - Ethernet28      4      65108         0         0        0    0    0    never         Idle        0
+        MonitorSrv
+    - Ethernet120     4          0         0         0        0    0    0    never         Idle        0
+        Spine_S2
+    - Ethernet124     4          0         0         0        0    0    0    never         Idle        0
+        Spine_S1
+    - 10.0.253.3      4      65254         0         0        0    0    0    never       Active        0
+        Exit_Router2
+    - ''
+    - Total number of neighbors 7
+    - ''
+    - 'IPv6 Unicast Summary (VRF default):'
+    - BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+
+TASK [post | Final interface status check (exit sub-ports)] *****************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet0)
+
+TASK [post | Display interface status] **************************************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet0) =>
+    msg:
+    - '  Interface    Lanes    Speed    MTU    FEC        Alias    Vlan    Oper    Admin    Type    Asym
+        PFC'
+    - '-----------  -------  -------  -----  -----  -----------  ------  ------  -------  ------  ----------'
+    - '  Ethernet0        9      10G   1500    N/A  Ethernet5/1  routed    down       up     N/A         N/A'
+
+TASK [post | Ping exit router to verify L3] *********************************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Exit_Router2 (10.0.253.3))
+
+TASK [post | Report ping result] ********************************************************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Exit_Router2) =>
+    msg: 'Ping 10.0.253.3: FAILED — check physical link'
+
+TASK [post | Breakout deployment summary] ***********************************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: 'Border_Leaf2 (Arista-7050QX-32S): Breakout complete. Exit BGP: 10.0.253.3'
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf2               : ok=13   changed=1    unreachable=0    failed=1    skipped=10   rescued=0    ignored=0
+Border_Leaf2               : ok=31   changed=8    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf2
 Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
@@ -156,42 +205,47 @@ All access and/or use are subject to monitoring.
 Help:    https://sonic-net.github.io/SONiC/
 
 admin@BorderLeaf2:~$ show interfaces status
-  Interface            Lanes    Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
------------  ---------------  -------  -----  -----  ------------  ------  ------  -------  ------  ----------
-  Ethernet4      13,14,15,16      40G   9100   none   Ethernet6/1  routed    down     down     N/A         N/A
-  Ethernet8      17,18,19,20      40G   9100   none   Ethernet7/1  routed    down     down     N/A         N/A
- Ethernet12      21,22,23,24      40G   9100   none   Ethernet8/1  routed    down     down     N/A         N/A
- Ethernet16      29,30,31,32      40G   9100   none   Ethernet9/1  routed    down     down     N/A         N/A
- Ethernet20      25,26,27,28      40G   9100   none  Ethernet10/1  routed    down     down     N/A         N/A
- Ethernet24      33,34,35,36      40G   9100   none  Ethernet11/1  routed    down     down     N/A         N/A
- Ethernet28      37,38,39,40      40G   9100   none  Ethernet12/1  routed    down     down     N/A         N/A
- Ethernet32      45,46,47,48      40G   9100   none  Ethernet13/1  routed    down     down     N/A         N/A
- Ethernet36      41,42,43,44      40G   9100   none  Ethernet14/1  routed    down     down     N/A         N/A
- Ethernet40      49,50,51,52      40G   9100   none  Ethernet15/1  routed    down     down     N/A         N/A
- Ethernet44      53,54,55,56      40G   9100   none  Ethernet16/1  routed    down     down     N/A         N/A
- Ethernet48      69,70,71,72      40G   9100   none  Ethernet17/1  routed    down     down     N/A         N/A
- Ethernet52      65,66,67,68      40G   9100   none  Ethernet18/1  routed    down     down     N/A         N/A
- Ethernet56      73,74,75,76      40G   9100   none  Ethernet19/1  routed    down     down     N/A         N/A
- Ethernet60      77,78,79,80      40G   9100   none  Ethernet20/1  routed    down     down     N/A         N/A
- Ethernet64      93,94,95,96      40G   9100   none  Ethernet21/1  routed    down     down     N/A         N/A
- Ethernet68      89,90,91,92      40G   9100   none  Ethernet22/1  routed    down     down     N/A         N/A
- Ethernet72     97,98,99,100      40G   9100   none  Ethernet23/1  routed    down     down     N/A         N/A
- Ethernet76  101,102,103,104      40G   9100   none  Ethernet24/1  routed    down     down     N/A         N/A
- Ethernet80  109,110,111,112      40G   9100   none  Ethernet25/1  routed    down     down     N/A         N/A
- Ethernet84  105,106,107,108      40G   9100   none  Ethernet26/1  routed    down     down     N/A         N/A
- Ethernet88  121,122,123,124      40G   9100   none  Ethernet27/1  routed    down     down     N/A         N/A
- Ethernet92  125,126,127,128      40G   9100   none  Ethernet28/1  routed    down     down     N/A         N/A
- Ethernet96      61,62,63,64      40G   9100   none    Ethernet29  routed    down     down     N/A         N/A
-Ethernet100      57,58,59,60      40G   9100   none    Ethernet30  routed    down     down     N/A         N/A
-Ethernet104      81,82,83,84      40G   9100   none    Ethernet31  routed    down     down     N/A         N/A
-Ethernet108      85,86,87,88      40G   9100   none    Ethernet32  routed    down     down     N/A         N/A
-Ethernet112  117,118,119,120      40G   9100   none    Ethernet33  routed    down     down     N/A         N/A
-Ethernet116  113,114,115,116      40G   9100   none    Ethernet34  routed    down     down     N/A         N/A
-Ethernet120          1,2,3,4      40G   9100   none    Ethernet35  routed    down     down     N/A         N/A
-Ethernet124          5,6,7,8      40G   9100   none    Ethernet36  routed    down     down     N/A         N/A
+  Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
+-----------  ---------------  ----------  -----  -----  ------------  ------  ------  -------  ------  ----------
+  Ethernet0                9         10G   1500    N/A   Ethernet5/1  routed    down       up     N/A         N/A
+  Ethernet1               10         10G   9100    N/A   Ethernet5/2  routed    down     down     N/A         N/A
+  Ethernet2               11         10G   9100    N/A   Ethernet5/3  routed    down     down     N/A         N/A
+  Ethernet3               12  4294967.3G   9100    N/A   Ethernet5/4  routed      up     down     N/A         N/A
+  Ethernet4      13,14,15,16         40G   9100   none   Ethernet6/1  routed    down     down     N/A         N/A
+  Ethernet8      17,18,19,20         40G   9100   none   Ethernet7/1  routed    down     down     N/A         N/A
+ Ethernet12      21,22,23,24         40G   9100   none   Ethernet8/1  routed    down     down     N/A         N/A
+ Ethernet16      29,30,31,32         40G   9100   none   Ethernet9/1  routed    down     down     N/A         N/A
+ Ethernet20      25,26,27,28         40G   9100   none  Ethernet10/1  routed    down     down     N/A         N/A
+ Ethernet24      33,34,35,36         40G   9100   none  Ethernet11/1  routed    down     down     N/A         N/A
+ Ethernet28      37,38,39,40         40G   9100   none  Ethernet12/1  routed    down     down     N/A         N/A
+ Ethernet32      45,46,47,48         40G   9100   none  Ethernet13/1  routed    down     down     N/A         N/A
+ Ethernet36      41,42,43,44         40G   9100   none  Ethernet14/1  routed    down     down     N/A         N/A
+ Ethernet40      49,50,51,52         40G   9100   none  Ethernet15/1  routed    down     down     N/A         N/A
+ Ethernet44      53,54,55,56         40G   9100   none  Ethernet16/1  routed    down     down     N/A         N/A
+ Ethernet48      69,70,71,72         40G   9100   none  Ethernet17/1  routed    down     down     N/A         N/A
+ Ethernet52      65,66,67,68         40G   9100   none  Ethernet18/1  routed    down     down     N/A         N/A
+ Ethernet56      73,74,75,76         40G   9100   none  Ethernet19/1  routed    down     down     N/A         N/A
+ Ethernet60      77,78,79,80         40G   9100   none  Ethernet20/1  routed    down     down     N/A         N/A
+ Ethernet64      93,94,95,96         40G   9100   none  Ethernet21/1  routed    down     down     N/A         N/A
+ Ethernet68      89,90,91,92         40G   9100   none  Ethernet22/1  routed    down     down     N/A         N/A
+ Ethernet72     97,98,99,100         40G   9100   none  Ethernet23/1  routed    down     down     N/A         N/A
+ Ethernet76  101,102,103,104         40G   9100   none  Ethernet24/1  routed    down     down     N/A         N/A
+ Ethernet80  109,110,111,112         40G   9100   none  Ethernet25/1  routed    down     down     N/A         N/A
+ Ethernet84  105,106,107,108         40G   9100   none  Ethernet26/1  routed    down     down     N/A         N/A
+ Ethernet88  121,122,123,124         40G   9100   none  Ethernet27/1  routed    down     down     N/A         N/A
+ Ethernet92  125,126,127,128         40G   9100   none  Ethernet28/1  routed    down     down     N/A         N/A
+ Ethernet96      61,62,63,64         40G   9100   none    Ethernet29  routed    down     down     N/A         N/A
+Ethernet100      57,58,59,60         40G   9100   none    Ethernet30  routed    down     down     N/A         N/A
+Ethernet104      81,82,83,84         40G   9100   none    Ethernet31  routed    down     down     N/A         N/A
+Ethernet108      85,86,87,88         40G   9100   none    Ethernet32  routed    down     down     N/A         N/A
+Ethernet112  117,118,119,120         40G   9100   none    Ethernet33  routed    down     down     N/A         N/A
+Ethernet116  113,114,115,116         40G   9100   none    Ethernet34  routed    down     down     N/A         N/A
+Ethernet120          1,2,3,4         40G   9100   none    Ethernet35  routed    down     down     N/A         N/A
+Ethernet124          5,6,7,8         40G   9100   none    Ethernet36  routed    down     down     N/A         N/A
 admin@BorderLeaf2:~$ show ip interfaces
 Interface    Master    IPv4 address/mask    Admin/Oper    BGP Neighbor    Neighbor IP
 -----------  --------  -------------------  ------------  --------------  -------------
+Ethernet0              10.0.253.2/31        up/up         N/A             N/A
 Loopback0              10.0.2.2/32          up/up         N/A             N/A
 docker0                240.127.1.1/24       up/down       N/A             N/A
 eth0         mgmt      172.16.2.32/24       up/up         N/A             N/A
@@ -206,8 +260,8 @@ BorderLeaf2# show bgp summary
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 1
-RIB entries 1, using 224 bytes of memory
+BGP table version 2
+RIB entries 3, using 672 bytes of memory
 Peers 7, using 5072 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
