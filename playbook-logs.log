@@ -40,11 +40,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       148       147        0    0    0 02:07:35        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       144       158        0    0    0 02:07:18        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108        71       142        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       143       149        0    0    0 02:11:53            0        0 Spine_S2
-Ethernet124     4      65000       143       149        0    0    0 02:11:51            0        0 Spine_S1
+Ethernet20      4      65106       161       160        0    0    0 02:20:37        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       157       171        0    0    0 02:20:20        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        78       156        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       156       162        0    0    0 02:24:55            0        0 Spine_S2
+Ethernet124     4      65000       156       162        0    0    0 02:24:53            0        0 Spine_S1
 
 Total number of neighbors 5
 
@@ -107,6 +107,15 @@ vnet70 (count=2)
 br-MS-BL1: virtualport already present or bridge not found
 br-MS-BL2: virtualport already present or bridge not found
   ✓  MonitorSrv: OVS virtualport already present in XML
+  ▸  Patching Border_Leaf1 XML: adding OVS virtualport to br-MS-BL1 NIC...
+br-MS-BL1: virtualport already present or bridge not found
+  ✓  Border_Leaf1: OVS virtualport already present in XML
+  ▸  Patching Border_Leaf2 XML: adding OVS virtualport to br-MS-BL2 NIC...
+br-MS-BL2: virtualport already present or bridge not found
+  ✓  Border_Leaf2: OVS virtualport already present in XML
+  ▸  Live-adding BL1/BL2 MonitorSrv vnets to OVS bridges (no restart needed)...
+  △  Border_Leaf1: no live vnet found for br-MS-BL1 (VM may need restart)
+  △  Border_Leaf2: no live vnet found for br-MS-BL2 (VM may need restart)
   △  Bridges incomplete (br-MS-BL1=1, br-MS-BL2=1) — hard restarting MonitorSrv
 Domain 'MonitorSrv' destroyed
 
@@ -114,8 +123,8 @@ Domain 'MonitorSrv' started
 
   ✓  MonitorSrv started
   △  br-MS-BL1: 1 port(s), br-MS-BL2: 1 port(s) — OVS ports:
-    br-MS-BL1: vnet383
-    br-MS-BL2: vnet384
+    br-MS-BL1: vnet386
+    br-MS-BL2: vnet387
 
 ══════════════════════════════════════════════════
   Phase 6 — Exit_Router1: SSH key inject + ether2 + BGP (virsh console)
@@ -126,8 +135,222 @@ Domain 'MonitorSrv' started
 spawn virsh console Exit_Router1
 Connected to domain 'Exit_Router1'
 Escape character is ^] (Ctrl + ])
+repeat new password>
+Try again, error: New passwords do not match!
+new password>
+repeat new password> ************************
+Try again, error: New passwords do not match!
+new password> invalid command name "/interface"
+    while executing
+"/interface get ether2 disabled"
+    invoked from within
+"send ":put \"[/interface get ether2 disabled] [/interface get ether2 running]\"\r""
+    (file "/tmp/ros_configure_Fu7uIT.exp" line 85)
+
+  △  virsh console session for ER1 had non-zero exit — check output above
+  ▸  Manual fallback: sudo virsh console Exit_Router1
+  ▸    /interface enable ether2
+  ▸    /ip address add address=10.0.253.1/31 interface=ether2
+  ▸    /routing bgp template set [find name=default] as=65253 router-id=10.0.253.1
+  ▸    /routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 router-id=10.0.253.1 local.role=ebgp
+
+══════════════════════════════════════════════════
+  Phase 7 — Exit_Router2: SSH key inject + ether2 + BGP (virsh console)
+══════════════════════════════════════════════════
+  ▸  Waiting for Exit_Router2 (172.16.2.99) to be reachable...
+  ✓  Exit_Router2 (172.16.2.99) is reachable
+
+  ▸  Configuring Exit_Router2 (172.16.2.99) via virsh serial console...
+
+spawn virsh console Exit_Router2
+Connected to domain 'Exit_Router2'
+Escape character is ^] (Ctrl + ])
 new password>
 repeat new password>
 Try again, error: New password is the same as old one
 new password> ************************
-repeat new password>
+repeat new password> invalid command name "/interface"
+    while executing
+"/interface get ether2 disabled"
+    invoked from within
+"send ":put \"[/interface get ether2 disabled] [/interface get ether2 running]\"\r""
+    (file "/tmp/ros_configure_Fu7uIT.exp" line 85)
+
+  △  virsh console session for ER2 had non-zero exit — check output above
+  ▸  Manual fallback: sudo virsh console Exit_Router2
+  ▸    /interface enable ether2
+  ▸    /ip address add address=10.0.253.3/31 interface=ether2
+  ▸    /routing bgp template set [find name=default] as=65254 router-id=10.0.253.3
+  ▸    /routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 router-id=10.0.253.3 local.role=ebgp
+
+══════════════════════════════════════════════════
+  Phase 8 — Waiting 35s for BGP to converge...
+══════════════════════════════════════════════════
+
+  ▸  T-5  s remaining...
+
+
+══════════════════════════════════════════════════
+  Phase 9 — Final Verification
+══════════════════════════════════════════════════
+
+─────  BL1 interface oper state (Ethernet20/24/28/120/124)  ─────
+ Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
+ Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
+ Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
+Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
+Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
+
+─────  BL2 interface oper state  ─────
+ Ethernet20      25,26,27,28  4294967.3G   9100   none  Ethernet10/1  routed      up       up     N/A         N/A
+ Ethernet24      33,34,35,36  4294967.3G   9100   none  Ethernet11/1  routed      up       up     N/A         N/A
+ Ethernet28      37,38,39,40  4294967.3G   9100   none  Ethernet12/1  routed      up       up     N/A         N/A
+Ethernet120          1,2,3,4  4294967.3G   9100   none    Ethernet35  routed      up       up     N/A         N/A
+Ethernet124          5,6,7,8  4294967.3G   9100   none    Ethernet36  routed      up       up     N/A         N/A
+
+─────  BL1 BGP summary (IPv4)  ─────
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 17
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       167       166        0    0    0 02:26:53           10       13 HostB12_1
+Ethernet24      4      65107       163       177        0    0    0 02:26:36            4       13 HostB12_2
+Ethernet28      4      65108        81       162        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       163       169        0    0    0 02:31:11            7       13 Spine_S2
+Ethernet124     4      65000       163       169        0    0    0 02:31:09            7       13 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+─────  BL2 BGP summary (IPv4)  ─────
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 16
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       162       165        0    0    0 02:28:10            5       13 HostB12_1
+Ethernet24      4      65107       155       164        0    0    0 02:12:33           11       13 HostB12_2
+Ethernet28      4      65108        88       174        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       162       167        0    0    0 02:30:49            6       13 Spine_S2
+Ethernet124     4      65000       162       167        0    0    0 02:30:44            6       13 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 6
+
+─────  Exit_Router1 BGP sessions (via SSH key)  ─────
+Flags: E - established
+ 0   remote.address=10.0.253.0 .as=0 .hold-time=infinity
+     local.address=10.0.253.1 .as=0 ebgp
+     prefix-count=0
+
+
+─────  Exit_Router2 BGP sessions (via SSH key)  ─────
+Flags: E - established
+
+
+─────  OVS bridge port counts  ─────
+  ✓  br-BL1-ER1: 2 ports
+  ✓  br-BL2-ER2: 2 ports
+  △  br-MS-BL1: only 1 port(s)
+  △  br-MS-BL2: only 1 port(s)
+
+══════════════════════════════════════════════════
+  Script complete.
+══════════════════════════════════════════════════
+
+  Target BGP state after all fixes:
+  ──────────────────────────────────────────────────────────
+  BL1  Ethernet120  → Spine_S2   : Established  (was: ✓)
+  BL1  Ethernet124  → Spine_S1   : Established  (was: ✓)
+  BL1  Ethernet20   → HostB12_1  : Established  (was: Connect)
+  BL1  Ethernet24   → HostB12_2  : Established  (was: OpenSent)
+  BL1  Ethernet28   → MonitorSrv : Established  (Phase 5 fix)
+  BL1  10.0.253.1   → Exit_Router1: Established (Phase 6 fix)
+
+  BL2  Ethernet120  → Spine_S2   : Established  (was: ✓)
+  BL2  Ethernet124  → Spine_S1   : Established  (was: ✓)
+  BL2  Ethernet20   → HostB12_1  : Established  (was: ✓)
+  BL2  Ethernet24   → HostB12_2  : Established  (was: Connect)
+  BL2  Ethernet28   → MonitorSrv : Established  (Phase 5 fix)
+  BL2  10.0.253.3   → Exit_Router2: Established (Phase 7 fix)
+
+  Ethernet22 (phantom) removed from FRR on both BL1/BL2.
+
+  If MikroTik SSH key auth is working, you can now use:
+    ssh -i ~/.ssh/id_dc_lab admin@172.16.2.98
+    ssh -i ~/.ssh/id_dc_lab admin@172.16.2.99
+
+  If any session is still not Established, run:
+    sudo virsh console Exit_Router1   (Ctrl+] to exit)
+    sudo virsh console Exit_Router2
+nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.32's password:
+
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 16
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       167       169        0    0    0 02:32:44            5       13 HostB12_1
+Ethernet24      4      65107       159       169        0    0    0 02:17:07           11       13 HostB12_2
+Ethernet28      4      65108        90       178        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       167       172        0    0    0 02:35:23            6       13 Spine_S2
+Ethernet124     4      65000       167       172        0    0    0 02:35:18            6       13 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       167       169        0    0    0 02:32:44        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       159       169        0    0    0 02:17:07        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        90       178        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       167       172        0    0    0 02:35:23            0        0 Spine_S2
+Ethernet124     4      65000       167       172        0    0    0 02:35:18            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
+admin@172.16.2.31's password:
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 17
+RIB entries 25, using 5600 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       172       171        0    0    0 02:31:49           10       13 HostB12_1
+Ethernet24      4      65107       168       182        0    0    0 02:31:32            4       13 HostB12_2
+Ethernet28      4      65108        83       166        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       168       174        0    0    0 02:36:07            7       13 Spine_S2
+Ethernet124     4      65000       168       174        0    0    0 02:36:05            7       13 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       172       171        0    0    0 02:31:49        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       168       182        0    0    0 02:31:32        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108        83       166        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       168       174        0    0    0 02:36:07            0        0 Spine_S2
+Ethernet124     4      65000       168       174        0    0    0 02:36:05            0        0 Spine_S1
+
+Total number of neighbors 5
+nh1221@R620:~$
