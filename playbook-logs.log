@@ -1,3 +1,389 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf1 "sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1|10.0.253.0/31'; config interface speed Ethernet3 10000; config save -y"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+1
+1
+Root privileges are required for this operation
+Root privileges are required for this operation
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf1 "sudo sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1|10.0.253.0/
+31'; config interface speed Ethernet3 10000; config save -y"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+0
+0
+Root privileges are required for this operation
+Root privileges are required for this operation
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1|10.0.253.2/31'; config interface speed Ethernet3 10000; config save -y"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+1
+1
+Root privileges are required for this operation
+Root privileges are required for this operation
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$ ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
+
+PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
+
+TASK [preflight | Wait for SSH connectivity] ********************************************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [preflight | Validate breakout_cfg is defined] *************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    changed: false
+    msg: All assertions passed
+
+TASK [preflight | Detect ports requiring breakout (split mode Nx > 1)] ******************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [preflight | Skip host if no split breakouts needed] *******************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [preflight | Display breakout plan] ************************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |-
+        ╔══════════════════════════════════════════════════════════════╗
+        ║  BREAKOUT PLAN:                Border_Leaf1               ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║  Switch Model:             Arista-7050QX-32S             ║
+        ║  Ports to break out: 1                                      ║
+        ║    Ethernet0 → 4x10G                            ║
+        ║  Exit interfaces: 1 (IP/BGP will be configured) ║
+        ╚══════════════════════════════════════════════════════════════╝
+
+TASK [sonic_breakout : breakout | Validate breakout_cfg is defined] *********************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Filter ports needing actual split (Nx where N > 1)] ***************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Report breakout plan] *********************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): 1 port(s) need breakout — Ethernet0=4x10G'
+
+TASK [sonic_breakout : breakout | Skip host if no ports need breakout] ******************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Check current lane config of parent port] *************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Determine which ports need breakout (multi-lane = needs split)] ***************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): All ports already broken out — skipping to
+        post-breakout config'
+
+TASK [sonic_breakout : breakout | Set breakout-needed flag] *****************************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Remove IP addresses from parent port before breakout] *************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Detect if running on KVM Virtual Switch] **************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Apply port breakout (real hardware)] ******************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Apply software breakout on KVM (remove parent, add children)] *****************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Wait for port reconfiguration to settle] **************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Build child port verification list] *******************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Verify child sub-ports exist after breakout] **********************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Display child port verification] **********************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Build child port attribute list] **********************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Set child sub-port speed] *****************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Set child sub-port admin_status up] *******************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Set exit sub-port speed] ******************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet0=10000)
+
+TASK [sonic_breakout : breakout | Set exit sub-port MTU] ********************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet0 mtu=1500)
+
+TASK [sonic_breakout : breakout | Bring exit sub-port admin up] *************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Set exit sub-port description] ************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Assign IP to exit sub-port] ***************************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Ethernet0 = 10.0.253.0/31)
+
+TASK [sonic_breakout : breakout | Configure BGP neighbor via vtysh] *********************************************************************************************************************************************
+changed: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
+
+TASK [sonic_breakout : breakout | Persist SONiC config to /etc/sonic/config_db.json] ****************************************************************************************************************************
+changed: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Persist FRR config (BGP neighbor)] ********************************************************************************************************************************************
+changed: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Wait for BGP container to be ready] *******************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_breakout : breakout | Wait for BGP session establishment (up to 60s)] *******************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
+
+TASK [sonic_breakout : breakout | Report BGP session status] ****************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Exit_Router1) =>
+    msg: 'NOT_ESTABLISHED after 60s - current state: Connect'
+
+TASK [sonic_breakout : breakout | Deployment complete] **********************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): Breakout applied on . Exit BGP configured
+        on Ethernet0.'
+
+TASK [post | Final BGP summary check] ***************************************************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [post | Display final BGP status] **************************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg:
+    - ''
+    - 'IPv4 Unicast Summary (VRF default):'
+    - BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+    - BGP table version 2
+    - RIB entries 3, using 672 bytes of memory
+    - Peers 7, using 5072 KiB of memory
+    - ''
+    - Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt
+        Desc
+    - Ethernet20      4      65106         0         0        0    0    0    never         Idle        0
+        HostB12_1
+    - Ethernet22      4      65108         0         0        0    0    0    never         Idle        0
+        MonitorSrv
+    - Ethernet24      4      65107         0         0        0    0    0    never         Idle        0
+        HostB12_2
+    - Ethernet28      4      65108         0         0        0    0    0    never         Idle        0
+        MonitorSrv
+    - Ethernet120     4          0         0         0        0    0    0    never         Idle        0
+        Spine_S2
+    - Ethernet124     4          0         0         0        0    0    0    never         Idle        0
+        Spine_S1
+    - 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0
+        Exit_Router1
+    - ''
+    - Total number of neighbors 7
+    - ''
+    - 'IPv6 Unicast Summary (VRF default):'
+    - BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+
+TASK [post | Final interface status check (exit sub-ports)] *****************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [post | Display interface status] **************************************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet0) =>
+    msg:
+    - '  Interface    Lanes    Speed    MTU    FEC        Alias    Vlan    Oper    Admin    Type    Asym
+        PFC'
+    - '-----------  -------  -------  -----  -----  -----------  ------  ------  -------  ------  ----------'
+    - '  Ethernet0        9      10G   1500    N/A  Ethernet5/1  routed    down       up     N/A         N/A'
+
+TASK [post | Ping exit router to verify L3] *********************************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Exit_Router1 (10.0.253.1))
+
+TASK [post | Report ping result] ********************************************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Exit_Router1) =>
+    msg: 'Ping 10.0.253.1: SUCCESS'
+
+TASK [post | Breakout deployment summary] ***********************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: 'Border_Leaf1 (Arista-7050QX-32S): Breakout complete. Exit BGP: 10.0.253.1'
+
+PLAY [Port Breakout — SONiC Switches (host_vars driven)] ********************************************************************************************************************************************************
+
+TASK [preflight | Wait for SSH connectivity] ********************************************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [preflight | Validate breakout_cfg is defined] *************************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    changed: false
+    msg: All assertions passed
+
+TASK [preflight | Detect ports requiring breakout (split mode Nx > 1)] ******************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [preflight | Skip host if no split breakouts needed] *******************************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [preflight | Display breakout plan] ************************************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: |-
+        ╔══════════════════════════════════════════════════════════════╗
+        ║  BREAKOUT PLAN:                Border_Leaf2               ║
+        ╠══════════════════════════════════════════════════════════════╣
+        ║  Switch Model:             Arista-7050QX-32S             ║
+        ║  Ports to break out: 1                                      ║
+        ║    Ethernet0 → 4x10G                            ║
+        ║  Exit interfaces: 1 (IP/BGP will be configured) ║
+        ╚══════════════════════════════════════════════════════════════╝
+
+TASK [sonic_breakout : breakout | Validate breakout_cfg is defined] *********************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Filter ports needing actual split (Nx where N > 1)] ***************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Report breakout plan] *********************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: 'Border_Leaf2 (Arista-7050QX-32S): 1 port(s) need breakout — Ethernet0=4x10G'
+
+TASK [sonic_breakout : breakout | Skip host if no ports need breakout] ******************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Check current lane config of parent port] *************************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet0)
+
+TASK [sonic_breakout : breakout | Determine which ports need breakout (multi-lane = needs split)] ***************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Report breakout status] *******************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: 'Border_Leaf2 (Arista-7050QX-32S): All ports already broken out — skipping to
+        post-breakout config'
+
+TASK [sonic_breakout : breakout | Set breakout-needed flag] *****************************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Remove IP addresses from parent port before breakout] *************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Detect if running on KVM Virtual Switch] **************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Apply port breakout (real hardware)] ******************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Apply software breakout on KVM (remove parent, add children)] *****************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Wait for port reconfiguration to settle] **************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Build child port verification list] *******************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Verify child sub-ports exist after breakout] **********************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Display child port verification] **********************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Build child port attribute list] **********************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Set child sub-port speed] *****************************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Set child sub-port admin_status up] *******************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_breakout : breakout | Set exit sub-port speed] ******************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet0=10000)
+
+TASK [sonic_breakout : breakout | Set exit sub-port MTU] ********************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v1/roles/sonic_breakout/tasks/main.yml:287:7
+
+285       failed_when: false
+286
+287     - name: "breakout | Set exit sub-port MTU"
+          ^ column 7
+
+failed: [Border_Leaf2] (item=Ethernet0 mtu=1500) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - config
+    - interface
+    - mtu
+    - Ethernet0
+    - '1500'
+    delta: '0:00:01.628098'
+    end: '2026-05-25 01:50:27.544430'
+    item:
+        alias: Ethernet5/1
+        breakout_mode: 4x10G
+        description: Border_Leaf2 → Exit_Router2 (10G, KVM breakout Ethernet0 lane9)
+        index: '5'
+        lanes: '9'
+        local_ip: 10.0.253.2/31
+        mtu: '1500'
+        neighbor: Exit_Router2
+        neighbor_asn: 65254
+        neighbor_ip: 10.0.253.3
+        neighbor_port: ether2
+        parent_port: Ethernet0
+        port: Ethernet0
+        speed: '10000'
+    msg: non-zero return code
+    rc: 1
+    start: '2026-05-25 01:50:25.916332'
+    stderr: Invalid port Ethernet0
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Border_Leaf1               : ok=31   changed=8    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Border_Leaf2               : ok=13   changed=1    unreachable=0    failed=1    skipped=10   rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1$
+
+C:\Users\nh1221>ssh admin@Border_Leaf1
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+Linux BorderLeaf1 6.1.0-29-2-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.123-1 (2025-01-02) x86_64
+You are on
+  ____   ___  _   _ _  ____
+ / ___| / _ \| \ | (_)/ ___|
+ \___ \| | | |  \| | | |
+  ___) | |_| | |\  | | |___
+ |____/ \___/|_| \_|_|\____|
+
+-- Software for Open Networking in the Cloud --
+
+Unauthorized access and/or use are prohibited.
+All access and/or use are subject to monitoring.
+
+Help:    https://sonic-net.github.io/SONiC/
+
+admin@BorderLeaf1:~$ docker ps
+CONTAINER ID   IMAGE                                COMMAND                  CREATED      STATUS             PORTS     NAMES
+8e25d1ec64c3   docker-snmp:latest                   "/usr/bin/docker-snm…"   3 days ago   Up About an hour             snmp
+47a10927a43a   docker-platform-monitor:latest       "/usr/bin/docker_ini…"   3 days ago   Up About an hour             pmon
+0ae6a1d51bb0   docker-sonic-mgmt-framework:latest   "/usr/local/bin/supe…"   3 days ago   Up About an hour             mgmt-framework
+bdc6590bd3a5   docker-lldp:latest                   "/usr/bin/docker-lld…"   3 days ago   Up About an hour             lldp
+615536bfc38f   docker-sonic-gnmi:latest             "/usr/local/bin/supe…"   3 days ago   Up About an hour             gnmi
+e573b61fe48a   docker-gbsyncd-vs:latest             "/usr/local/bin/supe…"   3 days ago   Up About an hour             gbsyncd
+b73c7ffcc0df   docker-fpm-frr:latest                "/usr/bin/docker_ini…"   3 days ago   Up About an hour             bgp
+0caac8d0080b   f099af7d1ef2                         "/usr/bin/docker_ini…"   3 days ago   Up About an hour             dhcp_relay
+2a4cc7b328ca   docker-router-advertiser:latest      "/usr/bin/docker-ini…"   3 days ago   Up About an hour             radv
+ac370031d835   docker-syncd-vs:latest               "/usr/local/bin/supe…"   3 days ago   Up About an hour             syncd
+cb26a1021216   docker-teamd:latest                  "/usr/local/bin/supe…"   3 days ago   Up About an hour             teamd
+284c01e40b82   docker-orchagent:latest              "/usr/bin/docker-ini…"   3 days ago   Up About an hour             swss
+2a80db589dd6   docker-eventd:latest                 "/usr/local/bin/supe…"   3 days ago   Up About an hour             eventd
+372e23ef3d0f   docker-database:latest               "/usr/local/bin/dock…"   4 days ago   Up 8 hours                   database
 admin@BorderLeaf1:~$ show interfaces status
   Interface            Lanes       Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
 -----------  ---------------  ----------  -----  -----  ------------  ------  ------  -------  ------  ----------
@@ -36,4 +422,190 @@ Ethernet112  117,118,119,120         40G   9100   none    Ethernet33  routed    
 Ethernet116  113,114,115,116         40G   9100   none    Ethernet34  routed    down     down     N/A         N/A
 Ethernet120          1,2,3,4         40G   9100   none    Ethernet35  routed    down     down     N/A         N/A
 Ethernet124          5,6,7,8         40G   9100   none    Ethernet36  routed    down     down     N/A         N/A
-admin@BorderLeaf1:~$
+admin@BorderLeaf1:~$ show ip interfaces
+Interface    Master    IPv4 address/mask    Admin/Oper    BGP Neighbor    Neighbor IP
+-----------  --------  -------------------  ------------  --------------  -------------
+Ethernet0              10.0.253.0/31        up/up         N/A             N/A
+Loopback0              10.0.2.1/32          up/up         N/A             N/A
+docker0                240.127.1.1/24       up/down       N/A             N/A
+eth0         mgmt      172.16.2.31/24       up/up         N/A             N/A
+lo                     127.0.0.1/16         up/up         N/A             N/A
+lo-m         mgmt      127.0.0.1/16         up/up         N/A             N/A
+admin@BorderLeaf1:~$ vtysh
+
+Hello, this is FRRouting (version 8.5.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+BorderLeaf1# show bgp summary
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 2
+RIB entries 3, using 672 bytes of memory
+Peers 7, using 5072 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 7
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+
+Total number of neighbors 6
+BorderLeaf1# show bgp summary
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 2
+RIB entries 3, using 672 bytes of memory
+Peers 7, using 5072 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 7
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+
+Total number of neighbors 6
+BorderLeaf1#
+
+C:\Users\nh1221>ssh admin@Border_Leaf2
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+Linux BorderLeaf2 6.1.0-29-2-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.123-1 (2025-01-02) x86_64
+You are on
+  ____   ___  _   _ _  ____
+ / ___| / _ \| \ | (_)/ ___|
+ \___ \| | | |  \| | | |
+  ___) | |_| | |\  | | |___
+ |____/ \___/|_| \_|_|\____|
+
+-- Software for Open Networking in the Cloud --
+
+Unauthorized access and/or use are prohibited.
+All access and/or use are subject to monitoring.
+
+Help:    https://sonic-net.github.io/SONiC/
+
+admin@BorderLeaf2:~$ show interfaces status
+  Interface            Lanes    Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
+-----------  ---------------  -------  -----  -----  ------------  ------  ------  -------  ------  ----------
+  Ethernet4      13,14,15,16      40G   9100   none   Ethernet6/1  routed    down     down     N/A         N/A
+Ethernet5/1                9      10G   1500    N/A   Ethernet5/1  routed    down       up     N/A         N/A
+Ethernet5/2               10      10G   9100    N/A   Ethernet5/2  routed    down     down     N/A         N/A
+Ethernet5/3               11      10G   9100    N/A   Ethernet5/3  routed    down     down     N/A         N/A
+Ethernet5/4               12      10G   9100    N/A   Ethernet5/4  routed    down     down     N/A         N/A
+  Ethernet8      17,18,19,20      40G   9100   none   Ethernet7/1  routed    down     down     N/A         N/A
+ Ethernet12      21,22,23,24      40G   9100   none   Ethernet8/1  routed    down     down     N/A         N/A
+ Ethernet16      29,30,31,32      40G   9100   none   Ethernet9/1  routed    down     down     N/A         N/A
+ Ethernet20      25,26,27,28      40G   9100   none  Ethernet10/1  routed    down     down     N/A         N/A
+ Ethernet24      33,34,35,36      40G   9100   none  Ethernet11/1  routed    down     down     N/A         N/A
+ Ethernet28      37,38,39,40      40G   9100   none  Ethernet12/1  routed    down     down     N/A         N/A
+ Ethernet32      45,46,47,48      40G   9100   none  Ethernet13/1  routed    down     down     N/A         N/A
+ Ethernet36      41,42,43,44      40G   9100   none  Ethernet14/1  routed    down     down     N/A         N/A
+ Ethernet40      49,50,51,52      40G   9100   none  Ethernet15/1  routed    down     down     N/A         N/A
+ Ethernet44      53,54,55,56      40G   9100   none  Ethernet16/1  routed    down     down     N/A         N/A
+ Ethernet48      69,70,71,72      40G   9100   none  Ethernet17/1  routed    down     down     N/A         N/A
+ Ethernet52      65,66,67,68      40G   9100   none  Ethernet18/1  routed    down     down     N/A         N/A
+ Ethernet56      73,74,75,76      40G   9100   none  Ethernet19/1  routed    down     down     N/A         N/A
+ Ethernet60      77,78,79,80      40G   9100   none  Ethernet20/1  routed    down     down     N/A         N/A
+ Ethernet64      93,94,95,96      40G   9100   none  Ethernet21/1  routed    down     down     N/A         N/A
+ Ethernet68      89,90,91,92      40G   9100   none  Ethernet22/1  routed    down     down     N/A         N/A
+ Ethernet72     97,98,99,100      40G   9100   none  Ethernet23/1  routed    down     down     N/A         N/A
+ Ethernet76  101,102,103,104      40G   9100   none  Ethernet24/1  routed    down     down     N/A         N/A
+ Ethernet80  109,110,111,112      40G   9100   none  Ethernet25/1  routed    down     down     N/A         N/A
+ Ethernet84  105,106,107,108      40G   9100   none  Ethernet26/1  routed    down     down     N/A         N/A
+ Ethernet88  121,122,123,124      40G   9100   none  Ethernet27/1  routed    down     down     N/A         N/A
+ Ethernet92  125,126,127,128      40G   9100   none  Ethernet28/1  routed    down     down     N/A         N/A
+ Ethernet96      61,62,63,64      40G   9100   none    Ethernet29  routed    down     down     N/A         N/A
+Ethernet100      57,58,59,60      40G   9100   none    Ethernet30  routed    down     down     N/A         N/A
+Ethernet104      81,82,83,84      40G   9100   none    Ethernet31  routed    down     down     N/A         N/A
+Ethernet108      85,86,87,88      40G   9100   none    Ethernet32  routed    down     down     N/A         N/A
+Ethernet112  117,118,119,120      40G   9100   none    Ethernet33  routed    down     down     N/A         N/A
+Ethernet116  113,114,115,116      40G   9100   none    Ethernet34  routed    down     down     N/A         N/A
+Ethernet120          1,2,3,4      40G   9100   none    Ethernet35  routed    down     down     N/A         N/A
+Ethernet124          5,6,7,8      40G   9100   none    Ethernet36  routed    down     down     N/A         N/A
+admin@BorderLeaf2:~$ show ip interfaces
+Interface    Master    IPv4 address/mask    Admin/Oper    BGP Neighbor    Neighbor IP
+-----------  --------  -------------------  ------------  --------------  -------------
+Loopback0              10.0.2.2/32          up/up         N/A             N/A
+docker0                240.127.1.1/24       up/down       N/A             N/A
+eth0         mgmt      172.16.2.32/24       up/up         N/A             N/A
+lo                     127.0.0.1/16         up/up         N/A             N/A
+lo-m         mgmt      127.0.0.1/16         up/up         N/A             N/A
+admin@BorderLeaf2:~$ vtysh
+
+Hello, this is FRRouting (version 8.5.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+BorderLeaf2# show bgp summary
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 1
+RIB entries 1, using 224 bytes of memory
+Peers 7, using 5072 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 7
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet22      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4          0         0         0        0    0    0    never         Idle        0 Spine_S2
+Ethernet124     4          0         0         0        0    0    0    never         Idle        0 Spine_S1
+
+Total number of neighbors 6
+BorderLeaf2#
