@@ -442,6 +442,17 @@ ssh admin@Border_Leaf2 bash -c '
   sonic-db-cli CONFIG_DB hset "INTERFACE|Ethernet0|10.0.253.2/31" "NULL" "NULL"
   config save -y
   sudo config reload -y
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%==14th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Run deploy_breakout.yml — but do the two manual cleanup commands first since the playbook won't clean up the stale Ethernet5/1 IP entry or the corrupted Ethernet3 speed:
+
+Step 1 — Quick manual cleanup (one liner):
+ssh admin@Border_Leaf1 "sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1|10.0.253.0/31'; config interface speed Ethernet3 10000; config save -y"
+ssh admin@Border_Leaf2 "sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1'; sonic-db-cli CONFIG_DB del 'INTERFACE|Ethernet5/1|10.0.253.2/31'; config interface speed Ethernet3 10000; config save -y"
+
+Step 2 — Run the breakout playbook:
+ansible-playbook playbooks/deploy_breakout.yml -i inventory/hosts.yml --limit border_leaves
+%%%%%%%%%%%%%%%%%%%%%%%%%%==14th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 '
 
 
