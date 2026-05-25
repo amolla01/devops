@@ -515,4 +515,72 @@ ether2 is almost certainly admin-disabled. After enabling it, also verify the BG
 # expect: address=10.0.253.0, remote-as=65021
 The spine and server links are purely an admin-down problem — the OVS bridges all have correct two-port wiring (br-BL1-S1, br-BL2-S1, br-BL1-S2, br-BL2-S2 all show two vnet ports each). Once you bring the interfaces up, those BGP sessions should establish within seconds.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%==16th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%==17th==%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+1. MikroTik password — you can't SSH in interactively
+The script verified SSH key auth works (✓ SSH key auth works for Exit_Router1/2). The password was never set to amolla01 because the script found ER1/ER2 already at the CLI prompt (Case C — they were still logged in from your earlier manual session). The password is likely still empty but RouterOS blocks empty-password SSH login over the network (it only allows empty via console).
+
+Fix — set the password now via console:
+
+virsh console Exit_Router1
+# press Enter, should see [admin@Exit_Router1] >
+/user set admin password=amolla01
+# Ctrl+] to exit
+
+virsh console Exit_Router2
+# press Enter
+/user set admin password=amolla01
+# Ctrl+] to exit
+
+Then ssh admin@172.16.2.98 with amolla01 will work.
+2. BGP still "Connect" / "Active" — ER1/ER2 have remote.as=0
+Look at the script output:
+remote.address=10.0.253.0 .as=0 .hold-time=infinity
+The BGP connection was created in a previous run (before the Tcl fix) with as=0 because the variable wasn't substituted. The script's idempotent check (find where remote.address=...) found the existing broken entry and skipped re-creation.
+
+Fix — delete and re-add on both ERs:
+ssh -i ~/id_dc_lab admin@172.16.2.98
+# or virsh console Exit_Router1
+
+/routing bgp connection remove [find]
+/routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 router-id=10.0.253.1 local.role=ebgp
+/routing bgp connection print
+# Ctrl+] if on console
+ssh -i ~/id_dc_lab admin@172.16.2.98
+# or virsh console Exit_Router1
+
+/routing bgp connection remove [find]
+/routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 router-id=10.0.253.1 local.role=ebgp
+/routing bgp connection print
+# Ctrl+] if on console
+virsh console Exit_Router2
+/routing bgp connection remove [find]
+/routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 router-id=10.0.253.3 local.role=ebgp
+/routing bgp connection print
+# Ctrl+]
+
+3. MonitorSrv / BL1/BL2 — br-MS-BL1 has no BL1 vnet
+Border_Leaf1/2 have no br-MS-BL1 or br-MS-BL2 NIC in their domiflist. The deploy script put MonitorSrv's NIC at position 7 (br-MS-BL1) but BL1/BL2's NICs at position 5 — however position 5 is also br-MS-BL1 in the bridge list. The script output says "no live vnet found" because awk '$3=="br-MS-BL1"' found no match in BL1's domiflist (all non-pad bridges are br-BL1-ER1, br-HB-BL1, br-HB2-BL1, br-BL1-S2, br-BL1-S1).
+
+The deploy never created the br-MS-BL1 NIC on BL1/BL2. The bridge definition in deploy_lab_v13.sh:
+
+VM_BRIDGES[Border_Leaf1]="br-BL1-ER1,@4,br-HB-BL1,br-HB2-BL1,br-MS-BL1,@22,br-BL1-S2,br-BL1-S1"
+
+Position 5 = br-MS-BL1, but there are 28 pad bridges between position 2 and the @22 marker — it got pushed to a pad NIC. The deploy worked correctly BUT with type=bridge (not OVS), so even though br-MS-BL1 was assigned, libvirt's brctl addif silently failed. The vnet IS there but named differently than br-MS-BL1 in domiflist column 3.
+
+Actually — looking more carefully: BL1's NIC at vnet44 should be br-MS-BL1 (position 5 after the @4 pad skip). But domiflist shows it as br-pad. This means the deploy mapped it wrong, OR the XML was overwritten.
+
+Quick fix — manually add the correct BL vnets to OVS:
+
+First remove the bogus BL1_VNET entry:
+
+sudo ovs-vsctl del-port br-MS-BL1 BL1_VNET
+
+Then check which vnet corresponds to BL1's 5th NIC (MAC 52:54:00:69:d4:ab = vnet44):
+# Verify by checking the XML
+virsh dumpxml Border_Leaf1 | grep -A3 "br-MS-BL1"
+virsh dumpxml Border_Leaf2 | grep -A3 "br-MS-BL2"
+# Verify by checking the XML
+virsh dumpxml Border_Leaf1 | grep -A3 "br-MS-BL1"
+virsh dumpxml Border_Leaf2 | grep -A3 "br-MS-BL2"
+If those return nothing, BL1/BL2 were never given br-MS-BL1/BL2 NICs and you need to hot-add them or restart BL1/BL2 with corrected XML.
