@@ -1,69 +1,5 @@
-nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.31's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 18
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       311       312        0    0    0 04:51:13           10       14 HostB12_1
-Ethernet24      4      65107       309       322        0    0    0 04:50:56            4       14 HostB12_2
-Ethernet28      4      65108       168       320        0    0    0 00:02:01            4       14 MonitorSrv
-Ethernet120     4      65000       308       314        0    0    0 04:55:31            7       14 Spine_S2
-Ethernet124     4      65000       308       314        0    0    0 04:55:29            7       14 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       311       312        0    0    0 04:51:13        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       309       322        0    0    0 04:50:56        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       168       320        0    0    0 00:02:01        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       308       314        0    0    0 04:55:31            0        0 Spine_S2
-Ethernet124     4      65000       308       314        0    0    0 04:55:29            0        0 Spine_S1
-
-Total number of neighbors 5
-nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.32's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 18
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
-                                                                                                                                                                                                                                                                                eighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-
-Ethernet20      4      65106       306       311        0    0    0 04:52:52            6       14 HostB12_1
-Ethernet24      4      65107       300       311        0    0    0 04:37:15           12       14 HostB12_2
-Ethernet28      4      65108       187       355        0    0    0 00:00:58           12       14 MonitorSrv
-Ethernet120     4      65000       308       314        0    0    0 04:55:31            7       14 Spine_S2
-Ethernet124     4      65000       308       314        0    0    0 04:55:26            7       14 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       306       311        0    0    0 04:52:52        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       300       311        0    0    0 04:37:15        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       187       355        0    0    0 00:00:58        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       308       314        0    0    0 04:55:31            0        0 Spine_S2
-Ethernet124     4      65000       308       314        0    0    0 04:55:26            0        0 Spine_S1
-
-Total number of neighbors 5
+nh1221@R620:~$
+nh1221@R620:~$
 nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.98
 
 
@@ -80,168 +16,32 @@ nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.98
 
 Press F1 for help
 
-[admin@Exit_Router1] > /routing/bgp/session/print
+[admin@Exit_Router1] > /interface print
+Flags: R - RUNNING
+Columns: NAME, TYPE, ACTUAL-MTU, MAC-ADDRESS
+#   NAME    TYPE      ACTUAL-MTU  MAC-ADDRESS
+0 R ether1  ether           1500  52:54:00:09:95:29
+1 R ether2  ether           1500  52:54:00:0F:CD:FB
+2 R lo      loopback       65536  00:00:00:00:00:00
+[admin@Exit_Router1] > /ping 10.0.253.0 count=3
+  SEQ HOST                                     SIZE TTL TIME       STATUS
+    0 10.0.253.0                                 56  64 1ms418us
+    1 10.0.253.0                                 56  64 1ms302us
+    2 10.0.253.0                                 56  64 1ms33us
+    sent=3 received=3 packet-loss=0% min-rtt=1ms33us avg-rtt=1ms251us max-rtt=1ms418us
+
+[admin@Exit_Router1] > /routing bgp session print detail
 Flags: E - established
  0   name="to-BL1-1"
      remote.address=10.0.253.0 .as=0 .hold-time=infinity
      local.address=10.0.253.1 .as=65253 .id=10.0.253.1 .cluster-id=10.0.253.1 .capabilities=mp,rr,gr,as4 .afi=ip ebgp
      prefix-count=0
-[admin@Exit_Router1] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to-BL1"
-     remote.address=10.0.253.0 .as=65021
-     local.default-address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.253.1 as=65253
-[admin@Exit_Router1] > /routing bgp connection remove [find]
-[admin@Exit_Router1] > /routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 router-id=10.0.253.1 local.role=ebgp
-[admin@Exit_Router1] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to-BL1"
-     remote.address=10.0.253.0 .as=65021
-     local.default-address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.253.1 as=65253
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router1] > exit
-bad command name exit (line 1 column 1)
-[admin@Exit_Router1] > quit
-interrupted
-Connection to 172.16.2.98 closed.
-nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.99
-
-
-
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
-
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
-
-
-Press F1 for help
-
-[admin@Exit_Router2] > /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router2] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
- 0 I ;;; cannot listen to incoming connections, missing 'local-address'
-     name="to-BL2"
-     remote.address=10.0.253.2 .as=65022
-     local.role=ebgp
-     routing-table=main router-id=10.0.253.3 as=65254
-[admin@Exit_Router2] > /routing bgp connection remove [find]
-[admin@Exit_Router2] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
-[admin@Exit_Router2] > /routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 router-id=10.0.253.3 local.role=ebgp
-[admin@Exit_Router2] > /routing bgp connection print
-Flags: D - dynamic, X - disabled, I - inactive
- 0 I ;;; cannot listen to incoming connections, missing 'local-address'
-     name="to-BL2"
-     remote.address=10.0.253.2 .as=65022
-     local.role=ebgp
-     routing-table=main router-id=10.0.253.3 as=65254
-[admin@Exit_Router2] > quit
-   errupted                                                                                                                                                                                                                                                                     onnection to 172.16.2.99 closed.
-
-nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.31's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 18
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       329       321        0    0    0 05:00:35            4       14 HostB12_1
-Ethernet24      4      65107       319       332        0    0    0 05:00:18            4       14 HostB12_2
-Ethernet28      4      65108       177       329        0    0    0 00:11:23            4       14 MonitorSrv
-Ethernet120     4      65000       319       323        0    0    0 05:04:53            6       14 Spine_S2
-Ethernet124     4      65000       319       323        0    0    0 05:04:51            6       14 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       329       321        0    0    0 05:00:35        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       319       332        0    0    0 05:00:18        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       177       329        0    0    0 00:11:23        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       319       323        0    0    0 05:04:53            0        0 Spine_S2
-Ethernet124     4      65000       319       323        0    0    0 05:04:51            0        0 Spine_S1
-                                                                                                                                                                                                                                                                                otal number of neighbors 5
-
-nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.32's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 21
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       327       336        0    0    0 00:06:33           12       14 HostB12_1
-Ethernet24      4      65107       310       323        0    0    0 04:46:33           12       14 HostB12_2
-Ethernet28      4      65108       197       368        0    0    0 00:10:16           12       14 MonitorSrv
-Ethernet120     4      65000       319       326        0    0    0 05:04:49            8       14 Spine_S2
-Ethernet124     4      65000       319       326        0    0    0 05:04:44            8       14 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       327       336        0    0    0 00:06:33        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       310       323        0    0    0 04:46:33        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       197       368        0    0    0 00:10:16        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       319       326        0    0    0 05:04:49            0        0 Spine_S2
-Ethernet124     4      65000       319       326        0    0    0 05:04:44            0        0 Spine_S1
-
-Total number of neighbors 5
-nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.98
-
-
-
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
-
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
-
-
-Press F1 for help
-
-[admin@Exit_Router1] > /routing bgp connection remove [find]
-[admin@Exit_Router1] > /routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 local.address=10.0.253.1 router-id=10.0.253.1 local.role=ebgp
-[admin@Exit_Router1] > /routing bgp connection print
+[admin@Exit_Router1] > /routing bgp connection print detail
 Flags: D - dynamic, X - disabled, I - inactive
  0   name="to-BL1"
      remote.address=10.0.253.0 .as=65021
      local.address=10.0.253.1 .role=ebgp
      routing-table=main router-id=10.0.253.1 as=65253
-[admin@Exit_Router1] > /routing bgp session print
-Flags: E - established
- 0   name="to-BL1-1"
-     remote.address=10.0.253.0 .as=0 .hold-time=infinity
-     local.address=10.0.253.1 .as=65253 .id=10.0.253.1 .cluster-id=10.0.253.1 .capabilities=mp,rr,gr,as4 .afi=ip ebgp
-     prefix-count=0
 [admin@Exit_Router1] > quit
 interrupted
 Connection to 172.16.2.98 closed.
@@ -261,18 +61,37 @@ nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.99
 
 Press F1 for help
 
-[admin@Exit_Router2] > /routing bgp connection remove [find]
-[admin@Exit_Router2] > /routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 local.address=10.0.253.3 router-id=10.0.253.3 local.role=ebgp
-[admin@Exit_Router2] > /routing bgp connection print
+[admin@Exit_Router2] > /interface print
+Flags: R - RUNNING
+Columns: NAME, TYPE, ACTUAL-MTU, MAC-ADDRESS
+#   NAME    TYPE      ACTUAL-MTU  MAC-ADDRESS
+0 R ether1  ether           1500  52:54:00:41:CB:8D
+1 R ether3  ether           1500  52:54:00:CF:AF:EF
+2 R lo      loopback       65536  00:00:00:00:00:00
+[admin@Exit_Router2] > /ip address print
+Flags: I - INVALID, D - DYNAMIC
+Columns: ADDRESS, NETWORK, INTERFACE
+#   ADDRESS         NETWORK     INTERFACE
+;;; loopback
+0   10.0.99.2/32    10.0.99.2   lo
+;;; fabric_Border_Leaf2
+1 I 10.0.253.3/31   10.0.253.2  *3
+2 D 172.16.2.99/24  172.16.2.0  ether1
+[admin@Exit_Router2] > /ping 10.0.253.2 count=3
+  SEQ HOST                                     SIZE TTL TIME       STATUS
+    0 10.0.253.2                                                   timeout
+    1 10.0.253.2                                                   timeout
+    2 10.0.253.2                                                   timeout
+    sent=3 received=0 packet-loss=100%
+
+[admin@Exit_Router2] > /routing bgp session print detail
+Flags: E - established
+[admin@Exit_Router2] > /routing bgp connection print detail
 Flags: D - dynamic, X - disabled, I - inactive
  0   name="to-BL2"
      remote.address=10.0.253.2 .as=65022
      local.address=10.0.253.3 .role=ebgp
      routing-table=main router-id=10.0.253.3 as=65254
-[admin@Exit_Router2] > /routing bgp session print
-Flags: E - established
-[admin@Exit_Router2] > /routing bgp session print
-Flags: E - established
 [admin@Exit_Router2] > quit
 interrupted
 Connection to 172.16.2.99 closed.
@@ -286,11 +105,11 @@ RIB entries 27, using 6048 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       343       336        0    0    0 05:15:06            4       14 HostB12_1
-Ethernet24      4      65107       333       346        0    0    0 05:14:49            4       14 HostB12_2
-Ethernet28      4      65108       192       343        0    0    0 00:25:54            4       14 MonitorSrv
-Ethernet120     4      65000       334       338        0    0    0 05:19:24            6       14 Spine_S2
-Ethernet124     4      65000       334       338        0    0    0 05:19:22            6       14 Spine_S1
+Ethernet20      4      65106       362       354        0    0    0 05:33:59            4       14 HostB12_1
+Ethernet24      4      65107       352       365        0    0    0 05:33:42            4       14 HostB12_2
+Ethernet28      4      65108       211       362        0    0    0 00:44:47            4       14 MonitorSrv
+Ethernet120     4      65000       353       357        0    0    0 05:38:17            6       14 Spine_S2
+Ethernet124     4      65000       353       357        0    0    0 05:38:15            6       14 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -302,44 +121,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       343       336        0    0    0 05:15:06        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       333       346        0    0    0 05:14:49        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       192       343        0    0    0 00:25:54        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       334       338        0    0    0 05:19:24            0        0 Spine_S2
-Ethernet124     4      65000       334       338        0    0    0 05:19:22            0        0 Spine_S1
-
-Total number of neighbors 5
-nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.31's password:
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 18
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       343       336        0    0    0 05:15:27            4       14 HostB12_1
-Ethernet24      4      65107       334       347        0    0    0 05:15:10            4       14 HostB12_2
-Ethernet28      4      65108       192       344        0    0    0 00:26:15            4       14 MonitorSrv
-Ethernet120     4      65000       334       338        0    0    0 05:19:45            6       14 Spine_S2
-Ethernet124     4      65000       334       338        0    0    0 05:19:43            6       14 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       343       336        0    0    0 05:15:27        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       334       347        0    0    0 05:15:10        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       192       344        0    0    0 00:26:15        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       334       338        0    0    0 05:19:45            0        0 Spine_S2
-Ethernet124     4      65000       334       338        0    0    0 05:19:43            0        0 Spine_S1
+Ethernet20      4      65106       362       354        0    0    0 05:33:59        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       352       365        0    0    0 05:33:42        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108       211       362        0    0    0 00:44:47        NoNeg    NoNeg MonitorSrv
+Ethernet120     4      65000       353       357        0    0    0 05:38:17            0        0 Spine_S2
+Ethernet124     4      65000       353       357        0    0    0 05:38:15            0        0 Spine_S1
 
 Total number of neighbors 5
 nh1221@R620:~$ ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
@@ -352,11 +138,11 @@ RIB entries 27, using 6048 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       342       351        0    0    0 00:21:18           12       14 HostB12_1
-Ethernet24      4      65107       325       338        0    0    0 05:01:18           12       14 HostB12_2
-Ethernet28      4      65108       212       383        0    0    0 00:25:01           12       14 MonitorSrv
-Ethernet120     4      65000       334       341        0    0    0 05:19:34            8       14 Spine_S2
-Ethernet124     4      65000       334       341        0    0    0 05:19:29            8       14 Spine_S1
+Ethernet20      4      65106       360       369        0    0    0 00:39:52           12       14 HostB12_1
+Ethernet24      4      65107       344       356        0    0    0 05:19:52           12       14 HostB12_2
+Ethernet28      4      65108       231       401        0    0    0 00:43:35           12       14 MonitorSrv
+Ethernet120     4      65000       353       360        0    0    0 05:38:08            8       14 Spine_S2
+Ethernet124     4      65000       353       360        0    0    0 05:38:03            8       14 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
 
 Total number of neighbors 6
@@ -368,11 +154,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       342       351        0    0    0 00:21:18        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       325       338        0    0    0 05:01:18        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       212       383        0    0    0 00:25:01        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       334       341        0    0    0 05:19:34            0        0 Spine_S2
-Ethernet124     4      65000       334       341        0    0    0 05:19:29            0        0 Spine_S1
+Ethernet20      4      65106       360       369        0    0    0 00:39:52        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       344       356        0    0    0 05:19:52        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108       231       401        0    0    0 00:43:35        NoNeg    NoNeg MonitorSrv
+Ethernet120     4      65000       353       360        0    0    0 05:38:08            0        0 Spine_S2
+Ethernet124     4      65000       353       360        0    0    0 05:38:03            0        0 Spine_S1
 
 Total number of neighbors 5
 nh1221@R620:~$
