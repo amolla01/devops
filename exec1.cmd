@@ -659,3 +659,40 @@ virsh console Exit_Router2
 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
 
 All three neighbors (MonitorSrv, ER1, ER2) should transition to Established.
+
+
+ZZZZZZZZZZZZZZZZZZZZZZZZZ==19th==ZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+Great progress! MonitorSrv is now Established on both BL1 and BL2. The remaining issue is ER1 and ER2 BGP still showing "Connect" and "Active".
+
+Looking at the problems:
+
+ER1: The BGP session shows remote.as=0 in the session output even after re-adding the connection. Also notice the connection still shows local.default-address=10.0.253.1 — this is good. But the session print showed remote.as=0 which means the old stale session is still lingering. Wait, but we removed and re-added... Actually looking more carefully, after the remove and re-add:
+
+The connection configuration looks correct now with the proper remote address and AS number set. But the session disappeared from the output entirely and hasn't re-established yet, while BL1 is still stuck in "Connect" state trying to reach ER1.
+
+I'm wondering if the issue is that ER1 needs local.address specified explicitly instead of relying on local.default-address — even though the IP 10.0.253.1 is definitely configured on the interface, RouterOS might not be binding the BGP session to it correctly without an explicit local address setting. The error message from ER2 confirms it's missing the local.address binding, so I need to add local.address=10.0.253.1 for ER1 and local.address=10.0.253.3 for ER2 to fix the BGP peer connections.
+
+MonitorSrv is now Established on both BL1 and BL2 — great!
+
+The ER BGP issue is clear from ER2's error message: cannot listen to incoming connections, missing 'local-address'
+
+The add command used router-id= but didn't set local.address=. RouterOS needs local.address to bind and accept incoming BGP connections. Fix both:
+
+ssh -i ~/id_dc_lab admin@172.16.2.98
+/routing bgp connection remove [find]
+/routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 local.address=10.0.253.1 router-id=10.0.253.1 local.role=ebgp
+/routing bgp connection print
+# wait 10s then:
+/routing bgp session print
+# quit (Ctrl+C)
+
+ssh -i ~/id_dc_lab admin@172.16.2.99
+/routing bgp connection remove [find]
+/routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 local.address=10.0.253.3 router-id=10.0.253.3 local.role=ebgp
+/routing bgp connection print
+# wait 10s then:
+/routing bgp session print
+# quit (Ctrl+C)
+
+
+The key difference: local.address=10.0.253.X tells RouterOS which IP to bind TCP:179 on. Without it, it can't accept inbound connections from BL1/BL2.
