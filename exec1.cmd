@@ -751,3 +751,57 @@ Then after ~30s verify from BL:
 
 sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
 
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT==22th==TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+
+
+
+Run these diagnostics on R620:
+# 1. Check if BL1 has an IP on Ethernet0 (the ER-facing interface)
+sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show interface Ethernet0'"
+
+# 2. Check the FRR running config for the ER neighbor
+sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show running-config'" | grep -A10 "10.0.253"
+
+# 3. Check if BL1 can reach ER1's data IP
+sshpass -p amolla01 ssh admin@172.16.2.31 "ping -c 3 10.0.253.1"
+
+# 4. Check ER1 firewall (MikroTik default rules may block port 179)
+ssh -i ~/id_dc_lab admin@172.16.2.98 "/ip firewall filter print"
+
+BL1's Ethernet0 has no IP — it uses ipv6_use_link_local_only (unnumbered), so there's no 10.0.253.0/31 on it. BL1 can't source TCP from that IP. ER1's ping reply works because it goes via a different path.
+MikroTik firewall blocking TCP:179 on ether2.
+
+The same root cause applies to both BL1↔ER1 and BL2↔ER2. The symptoms are identical:
+
+ER can ping BL's /31 IP ✓ (L2 path works, both OVS bridges have 2 ports)
+ER has a session with remote.as=0 (TCP established on ER side, but OPEN never exchanged)
+BL shows "Connect" forever (TCP SYN sent, never gets SYN-ACK or the connection isn't recognized)
+MsgRcvd=0, MsgSent=0 on BL side — no BGP messages at all
+This means TCP:179 isn't completing from BL's perspective. The issue is almost certainly one of:
+
+MikroTik firewall blocking inbound TCP:179 on the data interface (ether2/ether3)
+BL's Ethernet0 has no IPv4 — uses link-local only, so FRR can't source TCP from 10.0.253.x
+Run these — they'll pinpoint which one:
+# Check BL1's Ethernet0 IP config
+sshpass -p amolla01 ssh admin@172.16.2.31 "show ip interface Ethernet0"
+
+# Check BL2's Ethernet0 IP config
+sshpass -p amolla01 ssh admin@172.16.2.32 "show ip interface Ethernet0"
+
+# Check BL1's FRR neighbor config for ER
+sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show running-config'" 2>/dev/null | grep -B2 -A10 "10.0.253"
+
+# Check MikroTik firewall on ER1
+ssh -i ~/id_dc_lab admin@172.16.2.98 "/ip firewall filter print"
+
+If the firewall has rules, flush them:
+
+/ip firewall filter remove [find]
+
+If Ethernet0 has no IPv4, add it:
+
+sshpass -p amolla01 ssh admin@172.16.2.31 "sudo config interface ip add Ethernet0 10.0.253.0/31"
+sshpass -p amolla01 ssh admin@172.16.2.32 "sudo config interface ip add Ethernet0 10.0.253.2/31"
+
+
+
