@@ -716,3 +716,38 @@ ssh -i ~/id_dc_lab admin@172.16.2.99
 /ip address print
 quit
 ER2 likely has ether1 only (its data NIC might be named ether1 if the management NIC got renamed or removed during the rebuild). We need to see what interfaces exist and which one is connected to br-BL2-ER2, then add the IP to the correct interface.
+
+
+OOOOOOOOOOOOOOOOOOOOOOOOOOO==21th==OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+
+Now I see both problems clearly:
+
+ER2: Interface is ether3 (not ether2!), and the IP 10.0.253.3/31 is bound to interface *3 (INVALID — the I flag). Ping fails because the IP is on a non-existent interface.
+
+ER1: Has a stale BGP session (remote.as=0) that won't clear — the routing daemon needs a kick.
+
+Fix both now:
+
+# ── ER2: Fix interface + IP ──
+ssh -i ~/id_dc_lab admin@172.16.2.99
+/ip address remove [find where address="10.0.253.3/31"]
+/ip address add address=10.0.253.3/31 interface=ether3
+/interface enable ether3
+/ping 10.0.253.2 count=3
+# BGP connection already correct (local.address=10.0.253.3)
+# Just verify:
+/routing bgp connection print
+quit
+
+# ── ER1: Clear stale BGP session ──
+ssh -i ~/id_dc_lab admin@172.16.2.98
+/routing/bgp/connection/disable [find]
+:delay 3
+/routing/bgp/connection/enable [find]
+/routing/bgp/session/print
+quit
+
+Then after ~30s verify from BL:
+
+sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
+
