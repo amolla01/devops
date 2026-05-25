@@ -1,132 +1,237 @@
-nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.98
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show interface Ethernet0'"
+Interface Ethernet0 is up, line protocol is up
+  Link ups:       1    last: 2026/05/25 00:51:47.92
+  Link downs:     0    last: (never)
+  vrf: default
+  index 299 metric 0 mtu 1500 speed 10
+  flags: <UP,BROADCAST,RUNNING,MULTICAST>
+  Type: Ethernet
+  HWaddr: 00:e0:ec:57:12:01
+  inet 10.0.253.0/31
+  inet6 fe80::2e0:ecff:fe57:1201/64
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show running-config'" | grep -A10 "10.0.253"
+ neighbor 10.0.253.1 remote-as 65253
+ neighbor 10.0.253.1 description Exit_Router1
+ neighbor 10.0.253.1 update-source Ethernet0
+ neighbor 10.0.253.1 timers 60 180
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet20 soft-reconfiguration inbound
+  neighbor Ethernet24 activate
+  neighbor Ethernet24 soft-reconfiguration inbound
+  neighbor Ethernet28 activate
+  neighbor Ethernet28 soft-reconfiguration inbound
+  neighbor Ethernet120 activate
+--
+  neighbor 10.0.253.1 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+  neighbor Ethernet124 activate
+ exit-address-family
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "ping -c 3 10.0.253.1"
+PING 10.0.253.1 (10.0.253.1) 56(84) bytes of data.
+64 bytes from 10.0.253.1: icmp_seq=1 ttl=64 time=1.47 ms
+64 bytes from 10.0.253.1: icmp_seq=2 ttl=64 time=1.61 ms
+64 bytes from 10.0.253.1: icmp_seq=3 ttl=64 time=1.23 ms
 
+--- 10.0.253.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 1.231/1.436/1.610/0.156 ms
+nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.98 "/ip firewall filter print"
+Flags: X - disabled, I - invalid; D - dynamic
+ 0    ;;; accept-established
+      chain=input action=accept connection-state=established,related
 
+ 1    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
 
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+ 2    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
 
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+ 3    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
 
+ 4    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-Press F1 for help
+ 5    ;;; drop-all-else
+      chain=input action=drop
 
-[admin@Exit_Router1] > /routing/bgp/connection/disable [find]
-[admin@Exit_Router1] > :delay 3
-[admin@Exit_Router1] > /routing/bgp/connection/enable [find]
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router1] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to-BL1"
-     remote.address=10.0.253.0 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.253.1 as=65253
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
-[admin@Exit_Router1] > /routing/bgp/connection/disable [find]
-[admin@Exit_Router1] > :delay 30
-[admin@Exit_Router1] > /routing/bgp/connection/enable [find]
-[admin@Exit_Router1] > /routing/bgp/connection/print
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to-BL1"
-     remote.address=10.0.253.0 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     routing-table=main router-id=10.0.253.1 as=65253
-[admin@Exit_Router1] > /routing/bgp/session/print
-Flags: E - established
- 0   name="to-BL1-1"
-     remote.address=10.0.253.0 .as=0 .hold-time=infinity
-     local.address=10.0.253.1 .as=65253 .id=10.0.253.1 .cluster-id=10.0.253.1 .capabilities=mp,rr,gr,as4 .afi=ip ebgp
-     prefix-count=0
-[admin@Exit_Router1] > /ping 10.0.253.0 count=3
-  SEQ HOST                                     SIZE TTL TIME       STATUS
-    0 10.0.253.0                                 56  64 7ms611us
-    1 10.0.253.0                                 56  64 855us
-    2 10.0.253.0                                 56  64 1ms371us
-    sent=3 received=3 packet-loss=0% min-rtt=855us avg-rtt=3ms279us max-rtt=7ms611us
+ 6    ;;; fwd-established
+      chain=forward action=accept connection-state=established,related
 
-[admin@Exit_Router1] > quit
-interrupted
-Connection to 172.16.2.98 closed.
-nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.99
+ 7    ;;; fwd-fabric-out
+      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
 
+ 8    ;;; drop-invalid-fwd
+      chain=forward action=drop connection-state=invalid
 
+ 9    ;;; accept-established
+      chain=input action=accept connection-state=established,related
 
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+10    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
 
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+11    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
 
+12    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
 
-Press F1 for help
+13    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-[admin@Exit_Router2] > /ip address remove [find where address="10.0.253.3/31"]
-[admin@Exit_Router2] > /ip address add address=10.0.253.3/31 interface=ether3
-[admin@Exit_Router2] > /interface enable ether3
-[admin@Exit_Router2] > /ping 10.0.253.2 count=3
-  SEQ HOST                                     SIZE TTL TIME       STATUS
-    0 10.0.253.2                                 56  64 5ms589us
-    1 10.0.253.2                                 56  64 1ms283us
-    2 10.0.253.2                                 56  64 1ms376us
-    sent=3 received=3 packet-loss=0% min-rtt=1ms283us avg-rtt=2ms749us max-rtt=5ms589us
+14    ;;; drop-all-else
+      chain=input action=drop
 
-[admin@Exit_Router2] > /routing bgp connection print
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to-BL2"
-     remote.address=10.0.253.2 .as=65022
-     local.address=10.0.253.3 .role=ebgp
-     routing-table=main router-id=10.0.253.3 as=65254
-[admin@Exit_Router2] > /routing bgp session print
-Flags: E - established
- 0   remote.address=10.0.253.2 .as=0 .hold-time=infinity
-     local.address=10.0.253.3 .as=0 ebgp
-     prefix-count=0
-[admin@Exit_Router2] > quit
-interrupted
-Connection to 172.16.2.99 closed.
-nh1221@R620:~$ ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
-admin@172.16.2.31's password:
+15    ;;; fwd-established
+      chain=forward action=accept connection-state=established,related
 
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 18
-RIB entries 27, using 6048 bytes of memory
-Peers 6, using 4348 KiB of memory
+16    ;;; fwd-fabric-out
+      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
 
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       376       369        0    0    0 05:48:30            4       14 HostB12_1
-Ethernet24      4      65107       367       380        0    0    0 05:48:13            4       14 HostB12_2
-Ethernet28      4      65108       225       377        0    0    0 00:59:18            4       14 MonitorSrv
-Ethernet120     4      65000       367       371        0    0    0 05:52:48            6       14 Spine_S2
-Ethernet124     4      65000       367       371        0    0    0 05:52:46            6       14 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+17    ;;; drop-invalid-fwd
+      chain=forward action=drop connection-state=invalid
 
-Total number of neighbors 6
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "show ip interface Ethernet0"
+Usage: show ip interface [OPTIONS] COMMAND [ARGS]...
+Try "show ip interface -h" for help.
 
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       376       369        0    0    0 05:48:30        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       367       380        0    0    0 05:48:13        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       225       377        0    0    0 00:59:18        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       367       371        0    0    0 05:52:48            0        0 Spine_S2
-Ethernet124     4      65000       367       371        0    0    0 05:52:46            0        0 Spine_S1
-
-Total number of neighbors 5
+Error: No such command "Ethernet0".
 nh1221@R620:~$
 nh1221@R620:~$
+nh1221@R620:~$
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.32 "show ip interface Ethernet0"
+Usage: show ip interface [OPTIONS] COMMAND [ARGS]...
+Try "show ip interface -h" for help.
+
+Error: No such command "Ethernet0".
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show interface Ethernet0'"
+Interface Ethernet0 is up, line protocol is up
+  Link ups:       1    last: 2026/05/25 02:47:33.66
+  Link downs:     3    last: 2026/05/25 02:47:31.93
+  vrf: default
+  index 259 metric 0 mtu 1500 speed 10
+  flags: <UP,BROADCAST,RUNNING,MULTICAST>
+  Type: Ethernet
+  HWaddr: 00:e0:ec:57:12:02
+  inet 10.0.253.2/31
+  inet6 fe80::2e0:ecff:fe57:1202/64
+  Interface Type Other
+  Interface Slave Type None
+  protodown: off
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show running-config'" 2>/dev/null | grep -B2 -A10 "10.0.253"
+ neighbor Ethernet124 interface v6only remote-as external
+ neighbor Ethernet124 description Spine_S1
+ neighbor 10.0.253.3 remote-as 65254
+ neighbor 10.0.253.3 description Exit_Router2
+ neighbor 10.0.253.3 update-source Ethernet0
+ neighbor 10.0.253.3 timers 60 180
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet20 soft-reconfiguration inbound
+  neighbor Ethernet24 activate
+  neighbor Ethernet24 soft-reconfiguration inbound
+  neighbor Ethernet28 activate
+  neighbor Ethernet28 soft-reconfiguration inbound
+  neighbor Ethernet120 activate
+  neighbor Ethernet124 activate
+  neighbor 10.0.253.3 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+  neighbor Ethernet124 activate
+ exit-address-family
+nh1221@R620:~$ ssh -i ~/id_dc_lab admin@172.16.2.99 "/ip firewall filter print"
+Flags: X - disabled, I - invalid; D - dynamic
+ 0    ;;; accept-established
+      chain=input action=accept connection-state=established,related
+
+ 1    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
+
+ 2    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
+
+ 3    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
+
+ 4    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+ 5    ;;; drop-all-else
+      chain=input action=drop
+
+ 6    ;;; fwd-established
+      chain=forward action=accept connection-state=established,related
+
+ 7    ;;; fwd-fabric-out
+      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
+
+ 8    ;;; drop-invalid-fwd
+      chain=forward action=drop connection-state=invalid
+
+ 9    ;;; accept-established
+      chain=input action=accept connection-state=established,related
+
+10    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
+
+11    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
+
+12    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
+
+13    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+14    ;;; drop-all-else
+      chain=input action=drop
+
+15    ;;; fwd-established
+      chain=forward action=accept connection-state=established,related
+
+16    ;;; fwd-fabric-out
+      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
+
+17    ;;; drop-invalid-fwd
+      chain=forward action=drop connection-state=invalid
+
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "sudo config interface ip add Ethernet0 10.0.253.0/31"
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.32 "sudo config interface ip add Ethernet0 10.0.253.2/31"
+nh1221@R620:~$ sshpass -p amolla01 ssh admin@Border_Leaf1 "docker exec bgp vtysh -c 'show bgp summary'"
+ssh: Could not resolve hostname border_leaf1: Name or service not known
 nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
 
 IPv4 Unicast Summary (VRF default):
@@ -136,11 +241,11 @@ RIB entries 27, using 6048 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       377       370        0    0    0 05:49:18            4       14 HostB12_1
-Ethernet24      4      65107       368       381        0    0    0 05:49:01            4       14 HostB12_2
-Ethernet28      4      65108       226       378        0    0    0 01:00:06            4       14 MonitorSrv
-Ethernet120     4      65000       368       372        0    0    0 05:53:36            6       14 Spine_S2
-Ethernet124     4      65000       368       372        0    0    0 05:53:34            6       14 Spine_S1
+Ethernet20      4      65106       414       407        0    0    0 06:26:26            4       14 HostB12_1
+Ethernet24      4      65107       405       418        0    0    0 06:26:09            4       14 HostB12_2
+Ethernet28      4      65108       263       415        0    0    0 01:37:14            4       14 MonitorSrv
+Ethernet120     4      65000       405       409        0    0    0 06:30:44            6       14 Spine_S2
+Ethernet124     4      65000       405       409        0    0    0 06:30:42            6       14 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -152,17 +257,13 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       377       370        0    0    0 05:49:18        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       368       381        0    0    0 05:49:01        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       226       378        0    0    0 01:00:06        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       368       372        0    0    0 05:53:36            0        0 Spine_S2
-Ethernet124     4      65000       368       372        0    0    0 05:53:34            0        0 Spine_S1
+Ethernet20      4      65106       414       407        0    0    0 06:26:26        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       405       418        0    0    0 06:26:09        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108       263       415        0    0    0 01:37:14        NoNeg    NoNeg MonitorSrv
+Ethernet120     4      65000       405       409        0    0    0 06:30:44            0        0 Spine_S2
+Ethernet124     4      65000       405       409        0    0    0 06:30:42            0        0 Spine_S1
 
 Total number of neighbors 5
-nh1221@R620:~$
-nh1221@R620:~$
-nh1221@R620:~$
-nh1221@R620:~$
 nh1221@R620:~$ sshpass -p amolla01 ssh admin@172.16.2.32 "docker exec bgp vtysh -c 'show bgp summary'"
 
 IPv4 Unicast Summary (VRF default):
@@ -172,11 +273,11 @@ RIB entries 27, using 6048 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       376       385        0    0    0 00:55:10           12       14 HostB12_1
-Ethernet24      4      65107       359       372        0    0    0 05:35:10           12       14 HostB12_2
-Ethernet28      4      65108       246       416        0    0    0 00:58:53           12       14 MonitorSrv
-Ethernet120     4      65000       368       375        0    0    0 05:53:26            8       14 Spine_S2
-Ethernet124     4      65000       368       375        0    0    0 05:53:21            8       14 Spine_S1
+Ethernet20      4      65106       413       422        0    0    0 01:32:26           12       14 HostB12_1
+Ethernet24      4      65107       396       409        0    0    0 06:12:26           12       14 HostB12_2
+Ethernet28      4      65108       283       454        0    0    0 01:36:09           12       14 MonitorSrv
+Ethernet120     4      65000       405       412        0    0    0 06:30:42            8       14 Spine_S2
+Ethernet124     4      65000       405       412        0    0    0 06:30:37            8       14 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
 
 Total number of neighbors 6
@@ -188,11 +289,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       376       385        0    0    0 00:55:10        NoNeg    NoNeg HostB12_1
-Ethernet24      4      65107       359       372        0    0    0 05:35:10        NoNeg    NoNeg HostB12_2
-Ethernet28      4      65108       246       416        0    0    0 00:58:53        NoNeg    NoNeg MonitorSrv
-Ethernet120     4      65000       368       375        0    0    0 05:53:26            0        0 Spine_S2
-Ethernet124     4      65000       368       375        0    0    0 05:53:21            0        0 Spine_S1
+Ethernet20      4      65106       413       422        0    0    0 01:32:26        NoNeg    NoNeg HostB12_1
+Ethernet24      4      65107       396       409        0    0    0 06:12:26        NoNeg    NoNeg HostB12_2
+Ethernet28      4      65108       283       454        0    0    0 01:36:09        NoNeg    NoNeg MonitorSrv
+Ethernet120     4      65000       405       412        0    0    0 06:30:42            0        0 Spine_S2
+Ethernet124     4      65000       405       412        0    0    0 06:30:37            0        0 Spine_S1
 
 Total number of neighbors 5
 nh1221@R620:~$
