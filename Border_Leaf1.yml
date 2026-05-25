@@ -22,8 +22,9 @@
 #   and Ethernet120 (index 35) → eth31 → NIC31 → br-BL1-S2 ✓
 #
 # Exit Router Wiring:
-#   Ethernet0  (Ethernet1/1, QSFP+1 breakout sub0) ↔ Exit_Router1 sfp+port1 (10G)
-#   (QSFP+ Ethernet0 broken out 4x10G; lanes 13,14,15,16)
+#   Ethernet0  (lane 9, after 4x10G breakout of QSFP+5) ↔ Exit_Router1 ether2 (10G)
+#   KVM VS naming: parent Ethernet0 (lanes 9-12) splits into Ethernet0/1/2/3
+#   (Ethernet0=lane9, Ethernet1=lane10, Ethernet2=lane11, Ethernet3=lane12)
 #
 # Server Wiring:
 #   Ethernet20 (Ethernet6/1, QSFP+6 breakout sub0) ↔ HostB12_1 eth1 (10G)
@@ -73,62 +74,93 @@ uplink_interfaces:
     neighbor_asn: "{{ spine_asn }}"
     description: "Border_Leaf1 → Spine_S2 (Celestica DX010)"
 
-# ---- Exit router downlink (QSFP+ port 1 broken out 4x10G, using sub-port 0) ----
+# ---- Exit router downlink (QSFP+5 / Ethernet0 broken out 4x10G) ----
 # Point-to-point /31 link: Border_Leaf1 (10.0.253.0) ↔ Exit_Router1 (10.0.253.1)
+#
+# CRITICAL: Ethernet0 (QSFP+5, lanes 9-12, index 5) shares ASIC lanes with
+# the four front-panel 10G SFP+ ports (sfp1-4). They are MUTUALLY EXCLUSIVE.
+#   - Default 1x40G[10G] mode: QSFP+5 (Ethernet0/Ethernet5/1) active, SFP+ dead
+#   - After 4x10G breakout:   Ethernet5/1, 5/2, 5/3, 5/4 each at 10G
+#   - After 3x10G+1x1G:       Ethernet1-4 (SFP+ ports) active, QSFP+5 dead
+#
+# Platform.json breakout modes for Ethernet0:
+#   "1x40G[10G]"         → ["Ethernet5/1"]
+#   "4x10G"              → ["Ethernet5/1","Ethernet5/2","Ethernet5/3","Ethernet5/4"]
+#   "3x10G(3)+1x1G(1)"  → ["Ethernet1","Ethernet2","Ethernet3","Ethernet4"]
+#   "2x20G[10G]"         → ["Ethernet5/1","Ethernet5/3"]
+#
+# After breakout 4x10G:
+#   Parent Ethernet0 (lanes 9,10,11,12) disappears.
+#   Sub-port Ethernet5/1 (lane 9) is created at 10G — used for exit router.
+#   Sub-ports Ethernet5/2-4 (lanes 10,11,12) available for future use.
 exit_interfaces:
   - port: "Ethernet0"
+    parent_port: "Ethernet0"
+    breakout_mode: "4x10G"
     alias: "Ethernet5/1"
-    lanes: "9,10,11,12"
+    lanes: "9"
     index: "5"
     speed: "10000"
+    mtu: "1500"
     neighbor: "Exit_Router1"
     neighbor_port: "ether2"
     neighbor_asn: 65253
     local_ip: "10.0.253.0/31"
     neighbor_ip: "10.0.253.1"
-    description: "Border_Leaf1 → Exit_Router1 CRS326 sfp+port1 (10G breakout)"
+    description: "Border_Leaf1 → Exit_Router1 (10G, KVM breakout Ethernet0 lane9)"
 
-# ---- Server downlinks ----
-# NOTE: SONiC VS does not support QSFP breakout sub-ports for data-plane.
-# KVM VS maps vNIC position → port_config.ini index → native QSFP port.
-#   Position 6 (NIC6) → index 6 → Ethernet20  (br-HB-BL1)   ← HostB12_1
-#   Position 7 (NIC7) → index 7 → Ethernet24  (br-HB2-BL1)  ← HostB12_2
-#   Position 8 (NIC8) → index 8 → Ethernet28  (br-MS-BL1)   ← MonitorSrv
-# On physical hardware, these would be Ethernet20/21/22 (4x10G breakout of QSFP+6).
+# ---- Server downlinks (native QSFP+ ports, no breakout in KVM VS) ----
+# Platform.json verified port mappings (Arista 7050QX-32S):
+#   Ethernet20: index 10, lanes 25,26,27,28, alias Ethernet10/1 (QSFP+10)
+#   Ethernet24: index 11, lanes 33,34,35,36, alias Ethernet11/1 (QSFP+11)
+#   Ethernet28: index 12, lanes 37,38,39,40, alias Ethernet12/1 (QSFP+12)
+#
+# KVM VS maps: NIC position = index - 4 → Ethernet20(idx10)=eth6, Ethernet24(idx11)=eth7, etc.
 downlink_interfaces:
   - port: "Ethernet20"
-    alias: "Ethernet6/1"
-    lanes: "21,22,23,24"
-    index: "6"
+    alias: "Ethernet10/1"
+    lanes: "25,26,27,28"
+    index: "10"
     speed: "40000"
     neighbor: "HostB12_1"
     neighbor_port: "eth1"
-    description: "Border_Leaf1 → HostB12_1 eth1 (QSFP+6, VS native port)"
+    neighbor_asn: 65106
+    description: "Border_Leaf1 → HostB12_1 eth1 (QSFP+10, native 40G)"
 
   - port: "Ethernet24"
-    alias: "Ethernet7/1"
-    lanes: "25,26,27,28"
-    index: "7"
+    alias: "Ethernet11/1"
+    lanes: "33,34,35,36"
+    index: "11"
     speed: "40000"
     neighbor: "HostB12_2"
     neighbor_port: "eth1"
-    description: "Border_Leaf1 → HostB12_2 eth1 (QSFP+7, VS native port)"
+    neighbor_asn: 65107
+    description: "Border_Leaf1 → HostB12_2 eth1 (QSFP+11, native 40G)"
 
   - port: "Ethernet28"
-    alias: "Ethernet8/1"
-    lanes: "29,30,31,32"
-    index: "8"
+    alias: "Ethernet12/1"
+    lanes: "37,38,39,40"
+    index: "12"
     speed: "40000"
     neighbor: "MonitorSrv"
     neighbor_port: "eth1"
-    description: "Border_Leaf1 → MonitorSrv eth1 (QSFP+8, VS native port)"
+    neighbor_asn: 65108
+    description: "Border_Leaf1 → MonitorSrv eth1 (QSFP+12, native 40G)"
 
-# ---- Breakout config (physical hardware only; NOT applied in VS mode) ----
+# ---- Breakout configuration (applied by deploy_breakout.yml) ----
+# Defines parent ports that require breakout before fabric/exit can use sub-ports.
+# The breakout playbook applies these BEFORE the fabric patch.
 breakout_cfg:
-  Ethernet0:    { brkout_mode: "4x10G" }
-  # Ethernet20: { brkout_mode: "4x10G" }  # VS: use native Ethernet20/24/28 instead
-  Ethernet108:  { brkout_mode: "1x40G" }
-  Ethernet104:  { brkout_mode: "1x40G" }
+  Ethernet0:
+    brkout_mode: "4x10G"
+    parent_lanes: "9,10,11,12"
+    child_ports:
+      # KVM VS naming: sequential EthernetN, one lane each.
+      # Ethernet0 (lane 9) = exit router port. Ethernet1-3 unused.
+      - { port: "Ethernet0", lane: "9",  speed: "10000", alias: "Ethernet5/1", index: "5" }
+      - { port: "Ethernet1", lane: "10", speed: "10000", alias: "Ethernet5/2", index: "5" }
+      - { port: "Ethernet2", lane: "11", speed: "10000", alias: "Ethernet5/3", index: "5" }
+      - { port: "Ethernet3", lane: "12", speed: "10000", alias: "Ethernet5/4", index: "5" }
 
 # ---- All ports reference ----
 all_ports: "{{ qx32s_all_ports }}"
