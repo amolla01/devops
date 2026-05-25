@@ -584,3 +584,78 @@ virsh dumpxml Border_Leaf2 | grep -A3 "br-MS-BL2"
 virsh dumpxml Border_Leaf1 | grep -A3 "br-MS-BL1"
 virsh dumpxml Border_Leaf2 | grep -A3 "br-MS-BL2"
 If those return nothing, BL1/BL2 were never given br-MS-BL1/BL2 NICs and you need to hot-add them or restart BL1/BL2 with corrected XML.
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXX==18th==XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Which command to execute now since following is returning nothing: # Verify by checking the XML
+virsh dumpxml Border_Leaf1 | grep -A3 "br-MS-BL1"
+virsh dumpxml Border_Leaf2 | grep -A3 "br-MS-BL2"
+
+
+Confirmed that BL1 lacked NICs for br-MS-BL1
+The user confirmed that virsh dumpxml Border_Leaf1 | grep -A3 "br-MS-BL1" returns nothing. This means BL1/BL2 were never given NICs connected to br-MS-BL1/br-MS-BL2 OVS bridges. The deploy script has the bridge mapping but the actual VMs don't have those NICs.
+
+Looking at the deploy script's bridge definition:
+
+VM_BRIDGES[Border_Leaf1]="br-BL1-ER1,@4,br-HB-BL1,br-HB2-BL1,br-MS-BL1,@22,br-BL1-S2,br-BL1-S1"
+
+So the script maps out specific NIC positions: the first one connects to br-BL1-ER1, then there's padding, followed by br-HB-BL1 and br-HB2-BL1, then br-MS-BL1 at position 7, more padding, and finally the S2 and S1 bridges at the end.
+
+vnet43 is mapped to br-HB2-BL1, and then vnet44 should connect to br-MS-BL1 for NIC 7, but it's showing br-pad instead. This looks like a deployment script bug where the MS-BL1 bridge got incorrectly mapped to a pad bridge.
+Since the grep search found no reference to br-MS-BL1 in BL1's XML, the NIC was never properly connected. Rather than hot-attaching a new NIC (which would mess up the ordering), I should modify vnet44 directly by removing it from br-pad and attaching it to br-MS-BL1 using OVS commands.
+
+For BL2, I need to find the equivalent vnet at position 7 — looking at the NIC mapping, vnet77 is currently on br-pad but should be on br-MS-BL2 instead, since it corresponds to Ethernet28.
+
+The deploy script has a bug where it placed these NICs on br-pad rather than the correct bridges. Since these are bridge-type NICs with taps connected to br-pad, I can move them to fix the mapping. The first step is to move vnet44 from br-pad.
+
+Actually, wait—I need to reconsider. With type=bridge, libvirt uses Linux bridging, not OVS. If br-pad is an OVS bridge, the brctl command would have failed, so the vnet44 tap might not actually be connected to br-pad at all.
+
+But looking at the OVS output, vnet44 and vnet77 are both clearly listed as ports in br-pad. So the fix is to move vnet44 to br-MS-BL1 and vnet77 to br-MS-BL2, and also remove that bogus "BL1_VNET" port from br-MS-BL1. I'll need to update the XML configs too to make these changes persist across restarts.
+
+Now I should bundle together all the fixes needed—the port moves, the password issue, and the BGP configuration—into a single set of commands to run.
+
+The BL1/BL2 br-MS-BL1/br-MS-BL2 NICs were deployed as br-pad by mistake. Counting positions in domiflist:
+
+BL1 vnet44 = NIC position 7 = Ethernet28 → should be br-MS-BL1, currently in br-pad
+BL2 vnet77 = NIC position 7 = Ethernet28 → should be br-MS-BL2, currently in br-pad
+Run all three fixes in sequence:
+
+# ── Fix 1: Move BL vnets from br-pad to correct OVS bridges ──
+sudo ovs-vsctl del-port br-pad vnet44
+sudo ovs-vsctl add-port br-MS-BL1 vnet44
+sudo ovs-vsctl del-port br-MS-BL1 BL1_VNET   # remove bogus entry from earlier
+
+sudo ovs-vsctl del-port br-pad vnet77
+sudo ovs-vsctl add-port br-MS-BL2 vnet77
+
+# verify 2 ports each
+sudo ovs-vsctl list-ports br-MS-BL1
+sudo ovs-vsctl list-ports br-MS-BL2
+
+# ── Fix 2: Set MikroTik password via console ──
+virsh console Exit_Router1
+# press Enter → should see [admin@Exit_Router1] >
+# type:  /user set admin password=amolla01
+# then Ctrl+]
+
+virsh console Exit_Router2
+# press Enter → should see [admin@Exit_Router2] >
+# type:  /user set admin password=amolla01
+# then Ctrl+]
+
+# ── Fix 3: Fix BGP (remote.as=0 → correct ASN) ──
+virsh console Exit_Router1
+# /routing bgp connection remove [find]
+# /routing bgp connection add name=to-BL1 as=65253 remote.address=10.0.253.0 remote.as=65021 router-id=10.0.253.1 local.role=ebgp
+# /routing bgp connection print
+# Ctrl+]
+
+virsh console Exit_Router2
+# /routing bgp connection remove [find]
+# /routing bgp connection add name=to-BL2 as=65254 remote.address=10.0.253.2 remote.as=65022 router-id=10.0.253.3 local.role=ebgp
+# /routing bgp connection print
+# Ctrl+]
+
+ssh admin@172.16.2.31 "docker exec bgp vtysh -c 'show bgp summary'"
+
+All three neighbors (MonitorSrv, ER1, ER2) should transition to Established.
