@@ -9,6 +9,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 V13_SCRIPT="$SCRIPT_DIR/deploy_lab_v13.sh"
 INV_FILE="$SCRIPT_DIR/inventory/hosts.yml"
 
+# ======================= ENVIRONMENT FILE ===================================
+# Source persistent settings from ~/.deploy_lab_v3.env or ./.deploy_lab_v3.env
+# This avoids repeating --ssh-key, --r810-host, --profile on every invocation.
+#
+# Example ~/.deploy_lab_v3.env:
+#   R810_HOST=nh1221@R810
+#   SSH_KEY_PATH=~/.ssh/id_dc_lab
+#   AUTOMATION_PROFILE=ubuntu_r810_kvm
+#   REMOTE_V13_HOST=nh1221@R810
+# ============================================================================
+for _envfile in "$HOME/.deploy_lab_v3.env" "$SCRIPT_DIR/.deploy_lab_v3.env"; do
+  if [[ -f "$_envfile" ]]; then
+    # shellcheck disable=SC1090
+    source "$_envfile"
+    break
+  fi
+done
+unset _envfile
+
 PROFILE="${AUTOMATION_PROFILE:-ubuntu_r620_kvm}"
 PROXY_FLAGS=()
 EXTRA_ANSIBLE_ARGS=()
@@ -29,8 +48,8 @@ SSH_KEY_PATH="${SSH_KEY_PATH:-}"
 PROXY_JUMP_HOST="${PROXY_JUMP_HOST:-}"
 R620_HOST="${R620_HOST:-}"
 R810_HOST="${R810_HOST:-}"
-R620_V13_PATH="${R620_V13_PATH:-$REMOTE_V13_PATH}"
-R810_V13_PATH="${R810_V13_PATH:-$REMOTE_V13_PATH}"
+R620_V13_PATH="${R620_V13_PATH:-}"
+R810_V13_PATH="${R810_V13_PATH:-}"
 
 # Phased deployment defaults.
 R620_LIMIT="${R620_LIMIT:-Spine_S1,Spine_S2,Leaf_L1,Leaf_L2,Border_Leaf1,Border_Leaf2,Exit_Router1,Exit_Router2,Host12_1,Host12_2,Host12_3,HostB12_1,HostB12_2,MonitorSrv}"
@@ -90,15 +109,17 @@ Actions:
   status                  Show VM status from deploy_lab_v13.sh
 
 Examples:
-  ./deploy_lab_v3.sh --proxy-jump-host jump.example --ssh-key ~/.ssh/id_r620 --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 preflight
+  # Simplest usage (with .deploy_lab_v3.env configured):
+  ./deploy_lab_v3.sh kvm-destroy
+  ./deploy_lab_v3.sh kvm-deploy
+  ./deploy_lab_v3.sh remote-status
+
+  # Explicit flags (override env file):
+  ./deploy_lab_v3.sh --r810-host nh1221@R810 --ssh-key ~/.ssh/id_dc_lab --profile ubuntu_r810_kvm kvm-destroy
   ./deploy_lab_v3.sh --remote-v13-host admin@10.1.1.20 --profile ubuntu_r620_kvm kvm-deploy
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 kvm-deploy-r620
-  ./deploy_lab_v3.sh --r810-host admin@10.1.1.21 kvm-deploy-r810
   ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 kvm-deploy-both
   ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 remote-virsh r620 start Spine_S1
   ./deploy_lab_v3.sh phase-r620
-  ./deploy_lab_v3.sh phase-r810
-  ./deploy_lab_v3.sh --profile ubuntu_r620_kvm kvm-deploy
   ./deploy_lab_v3.sh --profile ubuntu_r620_kvm full
   ./deploy_lab_v3.sh teardown --ansible-arg=-e --ansible-arg=allow_destructive_teardown=true --ansible-arg=-e --ansible-arg=teardown_confirmation_token=YES-TEARDOWN-ALL
 EOF
@@ -299,6 +320,36 @@ run_v13_targeted() {
 
   local normalized
   normalized="$(normalize_target "$target")"
+
+  # Auto-resolve path on remote if empty or tilde-prefixed
+  if [[ -z "$target_path" ]]; then
+    local remote_home
+    remote_home="$(ssh "${SSH_OPTS[@]}" "$normalized" 'echo $HOME' 2>/dev/null)" || remote_home=""
+    if [[ -z "$remote_home" ]]; then
+      local remote_user="${target%%@*}"
+      [[ "$remote_user" != "$target" ]] || remote_user="${USER:-$(whoami)}"
+      remote_home="/home/$remote_user"
+    fi
+    target_path="$remote_home/deploy_lab_v13.sh"
+
+    # Auto-copy if missing on remote
+    if ! ssh "${SSH_OPTS[@]}" "$normalized" "test -f '$target_path'" >/dev/null 2>&1; then
+      local local_v13="$SCRIPT_DIR/deploy_lab_v13.sh"
+      if [[ -f "$local_v13" ]]; then
+        log "Auto-copying deploy_lab_v13.sh to $normalized:$target_path"
+        scp "${SSH_OPTS[@]}" "$local_v13" "$normalized:$target_path"
+        ssh "${SSH_OPTS[@]}" "$normalized" "chmod +x '$target_path'" 2>/dev/null || true
+      else
+        die "deploy_lab_v13.sh not found locally or on $normalized"
+      fi
+    fi
+  elif [[ "$target_path" == "~/"* ]]; then
+    local remote_home
+    remote_home="$(ssh "${SSH_OPTS[@]}" "$normalized" 'echo $HOME' 2>/dev/null)" || remote_home=""
+    [[ -n "$remote_home" ]] || remote_home="/home/${target%%@*}"
+    target_path="$remote_home/${target_path#\~/}"
+  fi
+
   local cmd=(bash "$target_path" --profile "$target_profile" "${PROXY_FLAGS[@]}" "$action" "$@")
   local remote_cmd
   remote_cmd="$(printf '%q ' "${cmd[@]}")"
@@ -478,6 +529,16 @@ run_phase_r810() {
 main() {
   parse_args "$@"
 
+  # Auto-infer REMOTE_V13_HOST from R810/R620 if not explicitly set.
+  # This avoids needing both --r810-host and --remote-v13-host for KVM ops.
+  if [[ -z "$REMOTE_V13_HOST" ]]; then
+    if [[ -n "$R810_HOST" ]]; then
+      REMOTE_V13_HOST="$R810_HOST"
+    elif [[ -n "$R620_HOST" ]]; then
+      REMOTE_V13_HOST="$R620_HOST"
+    fi
+  fi
+
   case "$ACTION" in
     preflight)
       preflight_access
@@ -488,16 +549,16 @@ main() {
       ;;
     kvm-deploy-r620)
       ensure_preflight
-      run_v13_targeted "$R620_HOST" "ubuntu_r620_kvm" "$R620_V13_PATH" deploy
+      run_v13_targeted "$R620_HOST" "ubuntu_r620_kvm" "${R620_V13_PATH:-$REMOTE_V13_PATH}" deploy
       ;;
     kvm-deploy-r810)
       ensure_preflight
-      run_v13_targeted "$R810_HOST" "ubuntu_r810_kvm" "$R810_V13_PATH" deploy
+      run_v13_targeted "$R810_HOST" "ubuntu_r810_kvm" "${R810_V13_PATH:-$REMOTE_V13_PATH}" deploy
       ;;
     kvm-deploy-both)
       ensure_preflight
-      run_v13_targeted "$R620_HOST" "ubuntu_r620_kvm" "$R620_V13_PATH" deploy
-      run_v13_targeted "$R810_HOST" "ubuntu_r810_kvm" "$R810_V13_PATH" deploy
+      run_v13_targeted "$R620_HOST" "ubuntu_r620_kvm" "${R620_V13_PATH:-$REMOTE_V13_PATH}" deploy
+      run_v13_targeted "$R810_HOST" "ubuntu_r810_kvm" "${R810_V13_PATH:-$REMOTE_V13_PATH}" deploy
       ;;
     kvm-redeploy)
       ensure_preflight
