@@ -15,6 +15,7 @@ EXTRA_ANSIBLE_ARGS=()
 SSH_OPTS=()
 PREFLIGHT_DONE=false
 ACTION_ARGS=()
+ALLOW_PASSWORD_AUTH="${ALLOW_PASSWORD_AUTH:-false}"
 
 # Optional remote execution for deploy_lab_v13.sh (recommended when laptop is controller
 # and R620/R810 are hypervisors running libvirt/qemu-kvm).
@@ -56,6 +57,7 @@ Options:
   --remote-v13-user <u>   SSH user for --remote-v13-host (default: current user)
   --remote-v13-path <p>   Path to deploy_lab_v13.sh on remote host
   --ssh-key <path>        SSH key path for laptop -> hypervisor auth checks
+  --allow-password        Allow password-based SSH (prompts during operations)
   --proxy-jump-host <h>   SSH ProxyJump host for laptop -> hypervisor access
   --r620-host <h>         R620 SSH target for preflight (host or user@host)
   --r810-host <h>         R810 SSH target for preflight (host or user@host)
@@ -107,11 +109,16 @@ need_cmd() {
 
 build_ssh_opts() {
   SSH_OPTS=(
-    -o BatchMode=yes
     -o ConnectTimeout=12
     -o StrictHostKeyChecking=no
     -o UserKnownHostsFile=/dev/null
   )
+
+  # BatchMode=yes disables password prompts (key-only auth).
+  # Skip it when --allow-password is set or no SSH key is configured.
+  if [[ "${ALLOW_PASSWORD_AUTH:-false}" != "true" && -n "$SSH_KEY_PATH" ]]; then
+    SSH_OPTS+=( -o BatchMode=yes )
+  fi
 
   if [[ -n "$SSH_KEY_PATH" ]]; then
     SSH_OPTS+=( -i "$SSH_KEY_PATH" )
@@ -137,9 +144,37 @@ check_ssh_target() {
   local label="$1"
   local target="$2"
   [[ -n "$target" ]] || return 0
-  log "Preflight: checking SSH key auth to $label ($target)"
-  ssh "${SSH_OPTS[@]}" "$target" "echo ok" >/dev/null 2>&1 || \
-    die "Preflight failed for $label ($target). Verify SSH key auth and ProxyJump settings."
+
+  # First try BatchMode (key auth, non-interactive)
+  log "Preflight: checking SSH connectivity to $label ($target)"
+  if ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+       ${SSH_KEY_PATH:+-i "$SSH_KEY_PATH"} ${PROXY_JUMP_HOST:+-J "$PROXY_JUMP_HOST"} \
+       "$target" "echo ok" >/dev/null 2>&1; then
+    log "Preflight: $label — key-based auth OK"
+    return 0
+  fi
+
+  # Key auth failed — offer password fallback
+  if [[ "${ALLOW_PASSWORD_AUTH:-false}" == "true" ]]; then
+    warn "Key-based auth failed for $label ($target). Password auth allowed (--allow-password)."
+    warn "You will be prompted for a password during remote operations."
+    # Verify connectivity with password prompt
+    ssh -o ConnectTimeout=8 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        ${PROXY_JUMP_HOST:+-J "$PROXY_JUMP_HOST"} \
+        "$target" "echo ok" >/dev/null 2>&1 || \
+      die "Preflight failed for $label ($target). Cannot connect even with password."
+    return 0
+  fi
+
+  # No key, no --allow-password
+  err "Preflight failed for $label ($target). Key-based SSH auth not working."
+  err ""
+  err "Options to fix:"
+  err "  1. Set up SSH key:  ssh-copy-id $target"
+  err "  2. Specify key:     --ssh-key ~/.ssh/id_ed25519"
+  err "  3. Allow password:  --allow-password  (will prompt during operations)"
+  err "  4. SSH in manually: ssh $target, then run deploy_lab_v13.sh directly"
+  die "Aborting preflight."
 }
 
 preflight_access() {
@@ -323,6 +358,8 @@ parse_args() {
         REMOTE_V13_PATH="$2"; shift 2 ;;
       --ssh-key)
         SSH_KEY_PATH="$2"; shift 2 ;;
+      --allow-password)
+        ALLOW_PASSWORD_AUTH=true; shift ;;
       --proxy-jump-host)
         PROXY_JUMP_HOST="$2"; shift 2 ;;
       --r620-host)
