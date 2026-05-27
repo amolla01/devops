@@ -342,7 +342,7 @@ run_remote_virsh() {
     set -- list --all
   fi
 
-  run_remote_virsh_raw "$target" sudo virsh "$@"
+  run_remote_virsh_raw "$target" virsh "$@"
 }
 
 run_remote_status() {
