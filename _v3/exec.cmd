@@ -26,3 +26,11 @@ Preflight now tries key-based auth first; if it fails and --allow-password is se
 Without --allow-password, the error message now shows 4 clear remediation options (set up keys, specify key path, allow password, or SSH in manually)
 BatchMode=yes is only enforced when a key is explicitly provided and password auth isn't allowed
 Claude Opus 4.6 • 3x
+What changed:
+
+REMOTE_V13_PATH no longer defaults to the local WSL path — it defaults to ~/deploy_lab_v13.sh on the remote
+If the script isn't found on R810, it auto-copies it from your local _v3/deploy_lab_v13.sh via scp
+You only need --remote-v13-path if you want a custom location on the remote
+./deploy_lab_v3.sh --ssh-key /mnt/c/Users/nh1221/.ssh/id_dc_lab \
+  --remote-v13-host nh1221@R810 \
+  --profile ubuntu_r810_kvm kvm-destroy
