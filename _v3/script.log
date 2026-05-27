@@ -1,15 +1,41 @@
-C:\Users\nh1221>wsl -d Ubuntu-24.04
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd data-center/_v3
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$  ./deploy_lab_v3.sh --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
 [INFO] Preflight: checking SSH key auth to REMOTE_V13_HOST (nh1221@R810)
 [FAIL] Preflight failed for REMOTE_V13_HOST (nh1221@R810). Verify SSH key auth and ProxyJump settings.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh-copy-id -i ~/.ssh/id_dc_lab nh1221@R810
+
+/usr/bin/ssh-copy-id: ERROR: failed to open ID file '/home/nh1221/.ssh/id_dc_lab.pub': No such file
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh-copy-id -i /mnt/c/Users/nh1221/.ssh/id_dc_lab nh1221@R810
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub"
+The authenticity of host 'r810 (192.168.9.198)' can't be established.
+ED25519 key fingerprint is SHA256:VroBPZhKfKuueBMLPSf4sgtegaOJiWgZYIh15IORYkI.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:10: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+
+/usr/bin/ssh-copy-id: WARNING: All keys were skipped because they already exist on the remote system.
+                (if you think this is a mistake, you may want to use -f option)
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --ssh-key /mnt/c/Users/nh1221/.ssh/id_r810 --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
+[INFO] Preflight: checking SSH connectivity to REMOTE_V13_HOST (nh1221@R810)
+[FAIL] Preflight failed for REMOTE_V13_HOST (nh1221@R810). Key-based SSH auth not working.
+[FAIL]
+[FAIL] Options to fix:
+[FAIL]   1. Set up SSH key:  ssh-copy-id nh1221@R810
+[FAIL]   2. Specify key:     --ssh-key ~/.ssh/id_ed25519
+[FAIL]   3. Allow password:  --allow-password  (will prompt during operations)
+[FAIL]   4. SSH in manually: ssh nh1221@R810, then run deploy_lab_v13.sh directly
+[FAIL] Aborting preflight.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --ssh-key ~/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
+[INFO] Preflight: checking SSH connectivity to REMOTE_V13_HOST (nh1221@R810)
+[INFO] Preflight: REMOTE_V13_HOST — key-based auth OK
+[INFO] Preflight: checking deploy_lab_v13.sh presence on remote target
+[FAIL] Remote deploy_lab_v13.sh not found at /mnt/c/Users/nh1221/data-center/_v3/deploy_lab_v13.sh on nh1221@R810
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --ssh-key /mnt/c/Users/nh1221/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
+[INFO] Preflight: checking SSH connectivity to REMOTE_V13_HOST (nh1221@R810)
+[INFO] Preflight: REMOTE_V13_HOST — key-based auth OK
+[INFO] Preflight: checking deploy_lab_v13.sh presence on remote target
+[FAIL] Remote deploy_lab_v13.sh not found at /mnt/c/Users/nh1221/data-center/_v3/deploy_lab_v13.sh on nh1221@R810
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-
-nh1221@Lab-ControlNode MINGW64 ~/data-center/_v3
-$ ./deploy_lab_v3.sh --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
-[INFO] Preflight: checking SSH key auth to REMOTE_V13_HOST (nh1221@R810)
-[FAIL] Preflight failed for REMOTE_V13_HOST (nh1221@R810). Verify SSH key auth and ProxyJump settings.
-
-nh1221@Lab-ControlNode MINGW64 ~/data-center/_v3
-$ wsl -d Ubuntu-24.04
 
