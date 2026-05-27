@@ -34,3 +34,14 @@ You only need --remote-v13-path if you want a custom location on the remote
 ./deploy_lab_v3.sh --ssh-key /mnt/c/Users/nh1221/.ssh/id_dc_lab \
   --remote-v13-host nh1221@R810 \
   --profile ubuntu_r810_kvm kvm-destroy
+Now the path will resolve to something like /home/nh1221/deploy_lab_v13.sh which printf '%q' won't mangle. The flow now:
+
+SSHs to R810, runs echo $HOME → gets /home/nh1221
+Sets REMOTE_V13_PATH=/home/nh1221/deploy_lab_v13.sh (absolute, no tilde)
+Checks if it exists → if not, auto-copies + chmod +x
+Runs it with the absolute path (safe through printf '%q')
+Try again:
+
+
+./deploy_lab_v3.sh --ssh-key ~/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
+./deploy_lab_v3.sh --ssh-key ~/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
