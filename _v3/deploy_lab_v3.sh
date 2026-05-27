@@ -260,7 +260,7 @@ run_v13() {
     local remote_cmd
     remote_cmd="$(printf '%q ' "${cmd[@]}")"
     log "Running remote deploy_lab_v13.sh action=$action profile=$PROFILE target=$remote_target"
-    ssh "${SSH_OPTS[@]}" "$remote_target" "$remote_cmd"
+    ssh -t "${SSH_OPTS[@]}" "$remote_target" "$remote_cmd"
   else
     # Guard: detect non-Linux environments where libvirt/KVM is not available.
     local os_type="${OSTYPE:-unknown}"
@@ -303,7 +303,7 @@ run_v13_targeted() {
   local remote_cmd
   remote_cmd="$(printf '%q ' "${cmd[@]}")"
   log "Running remote deploy_lab_v13.sh action=$action profile=$target_profile target=$normalized"
-  ssh "${SSH_OPTS[@]}" "$normalized" "$remote_cmd"
+  ssh -t "${SSH_OPTS[@]}" "$normalized" "$remote_cmd"
 }
 
 run_remote_virsh_raw() {
