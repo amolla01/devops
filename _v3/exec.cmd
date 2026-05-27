@@ -45,3 +45,20 @@ Try again:
 
 ./deploy_lab_v3.sh --ssh-key ~/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
 ./deploy_lab_v3.sh --ssh-key ~/.ssh/id_dc_lab --remote-v13-host nh1221@R810 --profile ubuntu_r810_kvm kvm-destroy
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Pre-run checklist
+# One-time venv setup (if not done already):
+cd /mnt/c/Users/nh1221/data-center
+python3 -m venv venv
+source venv/bin/activate
+pip install -r _v3/requirements-ansible.txt
+
+# For later stages (ceph, server networking):
+ansible-galaxy collection install -r _v3/requirements-collections.yml
+
+# Run day0:
+cd _v3
+./deploy_lab_v3.sh day0
+
+
