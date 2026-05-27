@@ -202,22 +202,34 @@ preflight_access() {
     remote_target="$(normalize_target "$REMOTE_V13_HOST")"
     check_ssh_target "REMOTE_V13_HOST" "$remote_target"
 
-    # Resolve REMOTE_V13_PATH: if not explicitly provided, default to ~/deploy_lab_v13.sh
+    # Resolve remote home directory (needed because printf '%q' escapes tildes)
+    local remote_home
+    remote_home="$(ssh "${SSH_OPTS[@]}" "$remote_target" 'echo $HOME' 2>/dev/null)" || remote_home=""
+    if [[ -z "$remote_home" ]]; then
+      warn "Could not resolve remote \$HOME, defaulting to /home/$REMOTE_V13_USER"
+      remote_home="/home/$REMOTE_V13_USER"
+    fi
+
+    # Resolve REMOTE_V13_PATH: if not explicitly provided, use $HOME/deploy_lab_v13.sh
     if [[ -z "$REMOTE_V13_PATH" ]]; then
-      REMOTE_V13_PATH="~/deploy_lab_v13.sh"
+      REMOTE_V13_PATH="$remote_home/deploy_lab_v13.sh"
+    elif [[ "$REMOTE_V13_PATH" == "~/"* ]]; then
+      # Expand leading ~/ to resolved remote home
+      REMOTE_V13_PATH="$remote_home/${REMOTE_V13_PATH#\~/}"
     fi
 
     log "Preflight: checking deploy_lab_v13.sh presence on remote ($REMOTE_V13_PATH)"
-    if ! ssh "${SSH_OPTS[@]}" "$remote_target" "test -f $REMOTE_V13_PATH" >/dev/null 2>&1; then
+    if ! ssh "${SSH_OPTS[@]}" "$remote_target" "test -f '$REMOTE_V13_PATH'" >/dev/null 2>&1; then
       # Script not found on remote — auto-copy from local
       local local_v13="$SCRIPT_DIR/deploy_lab_v13.sh"
       if [[ -f "$local_v13" ]]; then
         warn "deploy_lab_v13.sh not found at $REMOTE_V13_PATH on $remote_target"
         log "Auto-copying deploy_lab_v13.sh to remote host..."
-        scp "${SSH_OPTS[@]}" "$local_v13" "$remote_target:~/deploy_lab_v13.sh" || \
+        scp "${SSH_OPTS[@]}" "$local_v13" "$remote_target:$remote_home/deploy_lab_v13.sh" || \
           die "Failed to scp deploy_lab_v13.sh to $remote_target"
-        REMOTE_V13_PATH="~/deploy_lab_v13.sh"
-        log "Copied successfully to $remote_target:~/deploy_lab_v13.sh"
+        ssh "${SSH_OPTS[@]}" "$remote_target" "chmod +x '$remote_home/deploy_lab_v13.sh'" 2>/dev/null || true
+        REMOTE_V13_PATH="$remote_home/deploy_lab_v13.sh"
+        log "Copied successfully to $remote_target:$REMOTE_V13_PATH"
       else
         die "deploy_lab_v13.sh not found locally ($local_v13) or remotely ($REMOTE_V13_PATH on $remote_target)"
       fi
