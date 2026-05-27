@@ -21,7 +21,8 @@ ALLOW_PASSWORD_AUTH="${ALLOW_PASSWORD_AUTH:-false}"
 # and R620/R810 are hypervisors running libvirt/qemu-kvm).
 REMOTE_V13_HOST="${REMOTE_V13_HOST:-}"
 REMOTE_V13_USER="${REMOTE_V13_USER:-${USER:-$(whoami)}}"
-REMOTE_V13_PATH="${REMOTE_V13_PATH:-$SCRIPT_DIR/deploy_lab_v13.sh}"
+REMOTE_V13_PATH="${REMOTE_V13_PATH:-}"  # Empty = auto-detect (~/deploy_lab_v13.sh on remote)
+REMOTE_V13_PATH_EXPLICIT=false          # Track if user provided --remote-v13-path
 
 # Laptop -> hypervisor connectivity preflight parameters.
 SSH_KEY_PATH="${SSH_KEY_PATH:-}"
@@ -200,9 +201,27 @@ preflight_access() {
     local remote_target
     remote_target="$(normalize_target "$REMOTE_V13_HOST")"
     check_ssh_target "REMOTE_V13_HOST" "$remote_target"
-    log "Preflight: checking deploy_lab_v13.sh presence on remote target"
-    ssh "${SSH_OPTS[@]}" "$remote_target" "test -f '$REMOTE_V13_PATH'" >/dev/null 2>&1 || \
-      die "Remote deploy_lab_v13.sh not found at $REMOTE_V13_PATH on $remote_target"
+
+    # Resolve REMOTE_V13_PATH: if not explicitly provided, default to ~/deploy_lab_v13.sh
+    if [[ -z "$REMOTE_V13_PATH" ]]; then
+      REMOTE_V13_PATH="~/deploy_lab_v13.sh"
+    fi
+
+    log "Preflight: checking deploy_lab_v13.sh presence on remote ($REMOTE_V13_PATH)"
+    if ! ssh "${SSH_OPTS[@]}" "$remote_target" "test -f $REMOTE_V13_PATH" >/dev/null 2>&1; then
+      # Script not found on remote — auto-copy from local
+      local local_v13="$SCRIPT_DIR/deploy_lab_v13.sh"
+      if [[ -f "$local_v13" ]]; then
+        warn "deploy_lab_v13.sh not found at $REMOTE_V13_PATH on $remote_target"
+        log "Auto-copying deploy_lab_v13.sh to remote host..."
+        scp "${SSH_OPTS[@]}" "$local_v13" "$remote_target:~/deploy_lab_v13.sh" || \
+          die "Failed to scp deploy_lab_v13.sh to $remote_target"
+        REMOTE_V13_PATH="~/deploy_lab_v13.sh"
+        log "Copied successfully to $remote_target:~/deploy_lab_v13.sh"
+      else
+        die "deploy_lab_v13.sh not found locally ($local_v13) or remotely ($REMOTE_V13_PATH on $remote_target)"
+      fi
+    fi
   fi
 
   PREFLIGHT_DONE=true
@@ -355,7 +374,7 @@ parse_args() {
       --remote-v13-user)
         REMOTE_V13_USER="$2"; shift 2 ;;
       --remote-v13-path)
-        REMOTE_V13_PATH="$2"; shift 2 ;;
+        REMOTE_V13_PATH="$2"; REMOTE_V13_PATH_EXPLICIT=true; shift 2 ;;
       --ssh-key)
         SSH_KEY_PATH="$2"; shift 2 ;;
       --allow-password)
