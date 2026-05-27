@@ -1,114 +1,53 @@
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --r810-host nh1221@R810 remote-status
+[INFO] Preflight: checking SSH connectivity to R810 (nh1221@R810)
+[FAIL] Preflight failed for R810 (nh1221@R810). Key-based SSH auth not working.
+[FAIL]
+[FAIL] Options to fix:
+[FAIL]   1. Set up SSH key:  ssh-copy-id nh1221@R810
+[FAIL]   2. Specify key:     --ssh-key ~/.ssh/id_ed25519
+[FAIL]   3. Allow password:  --allow-password  (will prompt during operations)
+[FAIL]   4. SSH in manually: ssh nh1221@R810, then run deploy_lab_v13.sh directly
+[FAIL] Aborting preflight.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh-copy-id -i /mnt/c/Users/nh1221/.ssh/id_dc_lab nh1221@R810
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+
+/usr/bin/ssh-copy-id: WARNING: All keys were skipped because they already exist on the remote system.
+                (if you think this is a mistake, you may want to use -f option)
+
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --810-host nh1221@192.168.9.198 remote-status
-Usage: deploy_lab_v3.sh [options] <action>
 
-Options:
-  --profile <name>        Automation profile: win11_kvm|ubuntu_r620_kvm|ubuntu_r810_kvm|real_hardware
-  --no-proxy              Pass --no-proxy to deploy_lab_v13.sh
-  --proxy                 Pass --proxy to deploy_lab_v13.sh
-  --proxy-url <url>       Pass custom proxy URL to deploy_lab_v13.sh
-  --remote-v13-host <h>   Run deploy_lab_v13.sh on remote host (for laptop controller mode)
-  --remote-v13-user <u>   SSH user for --remote-v13-host (default: current user)
-  --remote-v13-path <p>   Path to deploy_lab_v13.sh on remote host
-  --ssh-key <path>        SSH key path for laptop -> hypervisor auth checks
-  --allow-password        Allow password-based SSH (prompts during operations)
-  --proxy-jump-host <h>   SSH ProxyJump host for laptop -> hypervisor access
-  --r620-host <h>         R620 SSH target for preflight (host or user@host)
-  --r810-host <h>         R810 SSH target for preflight (host or user@host)
-  --r620-limit <csv>      Host limit string for R620-first phase
-  --r810-limit <csv>      Host limit string for R810-expansion phase
-  --ansible-arg <arg>     Extra ansible-playbook argument (repeatable)
-
-Actions:
-  preflight               Verify laptop -> R620/R810 SSH/ProxyJump/key auth
-  kvm-deploy              Initial KVM topology deployment using deploy_lab_v13.sh
-  kvm-deploy-r620         Remote deploy on R620 (laptop-driven)
-  kvm-deploy-r810         Remote deploy on R810 (laptop-driven)
-  kvm-deploy-both         Remote deploy on R620 then R810
-  kvm-redeploy            Force redeploy KVM topology using deploy_lab_v13.sh
-  kvm-destroy             Destroy KVM topology using deploy_lab_v13.sh
-  kvm-validate            Validate VM SSH/connectivity using deploy_lab_v13.sh
-  remote-status           Show virsh list on R620 and R810 from laptop
-  remote-virsh <h> <cmd>  Run virsh command remotely. h=r620|r810
-  day0                    Run day-0 base provisioning
-  day1                    Run day-1 fabric wiring
-  infra-services          Run kubespray + postgresql + maas + ceph + openstack + monitoring
-  phase-r620              R620-first phased deployment with predefined host limits
-  phase-r810              R810 expansion phased deployment with predefined host limits
-  phased-full             Run phase-r620 then phase-r810
-  gateway                 Run _v3 gateway deployment
-  premium-fw              Run _v3 premium firewall deployment
-  full                    KVM deploy + full environment deploy
-  teardown                Full environment teardown (guarded)
-  status                  Show VM status from deploy_lab_v13.sh
-
-Examples:
-  ./deploy_lab_v3.sh --proxy-jump-host jump.example --ssh-key ~/.ssh/id_r620 --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 preflight
-  ./deploy_lab_v3.sh --remote-v13-host admin@10.1.1.20 --profile ubuntu_r620_kvm kvm-deploy
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 kvm-deploy-r620
-  ./deploy_lab_v3.sh --r810-host admin@10.1.1.21 kvm-deploy-r810
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 kvm-deploy-both
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 remote-virsh r620 start Spine_S1
-  ./deploy_lab_v3.sh phase-r620
-  ./deploy_lab_v3.sh phase-r810
-  ./deploy_lab_v3.sh --profile ubuntu_r620_kvm kvm-deploy
-  ./deploy_lab_v3.sh --profile ubuntu_r620_kvm full
-  ./deploy_lab_v3.sh teardown --ansible-arg=-e --ansible-arg=allow_destructive_teardown=true --ansible-arg=-e --ansible-arg=teardown_confirmation_token=YES-TEARDOWN-ALL
-[FAIL] Unsupported action: --810-host
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh --810-host nh1221@R810 remote-status
-Usage: deploy_lab_v3.sh [options] <action>
-
-Options:
-  --profile <name>        Automation profile: win11_kvm|ubuntu_r620_kvm|ubuntu_r810_kvm|real_hardware
-  --no-proxy              Pass --no-proxy to deploy_lab_v13.sh
-  --proxy                 Pass --proxy to deploy_lab_v13.sh
-  --proxy-url <url>       Pass custom proxy URL to deploy_lab_v13.sh
-  --remote-v13-host <h>   Run deploy_lab_v13.sh on remote host (for laptop controller mode)
-  --remote-v13-user <u>   SSH user for --remote-v13-host (default: current user)
-  --remote-v13-path <p>   Path to deploy_lab_v13.sh on remote host
-  --ssh-key <path>        SSH key path for laptop -> hypervisor auth checks
-  --allow-password        Allow password-based SSH (prompts during operations)
-  --proxy-jump-host <h>   SSH ProxyJump host for laptop -> hypervisor access
-  --r620-host <h>         R620 SSH target for preflight (host or user@host)
-  --r810-host <h>         R810 SSH target for preflight (host or user@host)
-  --r620-limit <csv>      Host limit string for R620-first phase
-  --r810-limit <csv>      Host limit string for R810-expansion phase
-  --ansible-arg <arg>     Extra ansible-playbook argument (repeatable)
-
-Actions:
-  preflight               Verify laptop -> R620/R810 SSH/ProxyJump/key auth
-  kvm-deploy              Initial KVM topology deployment using deploy_lab_v13.sh
-  kvm-deploy-r620         Remote deploy on R620 (laptop-driven)
-  kvm-deploy-r810         Remote deploy on R810 (laptop-driven)
-  kvm-deploy-both         Remote deploy on R620 then R810
-  kvm-redeploy            Force redeploy KVM topology using deploy_lab_v13.sh
-  kvm-destroy             Destroy KVM topology using deploy_lab_v13.sh
-  kvm-validate            Validate VM SSH/connectivity using deploy_lab_v13.sh
-  remote-status           Show virsh list on R620 and R810 from laptop
-  remote-virsh <h> <cmd>  Run virsh command remotely. h=r620|r810
-  day0                    Run day-0 base provisioning
-  day1                    Run day-1 fabric wiring
-  infra-services          Run kubespray + postgresql + maas + ceph + openstack + monitoring
-  phase-r620              R620-first phased deployment with predefined host limits
-  phase-r810              R810 expansion phased deployment with predefined host limits
-  phased-full             Run phase-r620 then phase-r810
-  gateway                 Run _v3 gateway deployment
-  premium-fw              Run _v3 premium firewall deployment
-  full                    KVM deploy + full environment deploy
-  teardown                Full environment teardown (guarded)
-  status                  Show VM status from deploy_lab_v13.sh
-
-Examples:
-  ./deploy_lab_v3.sh --proxy-jump-host jump.example --ssh-key ~/.ssh/id_r620 --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 preflight
-  ./deploy_lab_v3.sh --remote-v13-host admin@10.1.1.20 --profile ubuntu_r620_kvm kvm-deploy
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 kvm-deploy-r620
-  ./deploy_lab_v3.sh --r810-host admin@10.1.1.21 kvm-deploy-r810
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 --r810-host admin@10.1.1.21 kvm-deploy-both
-  ./deploy_lab_v3.sh --r620-host admin@10.1.1.20 remote-virsh r620 start Spine_S1
-  ./deploy_lab_v3.sh phase-r620
-  ./deploy_lab_v3.sh phase-r810
-  ./deploy_lab_v3.sh --profile ubuntu_r620_kvm kvm-deploy
-  ./deploy_lab_v3.sh --profile ubuntu_r620_kvm full
-  ./deploy_lab_v3.sh teardown --ansible-arg=-e --ansible-arg=allow_destructive_teardown=true --ansible-arg=-e --ansible-arg=teardown_confirmation_token=YES-TEARDOWN-ALL
-[FAIL] Unsupported action: --810-host
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+nh1221@PowerEdge-R810:~$ ls -al
+total 204
+drwxr-x--x 17 nh1221 nh1221   4096 May 25 21:43 .
+drwxr-xr-x  3 root   root     4096 May 24 20:44 ..
+-rw-------  1 nh1221 nh1221    752 May 26 21:42 .bash_history
+-rw-r--r--  1 nh1221 nh1221    220 Feb 13 06:16 .bash_logout
+-rw-r--r--  1 nh1221 nh1221   3771 Feb 13 06:16 .bashrc
+drwx------ 13 nh1221 nh1221   4096 May 24 21:55 .cache
+drwxr-xr-x 15 nh1221 nh1221   4096 May 24 23:31 .config
+drwx------  4 nh1221 nh1221   4096 May 24 21:02 .local
+-rw-r--r--  1 nh1221 nh1221    807 Feb 13 06:16 .profile
+drwx------  2 nh1221 nh1221   4096 May 25 07:53 .ssh
+-rw-rw-r--  1 nh1221 nh1221    239 May 24 23:43 .wget-hsts
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Desktop
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Documents
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Downloads
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Music
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Pictures
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Public
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Templates
+-rwx------  1 nh1221 nh1221   8035 May 24 23:27 TopologyRequirements.txt
+drwxr-xr-x  2 nh1221 nh1221   4096 May 24 21:02 Videos
+drwxrwxr-x  6 nh1221 nh1221   4096 May 26 21:59 dc_lab
+drwxrwxr-x  2 nh1221 nh1221   4096 May 24 23:29 dc_lab_project
+-rwx------  1 nh1221 nh1221 107871 May 24 23:27 deploy_lab_v13.sh
+drwx------  5 nh1221 nh1221   4096 May 25 00:00 snap
+nh1221@PowerEdge-R810:~$ ls -al .ssh/
+total 20
+drwx------  2 nh1221 nh1221 4096 May 25 07:53 .
+drwxr-x--x 17 nh1221 nh1221 4096 May 25 21:43 ..
+-rw-------  1 nh1221 nh1221  105 May 25 07:53 authorized_keys
+-rw-------  1 nh1221 nh1221  419 May 25 07:53 id_dc_lab
+-rw-r--r--  1 nh1221 nh1221  105 May 25 07:53 id_dc_lab.pub
+nh1221@PowerEdge-R810:~$
