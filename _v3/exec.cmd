@@ -60,3 +60,34 @@ ansible-galaxy collection install -r _v3/requirements-collections.yml
 # Run day0:
 cd _v3
 ./deploy_lab_v3.sh day0
+
+
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+# BGP session state across all hosts (switches + exit routers + servers)
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_day1.yml --tags verify
+# BGP session state across all hosts (switches + exit routers + servers)
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_day1.yml --tags verify
+
+# SONiC switches — IPv4 unicast routes (fabric + server loopbacks)
+ansible -i inventory/hosts.yml sonic_switches -m shell \
+  -a "vtysh -c 'show bgp ipv4 unicast'" --become
+
+# Exit routers — routes received from border_leaf
+ansible -i inventory/hosts.yml exit_routers -m community.routeros.command \
+  -a "commands='/routing/bgp/route/print where received'"
+
+# Servers — FRR routes (should see leaf-learned prefixes)
+ansible -i inventory/hosts.yml servers -m shell \
+  -a "vtysh -c 'show bgp ipv4 unicast'" --become
+
+Or if you want a single compact view showing session state + route count per peer:
+
+ansible -i inventory/hosts.yml all -m shell \
+  -a "vtysh -c 'show bgp summary'" --become -e ansible_shell_type=sh 2>/dev/null
+
+What you'll see (without EVPN):
+
+All Leaf↔Server sessions: Established with route counts (server loopbacks + subnets)
+Border_Leaf↔Exit_Router: Established with route exchange
+L2VPN EVPN AF: Still active on switches (from prior run) but no host-originated Type-2/5 routes yet — those appear only after deploy_evpn_overlay.yml
+The underlay (IPv4 unicast) is fully verifiable without EVPN. EVPN adds the overlay tenant routes on top.
