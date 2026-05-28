@@ -1,0 +1,110 @@
+---
+# =============================================================================
+# Leaf_L1 - Edgecore/Accton AS5712-54X (Leaf #1, serves Host12_1/2/3 with Leaf_L2)
+# =============================================================================
+# Platform:   x86_64-accton_as5712_54x-r0 / Accton-AS5712-54X
+# ASIC:       Broadcom Trident II BCM56854
+# Ports:      48x10G SFP+ (Ethernet0-Ethernet47) + 6x40G QSFP+ (Ethernet48-Ethernet68)
+# Management: 172.16.2.21 (Management Switch port45)
+# Loopback:   10.0.1.1/32
+# ASN:        65011
+#
+# Source: TopologyRequirements.txt — "Leaf_L1, Leaf_L2: Edge/Accton 5712 model to be used"
+#
+# KVM Virtual Lab Wiring (73 NICs; SEQUENTIAL port_config.ini position → NIC):
+#   port_config.ini has 72 ports (48 SFP+ + 6×4 QSFP+ sub-ports, pre-broken-out).
+#   KVM VS maps the Nth data entry in port_config.ini to kernel ethN (NIC-N).
+#   The `index` field is physical cage metadata, NOT the NIC binding.
+#
+#   NIC0  (mgmt/dc-mgmt)   → Management0 (172.16.2.21)
+#   NIC1  (br-H121-L1)     → Ethernet0  (tenGigE0,  lane 13,  pos=1)  ↔ Host12_1 eth1
+#   NIC2  (br-H122-L1)     → Ethernet1  (tenGigE1,  lane 14,  pos=2)  ↔ Host12_2 eth1
+#   NIC3  (br-H123-L1)     → Ethernet2  (tenGigE2,  lane 15,  pos=3)  ↔ Host12_3 eth1
+#   NIC4-64 (br-pad)       → positions 4-64: Ethernet3-Ethernet63 (unused in lab)
+#   NIC65 (br-L1-S2)       → Ethernet64 (tenGigE64, lane 109, pos=65) ↔ Spine_S2 Ethernet0
+#   NIC66-68 (br-pad)      → positions 66-68: Ethernet65-67 (unused QSFP+5 sub-ports)
+#   NIC69 (br-L1-S1)       → Ethernet68 (tenGigE68, lane 77,  pos=69) ↔ Spine_S1 Ethernet0
+#   NIC70-72 (br-pad)      → positions 70-72: Ethernet69-71 (unused QSFP+6 sub-ports)
+#
+# VM_BRIDGES: "br-H121-L1,br-H122-L1,br-H123-L1,@61,br-L1-S2,@3,br-L1-S1,@3"
+# QSFP+6 split 4×10G → Ethernet68(lane 77)+Ethernet69-71; Ethernet68 = Spine_S1 uplink.
+# QSFP+5 split 4×10G → Ethernet64(lane 109)+Ethernet65-67; Ethernet64 = Spine_S2 uplink.
+# =============================================================================
+
+hostname: "Leaf_L1"
+router_id: "10.0.1.1"
+loopback_ip: "10.0.1.1/32"
+mgmt_ip: "172.16.2.21/24"
+mgmt_gateway: "172.16.2.1"
+mac_address: "00:1c:73:a1:01:01"
+
+# Platform selection is now driven by automation_profile.
+
+bgp_local_asn: "{{ leaf_asn_map[inventory_hostname] }}"
+
+# ---- Uplink interfaces (to spines; QSFP+5 and QSFP+6 each split 4×10G) ----
+# Physical: QSFP+6 lanes 77-80 → 4×10G breakout → only lane 77 (Ethernet68) used as uplink
+#           QSFP+5 lanes 109-112 → 4×10G breakout → only lane 109 (Ethernet64) used as uplink
+# KVM: idx=54 → eth54 → NIC54 = br-L1-S1 (Spine_S1); idx=53 → eth53 → NIC53 = br-L1-S2
+uplink_interfaces:
+  - port: "Ethernet68"
+    alias: "fortyGigE68"
+    lanes: "77"
+    index: "54"
+    speed: "10000"
+    target_breakout_mode: "4x10G"
+    neighbor: "Spine_S1"
+    neighbor_port: "Ethernet0"
+    neighbor_asn: "{{ spine_asn }}"
+    description: "Leaf_L1 → Spine_S1 (Celestica DX010) QSFP+6/lane-77 [KVM NIC54/br-L1-S1]"
+
+  - port: "Ethernet64"
+    alias: "fortyGigE64"
+    lanes: "109"
+    index: "53"
+    speed: "10000"
+    target_breakout_mode: "4x10G"
+    neighbor: "Spine_S2"
+    neighbor_port: "Ethernet0"
+    neighbor_asn: "{{ spine_asn }}"
+    description: "Leaf_L1 → Spine_S2 (Celestica DX010) QSFP+5/lane-109 [KVM NIC53/br-L1-S2]"
+
+# ---- Downlink interfaces (to servers; SFP+ 10G, idx=1-3, KVM NIC1-3) ----
+downlink_interfaces:
+  - port: "Ethernet0"
+    alias: "tenGigE0"
+    lanes: "13"
+    speed: "10000"
+    neighbor: "Host12_1"
+    neighbor_asn: "{{ server_asn_map['Host12_1'] }}"
+    neighbor_port: "eth1"
+    description: "Leaf_L1 → Host12_1 eth1 (10G SFP+) [KVM NIC1/br-H121-L1]"
+
+  - port: "Ethernet1"
+    alias: "tenGigE1"
+    lanes: "14"
+    speed: "10000"
+    neighbor: "Host12_2"
+    neighbor_asn: "{{ server_asn_map['Host12_2'] }}"
+    neighbor_port: "eth1"
+    description: "Leaf_L1 → Host12_2 eth1 (10G SFP+) [KVM NIC2/br-H122-L1]"
+
+  - port: "Ethernet2"
+    alias: "tenGigE2"
+    lanes: "15"
+    speed: "10000"
+    neighbor: "Host12_3"
+    neighbor_asn: "{{ server_asn_map['Host12_3'] }}"
+    neighbor_port: "eth1"
+    description: "Leaf_L1 → Host12_3 eth1 (10G SFP+) [KVM NIC3/br-H123-L1]"
+
+# ---- Breakout config: QSFP+5 and QSFP+6 each split 4×10G ----
+# Applied by sonic_fabric apply_patch.yml Step 2 (config interface breakout).
+# Ethernet68 → Ethernet68-71 each 10G (lane 77,78,79,80); Ethernet68 used for BGP.
+# Ethernet64 → Ethernet64-67 each 10G (lane 109,110,111,112); Ethernet64 used for BGP.
+breakout_cfg:
+  Ethernet68: { brkout_mode: "4x10G" }
+  Ethernet64: { brkout_mode: "4x10G" }
+
+# ---- All ports reference ----
+all_ports: "{{ as5712_sfp_ports + as5712_qsfp_ports }}"
