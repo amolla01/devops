@@ -1,1441 +1,460 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh day1
-[INFO] Preflight: checking SSH connectivity to R810 (nh1221@R810)
-[INFO] Preflight: R810 — key-based auth OK
-[INFO] Preflight: checking SSH connectivity to REMOTE_V13_HOST (nh1221@R810)
-[INFO] Preflight: REMOTE_V13_HOST — key-based auth OK
-[INFO] Preflight: checking deploy_lab_v13.sh presence on remote (/home/nh1221/deploy_lab_v13.sh)
-[INFO] Preflight completed successfully.
-[INFO] Running ansible-playbook playbooks/reused/deploy_day1.yml (profile=ubuntu_r810_kvm)
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_leaf_server_bgp.yml -i inventory/hosts.yml
 
-PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
-[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
+PLAY [Deploy Leaf-to-Server BGP (Downlink eBGP)] ****************************************************************************************************************************************************************
 
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [Spine_S1 -> localhost] =>
+TASK [sonic_leaf_server : Leaf-Server | Validate required variables] ********************************************************************************************************************************************
+ok: [Leaf_L1] =>
     changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Spine_S2 -> localhost] =>
+    msg: All assertions passed
+ok: [Leaf_L2] =>
     changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Border_Leaf1 -> localhost] =>
+    msg: All assertions passed
+ok: [Leaf_L3] =>
     changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-
-TASK [Phase 0 | Pre-flight connectivity] ************************************************************************************************************************************************************************
-included: sonic_base for Spine_S1
-
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost] =>
+    msg: All assertions passed
+ok: [Leaf_L4] =>
     changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-
-TASK [Phase 0 | Pre-flight connectivity] ************************************************************************************************************************************************************************
-included: sonic_base for Spine_S2, Border_Leaf1
-
-TASK [sonic_base : preflight | Connectivity phase] **************************************************************************************************************************************************************
-
-TASK [sonic_base : preflight | Connectivity phase] **************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_connectivity.yml for Spine_S1
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_connectivity.yml for Spine_S2, Border_Leaf1
-
-TASK [Phase 0 | Pre-flight connectivity] ************************************************************************************************************************************************************************
-included: sonic_base for Border_Leaf2
-
-TASK [sonic_base : preflight | Connectivity phase] **************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_connectivity.yml for Border_Leaf2
-
-TASK [sonic_base : preflight | Kill any stale SSH ControlMaster process] ****************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Kill any stale SSH ControlMaster process] ****************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Kill any stale SSH ControlMaster process] ****************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to accept connections] **************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Confirm raw SSH is stable before Ansible session] ********************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=4)
-
-TASK [sonic_base : preflight | Probe SSH password (primary)] ****************************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Try alternate password (factory default)] ****************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Switch to alternate password] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Initialize raw SSH stability probe state] ****************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Confirm raw SSH is stable before Ansible session] ********************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=4)
-
-TASK [sonic_base : preflight | Confirm raw SSH is stable before Ansible session] ********************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=4)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=4)
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Fail fast when raw SSH is unstable] **********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Initialize SSH handoff probe state] **********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Confirm SSH is reachable for Ansible handoff] ************************************************************************************************************************************
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S1]
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=4)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=5)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf2 => (item=6)
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Fail fast when raw SSH is unstable] **********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Initialize SSH handoff probe state] **********************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Confirm SSH is reachable for Ansible handoff] ************************************************************************************************************************************
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S2]
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=4)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=5)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S1 => (item=6)
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe raw SSH stability before Ansible session] **********************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record raw SSH stability before Ansible session result] **************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Fail fast when raw SSH is unstable] **********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report raw SSH stability before Ansible session progress] ************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Initialize SSH handoff probe state] **********************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying raw SSH stability before Ansible session] *******************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Fail fast when raw SSH is unstable] **********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Initialize SSH handoff probe state] **********************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Confirm SSH is reachable for Ansible handoff] ************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=4)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=5)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Border_Leaf1 => (item=6)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=1)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=2)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=3)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=4)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=5)
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_ssh_probe_attempt.yml for Spine_S2 => (item=6)
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Fail fast when SSH handoff is unstable] ******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Fail fast when SSH handoff is unstable] ******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Fail fast when SSH handoff is unstable] ******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Probe SSH handoff to Ansible] ****************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Record SSH handoff to Ansible result] ********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Report SSH handoff to Ansible progress] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait before retrying SSH handoff to Ansible] *************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Fail fast when SSH handoff is unstable] ******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait for critical SONiC services to be active] ***********************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for critical SONiC services to be active] ***********************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after services gate] ************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after services gate] ************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for critical SONiC services to be active] ***********************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after services gate] ************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to stabilize after services gate] ***************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to stabilize after services gate] ***************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after services gate] ************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 to stabilize after services gate] ***************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Re-establish SSH after services gate] ********************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Pin conservative SSH transport for remaining preflight] **************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Host prep phase] *****************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_host_prep.yml for Border_Leaf2
-
-TASK [sonic_base : preflight | Re-establish SSH after services gate] ********************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Pin conservative SSH transport for remaining preflight] **************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Host prep phase] *****************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_host_prep.yml for Spine_S1
-
-TASK [sonic_base : preflight | Re-establish SSH after services gate] ********************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Pin conservative SSH transport for remaining preflight] **************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Host prep phase] *****************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_host_prep.yml for Border_Leaf1
-
-TASK [sonic_base : preflight | Re-establish SSH after services gate] ********************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Pin conservative SSH transport for remaining preflight] **************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Host prep phase] *****************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_host_prep.yml for Spine_S2
-
-TASK [sonic_base : preflight | Wait for Ansible connection to stabilise before host prep] ***********************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait for Ansible connection to stabilise before host prep] ***********************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait for Ansible connection to stabilise before host prep] ***********************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait for Ansible connection to stabilise before host prep] ***********************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Check if swap is already active] *************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Check if swap is already active] *************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Check if swap is already active] *************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Check if swap is already active] *************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Check if /swapfile exists] *******************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Check if /swapfile exists] *******************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Check if /swapfile exists] *******************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Check if /swapfile exists] *******************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Activate existing swapfile] ******************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Activate existing swapfile] ******************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Activate existing swapfile] ******************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Activate existing swapfile] ******************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Re-check swap status] ************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Re-check swap status] ************************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Re-check swap status] ************************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Re-check swap status] ************************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Create 1GB swap for OOM protection] **********************************************************************************************************************************************
-changed: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after swap setup] ***************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 after swap setup] *******************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Create 1GB swap for OOM protection] **********************************************************************************************************************************************
-changed: [Spine_S1]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after swap setup] ***************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Re-establish SSH after swap setup] ***********************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Identity phase] ******************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_identity.yml for Border_Leaf2
-
-TASK [sonic_base : preflight | Create 1GB swap for OOM protection] **********************************************************************************************************************************************
-changed: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 after swap setup] *******************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Create 1GB swap for OOM protection] **********************************************************************************************************************************************
-changed: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after swap setup] ***************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster after swap setup] ***************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 after swap setup] *******************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 after swap setup] *******************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Gather SONiC build version (probe)] **********************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Mark whether SONiC probe needs recovery] *****************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster (recovery after probe failure)] *************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 (recovery after probe failure)] *****************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Re-establish SSH (recovery after probe failure)] *********************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Re-establish SSH after swap setup] ***********************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Gather SONiC build version (retry)] **********************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Identity phase] ******************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_identity.yml for Spine_S1
-
-TASK [sonic_base : preflight | Set sonic hostname fact] *********************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Re-establish SSH after swap setup] ***********************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Identity phase] ******************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_identity.yml for Spine_S2
-
-TASK [sonic_base : preflight | Re-establish SSH after swap setup] ***********************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Identity phase] ******************************************************************************************************************************************************************
-included: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_base/tasks/preflight_identity.yml for Border_Leaf1
-
-TASK [sonic_base : preflight | Gather platform identity from ConfigDB] ******************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Display platform identity] *******************************************************************************************************************************************************
+    msg: All assertions passed
+ok: [Border_Leaf1] =>
+    changed: false
+    msg: All assertions passed
 ok: [Border_Leaf2] =>
-    msg: |-
-        hostname=Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-        Border_Leaf2 | metadata=Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-        {'buffer_model': 'traditional', 'default_bgp_status': 'up', 'default_pfcwd_status': 'disable', 'docker_routing_config_mode': 'split', 'hostname': 'Border_Leaf2', 'hwsku': 'Arista-7050QX-32S', 'mac': '00:e0:ec:57:12:02', 'platform': 'x86_64-kvm_x86_64-r0', 'synchronous_mode': 'enable', 'timezone': 'UTC', 'type': 'LeafRouter'}
+    changed: false
+    msg: All assertions passed
 
-TASK [sonic_base : preflight | Gather SONiC build version (probe)] **********************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
+TASK [sonic_leaf_server : Leaf-Server | Validate each downlink has required fields] *****************************************************************************************************************************
+[ERROR]: Task failed: Action failed: Downlink Ethernet0 missing required fields (port, neighbor_asn, neighbor).
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_leaf_server/tasks/main.yml:24:3
 
-TASK [sonic_base : preflight | Mark whether SONiC probe needs recovery] *****************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster (recovery after probe failure)] *************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 (recovery after probe failure)] *****************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Re-establish SSH (recovery after probe failure)] *********************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Gather SONiC build version (retry)] **********************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_base : preflight | Set sonic hostname fact] *********************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_base : preflight | Gather SONiC build version (probe)] **********************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Verify config_db.json exists] ****************************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_base : preflight | Report config_db.json status] ****************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: config_db.json exists at /etc/sonic/config_db.json
-
-TASK [sonic_fabric : fabric | Validate required variables] ******************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Mark whether SONiC probe needs recovery] *****************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster (recovery after probe failure)] *************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 (recovery after probe failure)] *****************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Re-establish SSH (recovery after probe failure)] *********************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Set unified interface list] *******************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Gather SONiC build version (retry)] **********************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_base : preflight | Gather SONiC build version (probe)] **********************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_fabric : fabric | Resolve local hardware profile paths] *********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Set sonic hostname fact] *********************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_fabric : fabric | Fail if no interfaces match play hosts] *******************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_base : preflight | Mark whether SONiC probe needs recovery] *****************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Kill stale ControlMaster (recovery after probe failure)] *************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Wait for SSH port 22 (recovery after probe failure)] *****************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Re-establish SSH (recovery after probe failure)] *********************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Gather SONiC build version (retry)] **********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_base : preflight | Set sonic hostname fact] *********************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Resolve interface metadata from hardware files] ***********************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_fabric/tasks/main.yml:97:3
-
-95   tags: [render, fabric]
-96
-97 - name: "fabric | Resolve interface metadata from hardware files"
+22   tags: [validate]
+23
+24 - name: "Leaf-Server | Validate each downlink has required fields"
      ^ column 3
 
-fatal: [Border_Leaf2 -> localhost]: FAILED! =>
+failed: [Leaf_L2] (item=Ethernet0) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
     changed: false
-    cmd: |-
-        python3 - <<'PY'
-        import json
-        import os
-        import sys
+    evaluated_to: false
+    item:
+        alias: tenGigE0
+        description: Leaf_L2 → Host12_1 eth2 (10G SFP+)
+        lanes: '13'
+        neighbor: Host12_1
+        neighbor_port: eth2
+        port: Ethernet0
+        speed: '10000'
+    msg: Downlink Ethernet0 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L1] (item=Ethernet0) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        alias: tenGigE0
+        description: Leaf_L1 → Host12_1 eth1 (10G SFP+) [KVM NIC1/br-H121-L1]
+        lanes: '13'
+        neighbor: Host12_1
+        neighbor_port: eth1
+        port: Ethernet0
+        speed: '10000'
+    msg: Downlink Ethernet0 missing required fields (port, neighbor_asn, neighbor).
+ok: [Border_Leaf1] => (item=Ethernet0) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/1
+        breakout_mode: 4x10G
+        description: Border_Leaf1 Ethernet0 → HostB12_1 enps1 (10G breakout lane9)
+        index: '5'
+        lanes: '9'
+        neighbor: HostB12_1
+        neighbor_asn: 65106
+        neighbor_port: enps1
+        parent_port: Ethernet0
+        port: Ethernet0
+        speed: '10000'
+    msg: All assertions passed
+[ERROR]: Task failed: Action failed: Downlink Ethernet1 missing required fields (port, neighbor_asn, neighbor).
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_leaf_server/tasks/main.yml:24:3
 
-        with open(os.environ["PORT_CONFIG_PATH"], encoding="utf-8") as handle:
-            port_rows = {}
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fields = line.split()
-                if len(fields) < 5:
-                    continue
-                port_rows[fields[0]] = {
-                    "lanes": fields[1],
-                    "alias": fields[2],
-                    "index": fields[3],
-                    "hardware_default_speed": str(fields[4]),
-                }
+22   tags: [validate]
+23
+24 - name: "Leaf-Server | Validate each downlink has required fields"
+     ^ column 3
 
-        with open(os.environ["HWSKU_JSON_PATH"], encoding="utf-8") as handle:
-            hwsku_data = json.load(handle)
+failed: [Leaf_L2] (item=Ethernet1) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        alias: tenGigE1
+        description: Leaf_L2 → Host12_2 eth2 (10G SFP+)
+        lanes: '14'
+        neighbor: Host12_2
+        neighbor_port: eth2
+        port: Ethernet1
+        speed: '10000'
+    msg: Downlink Ethernet1 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L3] (item=Ethernet0) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        breakout_mode: 4x10G
+        description: Leaf_L3 → Host34_1 enps1 (10G breakout sub0 of QSFP+1)
+        index: '1'
+        lanes: '125'
+        neighbor: Host34_1
+        neighbor_port: eth1
+        parent_port: Ethernet0
+        port: Ethernet0
+        speed: '10000'
+    msg: Downlink Ethernet0 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L4] (item=Ethernet0) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        breakout_mode: 4x10G
+        description: Leaf_L4 → Host34_1 enps2 (10G breakout sub0 of QSFP+1)
+        index: '1'
+        lanes: '125'
+        neighbor: Host34_1
+        neighbor_port: eth2
+        parent_port: Ethernet0
+        port: Ethernet0
+        speed: '10000'
+    msg: Downlink Ethernet0 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L1] (item=Ethernet1) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        alias: tenGigE1
+        description: Leaf_L1 → Host12_2 eth1 (10G SFP+) [KVM NIC2/br-H122-L1]
+        lanes: '14'
+        neighbor: Host12_2
+        neighbor_port: eth1
+        port: Ethernet1
+        speed: '10000'
+    msg: Downlink Ethernet1 missing required fields (port, neighbor_asn, neighbor).
+ok: [Border_Leaf1] => (item=Ethernet1) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/2
+        breakout_mode: 4x10G
+        description: Border_Leaf1 Ethernet1 → HostB12_2 enps1 (10G breakout lane10)
+        index: '5'
+        lanes: '10'
+        neighbor: HostB12_2
+        neighbor_asn: 65107
+        neighbor_port: enps1
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
+    msg: All assertions passed
+[ERROR]: Task failed: Action failed: Downlink Ethernet2 missing required fields (port, neighbor_asn, neighbor).
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_leaf_server/tasks/main.yml:24:3
 
-        breakout_cfg = json.loads(os.environ.get("BREAKOUT_CFG", "{}"))
+22   tags: [validate]
+23
+24 - name: "Leaf-Server | Validate each downlink has required fields"
+     ^ column 3
 
-        breakout_by_port = {
-            port: values.get("default_brkout_mode", "")
-            for port, values in (hwsku_data.get("interfaces") or {}).items()
-        }
+failed: [Leaf_L1] (item=Ethernet2) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        alias: tenGigE2
+        description: Leaf_L1 → Host12_3 eth1 (10G SFP+) [KVM NIC3/br-H123-L1]
+        lanes: '15'
+        neighbor: Host12_3
+        neighbor_port: eth1
+        port: Ethernet2
+        speed: '10000'
+    msg: Downlink Ethernet2 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L2] (item=Ethernet2) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        alias: tenGigE2
+        description: Leaf_L2 → Host12_3 eth2 (10G SFP+)
+        lanes: '15'
+        neighbor: Host12_3
+        neighbor_port: eth2
+        port: Ethernet2
+        speed: '10000'
+    msg: Downlink Ethernet2 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L3] (item=Ethernet1) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        breakout_mode: 4x10G
+        description: Leaf_L3 → Host34_2 enps1 (10G breakout sub1 of QSFP+1)
+        index: '1'
+        lanes: '126'
+        neighbor: Host34_2
+        neighbor_port: eth1
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
+    msg: Downlink Ethernet1 missing required fields (port, neighbor_asn, neighbor).
+failed: [Leaf_L4] (item=Ethernet1) =>
+    ansible_loop_var: item
+    assertion: item.neighbor_asn is defined
+    changed: false
+    evaluated_to: false
+    item:
+        breakout_mode: 4x10G
+        description: Leaf_L4 → Host34_2 enps2 (10G breakout sub1 of QSFP+1)
+        index: '1'
+        lanes: '126'
+        neighbor: Host34_2
+        neighbor_port: eth2
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
+    msg: Downlink Ethernet1 missing required fields (port, neighbor_asn, neighbor).
+ok: [Border_Leaf1] => (item=Ethernet2) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/3
+        breakout_mode: 4x10G
+        description: Border_Leaf1 Ethernet2 → MonitorSrv enps1 (10G breakout lane11)
+        index: '5'
+        lanes: '11'
+        neighbor: MonitorSrv
+        neighbor_asn: 65108
+        neighbor_port: enps1
+        parent_port: Ethernet0
+        port: Ethernet2
+        speed: '10000'
+    msg: All assertions passed
+ok: [Border_Leaf2] => (item=Ethernet0) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/1
+        breakout_mode: 4x10G
+        description: Border_Leaf2 Ethernet0 → HostB12_1 enps2 (10G breakout lane9)
+        index: '5'
+        lanes: '9'
+        neighbor: HostB12_1
+        neighbor_asn: 65106
+        neighbor_port: enps2
+        parent_port: Ethernet0
+        port: Ethernet0
+        speed: '10000'
+    msg: All assertions passed
+ok: [Border_Leaf2] => (item=Ethernet1) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/2
+        breakout_mode: 4x10G
+        description: Border_Leaf2 Ethernet1 → HostB12_2 enps2 (10G breakout lane10)
+        index: '5'
+        lanes: '10'
+        neighbor: HostB12_2
+        neighbor_asn: 65107
+        neighbor_port: enps2
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
+    msg: All assertions passed
+ok: [Border_Leaf2] => (item=Ethernet2) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        alias: Ethernet5/3
+        breakout_mode: 4x10G
+        description: Border_Leaf2 Ethernet2 → MonitorSrv enps2 (10G breakout lane11)
+        index: '5'
+        lanes: '11'
+        neighbor: MonitorSrv
+        neighbor_asn: 65108
+        neighbor_port: enps2
+        parent_port: Ethernet0
+        port: Ethernet2
+        speed: '10000'
+    msg: All assertions passed
 
-        resolved = []
-        missing = []
-        for link in json.loads(os.environ["FABRIC_LINKS"]):
-            port = link["port"]
-            metadata = port_rows.get(port)
-            if metadata is None:
-                missing.append(port)
-                continue
+TASK [sonic_leaf_server : Leaf-Server | Check existing BGP neighbors] *******************************************************************************************************************************************
+ok: [Border_Leaf2]
+ok: [Border_Leaf1]
 
-            merged = dict(link)
-            requested_breakout_mode = (breakout_cfg.get(port) or {}).get("brkout_mode", "")
+TASK [sonic_leaf_server : Leaf-Server | Parse existing interface neighbors] *************************************************************************************************************************************
+ok: [Border_Leaf2]
+ok: [Border_Leaf1]
 
-            merged["alias"] = merged.get("alias") or metadata["alias"]
-            merged["lanes"] = merged.get("lanes") or metadata["lanes"]
-            merged["index"] = merged.get("index") or metadata["index"]
-            merged["hardware_default_speed"] = metadata["hardware_default_speed"]
-            merged["hardware_default_brkout_mode"] = breakout_by_port.get(port, "")
-            if requested_breakout_mode:
-                merged["target_breakout_mode"] = requested_breakout_mode
-            if not merged.get("speed"):
-                merged["speed"] = metadata["hardware_default_speed"]
-            resolved.append(merged)
+TASK [sonic_leaf_server : Leaf-Server | Default empty neighbors if parse failed] ********************************************************************************************************************************
+skipping: [Border_Leaf1]
+skipping: [Border_Leaf2]
 
-        if missing:
-            print(
-                "Missing ports in local port_config.ini: " + ", ".join(missing),
-                file=sys.stderr,
-            )
-            sys.exit(1)
+TASK [sonic_leaf_server : Leaf-Server | Enable downlink ports] **************************************************************************************************************************************************
+changed: [Border_Leaf2] => (item=Ethernet0)
+changed: [Border_Leaf1] => (item=Ethernet0)
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_leaf_server/tasks/main.yml:58:3
 
-        print(json.dumps(resolved))
-        PY
-    delta: '0:00:00.039395'
-    end: '2026-05-27 20:35:08.873522'
+56   tags: [check]
+57
+58 - name: "Leaf-Server | Enable downlink ports"
+     ^ column 3
+
+failed: [Border_Leaf2] (item=Ethernet1) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - config
+    - interface
+    - startup
+    - Ethernet1
+    delta: '0:00:00.691550'
+    end: '2026-05-28 02:20:52.113739'
+    item:
+        alias: Ethernet5/2
+        breakout_mode: 4x10G
+        description: Border_Leaf2 Ethernet1 → HostB12_2 enps2 (10G breakout lane10)
+        index: '5'
+        lanes: '10'
+        neighbor: HostB12_2
+        neighbor_asn: 65107
+        neighbor_port: enps2
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
     msg: non-zero return code
-    rc: 1
-    start: '2026-05-27 20:35:08.834127'
+    rc: 2
+    start: '2026-05-28 02:20:51.422189'
     stderr: |-
-        Traceback (most recent call last):
-          File "<stdin>", line 5, in <module>
-        FileNotFoundError: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../arista/7050-QX32S/port_config.ini'
+        Usage: config interface startup [OPTIONS] <interface_name>
+        Try "config interface startup -h" for help.
+
+        Error: Interface name is invalid. Please enter a valid interface name!!
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
-
-TASK [sonic_base : preflight | Gather platform identity from ConfigDB] ******************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Display platform identity] *******************************************************************************************************************************************************
-ok: [Spine_S1] =>
-    msg: |-
-        hostname=Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
-        Spine_S1 | metadata=Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
-        {'buffer_model': 'traditional', 'default_bgp_status': 'up', 'default_pfcwd_status': 'disable', 'docker_routing_config_mode': 'split', 'hostname': 'Spine_S1', 'hwsku': 'Seastone-DX010', 'mac': '00:e0:ec:8a:1a:38', 'platform': 'x86_64-kvm_x86_64-r0', 'synchronous_mode': 'enable', 'timezone': 'UTC', 'type': 'SpineRouter'}
-
-TASK [sonic_base : preflight | Gather platform identity from ConfigDB] ******************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Display platform identity] *******************************************************************************************************************************************************
-ok: [Spine_S2] =>
-    msg: |-
-        hostname=Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.
-        Spine_S2 | metadata=Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.
-        {'buffer_model': 'traditional', 'default_bgp_status': 'up', 'default_pfcwd_status': 'disable', 'docker_routing_config_mode': 'split', 'hostname': 'Spine_S2', 'hwsku': 'Seastone-DX010', 'mac': '00:e0:ec:8a:1b:48', 'platform': 'x86_64-kvm_x86_64-r0', 'synchronous_mode': 'enable', 'timezone': 'UTC', 'type': 'SpineRouter'}
-
-TASK [sonic_base : preflight | Gather platform identity from ConfigDB] ******************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Display platform identity] *******************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |-
-        hostname=Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-        Border_Leaf1 | metadata=Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-        {'buffer_model': 'traditional', 'default_bgp_status': 'up', 'default_pfcwd_status': 'disable', 'docker_routing_config_mode': 'split', 'hostname': 'Border_Leaf1', 'hwsku': 'Arista-7050QX-32S', 'mac': '00:e0:ec:57:12:01', 'platform': 'x86_64-kvm_x86_64-r0', 'synchronous_mode': 'enable', 'timezone': 'UTC', 'type': 'LeafRouter'}
-
-TASK [sonic_base : preflight | Verify config_db.json exists] ****************************************************************************************************************************************************
-ok: [Spine_S1 -> localhost]
-
-TASK [sonic_base : preflight | Report config_db.json status] ****************************************************************************************************************************************************
-ok: [Spine_S1] =>
-    msg: config_db.json exists at /etc/sonic/config_db.json
-
-TASK [sonic_fabric : fabric | Validate required variables] ******************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Set unified interface list] *******************************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Resolve local hardware profile paths] *********************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
-ok: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Fail if no interfaces match play hosts] *******************************************************************************************************************************************
-skipping: [Spine_S1]
-
-TASK [sonic_fabric : fabric | Resolve interface metadata from hardware files] ***********************************************************************************************************************************
-fatal: [Spine_S1 -> localhost]: FAILED! =>
-    changed: false
-    cmd: |-
-        python3 - <<'PY'
-        import json
-        import os
-        import sys
-
-        with open(os.environ["PORT_CONFIG_PATH"], encoding="utf-8") as handle:
-            port_rows = {}
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fields = line.split()
-                if len(fields) < 5:
-                    continue
-                port_rows[fields[0]] = {
-                    "lanes": fields[1],
-                    "alias": fields[2],
-                    "index": fields[3],
-                    "hardware_default_speed": str(fields[4]),
-                }
-
-        with open(os.environ["HWSKU_JSON_PATH"], encoding="utf-8") as handle:
-            hwsku_data = json.load(handle)
-
-        breakout_cfg = json.loads(os.environ.get("BREAKOUT_CFG", "{}"))
-
-        breakout_by_port = {
-            port: values.get("default_brkout_mode", "")
-            for port, values in (hwsku_data.get("interfaces") or {}).items()
-        }
-
-        resolved = []
-        missing = []
-        for link in json.loads(os.environ["FABRIC_LINKS"]):
-            port = link["port"]
-            metadata = port_rows.get(port)
-            if metadata is None:
-                missing.append(port)
-                continue
-
-            merged = dict(link)
-            requested_breakout_mode = (breakout_cfg.get(port) or {}).get("brkout_mode", "")
-
-            merged["alias"] = merged.get("alias") or metadata["alias"]
-            merged["lanes"] = merged.get("lanes") or metadata["lanes"]
-            merged["index"] = merged.get("index") or metadata["index"]
-            merged["hardware_default_speed"] = metadata["hardware_default_speed"]
-            merged["hardware_default_brkout_mode"] = breakout_by_port.get(port, "")
-            if requested_breakout_mode:
-                merged["target_breakout_mode"] = requested_breakout_mode
-            if not merged.get("speed"):
-                merged["speed"] = metadata["hardware_default_speed"]
-            resolved.append(merged)
-
-        if missing:
-            print(
-                "Missing ports in local port_config.ini: " + ", ".join(missing),
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        print(json.dumps(resolved))
-        PY
-    delta: '0:00:00.034721'
-    end: '2026-05-27 20:35:13.287758'
+failed: [Border_Leaf1] (item=Ethernet1) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - config
+    - interface
+    - startup
+    - Ethernet1
+    delta: '0:00:01.012164'
+    end: '2026-05-28 02:20:52.992476'
+    item:
+        alias: Ethernet5/2
+        breakout_mode: 4x10G
+        description: Border_Leaf1 Ethernet1 → HostB12_2 enps1 (10G breakout lane10)
+        index: '5'
+        lanes: '10'
+        neighbor: HostB12_2
+        neighbor_asn: 65107
+        neighbor_port: enps1
+        parent_port: Ethernet0
+        port: Ethernet1
+        speed: '10000'
     msg: non-zero return code
-    rc: 1
-    start: '2026-05-27 20:35:13.253037'
+    rc: 2
+    start: '2026-05-28 02:20:51.980312'
     stderr: |-
-        Traceback (most recent call last):
-          File "<stdin>", line 5, in <module>
-        FileNotFoundError: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../celestica/Seastone-DX010/port_config.ini'
+        Usage: config interface startup [OPTIONS] <interface_name>
+        Try "config interface startup -h" for help.
+
+        Error: Interface name is invalid. Please enter a valid interface name!!
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
-
-TASK [sonic_base : preflight | Verify config_db.json exists] ****************************************************************************************************************************************************
-ok: [Spine_S2 -> localhost]
-
-TASK [sonic_base : preflight | Report config_db.json status] ****************************************************************************************************************************************************
-ok: [Spine_S2] =>
-    msg: config_db.json exists at /etc/sonic/config_db.json
-
-TASK [sonic_fabric : fabric | Validate required variables] ******************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_base : preflight | Verify config_db.json exists] ****************************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
-
-TASK [sonic_base : preflight | Report config_db.json status] ****************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: config_db.json exists at /etc/sonic/config_db.json
-
-TASK [sonic_fabric : fabric | Set unified interface list] *******************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Validate required variables] ******************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Resolve local hardware profile paths] *********************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Fail if no interfaces match play hosts] *******************************************************************************************************************************************
-skipping: [Spine_S2]
-
-TASK [sonic_fabric : fabric | Set unified interface list] *******************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Resolve local hardware profile paths] *********************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Fail if no interfaces match play hosts] *******************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_fabric : fabric | Resolve interface metadata from hardware files] ***********************************************************************************************************************************
-fatal: [Spine_S2 -> localhost]: FAILED! =>
-    changed: false
-    cmd: |-
-        python3 - <<'PY'
-        import json
-        import os
-        import sys
-
-        with open(os.environ["PORT_CONFIG_PATH"], encoding="utf-8") as handle:
-            port_rows = {}
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fields = line.split()
-                if len(fields) < 5:
-                    continue
-                port_rows[fields[0]] = {
-                    "lanes": fields[1],
-                    "alias": fields[2],
-                    "index": fields[3],
-                    "hardware_default_speed": str(fields[4]),
-                }
-
-        with open(os.environ["HWSKU_JSON_PATH"], encoding="utf-8") as handle:
-            hwsku_data = json.load(handle)
-
-        breakout_cfg = json.loads(os.environ.get("BREAKOUT_CFG", "{}"))
-
-        breakout_by_port = {
-            port: values.get("default_brkout_mode", "")
-            for port, values in (hwsku_data.get("interfaces") or {}).items()
-        }
-
-        resolved = []
-        missing = []
-        for link in json.loads(os.environ["FABRIC_LINKS"]):
-            port = link["port"]
-            metadata = port_rows.get(port)
-            if metadata is None:
-                missing.append(port)
-                continue
-
-            merged = dict(link)
-            requested_breakout_mode = (breakout_cfg.get(port) or {}).get("brkout_mode", "")
-
-            merged["alias"] = merged.get("alias") or metadata["alias"]
-            merged["lanes"] = merged.get("lanes") or metadata["lanes"]
-            merged["index"] = merged.get("index") or metadata["index"]
-            merged["hardware_default_speed"] = metadata["hardware_default_speed"]
-            merged["hardware_default_brkout_mode"] = breakout_by_port.get(port, "")
-            if requested_breakout_mode:
-                merged["target_breakout_mode"] = requested_breakout_mode
-            if not merged.get("speed"):
-                merged["speed"] = metadata["hardware_default_speed"]
-            resolved.append(merged)
-
-        if missing:
-            print(
-                "Missing ports in local port_config.ini: " + ", ".join(missing),
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        print(json.dumps(resolved))
-        PY
-    delta: '0:00:00.036288'
-    end: '2026-05-27 20:35:15.298005'
+failed: [Border_Leaf2] (item=Ethernet2) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - config
+    - interface
+    - startup
+    - Ethernet2
+    delta: '0:00:00.777277'
+    end: '2026-05-28 02:20:55.501262'
+    item:
+        alias: Ethernet5/3
+        breakout_mode: 4x10G
+        description: Border_Leaf2 Ethernet2 → MonitorSrv enps2 (10G breakout lane11)
+        index: '5'
+        lanes: '11'
+        neighbor: MonitorSrv
+        neighbor_asn: 65108
+        neighbor_port: enps2
+        parent_port: Ethernet0
+        port: Ethernet2
+        speed: '10000'
     msg: non-zero return code
-    rc: 1
-    start: '2026-05-27 20:35:15.261717'
+    rc: 2
+    start: '2026-05-28 02:20:54.723985'
     stderr: |-
-        Traceback (most recent call last):
-          File "<stdin>", line 5, in <module>
-        FileNotFoundError: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../celestica/Seastone-DX010/port_config.ini'
+        Usage: config interface startup [OPTIONS] <interface_name>
+        Try "config interface startup -h" for help.
+
+        Error: Interface name is invalid. Please enter a valid interface name!!
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
-fatal: [Border_Leaf1 -> localhost]: FAILED! =>
-    changed: false
-    cmd: |-
-        python3 - <<'PY'
-        import json
-        import os
-        import sys
-
-        with open(os.environ["PORT_CONFIG_PATH"], encoding="utf-8") as handle:
-            port_rows = {}
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                fields = line.split()
-                if len(fields) < 5:
-                    continue
-                port_rows[fields[0]] = {
-                    "lanes": fields[1],
-                    "alias": fields[2],
-                    "index": fields[3],
-                    "hardware_default_speed": str(fields[4]),
-                }
-
-        with open(os.environ["HWSKU_JSON_PATH"], encoding="utf-8") as handle:
-            hwsku_data = json.load(handle)
-
-        breakout_cfg = json.loads(os.environ.get("BREAKOUT_CFG", "{}"))
-
-        breakout_by_port = {
-            port: values.get("default_brkout_mode", "")
-            for port, values in (hwsku_data.get("interfaces") or {}).items()
-        }
-
-        resolved = []
-        missing = []
-        for link in json.loads(os.environ["FABRIC_LINKS"]):
-            port = link["port"]
-            metadata = port_rows.get(port)
-            if metadata is None:
-                missing.append(port)
-                continue
-
-            merged = dict(link)
-            requested_breakout_mode = (breakout_cfg.get(port) or {}).get("brkout_mode", "")
-
-            merged["alias"] = merged.get("alias") or metadata["alias"]
-            merged["lanes"] = merged.get("lanes") or metadata["lanes"]
-            merged["index"] = merged.get("index") or metadata["index"]
-            merged["hardware_default_speed"] = metadata["hardware_default_speed"]
-            merged["hardware_default_brkout_mode"] = breakout_by_port.get(port, "")
-            if requested_breakout_mode:
-                merged["target_breakout_mode"] = requested_breakout_mode
-            if not merged.get("speed"):
-                merged["speed"] = metadata["hardware_default_speed"]
-            resolved.append(merged)
-
-        if missing:
-            print(
-                "Missing ports in local port_config.ini: " + ", ".join(missing),
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        print(json.dumps(resolved))
-        PY
-    delta: '0:00:00.033320'
-    end: '2026-05-27 20:35:15.724225'
+failed: [Border_Leaf1] (item=Ethernet2) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - config
+    - interface
+    - startup
+    - Ethernet2
+    delta: '0:00:00.756214'
+    end: '2026-05-28 02:20:56.701765'
+    item:
+        alias: Ethernet5/3
+        breakout_mode: 4x10G
+        description: Border_Leaf1 Ethernet2 → MonitorSrv enps1 (10G breakout lane11)
+        index: '5'
+        lanes: '11'
+        neighbor: MonitorSrv
+        neighbor_asn: 65108
+        neighbor_port: enps1
+        parent_port: Ethernet0
+        port: Ethernet2
+        speed: '10000'
     msg: non-zero return code
-    rc: 1
-    start: '2026-05-27 20:35:15.690905'
+    rc: 2
+    start: '2026-05-28 02:20:55.945551'
     stderr: |-
-        Traceback (most recent call last):
-          File "<stdin>", line 5, in <module>
-        FileNotFoundError: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../arista/7050-QX32S/port_config.ini'
+        Usage: config interface startup [OPTIONS] <interface_name>
+        Try "config interface startup -h" for help.
+
+        Error: Interface name is invalid. Please enter a valid interface name!!
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=49   changed=1    unreachable=0    failed=1    skipped=47   rescued=0    ignored=0
-Border_Leaf2               : ok=49   changed=1    unreachable=0    failed=1    skipped=47   rescued=0    ignored=0
-Spine_S1                   : ok=49   changed=1    unreachable=0    failed=1    skipped=47   rescued=0    ignored=0
-Spine_S2                   : ok=49   changed=1    unreachable=0    failed=1    skipped=47   rescued=0    ignored=0
+Border_Leaf1               : ok=4    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+Border_Leaf2               : ok=4    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+Leaf_L1                    : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf_L2                    : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf_L3                    : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf_L4                    : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
