@@ -1,0 +1,109 @@
+---
+# =============================================================================
+# set_interface_properties.yml — Utility: Set SONiC interface properties
+# =============================================================================
+# Targeted operational playbook to set interface properties (admin_status, mtu,
+# speed, fec) on all connected/defined interfaces across SONiC switches.
+#
+# Works on interfaces defined in host_vars:
+#   - fabric_interfaces   (spine → leaf links)
+#   - uplink_interfaces   (leaf → spine links)
+#   - downlink_interfaces (leaf → server links)
+#
+# USAGE EXAMPLES:
+#
+#   # Enable ALL defined interfaces across all switches:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up"
+#
+#   # Set MTU 9100 on all defined interfaces:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "mtu=9100"
+#
+#   # Enable + set MTU in one pass:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" -e "mtu=9100"
+#
+#   # Only spine fabric ports:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" --limit spines -e "interface_scope=fabric"
+#
+#   # Only leaf uplinks (leaf → spine):
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" -e "interface_scope=uplink"
+#
+#   # Only leaf downlinks (leaf → server):
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" -e "interface_scope=downlink"
+#
+#   # Fabric + uplinks (spine side + leaf side = full spine-leaf mesh):
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" -e "interface_scope=fabric,uplink"
+#
+#   # Single switch:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" --limit Spine_S1
+#
+#   # Set speed on spine fabric ports:
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "speed=40000" -e "interface_scope=fabric" --limit spines
+#
+#   # Dry-run (verify only, no changes):
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     --tags verify
+#
+#   # Skip config save (volatile, lost on reboot):
+#   ansible-playbook -i inventory/hosts.yml playbooks/reused/set_interface_properties.yml \
+#     -e "admin_status=up" -e "persist_config=false"
+#
+# SUPPORTED PROPERTIES:
+#   admin_status : "up" | "down"              → config interface startup/shutdown
+#   mtu          : numeric (e.g. "9100")      → config interface mtu
+#   speed        : numeric (e.g. "40000")     → config interface speed
+#   fec          : "rs" | "fc" | "none"       → config interface fec
+#
+# INTERFACE SCOPE (interface_scope extra-var):
+#   all      — fabric + uplink + downlink (default)
+#   fabric   — spine fabric_interfaces only
+#   uplink   — leaf/border_leaf uplink_interfaces only
+#   downlink — leaf downlink_interfaces only
+#   Combine: "fabric,uplink" targets both groups
+#
+# TAGS:
+#   validate — input validation only
+#   deploy   — apply changes
+#   admin    — admin_status changes only
+#   mtu      — MTU changes only
+#   speed    — speed changes only
+#   fec      — FEC changes only
+#   persist  — config save step
+#   verify   — show interface status after changes
+# =============================================================================
+
+- name: "Set Interface Properties — SONiC Switches"
+  hosts: "sonic_switches"
+  become: true
+  gather_facts: false
+  serial: "{{ iface_serial | default('100%') }}"
+
+  pre_tasks:
+    - name: "Preflight | Verify at least one property is requested"
+      ansible.builtin.assert:
+        that: >-
+          (admin_status is defined and admin_status | length > 0) or
+          (mtu is defined and mtu | length > 0) or
+          (speed is defined and speed | length > 0) or
+          (fec is defined and fec | length > 0)
+        fail_msg: >-
+          No property specified. Pass at least one of:
+            -e "admin_status=up|down"
+            -e "mtu=<value>"
+            -e "speed=<value>"
+            -e "fec=rs|fc|none"
+      run_once: true
+      delegate_to: localhost
+      tags: [deploy, validate, admin, mtu, speed, fec, persist]
+
+  roles:
+    - role: sonic_interface_props
+      tags: [deploy, verify, validate]
