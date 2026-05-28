@@ -1,0 +1,96 @@
+---
+# =============================================================================
+# HostB12_2 - Ubuntu Bare-Metal Server (Border Leaf Pair BL1/BL2)
+# =============================================================================
+# Role: Future expansion (from TopologyRequirements.txt physical wiring)
+# iDRAC:    192.168.255.32 (Management Switch port — TBD)
+# Bond IP:  10.10.100.2/24 (active-backup across Border_Leaf1 + Border_Leaf2)
+#
+# Physical Wiring (per TopologyRequirements.txt):
+#   eth1 ↔ Border_Leaf1 Ethernet21 (QSFP+6 breakout sub1, 10G)
+#   eth2 ↔ Border_Leaf2 Ethernet21 (QSFP+6 breakout sub1, 10G)
+#   eth0 ↔ Management Switch (PXE/MaaS — port TBD)
+#   iDRAC ↔ Management Switch (port TBD)
+#
+# NOTE: TopologyRequirements.txt lists HostB12_2 on Border-Leaf1/2 Ethernet1,
+#       but Ethernet0 is used by Exit_Router. In KVM VS, hosts use QSFP+ port 6
+#       breakout (Ethernet20-23) for separate NIC mapping; HostB12_2 = sub1.
+# =============================================================================
+
+hostname: "HostB12_2"
+idrac_ip: "192.168.255.32"
+bond_ip: "10.10.100.2/24"
+loopback_ip: "10.10.255.101/32"
+
+fabric_interfaces:
+  - name: "eth1"
+    speed: "10000"
+    neighbor: "Border_Leaf1"
+    neighbor_port: "Ethernet1"
+    description: "HostB12_2 → Border_Leaf1 (10G QSFP+6 breakout sub1)"
+  - name: "eth2"
+    speed: "10000"
+    neighbor: "Border_Leaf2"
+    neighbor_port: "Ethernet1"
+    description: "HostB12_2 → Border_Leaf2 (10G QSFP+6 breakout sub1)"
+
+netplan:
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      eth0:
+        dhcp4: true
+        dhcp4-overrides:
+          use-dns: false
+          use-routes: false
+      eth1:
+        dhcp4: false
+        mtu: 9000
+      eth2:
+        dhcp4: false
+        mtu: 9000
+    bonds:
+      bond0:
+        interfaces: [eth1, eth2]
+        addresses: ["10.10.100.2/24"]
+        mtu: 9000
+        parameters:
+          mode: active-backup
+          mii-monitor-interval: 100
+          primary: eth1
+    vlans: {}
+
+frr_bgp:
+  local_asn: 65107                  # UNIQUE per server (was 65201)
+  router_id: "10.10.255.101"
+  neighbors:
+    - interface: "eth1"
+      remote_asn: 65021
+      description: "Border_Leaf1"
+    - interface: "eth2"
+      remote_asn: 65022
+      description: "Border_Leaf2"
+  networks:
+    - "10.10.100.0/24"
+    - "10.10.255.101/32"
+  evpn:
+    enabled: true
+    advertise_all_vni: true
+    advertise_ipv4_unicast: true
+    advertise_ipv6_unicast: true
+
+# ---- Ceph ----
+ceph_roles: [osd]
+
+# ---- sonic_server_net role variables ----
+server_asn: "{{ server_asn_map[inventory_hostname] }}"
+server_router_id: "{{ loopback_ip.split('/')[0] }}"
+server_loopback_ip: "{{ loopback_ip }}"
+server_interfaces_kvm:
+  - name: "eth1"
+    peer_asn: "{{ border_leaf_asn_map['Border_Leaf1'] }}"
+    neighbor: "Border_Leaf1"
+  - name: "eth2"
+    peer_asn: "{{ border_leaf_asn_map['Border_Leaf2'] }}"
+    neighbor: "Border_Leaf2"

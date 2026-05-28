@@ -1,0 +1,105 @@
+---
+# =============================================================================
+# Host34_1 - Ubuntu Bare-Metal Server (Leaf Pair L3/L4)
+# =============================================================================
+# Role: K8s Controller + Ceph MON/MGR/OSD + OpenStack Controller
+# MaaS PXE: 192.168.255.44 (Management Switch port14)
+# iDRAC:    192.168.255.21 (Management Switch port4)
+# Bond IP:  10.10.34.1/24  (active-backup across Leaf_L3 + Leaf_L4)
+#
+# Physical Wiring:
+#   eth1 ↔ Leaf_L3 Ethernet0 (10G, breakout sub0 from QSFP+ port1)
+#   eth2 ↔ Leaf_L4 Ethernet0 (10G, breakout sub0 from QSFP+ port1)
+#   eth0 ↔ Management Switch port14 (PXE/MaaS)
+#   iDRAC ↔ Management Switch port4
+# =============================================================================
+
+hostname: "Host34_1"
+idrac_ip: "192.168.255.21"
+pxe_ip: "192.168.255.44"
+bond_ip: "10.10.34.1/24"
+loopback_ip: "10.10.255.11/32"
+
+fabric_interfaces:
+  - name: "eth1"
+    speed: "10000"
+    neighbor: "Leaf_L3"
+    neighbor_port: "Ethernet0"
+    description: "Host34_1 → Leaf_L3 (10G)"
+  - name: "eth2"
+    speed: "10000"
+    neighbor: "Leaf_L4"
+    neighbor_port: "Ethernet0"
+    description: "Host34_1 → Leaf_L4 (10G)"
+
+pxe_interface:
+  name: "eth0"
+  neighbor: "Management_Switch"
+  neighbor_port: "port14"
+
+netplan:
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      eth0:
+        dhcp4: true
+        dhcp4-overrides:
+          use-dns: false
+          use-routes: false
+      eth1:
+        dhcp4: false
+        mtu: 9000
+      eth2:
+        dhcp4: false
+        mtu: 9000
+    bonds:
+      bond0:
+        interfaces: [eth1, eth2]
+        addresses: ["10.10.34.1/24"]
+        mtu: 9000
+        parameters:
+          mode: active-backup
+          mii-monitor-interval: 100
+          primary: eth1
+    vlans: {}
+
+frr_bgp:
+  local_asn: 65104                  # UNIQUE per server (was 65200 — broken)
+  router_id: "10.10.255.11"
+  neighbors:
+    - interface: "eth1"
+      remote_asn: 65013
+      description: "Leaf_L3"
+    - interface: "eth2"
+      remote_asn: 65014
+      description: "Leaf_L4"
+  networks:
+    - "10.10.34.0/24"
+    - "10.10.255.11/32"
+  evpn:
+    enabled: true
+    advertise_all_vni: true
+    advertise_ipv4_unicast: true
+    advertise_ipv6_unicast: true
+
+kube_role: controller
+kubespray_node_labels:
+  - "node-role.kubernetes.io/control-plane="
+  - "ceph-mon=enabled"
+  - "ceph-mgr=enabled"
+  - "openstack-control-plane=enabled"
+
+ceph_roles: [mon, mgr, osd, mds]
+
+# ---- sonic_server_net role variables ----
+server_asn: "{{ server_asn_map[inventory_hostname] }}"
+server_router_id: "{{ loopback_ip.split('/')[0] }}"
+server_loopback_ip: "{{ loopback_ip }}"
+server_interfaces_kvm:
+  - name: "eth1"
+    peer_asn: "{{ leaf_asn_map['Leaf_L3'] }}"
+    neighbor: "Leaf_L3"
+  - name: "eth2"
+    peer_asn: "{{ leaf_asn_map['Leaf_L4'] }}"
+    neighbor: "Leaf_L4"
