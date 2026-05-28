@@ -1,154 +1,132 @@
 ---
 # =============================================================================
-# sonic_leaf_server/tasks/main.yml — Leaf-to-Server BGP Configuration
+# sonic_server_net/tasks/main.yml — Server-side Network + FRR Configuration
 # =============================================================================
-# Configures BGP unnumbered sessions between leaf switches and their
-# directly-connected multi-homed compute servers. Uses interface-based
-# peering (link-local IPv6) — no /31 addressing on fabric downlinks.
+# Configures compute server fabric-facing interfaces, loopback, and FRR BGP
+# peering back to dual-homed leaf switches.
 #
-# Enhanced from _v2 with: explicit validation, idempotency (checks existing
-# neighbors), KVM + real hardware support, and BGP session verification.
+# Enhanced from _v2 with: explicit validation, profile-conditional interface
+# selection, netplan support (Ubuntu 22.04+), and idempotency checks.
 # =============================================================================
 
-- name: "Leaf-Server | Validate required variables"
+- name: "Server-Net | Validate required variables"
   ansible.builtin.assert:
     that:
-      - downlink_interfaces is defined
-      - downlink_interfaces | length > 0
-      - hostname is defined
+      - server_asn is defined
+      - server_router_id is defined
+      - server_loopback_ip is defined
+      - (server_interfaces_kvm is defined) or (server_interfaces_real is defined) or (server_interfaces is defined)
     fail_msg: >-
-      Missing leaf-server vars. Ensure host_vars defines downlink_interfaces
-      with port, neighbor_asn, and neighbor for each server-facing port.
+      Missing server networking vars. Ensure host_vars defines:
+      server_asn, server_router_id, server_loopback_ip, and
+      server_interfaces_kvm/server_interfaces_real (or server_interfaces).
   tags: [validate]
 
-- name: "Leaf-Server | Validate each downlink has required fields"
+- name: "Server-Net | Resolve interface list (profile-conditional)"
+  ansible.builtin.set_fact:
+    _server_interfaces: >-
+      {{ server_interfaces_real
+         if (automation_profile | default('') == 'real_hardware' and server_interfaces_real is defined)
+         else server_interfaces_kvm }}
+  when: server_interfaces_kvm is defined or server_interfaces_real is defined
+  tags: [resolve]
+
+- name: "Server-Net | Fallback to unified server_interfaces"
+  ansible.builtin.set_fact:
+    _server_interfaces: "{{ server_interfaces }}"
+  when: _server_interfaces is not defined and server_interfaces is defined
+  tags: [resolve]
+
+- name: "Server-Net | Validate resolved interfaces"
   ansible.builtin.assert:
     that:
-      - item.port is defined
-      - item.neighbor_asn is defined
-      - item.neighbor is defined
-    fail_msg: "Downlink {{ item.port | default('UNKNOWN') }} missing required fields (port, neighbor_asn, neighbor)."
-  loop: "{{ downlink_interfaces }}"
-  loop_control:
-    label: "{{ item.port | default('UNKNOWN') }}"
+      - _server_interfaces is defined
+      - _server_interfaces | length > 0
+    fail_msg: "No server interfaces resolved. Check host_vars interface definitions."
   tags: [validate]
 
-- name: "Leaf-Server | Check existing BGP neighbors"
+- name: "Server-Net | Ensure network interfaces directory exists"
+  ansible.builtin.file:
+    path: /etc/network/interfaces.d
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: "Server-Net | Configure loopback address for BGP"
+  ansible.builtin.template:
+    src: server_loopback.conf.j2
+    dest: /etc/network/interfaces.d/lo_bgp.cfg
+    mode: '0644'
+  become: true
+  notify: restart_networking
+  tags: [configure]
+
+- name: "Server-Net | Configure fabric-facing interfaces"
+  ansible.builtin.template:
+    src: server_interface.conf.j2
+    dest: "/etc/network/interfaces.d/fabric_{{ item.name }}.cfg"
+    mode: '0644'
+  become: true
+  loop: "{{ _server_interfaces }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: restart_networking
+  tags: [configure]
+
+- name: "Server-Net | Install FRR if not present"
+  ansible.builtin.apt:
+    name: frr
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  tags: [install]
+
+- name: "Server-Net | Enable BGP daemon in FRR daemons config"
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: '^bgpd='
+    line: 'bgpd=yes'
+  become: true
+  notify: restart_frr
+  tags: [configure]
+
+- name: "Server-Net | Deploy FRR configuration"
+  ansible.builtin.template:
+    src: server_frr.conf.j2
+    dest: /etc/frr/frr.conf
+    owner: frr
+    group: frr
+    mode: '0640'
+    backup: true
+  become: true
+  notify: restart_frr
+  tags: [configure]
+
+- name: "Server-Net | Ensure FRR is enabled and running"
+  ansible.builtin.systemd:
+    name: frr
+    enabled: true
+    state: started
+  become: true
+  tags: [configure]
+
+- name: "Server-Net | Verify loopback is up"
   ansible.builtin.command:
-    cmd: "vtysh -c 'show bgp summary json'"
-  register: bgp_summary
+    cmd: "ip addr show lo"
+  register: lo_check
   changed_when: false
-  failed_when: false
-  tags: [check]
-
-- name: "Leaf-Server | Parse existing interface neighbors"
-  ansible.builtin.set_fact:
-    _existing_iface_neighbors: >-
-      {{ (bgp_summary.stdout | from_json).get('ipv4Unicast', {}).get('peers', {}).keys() | list }}
-  when: bgp_summary.rc == 0 and bgp_summary.stdout | length > 0
-  failed_when: false
-  tags: [check]
-
-- name: "Leaf-Server | Default empty neighbors if parse failed"
-  ansible.builtin.set_fact:
-    _existing_iface_neighbors: []
-  when: _existing_iface_neighbors is not defined
-  tags: [check]
-
-- name: "Leaf-Server | Enable downlink ports"
-  ansible.builtin.command:
-    cmd: "config interface startup {{ item.port }}"
-  become: true
-  loop: "{{ downlink_interfaces }}"
-  loop_control:
-    label: "{{ item.port }}"
-  changed_when: true
-  tags: [apply]
-
-- name: "Leaf-Server | Set MTU 9000 on downlink ports"
-  ansible.builtin.command:
-    cmd: "config interface mtu {{ item.port }} 9000"
-  become: true
-  loop: "{{ downlink_interfaces }}"
-  loop_control:
-    label: "{{ item.port }}"
-  changed_when: true
-  failed_when: false
-  tags: [apply]
-
-- name: "Leaf-Server | Configure BGP unnumbered neighbors via vtysh"
-  ansible.builtin.command:
-    cmd: >-
-      vtysh -c "configure terminal"
-      -c "router bgp {{ bgp_local_asn | default(leaf_asn) }}"
-      -c "neighbor {{ item.port }} interface remote-as {{ item.neighbor_asn }}"
-      -c "neighbor {{ item.port }} description {{ item.neighbor }}"
-      -c "address-family ipv4 unicast"
-      -c "neighbor {{ item.port }} activate"
-      -c "neighbor {{ item.port }} soft-reconfiguration inbound"
-      -c "exit-address-family"
-      -c "address-family l2vpn evpn"
-      -c "neighbor {{ item.port }} activate"
-      -c "exit-address-family"
-      -c "exit"
-  become: true
-  loop: "{{ downlink_interfaces }}"
-  loop_control:
-    label: "{{ item.neighbor }} (AS{{ item.neighbor_asn }})"
-  when: item.port not in _existing_iface_neighbors
-  changed_when: true
-  tags: [apply]
-
-- name: "Leaf-Server | Enable advertise-all-vni for EVPN relay"
-  ansible.builtin.command:
-    cmd: >-
-      vtysh -c "configure terminal"
-      -c "router bgp {{ bgp_local_asn | default(leaf_asn) }}"
-      -c "address-family l2vpn evpn"
-      -c "advertise-all-vni"
-      -c "exit-address-family"
-      -c "end"
-  become: true
-  when: sonic_evpn_enabled | default(true) | bool
-  changed_when: true
-  tags: [apply]
-
-- name: "Leaf-Server | Save configuration"
-  ansible.builtin.command:
-    cmd: "config save -y"
-  become: true
-  changed_when: true
-  tags: [apply]
-
-- name: "Leaf-Server | Write FRR memory"
-  ansible.builtin.command:
-    cmd: "vtysh -c 'write memory'"
-  become: true
-  changed_when: true
-  tags: [apply]
-
-- name: "Leaf-Server | Wait for BGP sessions to establish (60s)"
-  ansible.builtin.command:
-    cmd: "vtysh -c 'show bgp neighbor {{ item.port }} json'"
-  become: true
-  loop: "{{ downlink_interfaces }}"
-  loop_control:
-    label: "{{ item.neighbor }}"
-  register: bgp_verify
-  until: >-
-    (bgp_verify.stdout | from_json).get(item.port, {}).get('bgpState', '') == 'Established'
-  retries: 12
-  delay: 5
-  changed_when: false
-  ignore_errors: true
+  failed_when: server_router_id not in lo_check.stdout
   tags: [verify]
 
-- name: "Leaf-Server | Report BGP session status"
-  ansible.builtin.debug:
-    msg: >-
-      {{ item.item.neighbor }} ({{ item.item.port }}):
-      {{ (item.stdout | from_json).get(item.item.port, {}).get('bgpState', 'NOT_FOUND') }}
-  loop: "{{ bgp_verify.results }}"
+- name: "Server-Net | Verify fabric interfaces are UP"
+  ansible.builtin.command:
+    cmd: "ip link show {{ item.name }}"
+  loop: "{{ _server_interfaces }}"
   loop_control:
-    label: "{{ item.item.neighbor }}"
+    label: "{{ item.name }}"
+  register: iface_check
+  changed_when: false
+  failed_when: "'state UP' not in iface_check.stdout"
+  ignore_errors: true
   tags: [verify]
