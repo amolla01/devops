@@ -16,7 +16,9 @@
 
 - name: "day1 | Probe running ethernet interfaces on KVM CHR"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/interface ethernet print where running=yes'
+    {{ mikrotik_ssh_cmd }} '/interface ethernet print where running=yes' \
+      | grep -oE 'ether[0-9]+' \
+      | awk '!seen[$0]++'
   register: _running_ethernet
   changed_when: false
   failed_when: false
@@ -29,7 +31,7 @@
   ansible.builtin.set_fact:
     _running_data_ports: >-
       {{
-        (_running_ethernet.stdout | default('') | regex_findall('(?im)\\bether\\d+\\b'))
+        (_running_ethernet.stdout_lines | default([]))
         | reject('equalto', 'ether1')
         | unique
         | list
