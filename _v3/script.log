@@ -1,552 +1,1927 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_server_networking.yml -i inventory/hosts.yml
-
-
-PLAY [Deploy Server Networking (FRR + Fabric Interfaces)] *******************************************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host34_1]
-ok: [Host12_1]
-ok: [Host34_2]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Validate required variables] **********************************************************************************************************************************************
-ok: [Host12_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host12_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host12_3] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host34_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host34_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [HostB12_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [HostB12_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [MonitorSrv] =>
-    changed: false
-    msg: All assertions passed
-
-TASK [sonic_server_net : Server-Net | Resolve interface list (profile-conditional)] *****************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [Host34_1]
-ok: [Host34_2]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Fallback to unified server_interfaces] ************************************************************************************************************************************
-skipping: [Host12_1]
-skipping: [Host12_2]
-skipping: [Host12_3]
-skipping: [Host34_1]
-skipping: [Host34_2]
-skipping: [HostB12_2]
-skipping: [HostB12_1]
-skipping: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Validate resolved interfaces] *********************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host12_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host12_3] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host34_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [Host34_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [HostB12_2] =>
-    changed: false
-    msg: All assertions passed
-ok: [HostB12_1] =>
-    changed: false
-    msg: All assertions passed
-ok: [MonitorSrv] =>
-    changed: false
-    msg: All assertions passed
-
-TASK [sonic_server_net : Server-Net | Detect non-management interfaces] *****************************************************************************************************************************************
-[WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
-[DEPRECATION WARNING]: INJECT_FACTS_AS_VARS default to `True` is deprecated, top-level facts will not be auto injected after the change. This feature will be removed from ansible-core version 2.24.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_server_net/tasks/main.yml:52:30
-
-50 - name: "Server-Net | Detect non-management interfaces"
-51   ansible.builtin.set_fact:
-52     _detected_fabric_ifaces: >-
-                                ^ column 30
-
-Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
-
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [Host34_1]
-ok: [Host34_2]
-ok: [HostB12_2]
-ok: [HostB12_1]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Remap interface list to actual device names] ******************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [Host34_1]
-ok: [Host34_2]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Show resolved fabric interfaces] ******************************************************************************************************************************************
-ok: [Host12_1] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L1 (peer AS65011)
-ok: [Host12_2] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L1 (peer AS65011)
-ok: [Host12_1] => (item=enp3s0) =>
-    msg: enp3s0 → Leaf_L2 (peer AS65012)
-ok: [Host12_2] => (item=enp3s0) =>
-    msg: enp3s0 → Leaf_L2 (peer AS65012)
-ok: [Host12_3] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L1 (peer AS65011)
-ok: [Host34_1] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L3 (peer AS65013)
-ok: [Host12_3] => (item=enp3s0) =>
-    msg: enp3s0 → Leaf_L2 (peer AS65012)
-ok: [Host34_1] => (item=enp3s0) =>
-    msg: enp3s0 → Leaf_L4 (peer AS65014)
-ok: [Host34_2] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L3 (peer AS65013)
-ok: [Host34_2] => (item=enp3s0) =>
-    msg: enp3s0 → Leaf_L4 (peer AS65014)
-ok: [HostB12_1] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf1 (peer AS65021)
-ok: [HostB12_2] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf1 (peer AS65021)
-ok: [HostB12_1] => (item=enp3s0) =>
-    msg: enp3s0 → Border_Leaf2 (peer AS65022)
-ok: [HostB12_2] => (item=enp3s0) =>
-    msg: enp3s0 → Border_Leaf2 (peer AS65022)
-ok: [MonitorSrv] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf1 (peer AS65021)
-ok: [MonitorSrv] => (item=enp3s0) =>
-    msg: enp3s0 → Border_Leaf2 (peer AS65022)
-
-TASK [sonic_server_net : Server-Net | Configure loopback address for BGP] ***************************************************************************************************************************************
-changed: [Host12_3]
-changed: [Host34_1]
-changed: [Host12_1]
-changed: [Host12_2]
-changed: [Host34_2]
-changed: [MonitorSrv]
-changed: [HostB12_1]
-changed: [HostB12_2]
-
-TASK [sonic_server_net : Server-Net | Bring up fabric interfaces with MTU 9000] *********************************************************************************************************************************
-changed: [Host12_1] => (item=enp2s0)
-changed: [Host12_2] => (item=enp2s0)
-changed: [Host34_1] => (item=enp2s0)
-changed: [Host12_3] => (item=enp2s0)
-changed: [Host34_2] => (item=enp2s0)
-changed: [Host12_1] => (item=enp3s0)
-changed: [Host12_2] => (item=enp3s0)
-changed: [Host34_1] => (item=enp3s0)
-changed: [Host12_3] => (item=enp3s0)
-changed: [Host34_2] => (item=enp3s0)
-changed: [HostB12_1] => (item=enp2s0)
-changed: [HostB12_2] => (item=enp2s0)
-changed: [MonitorSrv] => (item=enp2s0)
-changed: [HostB12_1] => (item=enp3s0)
-changed: [HostB12_2] => (item=enp3s0)
-changed: [MonitorSrv] => (item=enp3s0)
-
-TASK [sonic_server_net : Server-Net | Remove conflicting netplan bond config (KVM uses individual links)] *******************************************************************************************************
-changed: [Host34_2] => (item=01-fabric-config.yaml)
-changed: [Host12_3] => (item=01-fabric-config.yaml)
-changed: [Host12_1] => (item=01-fabric-config.yaml)
-changed: [Host34_1] => (item=01-fabric-config.yaml)
-changed: [Host12_2] => (item=01-fabric-config.yaml)
-changed: [Host12_3] => (item=20-fabric.yaml)
-changed: [Host34_2] => (item=20-fabric.yaml)
-changed: [Host12_1] => (item=20-fabric.yaml)
-changed: [Host34_1] => (item=20-fabric.yaml)
-changed: [Host12_2] => (item=20-fabric.yaml)
-changed: [HostB12_2] => (item=01-fabric-config.yaml)
-changed: [HostB12_1] => (item=01-fabric-config.yaml)
-changed: [MonitorSrv] => (item=01-fabric-config.yaml)
-changed: [HostB12_2] => (item=20-fabric.yaml)
-changed: [HostB12_1] => (item=20-fabric.yaml)
-changed: [MonitorSrv] => (item=20-fabric.yaml)
-
-TASK [sonic_server_net : Server-Net | Write netplan config for fabric interfaces (persistence)] *****************************************************************************************************************
-changed: [Host34_1]
-changed: [Host12_1]
-changed: [Host12_2]
-changed: [Host12_3]
-changed: [Host34_2]
-changed: [MonitorSrv]
-changed: [HostB12_1]
-changed: [HostB12_2]
-
-TASK [sonic_server_net : Server-Net | Install FRR if not present] ***********************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host34_2]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [Host34_1]
-ok: [MonitorSrv]
-ok: [HostB12_1]
-ok: [HostB12_2]
-
-TASK [sonic_server_net : Server-Net | Enable BGP daemon in FRR daemons config] **********************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host34_2]
-ok: [Host34_1]
-ok: [Host12_3]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Deploy FRR configuration] *************************************************************************************************************************************************
-changed: [Host12_1]
-changed: [Host34_1]
-changed: [Host12_2]
-changed: [Host34_2]
-changed: [Host12_3]
-changed: [HostB12_1]
-changed: [HostB12_2]
-changed: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Ensure FRR is enabled and running] ****************************************************************************************************************************************
-ok: [Host12_3]
-ok: [Host34_2]
-ok: [Host34_1]
-ok: [Host12_2]
-ok: [Host12_1]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Verify loopback is up] ****************************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host34_1]
-ok: [Host12_3]
-ok: [Host34_2]
-ok: [HostB12_1]
-ok: [HostB12_2]
-ok: [MonitorSrv]
-
-TASK [sonic_server_net : Server-Net | Verify fabric interfaces are UP] ******************************************************************************************************************************************
-ok: [Host12_1] => (item=enp2s0)
-ok: [Host34_2] => (item=enp2s0)
-ok: [Host12_3] => (item=enp2s0)
-ok: [Host34_1] => (item=enp2s0)
-ok: [Host12_2] => (item=enp2s0)
-ok: [Host12_1] => (item=enp3s0)
-ok: [Host34_2] => (item=enp3s0)
-ok: [Host34_1] => (item=enp3s0)
-ok: [Host12_3] => (item=enp3s0)
-ok: [Host12_2] => (item=enp3s0)
-ok: [HostB12_1] => (item=enp2s0)
-ok: [HostB12_2] => (item=enp2s0)
-ok: [MonitorSrv] => (item=enp2s0)
-ok: [HostB12_1] => (item=enp3s0)
-ok: [HostB12_2] => (item=enp3s0)
-ok: [MonitorSrv] => (item=enp3s0)
-
-RUNNING HANDLER [sonic_server_net : restart_frr] ****************************************************************************************************************************************************************
-changed: [Host12_1]
-changed: [Host12_2]
-changed: [Host34_1]
-changed: [Host34_2]
-changed: [Host12_3]
-changed: [HostB12_1]
-changed: [HostB12_2]
-changed: [MonitorSrv]
-
-RUNNING HANDLER [sonic_server_net : restart_networking] *********************************************************************************************************************************************************
-changed: [Host12_2]
-changed: [Host12_1]
-changed: [Host12_3]
-changed: [Host34_1]
-changed: [Host34_2]
-changed: [HostB12_2]
-changed: [HostB12_1]
-changed: [MonitorSrv]
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Host12_2                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Host12_3                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Host34_1                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-Host34_2                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-HostB12_1                  : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-HostB12_2                  : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-MonitorSrv                 : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
-enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.41' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.2, local AS number 65102 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
-enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_3 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.42' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.3, local AS number 65103 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
-enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.43' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.11, local AS number 65104 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013         0         0        0    0    0    never      Connect        0 Leaf_L3
-enp3s0          4      65014         0         2        0    0    0    never      Connect        0 Leaf_L4
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.44' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.12, local AS number 65105 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013         0         0        0    0    0    never      Connect        0 Leaf_L3
-enp3s0          4      65014         0         2        0    0    0    never      Connect        0 Leaf_L4
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.45' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.100, local AS number 65106 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
-enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.46' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.101, local AS number 65107 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
-enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.102, local AS number 65108 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
-enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 12
-RIB entries 15, using 3360 bytes of memory
-Peers 9, using 6521 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
-Ethernet8       4      65108         4         9        0    0    0    never         Idle        0 MonitorSrv
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       209       211        0    0    0 03:18:21            6        8 Spine_S2
-Ethernet124     4      65000       209       211        0    0    0 03:18:15            6        8 Spine_S1
-10.0.253.1      4      65253         0         0        0    0    0    never       Active        0 Exit_Router1
-
-Total number of neighbors 9
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       209       211        0    0    0 03:18:21            0        0 Spine_S2
-Ethernet124     4      65000       209       211        0    0    0 03:18:15            0        0 Spine_S1
-
-Total number of neighbors 5
-
-L2VPN EVPN Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 3, using 2174 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
-Ethernet8       4      65108         4         9        0    0    0    never         Idle        0 MonitorSrv
-
-Total number of neighbors 3
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 13
-RIB entries 15, using 3360 bytes of memory
-Peers 9, using 6521 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
-Ethernet8       4      65108         4        11        0    0    0    never         Idle        0 MonitorSrv
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       209       211        0    0    0 03:18:38            6        8 Spine_S2
-Ethernet124     4      65000       209       211        0    0    0 03:18:41            6        8 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
-
-Total number of neighbors 9
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
-Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
-Ethernet120     4      65000       209       211        0    0    0 03:18:38            0        0 Spine_S2
-Ethernet124     4      65000       209       211        0    0    0 03:18:41            0        0 Spine_S1
-
-Total number of neighbors 5
-
-L2VPN EVPN Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 3, using 2174 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
-Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
-Ethernet8       4      65108         4        11        0    0    0    never         Idle        0 MonitorSrv
-
-Total number of neighbors 3
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show running-configuration'"
-Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
-% Unknown command: show running-configuration
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show running-config'"
-Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
+admin@LeafL1:~$ show runningconfiguration bgp
 Building configuration...
 
 Current configuration:
 !
-frr version 8.4.4
-frr defaults datacenter
-hostname monitorsrv
+frr version 8.5.4
+frr defaults traditional
+hostname sonic
 log syslog informational
-no ip forwarding
-no ipv6 forwarding
-service integrated-vtysh-config
+log facility local4
+agentx
+hostname LeafL1
+no service integrated-vtysh-config
 !
-router bgp 65108
- bgp router-id 10.10.255.102
- bgp bestpath as-path multipath-relax
- neighbor enp2s0 interface remote-as 65021
- neighbor enp2s0 description Border_Leaf1
- neighbor enp3s0 interface remote-as 65022
- neighbor enp3s0 description Border_Leaf2
+password zebra
+enable password zebra
+!
+router bgp 65011
+ bgp router-id 10.0.1.1
+ no bgp ebgp-requires-policy
+ no bgp default ipv4-unicast
+ neighbor Ethernet0 interface v6only remote-as 65101
+ neighbor Ethernet0 description Host12_1
+ neighbor Ethernet1 interface v6only remote-as 65102
+ neighbor Ethernet1 description Host12_2
+ neighbor Ethernet2 interface v6only remote-as 65103
+ neighbor Ethernet2 description Host12_3
+ neighbor Ethernet64 interface v6only remote-as external
+ neighbor Ethernet64 description Spine_S2
+ neighbor Ethernet68 interface v6only remote-as external
+ neighbor Ethernet68 description Spine_S1
  !
  address-family ipv4 unicast
-  network 10.10.255.102/32
-  neighbor enp2s0 soft-reconfiguration inbound
-  neighbor enp3s0 soft-reconfiguration inbound
-  maximum-paths 2
+  redistribute connected
+  neighbor Ethernet0 activate
+  neighbor Ethernet0 soft-reconfiguration inbound
+  neighbor Ethernet1 activate
+  neighbor Ethernet1 soft-reconfiguration inbound
+  neighbor Ethernet2 activate
+  neighbor Ethernet2 soft-reconfiguration inbound
+  neighbor Ethernet64 activate
+  neighbor Ethernet68 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  redistribute connected
+  neighbor Ethernet0 activate
+  neighbor Ethernet1 activate
+  neighbor Ethernet2 activate
+  neighbor Ethernet64 activate
+  neighbor Ethernet68 activate
+ exit-address-family
+ !
+ address-family l2vpn evpn
+  advertise-all-vni
  exit-address-family
 exit
 !
+ip prefix-list PL_LoopbackV4 seq 5 permit 10.1.0.1/32
+!
+route-map RM_SET_SRC permit 10
+exit
+!
 end
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+
+admin@LeafL1:~$ show runningconfiguration ports
+{
+    "Ethernet0": {
+        "admin_status": "up",
+        "alias": "tenGigE0",
+        "fec": "none",
+        "index": "1",
+        "lanes": "13",
+        "mtu": "9216",
+        "speed": "10000"
+    },
+    "Ethernet1": {
+        "admin_status": "up",
+        "alias": "tenGigE1",
+        "fec": "none",
+        "index": "2",
+        "lanes": "14",
+        "mtu": "9216",
+        "speed": "10000"
+    },
+    "Ethernet10": {
+        "admin_status": "down",
+        "alias": "tenGigE10",
+        "fec": "none",
+        "index": "11",
+        "lanes": "27",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet11": {
+        "admin_status": "down",
+        "alias": "tenGigE11",
+        "fec": "none",
+        "index": "12",
+        "lanes": "28",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet12": {
+        "admin_status": "down",
+        "alias": "tenGigE12",
+        "fec": "none",
+        "index": "13",
+        "lanes": "29",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet13": {
+        "admin_status": "down",
+        "alias": "tenGigE13",
+        "fec": "none",
+        "index": "14",
+        "lanes": "30",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet14": {
+        "admin_status": "down",
+        "alias": "tenGigE14",
+        "fec": "none",
+        "index": "15",
+        "lanes": "31",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet15": {
+        "admin_status": "down",
+        "alias": "tenGigE15",
+        "fec": "none",
+        "index": "16",
+        "lanes": "32",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet16": {
+        "admin_status": "down",
+        "alias": "tenGigE16",
+        "fec": "none",
+        "index": "17",
+        "lanes": "45",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet17": {
+        "admin_status": "down",
+        "alias": "tenGigE17",
+        "fec": "none",
+        "index": "18",
+        "lanes": "46",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet18": {
+        "admin_status": "down",
+        "alias": "tenGigE18",
+        "fec": "none",
+        "index": "19",
+        "lanes": "47",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet19": {
+        "admin_status": "down",
+        "alias": "tenGigE19",
+        "fec": "none",
+        "index": "20",
+        "lanes": "48",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet2": {
+        "admin_status": "up",
+        "alias": "tenGigE2",
+        "fec": "none",
+        "index": "3",
+        "lanes": "15",
+        "mtu": "9216",
+        "speed": "10000"
+    },
+    "Ethernet20": {
+        "admin_status": "down",
+        "alias": "tenGigE20",
+        "fec": "none",
+        "index": "21",
+        "lanes": "49",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet21": {
+        "admin_status": "down",
+        "alias": "tenGigE21",
+        "fec": "none",
+        "index": "22",
+        "lanes": "50",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet22": {
+        "admin_status": "down",
+        "alias": "tenGigE22",
+        "fec": "none",
+        "index": "23",
+        "lanes": "51",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet23": {
+        "admin_status": "down",
+        "alias": "tenGigE23",
+        "fec": "none",
+        "index": "24",
+        "lanes": "52",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet24": {
+        "admin_status": "down",
+        "alias": "tenGigE24",
+        "fec": "none",
+        "index": "25",
+        "lanes": "53",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet25": {
+        "admin_status": "down",
+        "alias": "tenGigE25",
+        "fec": "none",
+        "index": "26",
+        "lanes": "54",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet26": {
+        "admin_status": "down",
+        "alias": "tenGigE26",
+        "fec": "none",
+        "index": "27",
+        "lanes": "55",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet27": {
+        "admin_status": "down",
+        "alias": "tenGigE27",
+        "fec": "none",
+        "index": "28",
+        "lanes": "56",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet28": {
+        "admin_status": "down",
+        "alias": "tenGigE28",
+        "fec": "none",
+        "index": "29",
+        "lanes": "57",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet29": {
+        "admin_status": "down",
+        "alias": "tenGigE29",
+        "fec": "none",
+        "index": "30",
+        "lanes": "58",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet3": {
+        "admin_status": "down",
+        "alias": "tenGigE3",
+        "fec": "none",
+        "index": "4",
+        "lanes": "16",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet30": {
+        "admin_status": "down",
+        "alias": "tenGigE30",
+        "fec": "none",
+        "index": "31",
+        "lanes": "59",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet31": {
+        "admin_status": "down",
+        "alias": "tenGigE31",
+        "fec": "none",
+        "index": "32",
+        "lanes": "60",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet32": {
+        "admin_status": "down",
+        "alias": "tenGigE32",
+        "fec": "none",
+        "index": "33",
+        "lanes": "61",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet33": {
+        "admin_status": "down",
+        "alias": "tenGigE33",
+        "fec": "none",
+        "index": "34",
+        "lanes": "62",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet34": {
+        "admin_status": "down",
+        "alias": "tenGigE34",
+        "fec": "none",
+        "index": "35",
+        "lanes": "63",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet35": {
+        "admin_status": "down",
+        "alias": "tenGigE35",
+        "fec": "none",
+        "index": "36",
+        "lanes": "64",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet36": {
+        "admin_status": "down",
+        "alias": "tenGigE36",
+        "fec": "none",
+        "index": "37",
+        "lanes": "65",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet37": {
+        "admin_status": "down",
+        "alias": "tenGigE37",
+        "fec": "none",
+        "index": "38",
+        "lanes": "66",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet38": {
+        "admin_status": "down",
+        "alias": "tenGigE38",
+        "fec": "none",
+        "index": "39",
+        "lanes": "67",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet39": {
+        "admin_status": "down",
+        "alias": "tenGigE39",
+        "fec": "none",
+        "index": "40",
+        "lanes": "68",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet4": {
+        "admin_status": "down",
+        "alias": "tenGigE4",
+        "fec": "none",
+        "index": "5",
+        "lanes": "21",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet40": {
+        "admin_status": "down",
+        "alias": "tenGigE40",
+        "fec": "none",
+        "index": "41",
+        "lanes": "69",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet41": {
+        "admin_status": "down",
+        "alias": "tenGigE41",
+        "fec": "none",
+        "index": "42",
+        "lanes": "70",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet42": {
+        "admin_status": "down",
+        "alias": "tenGigE42",
+        "fec": "none",
+        "index": "43",
+        "lanes": "71",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet43": {
+        "admin_status": "down",
+        "alias": "tenGigE43",
+        "fec": "none",
+        "index": "44",
+        "lanes": "72",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet44": {
+        "admin_status": "down",
+        "alias": "tenGigE44",
+        "fec": "none",
+        "index": "45",
+        "lanes": "73",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet45": {
+        "admin_status": "down",
+        "alias": "tenGigE45",
+        "fec": "none",
+        "index": "46",
+        "lanes": "74",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet46": {
+        "admin_status": "down",
+        "alias": "tenGigE46",
+        "fec": "none",
+        "index": "47",
+        "lanes": "75",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet47": {
+        "admin_status": "down",
+        "alias": "tenGigE47",
+        "fec": "none",
+        "index": "48",
+        "lanes": "76",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet48": {
+        "admin_status": "down",
+        "alias": "fortyGigE48",
+        "fec": "none",
+        "index": "49",
+        "lanes": "97,98,99,100",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet5": {
+        "admin_status": "down",
+        "alias": "tenGigE5",
+        "fec": "none",
+        "index": "6",
+        "lanes": "22",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet52": {
+        "admin_status": "down",
+        "alias": "fortyGigE52",
+        "fec": "none",
+        "index": "50",
+        "lanes": "101,102,103,104",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet56": {
+        "admin_status": "down",
+        "alias": "fortyGigE56",
+        "fec": "none",
+        "index": "51",
+        "lanes": "81,82,83,84",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet6": {
+        "admin_status": "down",
+        "alias": "tenGigE6",
+        "fec": "none",
+        "index": "7",
+        "lanes": "23",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet60": {
+        "admin_status": "down",
+        "alias": "fortyGigE60",
+        "fec": "none",
+        "index": "52",
+        "lanes": "105,106,107,108",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet64": {
+        "admin_status": "up",
+        "alias": "fortyGigE64",
+        "fec": "none",
+        "index": "53",
+        "lanes": "109",
+        "mtu": "9216",
+        "speed": "10000"
+    },
+    "Ethernet68": {
+        "admin_status": "up",
+        "alias": "fortyGigE68",
+        "fec": "none",
+        "index": "54",
+        "lanes": "77",
+        "mtu": "9216",
+        "speed": "10000"
+    },
+    "Ethernet7": {
+        "admin_status": "down",
+        "alias": "tenGigE7",
+        "fec": "none",
+        "index": "8",
+        "lanes": "24",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet8": {
+        "admin_status": "down",
+        "alias": "tenGigE8",
+        "fec": "none",
+        "index": "9",
+        "lanes": "25",
+        "mtu": "9100",
+        "speed": "10000"
+    },
+    "Ethernet9": {
+        "admin_status": "down",
+        "alias": "tenGigE9",
+        "fec": "none",
+        "index": "10",
+        "lanes": "26",
+        "mtu": "9100",
+        "speed": "10000"
+    }
+}
+admin@LeafL1:~$ show runningconfiguration interfaces
+admin@LeafL1:~$ show runningconfiguration all
+{
+    "AUTO_TECHSUPPORT": {
+        "GLOBAL": {
+            "available_mem_threshold": "10.0",
+            "max_core_limit": "5.0",
+            "max_techsupport_limit": "10.0",
+            "min_available_mem": "200",
+            "rate_limit_interval": "180",
+            "since": "2 days ago",
+            "state": "enabled"
+        }
+    },
+    "AUTO_TECHSUPPORT_FEATURE": {
+        "bgp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "database": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "dhcp_relay": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "eventd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "gbsyncd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "gnmi": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "lldp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "macsec": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "mgmt-framework": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "mux": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "nat": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "pmon": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "radv": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "sflow": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "snmp": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "swss": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "syncd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        },
+        "teamd": {
+            "available_mem_threshold": "10.0",
+            "rate_limit_interval": "600",
+            "state": "enabled"
+        }
+    },
+    "BANNER_MESSAGE": {
+        "global": {
+            "login": "Debian GNU/Linux 11",
+            "logout": "",
+            "motd": "You are on\n  ____   ___  _   _ _  ____\n / ___| / _ \\| \\ | (_)/ ___|\n \\___ \\| | | |  \\| | | |\n  ___) | |_| | |\\  | | |___\n |____/ \\___/|_| \\_|_|\\____|\n\n-- Software for Open Networking in the Cloud --\n\nUnauthorized access and/or use are prohibited.\nAll access and/or use are subject to monitoring.\n\nHelp:    https://sonic-net.github.io/SONiC/\n\n",
+            "state": "disabled"
+        }
+    },
+    "BGP_DEVICE_GLOBAL": {
+        "STATE": {
+            "idf_isolation_state": "unisolated",
+            "tsa_enabled": "false"
+        }
+    },
+    "CRM": {
+        "Config": {
+            "acl_counter_high_threshold": "85",
+            "acl_counter_low_threshold": "70",
+            "acl_counter_threshold_type": "percentage",
+            "acl_entry_high_threshold": "85",
+            "acl_entry_low_threshold": "70",
+            "acl_entry_threshold_type": "percentage",
+            "acl_group_high_threshold": "85",
+            "acl_group_low_threshold": "70",
+            "acl_group_threshold_type": "percentage",
+            "acl_table_high_threshold": "85",
+            "acl_table_low_threshold": "70",
+            "acl_table_threshold_type": "percentage",
+            "dnat_entry_high_threshold": "85",
+            "dnat_entry_low_threshold": "70",
+            "dnat_entry_threshold_type": "percentage",
+            "fdb_entry_high_threshold": "85",
+            "fdb_entry_low_threshold": "70",
+            "fdb_entry_threshold_type": "percentage",
+            "ipmc_entry_high_threshold": "85",
+            "ipmc_entry_low_threshold": "70",
+            "ipmc_entry_threshold_type": "percentage",
+            "ipv4_neighbor_high_threshold": "85",
+            "ipv4_neighbor_low_threshold": "70",
+            "ipv4_neighbor_threshold_type": "percentage",
+            "ipv4_nexthop_high_threshold": "85",
+            "ipv4_nexthop_low_threshold": "70",
+            "ipv4_nexthop_threshold_type": "percentage",
+            "ipv4_route_high_threshold": "85",
+            "ipv4_route_low_threshold": "70",
+            "ipv4_route_threshold_type": "percentage",
+            "ipv6_neighbor_high_threshold": "85",
+            "ipv6_neighbor_low_threshold": "70",
+            "ipv6_neighbor_threshold_type": "percentage",
+            "ipv6_nexthop_high_threshold": "85",
+            "ipv6_nexthop_low_threshold": "70",
+            "ipv6_nexthop_threshold_type": "percentage",
+            "ipv6_route_high_threshold": "85",
+            "ipv6_route_low_threshold": "70",
+            "ipv6_route_threshold_type": "percentage",
+            "mpls_inseg_high_threshold": "85",
+            "mpls_inseg_low_threshold": "70",
+            "mpls_inseg_threshold_type": "percentage",
+            "mpls_nexthop_high_threshold": "85",
+            "mpls_nexthop_low_threshold": "70",
+            "mpls_nexthop_threshold_type": "percentage",
+            "nexthop_group_high_threshold": "85",
+            "nexthop_group_low_threshold": "70",
+            "nexthop_group_member_high_threshold": "85",
+            "nexthop_group_member_low_threshold": "70",
+            "nexthop_group_member_threshold_type": "percentage",
+            "nexthop_group_threshold_type": "percentage",
+            "polling_interval": "300",
+            "snat_entry_high_threshold": "85",
+            "snat_entry_low_threshold": "70",
+            "snat_entry_threshold_type": "percentage"
+        }
+    },
+    "DEVICE_METADATA": {
+        "localhost": {
+            "buffer_model": "traditional",
+            "default_bgp_status": "up",
+            "default_pfcwd_status": "disable",
+            "docker_routing_config_mode": "split",
+            "hostname": "Leaf_L1",
+            "hwsku": "Accton-AS5712-54X",
+            "mac": "00:1c:73:a1:01:01",
+            "platform": "x86_64-kvm_x86_64-r0",
+            "synchronous_mode": "enable",
+            "timezone": "UTC",
+            "type": "LeafRouter"
+        }
+    },
+    "DNS_NAMESERVER": {
+        "8.8.4.4": {},
+        "8.8.8.8": {}
+    },
+    "FEATURE": {
+        "bgp": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "database": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "dhcp_relay": {
+            "auto_restart": "enabled",
+            "check_up_status": "False",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "enabled",
+            "support_syslog_rate_limit": "True"
+        },
+        "eventd": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "gbsyncd": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "False",
+            "has_per_asic_scope": "True",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "gnmi": {
+            "auto_restart": "enabled",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "lldp": {
+            "auto_restart": "enabled",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "macsec": {
+            "auto_restart": "disabled",
+            "check_up_status": "False",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "set_owner": "local",
+            "state": "disabled",
+            "support_syslog_rate_limit": "True"
+        },
+        "mgmt-framework": {
+            "auto_restart": "enabled",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "mux": {
+            "auto_restart": "disabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "disabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "nat": {
+            "auto_restart": "disabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "disabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "pmon": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "radv": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "sflow": {
+            "auto_restart": "disabled",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "disabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "snmp": {
+            "auto_restart": "enabled",
+            "delayed": "True",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "swss": {
+            "auto_restart": "enabled",
+            "check_up_status": "false",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "syncd": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        },
+        "teamd": {
+            "auto_restart": "enabled",
+            "delayed": "False",
+            "has_global_scope": "True",
+            "has_per_asic_scope": "False",
+            "high_mem_alert": "disabled",
+            "state": "enabled",
+            "support_syslog_rate_limit": "true"
+        }
+    },
+    "FLEX_COUNTER_TABLE": {
+        "ACL": {
+            "FLEX_COUNTER_DELAY_STATUS": "false",
+            "FLEX_COUNTER_STATUS": "enable",
+            "POLL_INTERVAL": "10000"
+        },
+        "BUFFER_POOL_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PFCWD": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PG_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "PORT_BUFFER_DROP": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "QUEUE_WATERMARK": {
+            "FLEX_COUNTER_STATUS": "enable"
+        },
+        "RIF": {
+            "FLEX_COUNTER_STATUS": "enable"
+        }
+    },
+    "KDUMP": {
+        "config": {
+            "enabled": "false",
+            "memory": "0M-2G:256M,2G-4G:320M,4G-8G:384M,8G-:448M",
+            "num_dumps": "3"
+        }
+    },
+    "LOGGER": {
+        "SAI_API_ACL": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_ARS": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_ARS_PROFILE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_BFD": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_BMTOR": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_BRIDGE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_BUFFER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_COUNTER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_ACL": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_DIRECTION_LOOKUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_ENI": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_INBOUND_ROUTING": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_METER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_OUTBOUND_CA_TO_PA": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_OUTBOUND_ROUTING": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_PA_VALIDATION": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_VIP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DASH_VNET": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DEBUG_COUNTER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_DTEL": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_FDB": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_GENERIC_PROGRAMMABLE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_HASH": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_HOSTIF": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_IPMC": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_IPMC_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_IPSEC": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_ISOLATION_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_L2MC": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_L2MC_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_LAG": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_MACSEC": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_MCAST_FDB": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_MIRROR": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_MPLS": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_MY_MAC": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_NAT": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_NEIGHBOR": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_NEXT_HOP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_NEXT_HOP_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_POE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_POLICER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_PORT": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_QOS_MAP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_QUEUE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_ROUTE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_ROUTER_INTERFACE": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_RPF_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SAMPLEPACKET": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SCHEDULER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SCHEDULER_GROUP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SRV6": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_STP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SWITCH": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_SYSTEM_PORT": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_TAM": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_TUNNEL": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_TWAMP": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_UDF": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_VIRTUAL_ROUTER": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_VLAN": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "SAI_API_WRED": {
+            "LOGLEVEL": "SAI_LOG_LEVEL_NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "buffermgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "coppmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "fabricmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "fdbsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "fpmsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "gearsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "intfmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "nbrmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "neighsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "orchagent": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "portmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "portsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "syncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "teammgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "teamsyncd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "tlm_teamd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "tunnelmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "vlanmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "vrfmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        },
+        "vxlanmgrd": {
+            "LOGLEVEL": "NOTICE",
+            "LOGOUTPUT": "SYSLOG"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0": {},
+        "Loopback0|10.0.1.1/32": {}
+    },
+    "MGMT_INTERFACE": {
+        "eth0|172.16.2.21/24": {
+            "gwaddr": "172.16.2.1"
+        }
+    },
+    "MGMT_VRF_CONFIG": {
+        "vrf_global": {
+            "mgmtVrfEnabled": "true"
+        }
+    },
+    "NTP": {
+        "global": {
+            "admin_state": "enabled",
+            "authentication": "disabled",
+            "dhcp": "enabled",
+            "server_role": "disabled",
+            "src_intf": "eth0",
+            "vrf": "default"
+        }
+    },
+    "NTP_SERVER": {
+        "0.pool.ntp.org": {},
+        "1.pool.ntp.org": {}
+    },
+    "PASSW_HARDENING": {
+        "POLICIES": {
+            "digits_class": "true",
+            "expiration": "180",
+            "expiration_warning": "15",
+            "history_cnt": "10",
+            "len_min": "8",
+            "lower_class": "true",
+            "reject_user_passw_match": "true",
+            "special_class": "true",
+            "state": "disabled",
+            "upper_class": "true"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "admin_status": "up",
+            "alias": "tenGigE0",
+            "fec": "none",
+            "index": "1",
+            "lanes": "13",
+            "mtu": "9216",
+            "speed": "10000"
+        },
+        "Ethernet1": {
+            "admin_status": "up",
+            "alias": "tenGigE1",
+            "fec": "none",
+            "index": "2",
+            "lanes": "14",
+            "mtu": "9216",
+            "speed": "10000"
+        },
+        "Ethernet10": {
+            "admin_status": "down",
+            "alias": "tenGigE10",
+            "fec": "none",
+            "index": "11",
+            "lanes": "27",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet11": {
+            "admin_status": "down",
+            "alias": "tenGigE11",
+            "fec": "none",
+            "index": "12",
+            "lanes": "28",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet12": {
+            "admin_status": "down",
+            "alias": "tenGigE12",
+            "fec": "none",
+            "index": "13",
+            "lanes": "29",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet13": {
+            "admin_status": "down",
+            "alias": "tenGigE13",
+            "fec": "none",
+            "index": "14",
+            "lanes": "30",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet14": {
+            "admin_status": "down",
+            "alias": "tenGigE14",
+            "fec": "none",
+            "index": "15",
+            "lanes": "31",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet15": {
+            "admin_status": "down",
+            "alias": "tenGigE15",
+            "fec": "none",
+            "index": "16",
+            "lanes": "32",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet16": {
+            "admin_status": "down",
+            "alias": "tenGigE16",
+            "fec": "none",
+            "index": "17",
+            "lanes": "45",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet17": {
+            "admin_status": "down",
+            "alias": "tenGigE17",
+            "fec": "none",
+            "index": "18",
+            "lanes": "46",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet18": {
+            "admin_status": "down",
+            "alias": "tenGigE18",
+            "fec": "none",
+            "index": "19",
+            "lanes": "47",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet19": {
+            "admin_status": "down",
+            "alias": "tenGigE19",
+            "fec": "none",
+            "index": "20",
+            "lanes": "48",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet2": {
+            "admin_status": "up",
+            "alias": "tenGigE2",
+            "fec": "none",
+            "index": "3",
+            "lanes": "15",
+            "mtu": "9216",
+            "speed": "10000"
+        },
+        "Ethernet20": {
+            "admin_status": "down",
+            "alias": "tenGigE20",
+            "fec": "none",
+            "index": "21",
+            "lanes": "49",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet21": {
+            "admin_status": "down",
+            "alias": "tenGigE21",
+            "fec": "none",
+            "index": "22",
+            "lanes": "50",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet22": {
+            "admin_status": "down",
+            "alias": "tenGigE22",
+            "fec": "none",
+            "index": "23",
+            "lanes": "51",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet23": {
+            "admin_status": "down",
+            "alias": "tenGigE23",
+            "fec": "none",
+            "index": "24",
+            "lanes": "52",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet24": {
+            "admin_status": "down",
+            "alias": "tenGigE24",
+            "fec": "none",
+            "index": "25",
+            "lanes": "53",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet25": {
+            "admin_status": "down",
+            "alias": "tenGigE25",
+            "fec": "none",
+            "index": "26",
+            "lanes": "54",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet26": {
+            "admin_status": "down",
+            "alias": "tenGigE26",
+            "fec": "none",
+            "index": "27",
+            "lanes": "55",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet27": {
+            "admin_status": "down",
+            "alias": "tenGigE27",
+            "fec": "none",
+            "index": "28",
+            "lanes": "56",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet28": {
+            "admin_status": "down",
+            "alias": "tenGigE28",
+            "fec": "none",
+            "index": "29",
+            "lanes": "57",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet29": {
+            "admin_status": "down",
+            "alias": "tenGigE29",
+            "fec": "none",
+            "index": "30",
+            "lanes": "58",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet3": {
+            "admin_status": "down",
+            "alias": "tenGigE3",
+            "fec": "none",
+            "index": "4",
+            "lanes": "16",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet30": {
+            "admin_status": "down",
+            "alias": "tenGigE30",
+            "fec": "none",
+            "index": "31",
+            "lanes": "59",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet31": {
+            "admin_status": "down",
+            "alias": "tenGigE31",
+            "fec": "none",
+            "index": "32",
+            "lanes": "60",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet32": {
+            "admin_status": "down",
+            "alias": "tenGigE32",
+            "fec": "none",
+            "index": "33",
+            "lanes": "61",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet33": {
+            "admin_status": "down",
+            "alias": "tenGigE33",
+            "fec": "none",
+            "index": "34",
+            "lanes": "62",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet34": {
+            "admin_status": "down",
+            "alias": "tenGigE34",
+            "fec": "none",
+            "index": "35",
+            "lanes": "63",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet35": {
+            "admin_status": "down",
+            "alias": "tenGigE35",
+            "fec": "none",
+            "index": "36",
+            "lanes": "64",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet36": {
+            "admin_status": "down",
+            "alias": "tenGigE36",
+            "fec": "none",
+            "index": "37",
+            "lanes": "65",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet37": {
+            "admin_status": "down",
+            "alias": "tenGigE37",
+            "fec": "none",
+            "index": "38",
+            "lanes": "66",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet38": {
+            "admin_status": "down",
+            "alias": "tenGigE38",
+            "fec": "none",
+            "index": "39",
+            "lanes": "67",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet39": {
+            "admin_status": "down",
+            "alias": "tenGigE39",
+            "fec": "none",
+            "index": "40",
+            "lanes": "68",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet4": {
+            "admin_status": "down",
+            "alias": "tenGigE4",
+            "fec": "none",
+            "index": "5",
+            "lanes": "21",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet40": {
+            "admin_status": "down",
+            "alias": "tenGigE40",
+            "fec": "none",
+            "index": "41",
+            "lanes": "69",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet41": {
+            "admin_status": "down",
+            "alias": "tenGigE41",
+            "fec": "none",
+            "index": "42",
+            "lanes": "70",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet42": {
+            "admin_status": "down",
+            "alias": "tenGigE42",
+            "fec": "none",
+            "index": "43",
+            "lanes": "71",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet43": {
+            "admin_status": "down",
+            "alias": "tenGigE43",
+            "fec": "none",
+            "index": "44",
+            "lanes": "72",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet44": {
+            "admin_status": "down",
+            "alias": "tenGigE44",
+            "fec": "none",
+            "index": "45",
+            "lanes": "73",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet45": {
+            "admin_status": "down",
+            "alias": "tenGigE45",
+            "fec": "none",
+            "index": "46",
+            "lanes": "74",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet46": {
+            "admin_status": "down",
+            "alias": "tenGigE46",
+            "fec": "none",
+            "index": "47",
+            "lanes": "75",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet47": {
+            "admin_status": "down",
+            "alias": "tenGigE47",
+            "fec": "none",
+            "index": "48",
+            "lanes": "76",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet48": {
+            "admin_status": "down",
+            "alias": "fortyGigE48",
+            "fec": "none",
+            "index": "49",
+            "lanes": "97,98,99,100",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet5": {
+            "admin_status": "down",
+            "alias": "tenGigE5",
+            "fec": "none",
+            "index": "6",
+            "lanes": "22",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet52": {
+            "admin_status": "down",
+            "alias": "fortyGigE52",
+            "fec": "none",
+            "index": "50",
+            "lanes": "101,102,103,104",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet56": {
+            "admin_status": "down",
+            "alias": "fortyGigE56",
+            "fec": "none",
+            "index": "51",
+            "lanes": "81,82,83,84",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet6": {
+            "admin_status": "down",
+            "alias": "tenGigE6",
+            "fec": "none",
+            "index": "7",
+            "lanes": "23",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet60": {
+            "admin_status": "down",
+            "alias": "fortyGigE60",
+            "fec": "none",
+            "index": "52",
+            "lanes": "105,106,107,108",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet64": {
+            "admin_status": "up",
+            "alias": "fortyGigE64",
+            "fec": "none",
+            "index": "53",
+            "lanes": "109",
+            "mtu": "9216",
+            "speed": "10000"
+        },
+        "Ethernet68": {
+            "admin_status": "up",
+            "alias": "fortyGigE68",
+            "fec": "none",
+            "index": "54",
+            "lanes": "77",
+            "mtu": "9216",
+            "speed": "10000"
+        },
+        "Ethernet7": {
+            "admin_status": "down",
+            "alias": "tenGigE7",
+            "fec": "none",
+            "index": "8",
+            "lanes": "24",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet8": {
+            "admin_status": "down",
+            "alias": "tenGigE8",
+            "fec": "none",
+            "index": "9",
+            "lanes": "25",
+            "mtu": "9100",
+            "speed": "10000"
+        },
+        "Ethernet9": {
+            "admin_status": "down",
+            "alias": "tenGigE9",
+            "fec": "none",
+            "index": "10",
+            "lanes": "26",
+            "mtu": "9100",
+            "speed": "10000"
+        }
+    },
+    "SNMP": {
+        "LOCATION": {
+            "Location": "public"
+        }
+    },
+    "SNMP_COMMUNITY": {
+        "public": {
+            "TYPE": "RO"
+        }
+    },
+    "SYSLOG_CONFIG": {
+        "GLOBAL": {
+            "rate_limit_burst": "0",
+            "rate_limit_interval": "0"
+        }
+    },
+    "SYSLOG_CONFIG_FEATURE": {
+        "bgp": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "database": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "dhcp_relay": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "eventd": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "gbsyncd": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "gnmi": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "lldp": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "macsec": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "mgmt-framework": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "mux": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "nat": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "pmon": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "radv": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "sflow": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "snmp": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "swss": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "syncd": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        },
+        "teamd": {
+            "rate_limit_burst": "20000",
+            "rate_limit_interval": "300"
+        }
+    },
+    "SYSTEM_DEFAULTS": {
+        "mux_tunnel_egress_acl": {
+            "status": "disabled"
+        }
+    },
+    "VERSIONS": {
+        "DATABASE": {
+            "VERSION": "version_202405_02"
+        }
+    },
+    "bgpraw": "Building configuration...\n\nCurrent configuration:\n!\nfrr version 8.5.4\nfrr defaults traditional\nhostname sonic\nlog syslog informational\nlog facility local4\nno zebra nexthop kernel enable\nfpm address 127.0.0.1\nno fpm use-next-hop-groups\nagentx\nhostname LeafL1\nno service integrated-vtysh-config\n!\npassword zebra\nenable password zebra\n!\nrouter bgp 65011\n bgp router-id 10.0.1.1\n no bgp ebgp-requires-policy\n no bgp default ipv4-unicast\n neighbor Ethernet0 interface v6only remote-as 65101\n neighbor Ethernet0 description Host12_1\n neighbor Ethernet1 interface v6only remote-as 65102\n neighbor Ethernet1 description Host12_2\n neighbor Ethernet2 interface v6only remote-as 65103\n neighbor Ethernet2 description Host12_3\n neighbor Ethernet64 interface v6only remote-as external\n neighbor Ethernet64 description Spine_S2\n neighbor Ethernet68 interface v6only remote-as external\n neighbor Ethernet68 description Spine_S1\n !\n address-family ipv4 unicast\n  redistribute connected\n  neighbor Ethernet0 activate\n  neighbor Ethernet0 soft-reconfiguration inbound\n  neighbor Ethernet1 activate\n  neighbor Ethernet1 soft-reconfiguration inbound\n  neighbor Ethernet2 activate\n  neighbor Ethernet2 soft-reconfiguration inbound\n  neighbor Ethernet64 activate\n  neighbor Ethernet68 activate\n exit-address-family\n !\n address-family ipv6 unicast\n  redistribute connected\n  neighbor Ethernet0 activate\n  neighbor Ethernet1 activate\n  neighbor Ethernet2 activate\n  neighbor Ethernet64 activate\n  neighbor Ethernet68 activate\n exit-address-family\n !\n address-family l2vpn evpn\n  advertise-all-vni\n exit-address-family\nexit\n!\nip prefix-list PL_LoopbackV4 seq 5 permit 10.1.0.1/32\n!\nroute-map RM_SET_SRC permit 10\n set src 10.0.1.1\nexit\n!\nip nht resolve-via-default\n!\nipv6 nht resolve-via-default\n!\nip protocol bgp route-map RM_SET_SRC\n!\nend\n"
+}
+admin@LeafL1:~$
