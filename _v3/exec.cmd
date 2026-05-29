@@ -224,3 +224,36 @@ Leaf_L1/L2 on br-H121-L1 br-H122-L1 br-H123-L1 br-H121-L2 br-H122-L2 br-H123-L2
 Leaf_L3/L4 on br-H341-L3 br-H342-L3 br-H341-L4 br-H342-L4
 Border_Leaf1/2 on br-HB-BL1 br-HB2-BL1 br-MS-BL1 br-HB-BL2 br-HB2-BL2 br-MS-BL2
 If you want, I can give you one consolidated hypervisor script that fixes all leaf and border-leaf taps in one pass.
+
+
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+Do this on Host12_1 first:
+ssh Host12_1 "sudo vtysh <<'EOF'
+configure terminal
+router bgp 65101
+ no neighbor enp2s0 interface remote-as 65011
+ no neighbor enp3s0 interface remote-as 65012
+ neighbor enp2s0 interface v6only
+ neighbor enp2s0 remote-as external
+ neighbor enp2s0 description Leaf_L1
+ neighbor enp3s0 interface v6only
+ neighbor enp3s0 remote-as external
+ neighbor enp3s0 description Leaf_L2
+ address-family ipv4 unicast
+  neighbor enp2s0 activate
+  neighbor enp2s0 soft-reconfiguration inbound
+  neighbor enp3s0 activate
+  neighbor enp3s0 soft-reconfiguration inbound
+ exit-address-family
+ address-family ipv6 unicast
+  neighbor enp2s0 activate
+  neighbor enp3s0 activate
+ exit-address-family
+end
+write
+EOF"
+Then immediately check:
+ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
+ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
