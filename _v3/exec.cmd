@@ -129,3 +129,5 @@ ssh Host12_1 "ping6 -c 2 -I enp2s0 ff02::1%enp2s0"
 # Should show neighbor discovery responses from Leaf_L1
 
 If 100% packet loss → the virtual network bridge isn't connected to SONiC. If neighbors appear → it's a FRR configuration issue (probably the no bgp ebgp-requires-policy line).
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+ansible localhost -m debug -a "msg='Host12_1 ASN={{ server_asn_map[\"Host12_1\"] }}, Leaf_L1 ASN={{ leaf_asn_map[\"Leaf_L1\"] }}'" -i inventory/hosts.yml
