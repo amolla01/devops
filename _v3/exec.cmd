@@ -273,3 +273,12 @@ Then, during that 15-second window:
 ssh Leaf_L1 "sudo vtysh -c 'clear bgp Ethernet0'"
 ssh Leaf_L1 "sudo vtysh -c 'clear bgp Ethernet0'"
 If you paste the outputs from the 8 host checks first, I can tell you immediately whether this is a host interface-state problem or whether we need to move to a packet-drop/checksum proof on the guest path.
+
+
+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+Run this immediately on Host12_1 to prove it before rerunning Ansible:
+ssh Host12_1 "for i in enp2s0 enp3s0; do sudo ethtool -K $i tx off tso off gso off gro off; done"
+ssh Host12_1 "sudo systemctl restart frr"
+ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
