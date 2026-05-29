@@ -146,3 +146,41 @@ sudo tail -50 /var/log/frr/bgpd.log
 
 # 4. Check if FRR can see the neighbors
 sudo vtysh -c "show bgp neighbors" | head -40
+
+
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+Run this on the KVM hypervisor for a proof on Host12_1 first:
+for br in br-H121-L1 br-H121-L2; do
+  tap=$(sudo ovs-vsctl list-ports "$br" | grep '^vnet' | while read -r port; do
+    sudo virsh domiflist Host12_1 | grep -q "$port" && echo "$port" && break
+  done)
+  echo "$br -> $tap"
+  sudo ethtool -K "$tap" tx off
+done
+Then verify immediately:
+ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+If Host12_1 comes up, apply the same fix for all server VMs using the bridge map from
+declare -A VM_BRIDGES=(
+  [Host12_1]="br-H121-L1 br-H121-L2"
+  [Host12_2]="br-H122-L1 br-H122-L2"
+  [Host12_3]="br-H123-L1 br-H123-L2"
+  [Host34_1]="br-H341-L3 br-H341-L4"
+  [Host34_2]="br-H342-L3 br-H342-L4"
+  [HostB12_1]="br-HB-BL1 br-HB-BL2"
+  [HostB12_2]="br-HB2-BL1 br-HB2-BL2"
+  [MonitorSrv]="br-MS-BL1 br-MS-BL2"
+)
+
+for vm in "${!VM_BRIDGES[@]}"; do
+  for br in ${VM_BRIDGES[$vm]}; do
+    tap=$(sudo ovs-vsctl list-ports "$br" | grep '^vnet' | while read -r port; do
+      sudo virsh domiflist "$vm" | grep -q "$port" && echo "$port" && break
+    done)
+    [ -n "$tap" ] && sudo ethtool -K "$tap" tx off
+  done
+done
+One secondary issue remains on the border leaves: Border_Leaf1 and Border_Leaf2 show stale extra neighbors on Ethernet20/24/28 and an old numbered peer in your live output. That is separate cleanup. First get one host pair established by applying the tap offload fix; if it works, I can help clean the border leaf neighbor drift next.
+
