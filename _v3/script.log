@@ -796,3 +796,226 @@ exit
 end
 
 C:\Users\nh1221>
+
+
+LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+C:\Users\nh1221>ssh Host12_1 "ip -d link show enp2s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+3: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 52:54:00:df:fc:7c brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 parentbus virtio parentdev virtio1
+
+C:\Users\nh1221>ssh Host12_1 "ip -d link show enp3s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+4: enp3s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 52:54:00:88:6e:f9 brd ff:ff:ff:ff:ff:ff promiscuity 0  allmulti 0 minmtu 68 maxmtu 65535 addrgenmode eui64 numtxqueues 1 numrxqueues 1 gso_max_size 65536 gso_max_segs 65535 tso_max_size 65536 tso_max_segs 65535 gro_max_size 65536 parentbus virtio parentdev virtio2
+
+C:\Users\nh1221>ssh Host12_1 "ip -6 addr show dev enp2s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+3: enp2s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP group default qlen 1000
+    inet6 fe80::5054:ff:fedf:fc7c/64 scope link
+       valid_lft forever preferred_lft forever
+
+C:\Users\nh1221>ssh Host12_1 "ip -6 addr show dev enp3s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+4: enp3s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc fq_codel state UP group default qlen 1000
+    inet6 fe80::5054:ff:fe88:6ef9/64 scope link
+       valid_lft forever preferred_lft forever
+
+C:\Users\nh1221>ssh Host12_1 "ip -6 route get fe80::21c:73ff:fea1:101 dev enp2s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+fe80::21c:73ff:fea1:101 from :: dev enp2s0 proto kernel src fe80::5054:ff:fedf:fc7c metric 256 pref medium
+
+C:\Users\nh1221>ssh Host12_1 "ip -6 route get fe80::21c:73ff:fea1:102 dev enp3s0"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+fe80::21c:73ff:fea1:102 from :: dev enp3s0 proto kernel src fe80::5054:ff:fe88:6ef9 metric 256 pref medium
+
+C:\Users\nh1221>ssh Host12_1 "sysctl net.ipv6.conf.enp2s0.disable_ipv6 net.ipv6.conf.enp3s0.disable_ipv6"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+net.ipv6.conf.enp2s0.disable_ipv6 = 0
+net.ipv6.conf.enp3s0.disable_ipv6 = 0
+
+C:\Users\nh1221>ssh Host12_1 "ls -l /etc/netplan"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+total 12
+-rw------- 1 root root  85 May 26 01:17 10-loopback.yaml
+-rw------- 1 root root 327 May 23 15:50 50-cloud-init.yaml
+-rw------- 1 root root 419 May 29 03:03 60-fabric-bgp.yaml
+
+C:\Users\nh1221>ssh Host12_1 "grep -R \"bond0\\|enp2s0\\|enp3s0\" /etc/netplan"
+'enp2s0\\' is not recognized as an internal or external command,
+operable program or batch file.
+
+C:\Users\nh1221>ssh Host12_1 "cat '/etc/netplan/10-loopback.yaml'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+cat: /etc/netplan/10-loopback.yaml: Permission denied
+
+C:\Users\nh1221>ssh Host12_1 "sudo cat '/etc/netplan/10-loopback.yaml'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+network:
+  version: 2
+  ethernets:
+    lo:
+      addresses:
+        - 10.10.255.1/32
+
+C:\Users\nh1221>ssh Host12_1 "sudo cat '/etc/netplan/50-cloud-init.yaml'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      dhcp4: false
+      addresses: ["172.16.2.40/24"]
+      routes:
+        - to: default
+          via: 172.16.2.1
+          metric: 9999
+        - to: 192.168.255.0/24
+          via: 172.16.2.1
+          metric: 100
+      nameservers:
+        addresses: ["8.8.8.8", "8.8.4.4"]
+
+C:\Users\nh1221>ssh Host12_1 "sudo cat '/etc/netplan/60-fabric-bgp.yaml'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+# Managed by Ansible (sonic_server_net role) — do not edit
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp2s0:
+      dhcp4: false
+      dhcp6: false
+      mtu: 9000
+      link-local: [ipv6]
+      ipv6-address-generation: eui64
+      accept-ra: false
+    enp3s0:
+      dhcp4: false
+      dhcp6: false
+      mtu: 9000
+      link-local: [ipv6]
+      ipv6-address-generation: eui64
+      accept-ra: false
+
+C:\Users\nh1221>ssh Host12_1 "sudo timeout 15 tcpdump -ni enp2s0 -vv 'icmp6 or tcp port 179'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+tcpdump: listening on enp2s0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:58:29.044595 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:29.600350 IP6 (class 0xc0, flowlabel 0xeaa85, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x9b32), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060148124 ecr 0,nop,wscale 7], length 0
+10:58:30.045126 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:30.615916 IP6 (class 0xc0, flowlabel 0x4bf13, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x973a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060149140 ecr 0,nop,wscale 7], length 0
+10:58:31.045112 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:31.640005 IP6 (class 0xc0, flowlabel 0xcf9e2, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x933a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060150164 ecr 0,nop,wscale 7], length 0
+10:58:32.026975 IP6 (class 0xc0, flowlabel 0xf804d, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.35692 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0x66d3 (correct), seq 3653643388, win 62580, options [mss 8940,sackOK,TS val 3774520496 ecr 0,nop,wscale 9], length 0
+10:58:32.027069 IP6 (class 0xc0, flowlabel 0xcce1c, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x19e6), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060150551 ecr 3774520496,nop,wscale 7], length 0
+10:58:32.045435 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:32.459566 IP6 (flowlabel 0x0f8eb, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::21c:73ff:fea1:101 > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 00:1c:73:a1:01:01
+            0x0000:  001c 73a1 0101
+10:58:32.663984 IP6 (class 0xc0, flowlabel 0x2ceb3, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x8f3a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060151188 ecr 0,nop,wscale 7], length 0
+10:58:33.040918 IP6 (class 0xc0, flowlabel 0x13c3a, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.35692 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0x62d9 (correct), seq 3653643388, win 62580, options [mss 8940,sackOK,TS val 3774521514 ecr 0,nop,wscale 9], length 0
+10:58:33.040994 IP6 (class 0xc0, flowlabel 0x29e1c, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x15f0), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060151565 ecr 3774520496,nop,wscale 7], length 0
+10:58:33.687974 IP6 (class 0xc0, flowlabel 0x20ed1, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x8b3a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060152212 ecr 0,nop,wscale 7], length 0
+10:58:34.046289 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:34.071970 IP6 (class 0xc0, flowlabel 0x19281, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x11e9), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060152596 ecr 3774520496,nop,wscale 7], length 0
+10:58:34.711978 IP6 (class 0xc0, flowlabel 0xb0c77, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x873a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060153236 ecr 0,nop,wscale 7], length 0
+10:58:35.056991 IP6 (class 0xc0, flowlabel 0xb311c, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.35692 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0x5af9 (correct), seq 3653643388, win 62580, options [mss 8940,sackOK,TS val 3774523530 ecr 0,nop,wscale 9], length 0
+10:58:35.057064 IP6 (class 0xc0, flowlabel 0x79770, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x0e10), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060153581 ecr 3774520496,nop,wscale 7], length 0
+10:58:36.759953 IP6 (class 0xc0, flowlabel 0x8582e, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.49536 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x7f3a), seq 788600751, win 62580, options [mss 8940,sackOK,TS val 1060155284 ecr 0,nop,wscale 7], length 0
+10:58:37.079984 IP6 (class 0xc0, flowlabel 0xd8ac0, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x0629), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060155604 ecr 3774520496,nop,wscale 7], length 0
+10:58:39.248958 IP6 (class 0xc0, flowlabel 0xca61f, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.35692 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0x4a99 (correct), seq 3653643388, win 62580, options [mss 8940,sackOK,TS val 3774527722 ecr 0,nop,wscale 9], length 0
+10:58:39.249040 IP6 (class 0xc0, flowlabel 0x4fb95, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0xfdaf), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060157773 ecr 3774520496,nop,wscale 7], length 0
+10:58:39.605129 IP6 (class 0xc0, flowlabel 0xfe9e5, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.58884 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x5c64), seq 733023796, win 62580, options [mss 8940,sackOK,TS val 1060158129 ecr 0,nop,wscale 7], length 0
+10:58:40.663952 IP6 (class 0xc0, flowlabel 0x53317, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.58884 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x5841), seq 733023796, win 62580, options [mss 8940,sackOK,TS val 1060159188 ecr 0,nop,wscale 7], length 0
+10:58:41.687924 IP6 (class 0xc0, flowlabel 0x9620f, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.58884 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x5441), seq 733023796, win 62580, options [mss 8940,sackOK,TS val 1060160212 ecr 0,nop,wscale 7], length 0
+10:58:42.462369 IP6 (flowlabel 0x0f8eb, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::21c:73ff:fea1:101 > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 00:1c:73:a1:01:01
+            0x0000:  001c 73a1 0101
+10:58:42.711929 IP6 (class 0xc0, flowlabel 0xc0e96, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.58884 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x5041), seq 733023796, win 62580, options [mss 8940,sackOK,TS val 1060161236 ecr 0,nop,wscale 7], length 0
+
+28 packets captured
+29 packets received by filter
+0 packets dropped by kernel
+
+C:\Users\nh1221>ssh Host12_1 "sudo timeout 15 tcpdump -ni enp2s0 -vv 'icmp6 or tcp port 179'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+tcpdump: listening on enp2s0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:58:59.052583 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:58:59.381660 IP6 (class 0xc0, flowlabel 0xa2c60, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x7e09), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060177905 ecr 0,nop,wscale 7], length 0
+10:59:00.052988 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:59:00.440014 IP6 (class 0xc0, flowlabel 0xd6182, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x79e6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060178964 ecr 0,nop,wscale 7], length 0
+10:59:01.053016 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:59:01.161276 IP6 (class 0xc0, flowlabel 0xa151d, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.41106 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0xcc39 (correct), seq 1290980594, win 62580, options [mss 8940,sackOK,TS val 3774549633 ecr 0,nop,wscale 9], length 0
+10:59:01.161375 IP6 (class 0xc0, flowlabel 0x43100, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x478e), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060179685 ecr 3774549633,nop,wscale 7], length 0
+10:59:01.463991 IP6 (class 0xc0, flowlabel 0x45844, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x75e6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060179988 ecr 0,nop,wscale 7], length 0
+10:59:02.053708 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:59:02.161585 IP6 (class 0xc0, flowlabel 0xc1951, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.41106 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0xc850 (correct), seq 1290980594, win 62580, options [mss 8940,sackOK,TS val 3774550634 ecr 0,nop,wscale 9], length 0
+10:59:02.161669 IP6 (class 0xc0, flowlabel 0xa0344, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x43a6), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060180685 ecr 3774549633,nop,wscale 7], length 0
+10:59:02.472960 IP6 (flowlabel 0x0f8eb, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::21c:73ff:fea1:101 > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 00:1c:73:a1:01:01
+            0x0000:  001c 73a1 0101
+10:59:02.487969 IP6 (class 0xc0, flowlabel 0x10aa2, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x71e6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060181012 ecr 0,nop,wscale 7], length 0
+10:59:03.192026 IP6 (class 0xc0, flowlabel 0x38de2, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x3f9f), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060181716 ecr 3774549633,nop,wscale 7], length 0
+10:59:03.512005 IP6 (class 0xc0, flowlabel 0xb6204, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x6de6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060182036 ecr 0,nop,wscale 7], length 0
+10:59:04.177849 IP6 (class 0xc0, flowlabel 0xa50b7, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.41106 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0xc070 (correct), seq 1290980594, win 62580, options [mss 8940,sackOK,TS val 3774552650 ecr 0,nop,wscale 9], length 0
+10:59:04.177981 IP6 (class 0xc0, flowlabel 0x5b9d1, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x3bc5), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060182702 ecr 3774549633,nop,wscale 7], length 0
+10:59:04.535979 IP6 (class 0xc0, flowlabel 0x366d0, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x69e6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060183060 ecr 0,nop,wscale 7], length 0
+10:59:06.199992 IP6 (class 0xc0, flowlabel 0x098b6, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x33df), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060184724 ecr 3774549633,nop,wscale 7], length 0
+10:59:06.583962 IP6 (class 0xc0, flowlabel 0x03dbc, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.56624 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0x61e6), seq 3589668317, win 62580, options [mss 8940,sackOK,TS val 1060185108 ecr 0,nop,wscale 7], length 0
+10:59:08.433872 IP6 (class 0xc0, flowlabel 0x8aaef, hlim 1, next-header TCP (6) payload length: 40) fe80::21c:73ff:fea1:101.41106 > fe80::5054:ff:fedf:fc7c.179: Flags [S], cksum 0xafd0 (correct), seq 1290980594, win 62580, options [mss 8940,sackOK,TS val 3774556906 ecr 0,nop,wscale 9], length 0
+10:59:08.433985 IP6 (class 0xc0, flowlabel 0x27908, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x2b25), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060186958 ecr 3774549633,nop,wscale 7], length 0
+10:59:09.386223 IP6 (class 0xc0, flowlabel 0xfe3a3, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.33806 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0xf6bc), seq 651191901, win 62580, options [mss 8940,sackOK,TS val 1060187910 ecr 0,nop,wscale 7], length 0
+10:59:10.423986 IP6 (class 0xc0, flowlabel 0xe2cd0, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.33806 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0xf2ae), seq 651191901, win 62580, options [mss 8940,sackOK,TS val 1060188948 ecr 0,nop,wscale 7], length 0
+10:59:11.448004 IP6 (class 0xc0, flowlabel 0x3c165, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.33806 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0xeeae), seq 651191901, win 62580, options [mss 8940,sackOK,TS val 1060189972 ecr 0,nop,wscale 7], length 0
+10:59:12.024056 IP6 (class 0xc0, flowlabel 0xf2a53, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.35692: Flags [S.], cksum 0xbf9e (incorrect -> 0x7da8), seq 1547113651, ack 3653643389, win 62496, options [mss 8940,sackOK,TS val 1060190548 ecr 3774520496,nop,wscale 7], length 0
+10:59:12.056302 IP6 (flowlabel 0x6eedf, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::5054:ff:fedf:fc7c > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 52:54:00:df:fc:7c
+            0x0000:  5254 00df fc7c
+10:59:12.471982 IP6 (class 0xc0, flowlabel 0x268ac, hlim 1, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.33806 > fe80::21c:73ff:fea1:101.179: Flags [S], cksum 0xbf9e (incorrect -> 0xeaae), seq 651191901, win 62580, options [mss 8940,sackOK,TS val 1060190996 ecr 0,nop,wscale 7], length 0
+10:59:12.472054 IP6 (class 0xc0, flowlabel 0xea998, hlim 255, next-header TCP (6) payload length: 40) fe80::5054:ff:fedf:fc7c.179 > fe80::21c:73ff:fea1:101.41106: Flags [S.], cksum 0xbf9e (incorrect -> 0x1b5f), seq 3163126352, ack 1290980595, win 62496, options [mss 8940,sackOK,TS val 1060190996 ecr 3774549633,nop,wscale 7], length 0
+10:59:12.476332 IP6 (flowlabel 0x0f8eb, hlim 255, next-header ICMPv6 (58) payload length: 24) fe80::21c:73ff:fea1:101 > ff02::1: [icmp6 sum ok] ICMP6, router advertisement, length 24
+        hop limit 64, Flags [none], pref medium, router lifetime 30s, reachable time 0ms, retrans timer 0ms
+          source link-address option (1), length 8 (1): 00:1c:73:a1:01:01
+            0x0000:  001c 73a1 0101
+
+30 packets captured
+30 packets received by filter
+0 packets dropped by kernel
+
+C:\Users\nh1221>
+C:\Users\nh1221>ssh Leaf_L1 "sudo vtysh -c 'clear bgp Ethernet0'"
+Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+
+C:\Users\nh1221>
