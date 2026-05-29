@@ -257,3 +257,19 @@ ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
 ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
 ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+Run these exact checks from Windows cmd:
+ssh Host12_1 "ip -d link show enp2s0"
+ssh Host12_1 "ip -d link show enp3s0"
+ssh Host12_1 "ip -6 addr show dev enp2s0"
+ssh Host12_1 "ip -6 addr show dev enp3s0"
+ssh Host12_1 "ip -6 route get fe80::21c:73ff:fea1:101 dev enp2s0"
+ssh Host12_1 "ip -6 route get fe80::21c:73ff:fea1:102 dev enp3s0"
+ssh Host12_1 "sysctl net.ipv6.conf.enp2s0.disable_ipv6 net.ipv6.conf.enp3s0.disable_ipv6"
+ssh Host12_1 "ls -l /etc/netplan"
+ssh Host12_1 "grep -R \"bond0\\|enp2s0\\|enp3s0\" /etc/netplan"
+ssh Host12_1 "sudo timeout 15 tcpdump -ni enp2s0 -vv 'icmp6 or tcp port 179'"
+Then, during that 15-second window:
+ssh Leaf_L1 "sudo vtysh -c 'clear bgp Ethernet0'"
+ssh Leaf_L1 "sudo vtysh -c 'clear bgp Ethernet0'"
+If you paste the outputs from the 8 host checks first, I can tell you immediately whether this is a host interface-state problem or whether we need to move to a packet-drop/checksum proof on the guest path.
