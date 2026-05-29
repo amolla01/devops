@@ -1,26 +1,242 @@
-nh1221@PowerEdge-R810:~$ for br in br-H121-L1 br-H121-L2; do
-  tap=$(sudo ovs-vsctl list-ports "$br" | grep '^vnet' | while read -r port; do
-    sudo virsh domiflist Host12_1 | grep -q "$port" && echo "$port" && break
-  done)
-  echo "$br -> $tap"
-  sudo ethtool -K "$tap" tx off
-done
-[sudo: authenticate] Password:
-br-H121-L1 -> vnet617
-Actual changes:
-tx-checksum-ip-generic: off
-tx-tcp-segmentation: off [not requested]
-tx-tcp-ecn-segmentation: off [not requested]
-tx-tcp6-segmentation: off [not requested]
-tx-udp-segmentation: off [not requested]
-br-H121-L2 -> vnet618
-Actual changes:
-tx-checksum-ip-generic: off
-tx-tcp-segmentation: off [not requested]
-tx-tcp-ecn-segmentation: off [not requested]
-tx-tcp6-segmentation: off [not requested]
-tx-udp-segmentation: off [not requested]
-nh1221@PowerEdge-R810:~$
+
+C:\Users\nh1221>ssh Host12_1 "sudo ss -ltnp | grep ':179 ' || true"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+LISTEN 0      4096         0.0.0.0:179       0.0.0.0:*    users:(("bgpd",pid=49232,fd=22))
+LISTEN 0      4096            [::]:179          [::]:*    users:(("bgpd",pid=49232,fd=23))
+
+C:\Users\nh1221>ssh Host12_1 "sudo systemctl status frr --no-pager -l"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+● frr.service - FRRouting
+     Loaded: loaded (/usr/lib/systemd/system/frr.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-05-29 03:49:11 UTC; 6h ago
+       Docs: https://frrouting.readthedocs.io/en/latest/setup.html
+    Process: 49204 ExecStart=/usr/lib/frr/frrinit.sh start (code=exited, status=0/SUCCESS)
+   Main PID: 49214 (watchfrr)
+     Status: "FRR Operational"
+      Tasks: 13 (limit: 9483)
+     Memory: 18.3M (peak: 29.2M)
+        CPU: 21.921s
+     CGroup: /system.slice/frr.service
+             ├─49214 /usr/lib/frr/watchfrr -d -F traditional zebra bgpd staticd
+             ├─49227 /usr/lib/frr/zebra -d -F traditional -A 127.0.0.1 -s 90000000
+             ├─49232 /usr/lib/frr/bgpd -d -F traditional -A 127.0.0.1
+             └─49239 /usr/lib/frr/staticd -d -F traditional -A 127.0.0.1
+
+May 29 03:49:11 host12-1 watchfrr[49214]: [YFT0P-5Q5YX] Forked background command [pid 49215]: /usr/lib/frr/watchfrr.sh restart all
+May 29 03:49:11 host12-1 zebra[49227]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 bgpd[49232]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 staticd[49239]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+May 29 03:49:11 host12-1 frrinit.sh[49204]:  * Started watchfrr
+May 29 03:49:11 host12-1 systemd[1]: Started frr.service - FRRouting.
+
+C:\Users\nh1221>ssh Host12_1 "sudo journalctl -u frr -n 100 --no-pager"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+May 29 03:27:36 host12-1 systemd[1]: Stopped frr.service - FRRouting.
+May 29 03:27:36 host12-1 systemd[1]: frr.service: Consumed 1.944s CPU time, 27.9M memory peak, 0B memory swap peak.
+May 29 03:27:36 host12-1 systemd[1]: Starting frr.service - FRRouting...
+May 29 03:27:36 host12-1 frrinit.sh[46863]:  * Starting watchfrr with command: '  /usr/lib/frr/watchfrr  -d  -F traditional   zebra bgpd staticd'
+May 29 03:27:36 host12-1 watchfrr[46873]: [T83RR-8SM5G] watchfrr 8.4.4 starting: vty@0
+May 29 03:27:36 host12-1 watchfrr[46873]: [ZCJ3S-SPH5S] zebra state -> down : initial connection attempt failed
+May 29 03:27:36 host12-1 watchfrr[46873]: [ZCJ3S-SPH5S] bgpd state -> down : initial connection attempt failed
+May 29 03:27:36 host12-1 watchfrr[46873]: [ZCJ3S-SPH5S] staticd state -> down : initial connection attempt failed
+May 29 03:27:36 host12-1 watchfrr[46873]: [YFT0P-5Q5YX] Forked background command [pid 46874]: /usr/lib/frr/watchfrr.sh restart all
+May 29 03:27:36 host12-1 watchfrr.sh[46884]: Cannot stop zebra: pid file not found
+May 29 03:27:37 host12-1 zebra[46886]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:37 host12-1 bgpd[46891]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:37 host12-1 staticd[46898]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:37 host12-1 watchfrr[46873]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+May 29 03:27:37 host12-1 watchfrr[46873]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+May 29 03:27:37 host12-1 watchfrr[46873]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+May 29 03:27:37 host12-1 watchfrr[46873]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+May 29 03:27:37 host12-1 frrinit.sh[46863]:  * Started watchfrr
+May 29 03:27:37 host12-1 systemd[1]: Started frr.service - FRRouting.
+May 29 03:27:51 host12-1 systemd[1]: Stopping frr.service - FRRouting...
+May 29 03:27:51 host12-1 watchfrr[46873]: [NG1AJ-FP2TQ] Terminating on signal
+May 29 03:27:51 host12-1 frrinit.sh[47016]:  * Stopped watchfrr
+May 29 03:27:51 host12-1 staticd[46898]: [MRN6F-AYZC4] Terminating on signal
+May 29 03:27:51 host12-1 bgpd[46891]: [ZW1GY-R46JE] Terminating on signal
+May 29 03:27:51 host12-1 zebra[46886]: [VXKFG-8SJRV][EC 4043309121] Client 'static' encountered an error and is shutting down.
+May 29 03:27:51 host12-1 zebra[46886]: [JPSA8-5KYEA] client 38 disconnected 0 static routes removed from the rib
+May 29 03:27:51 host12-1 zebra[46886]: [S929C-NZR3N] client 38 disconnected 0 static nhgs removed from the rib
+May 29 03:27:51 host12-1 zebra[46886]: [GE156-FS0MJ][EC 100663299] stream_read_try: read failed on fd 31: Connection reset by peer
+May 29 03:27:51 host12-1 zebra[46886]: [VXKFG-8SJRV][EC 4043309121] Client 'vnc' encountered an error and is shutting down.
+May 29 03:27:51 host12-1 zebra[46886]: [GE156-FS0MJ][EC 100663299] stream_read_try: read failed on fd 17: Connection reset by peer
+May 29 03:27:51 host12-1 zebra[46886]: [VXKFG-8SJRV][EC 4043309121] Client 'bgp' encountered an error and is shutting down.
+May 29 03:27:51 host12-1 zebra[46886]: [JPSA8-5KYEA] client 31 disconnected 0 vnc routes removed from the rib
+May 29 03:27:51 host12-1 zebra[46886]: [S929C-NZR3N] client 31 disconnected 0 vnc nhgs removed from the rib
+May 29 03:27:51 host12-1 zebra[46886]: [JPSA8-5KYEA] client 17 disconnected 0 bgp routes removed from the rib
+May 29 03:27:51 host12-1 zebra[46886]: [S929C-NZR3N] client 17 disconnected 0 bgp nhgs removed from the rib
+May 29 03:27:51 host12-1 bgpd[46891]: [HZN6M-XRM1G] %NOTIFICATION: sent to neighbor enp3s0 6/3 (Cease/Peer De-configured) 0 bytes
+May 29 03:27:51 host12-1 bgpd[46891]: [HZN6M-XRM1G] %NOTIFICATION: sent to neighbor enp3s0 6/2 (Cease/Administrative Shutdown) 0 bytes
+May 29 03:27:51 host12-1 frrinit.sh[47045]:  * Stopped staticd
+May 29 03:27:51 host12-1 frrinit.sh[47047]:  * Stopped bgpd
+May 29 03:27:51 host12-1 zebra[46886]: [XVBTQ-5QTVQ] Terminating on signal
+May 29 03:27:51 host12-1 zebra[46886]: [QS0NJ-H5QKJ] Zebra final shutdown
+May 29 03:27:51 host12-1 frrinit.sh[47016]:  * Stopped zebra
+May 29 03:27:51 host12-1 systemd[1]: frr.service: Deactivated successfully.
+May 29 03:27:51 host12-1 systemd[1]: Stopped frr.service - FRRouting.
+May 29 03:27:51 host12-1 systemd[1]: Starting frr.service - FRRouting...
+May 29 03:27:51 host12-1 frrinit.sh[47057]:  * Starting watchfrr with command: '  /usr/lib/frr/watchfrr  -d  -F traditional   zebra bgpd staticd'
+May 29 03:27:51 host12-1 watchfrr[47067]: [T83RR-8SM5G] watchfrr 8.4.4 starting: vty@0
+May 29 03:27:51 host12-1 watchfrr[47067]: [ZCJ3S-SPH5S] zebra state -> down : initial connection attempt failed
+May 29 03:27:51 host12-1 watchfrr[47067]: [ZCJ3S-SPH5S] bgpd state -> down : initial connection attempt failed
+May 29 03:27:51 host12-1 watchfrr[47067]: [ZCJ3S-SPH5S] staticd state -> down : initial connection attempt failed
+May 29 03:27:51 host12-1 watchfrr[47067]: [YFT0P-5Q5YX] Forked background command [pid 47068]: /usr/lib/frr/watchfrr.sh restart all
+May 29 03:27:51 host12-1 zebra[47080]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:51 host12-1 bgpd[47085]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:51 host12-1 staticd[47092]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:27:51 host12-1 watchfrr[47067]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+May 29 03:27:51 host12-1 watchfrr[47067]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+May 29 03:27:51 host12-1 watchfrr[47067]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+May 29 03:27:51 host12-1 watchfrr[47067]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+May 29 03:27:51 host12-1 frrinit.sh[47057]:  * Started watchfrr
+May 29 03:27:51 host12-1 systemd[1]: Started frr.service - FRRouting.
+May 29 03:49:11 host12-1 systemd[1]: Stopping frr.service - FRRouting...
+May 29 03:49:11 host12-1 watchfrr[47067]: [NG1AJ-FP2TQ] Terminating on signal
+May 29 03:49:11 host12-1 frrinit.sh[49163]:  * Stopped watchfrr
+May 29 03:49:11 host12-1 bgpd[47085]: [ZW1GY-R46JE] Terminating on signal
+May 29 03:49:11 host12-1 staticd[47092]: [MRN6F-AYZC4] Terminating on signal
+May 29 03:49:11 host12-1 zebra[47080]: [VXKFG-8SJRV][EC 4043309121] Client 'static' encountered an error and is shutting down.
+May 29 03:49:11 host12-1 zebra[47080]: [JPSA8-5KYEA] client 38 disconnected 0 static routes removed from the rib
+May 29 03:49:11 host12-1 zebra[47080]: [S929C-NZR3N] client 38 disconnected 0 static nhgs removed from the rib
+May 29 03:49:11 host12-1 zebra[47080]: [GE156-FS0MJ][EC 100663299] stream_read_try: read failed on fd 31: Connection reset by peer
+May 29 03:49:11 host12-1 zebra[47080]: [VXKFG-8SJRV][EC 4043309121] Client 'vnc' encountered an error and is shutting down.
+May 29 03:49:11 host12-1 zebra[47080]: [GE156-FS0MJ][EC 100663299] stream_read_try: read failed on fd 17: Connection reset by peer
+May 29 03:49:11 host12-1 zebra[47080]: [VXKFG-8SJRV][EC 4043309121] Client 'bgp' encountered an error and is shutting down.
+May 29 03:49:11 host12-1 zebra[47080]: [JPSA8-5KYEA] client 31 disconnected 0 vnc routes removed from the rib
+May 29 03:49:11 host12-1 zebra[47080]: [S929C-NZR3N] client 31 disconnected 0 vnc nhgs removed from the rib
+May 29 03:49:11 host12-1 zebra[47080]: [JPSA8-5KYEA] client 17 disconnected 0 bgp routes removed from the rib
+May 29 03:49:11 host12-1 zebra[47080]: [S929C-NZR3N] client 17 disconnected 0 bgp nhgs removed from the rib
+May 29 03:49:11 host12-1 frrinit.sh[49193]:  * Stopped bgpd
+May 29 03:49:11 host12-1 frrinit.sh[49192]:  * Stopped staticd
+May 29 03:49:11 host12-1 zebra[47080]: [XVBTQ-5QTVQ] Terminating on signal
+May 29 03:49:11 host12-1 zebra[47080]: [QS0NJ-H5QKJ] Zebra final shutdown
+May 29 03:49:11 host12-1 frrinit.sh[49163]:  * Stopped zebra
+May 29 03:49:11 host12-1 systemd[1]: frr.service: Deactivated successfully.
+May 29 03:49:11 host12-1 systemd[1]: Stopped frr.service - FRRouting.
+May 29 03:49:11 host12-1 systemd[1]: frr.service: Consumed 1.964s CPU time, 29.2M memory peak, 0B memory swap peak.
+May 29 03:49:11 host12-1 systemd[1]: Starting frr.service - FRRouting...
+May 29 03:49:11 host12-1 frrinit.sh[49204]:  * Starting watchfrr with command: '  /usr/lib/frr/watchfrr  -d  -F traditional   zebra bgpd staticd'
+May 29 03:49:11 host12-1 watchfrr[49214]: [T83RR-8SM5G] watchfrr 8.4.4 starting: vty@0
+May 29 03:49:11 host12-1 watchfrr[49214]: [ZCJ3S-SPH5S] zebra state -> down : initial connection attempt failed
+May 29 03:49:11 host12-1 watchfrr[49214]: [ZCJ3S-SPH5S] bgpd state -> down : initial connection attempt failed
+May 29 03:49:11 host12-1 watchfrr[49214]: [ZCJ3S-SPH5S] staticd state -> down : initial connection attempt failed
+May 29 03:49:11 host12-1 watchfrr[49214]: [YFT0P-5Q5YX] Forked background command [pid 49215]: /usr/lib/frr/watchfrr.sh restart all
+May 29 03:49:11 host12-1 zebra[49227]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 bgpd[49232]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 staticd[49239]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+May 29 03:49:11 host12-1 watchfrr[49214]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+May 29 03:49:11 host12-1 frrinit.sh[49204]:  * Started watchfrr
+May 29 03:49:11 host12-1 systemd[1]: Started frr.service - FRRouting.
+
+C:\Users\nh1221>ssh Host12_1 "sudo ufw status verbose || true"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+Status: inactive
+
+C:\Users\nh1221>ssh Host12_1 "sudo iptables -S || true"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+-P INPUT ACCEPT
+-P FORWARD ACCEPT
+-P OUTPUT ACCEPT
+
+C:\Users\nh1221>ssh Host12_1 "sudo nft list ruleset || true"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+{
+  "enp2s0":{
+    "bgpNeighborAddr":"fe80::21c:73ff:fea1:101",
+    "remoteAs":65011,
+    "localAs":65101,
+    "nbrExternalLink":true,
+    "localRole":"undefined",
+    "remoteRole":"undefined",
+    "nbrDesc":"Leaf_L1",
+    "bgpVersion":4,
+    "remoteRouterId":"0.0.0.0",
+    "localRouterId":"10.10.255.1",
+    "bgpState":"Connect",
+    "bgpTimerLastRead":23168000,
+    "bgpTimerLastWrite":57659000,
+    "bgpInUpdateElapsedTimeMsecs":57659000,
+    "bgpTimerConfiguredHoldTimeMsecs":9000,
+    "bgpTimerConfiguredKeepAliveIntervalMsecs":3000,
+    "bgpTimerHoldTimeMsecs":9000,
+    "bgpTimerKeepAliveIntervalMsecs":3000,
+    "extendedOptionalParametersLength":false,
+    "bgpTimerConfiguredConditionalAdvertisementsSec":60,
+    "gracefulRestartInfo":{
+      "endOfRibSend":{},
+      "endOfRibRecv":{},
+      "localGrMode":"Helper*",
+      "remoteGrMode":"NotApplicable",
+      "rBit":false,
+      "nBit":false,
+      "timers":{
+        "configuredRestartTimer":120,
+        "receivedRestartTimer":0
+      }
+    },
+    "messageStats":{
+      "depthInq":0,
+      "depthOutq":0,
+      "opensSent":0,
+      "opensRecv":0,
+      "notificationsSent":0,
+      "notificationsRecv":0,
+      "updatesSent":0,
+      "updatesRecv":0,
+      "keepalivesSent":0,
+      "keepalivesRecv":0,
+      "routeRefreshSent":0,
+      "routeRefreshRecv":0,
+      "capabilitySent":0,
+      "capabilityRecv":0,
+      "totalSent":0,
+      "totalRecv":0
+    },
+    "minBtwnAdvertisementRunsTimerMsecs":0,
+    "addressFamilyInfo":{
+      "ipv4Unicast":{
+        "inboundSoftConfigPermit":true,
+        "commAttriSentToNbr":"extendedAndStandard",
+        "acceptedPrefixCounter":0
+      },
+      "ipv6Unicast":{
+        "commAttriSentToNbr":"extendedAndStandard",
+        "acceptedPrefixCounter":0
+      }
+    },
+    "connectionsEstablished":0,
+    "connectionsDropped":0,
+    "lastResetTimerMsecs":23168000,
+    "lastResetDueTo":"Waiting for peer OPEN",
+    "lastResetCode":32,
+    "externalBgpNbrMaxHopsAway":1,
+    "hostLocal":"Unknown",
+    "portLocal":-1,
+    "hostForeign":"Unknown",
+    "portForeign":-1,
+    "connectRetryTimer":10,
+    "nextConnectTimerDueInMsecs":1000,
+    "readThread":"off",
+    "writeThread":"off"
+  }
+}
+
+C:\Users\nh1221>ssh Host12_1 "sudo ufw allow 179/tcp; sudo iptables -I INPUT -p tcp --dport 179 -j ACCEPT; sudo ip6tables -I INPUT -p tcp --dport 179 -j ACCEPT; sudo systemctl restart frr"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+Then immediately re-check:
+ssh Host12_1 "sudo vtysh -c 'show bgp summary'"Rules updated
+Rules updated (v6)
 
 C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
@@ -62,8 +278,8 @@ Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down Sta
 Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
 Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
 Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
-Ethernet64      4      65000       764       765        0    0    0 12:33:56            6        8 Spine_S2
-Ethernet68      4      65000       764       766        0    0    0 12:33:57            6        8 Spine_S1
+Ethernet64      4      65000       777       778        0    0    0 12:46:03            6        8 Spine_S2
+Ethernet68      4      65000       777       779        0    0    0 12:46:04            6        8 Spine_S1
 
 Total number of neighbors 5
 
@@ -77,41 +293,8 @@ Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down Sta
 Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
 Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
 Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
-Ethernet64      4      65000       764       765        0    0    0 12:33:56            0        0 Spine_S2
-Ethernet68      4      65000       764       766        0    0    0 12:33:57            0        0 Spine_S1
-
-Total number of neighbors 5
-
-C:\Users\nh1221>ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
-BGP table version 13
-RIB entries 15, using 3360 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
-Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
-Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
-Ethernet64      4      65000       764       765        0    0    0 12:33:43            6        8 Spine_S2
-Ethernet68      4      65000       764       765        0    0    0 12:33:44            6        8 Spine_S1
-
-Total number of neighbors 5
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
-Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
-Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
-Ethernet64      4      65000       764       765        0    0    0 12:33:43            0        0 Spine_S2
-Ethernet68      4      65000       764       765        0    0    0 12:33:44            0        0 Spine_S1
+Ethernet64      4      65000       777       778        0    0    0 12:46:03            0        0 Spine_S2
+Ethernet68      4      65000       777       779        0    0    0 12:46:04            0        0 Spine_S1
 
 Total number of neighbors 5
 
