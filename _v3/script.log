@@ -518,3 +518,241 @@ Total number of neighbors 5
 C:\Users\nh1221>
 
 C:\Users\nh1221>
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh <<'EOF'
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+bash: line 1: warning: here-document at line 1 delimited by end-of-file (wanted `EOF')
+configure terminal
+router bgp 65101
+ no neighbor enp2s0 interface remote-as 65011
+ no neighbor enp3s0 interface remote-as 65012
+ neighbor enp2s0 interface v6only
+ neighbor enp2s0 remote-as external
+ neighbor enp2s0 description Leaf_L1
+ neighbor enp3s0 interface v6only
+ neighbor enp3s0 remote-as external
+ neighbor enp3s0 description Leaf_L2
+ address-family ipv4 unicast
+  neighbor enp2s0 activate
+  neighbor enp2s0 soft-reconfiguration inbound
+  neighbor enp3s0 activate
+  neighbor enp3s0 soft-reconfiguration inbound
+ exit-address-family
+ address-family ipv6 unicast
+  neighbor enp2s0 activate
+  neighbor enp3s0 activate
+ exit-address-family
+end
+write
+EOF"
+Hello, this is FRRouting (version 8.4.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+host12-1#
+
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+{
+  "enp2s0":{
+    "bgpNeighborAddr":"fe80::21c:73ff:fea1:101",
+    "remoteAs":65011,
+    "localAs":65101,
+    "nbrExternalLink":true,
+    "localRole":"undefined",
+    "remoteRole":"undefined",
+    "nbrDesc":"Leaf_L1",
+    "bgpVersion":4,
+    "remoteRouterId":"0.0.0.0",
+    "localRouterId":"10.10.255.1",
+    "bgpState":"Connect",
+    "bgpTimerLastRead":783000,
+    "bgpTimerLastWrite":59138000,
+    "bgpInUpdateElapsedTimeMsecs":59138000,
+    "bgpTimerConfiguredHoldTimeMsecs":9000,
+    "bgpTimerConfiguredKeepAliveIntervalMsecs":3000,
+    "bgpTimerHoldTimeMsecs":9000,
+    "bgpTimerKeepAliveIntervalMsecs":3000,
+    "extendedOptionalParametersLength":false,
+    "bgpTimerConfiguredConditionalAdvertisementsSec":60,
+    "gracefulRestartInfo":{
+      "endOfRibSend":{},
+      "endOfRibRecv":{},
+      "localGrMode":"Helper*",
+      "remoteGrMode":"NotApplicable",
+      "rBit":false,
+      "nBit":false,
+      "timers":{
+        "configuredRestartTimer":120,
+        "receivedRestartTimer":0
+      }
+    },
+    "messageStats":{
+      "depthInq":0,
+      "depthOutq":0,
+      "opensSent":0,
+      "opensRecv":0,
+      "notificationsSent":0,
+      "notificationsRecv":0,
+      "updatesSent":0,
+      "updatesRecv":0,
+      "keepalivesSent":0,
+      "keepalivesRecv":0,
+      "routeRefreshSent":0,
+      "routeRefreshRecv":0,
+      "capabilitySent":0,
+      "capabilityRecv":0,
+      "totalSent":0,
+      "totalRecv":0
+    },
+    "minBtwnAdvertisementRunsTimerMsecs":0,
+    "addressFamilyInfo":{
+      "ipv4Unicast":{
+        "inboundSoftConfigPermit":true,
+        "commAttriSentToNbr":"extendedAndStandard",
+        "acceptedPrefixCounter":0
+      },
+      "ipv6Unicast":{
+        "commAttriSentToNbr":"extendedAndStandard",
+        "acceptedPrefixCounter":0
+      }
+    },
+    "connectionsEstablished":0,
+    "connectionsDropped":0,
+    "lastResetTimerMsecs":783000,
+    "lastResetDueTo":"Waiting for peer OPEN",
+    "lastResetCode":32,
+    "externalBgpNbrMaxHopsAway":1,
+    "hostLocal":"Unknown",
+    "portLocal":-1,
+    "hostForeign":"Unknown",
+    "portForeign":-1,
+    "connectRetryTimer":10,
+    "nextConnectTimerDueInMsecs":2000,
+    "readThread":"off",
+    "writeThread":"off"
+  }
+}
+
+C:\Users\nh1221>ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 12
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       800       801        0    0    0 13:09:37            6        8 Spine_S2
+Ethernet68      4      65000       800       802        0    0    0 13:09:38            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       800       801        0    0    0 13:09:37            0        0 Spine_S2
+Ethernet68      4      65000       800       802        0    0    0 13:09:38            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 13
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       800       801        0    0    0 13:09:37            6        8 Spine_S2
+Ethernet68      4      65000       800       801        0    0    0 13:09:38            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       800       801        0    0    0 13:09:37            0        0 Spine_S2
+Ethernet68      4      65000       800       801        0    0    0 13:09:38            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>
