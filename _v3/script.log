@@ -756,3 +756,43 @@ Ethernet68      4      65000       800       801        0    0    0 13:09:38    
 Total number of neighbors 5
 
 C:\Users\nh1221>
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show running-config'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+Building configuration...
+
+Current configuration:
+!
+frr version 8.4.4
+frr defaults datacenter
+hostname host12-1
+log syslog informational
+service integrated-vtysh-config
+!
+router bgp 65101
+ bgp router-id 10.10.255.1
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor enp2s0 interface v6only remote-as 65011
+ neighbor enp2s0 description Leaf_L1
+ neighbor enp3s0 interface v6only remote-as 65012
+ neighbor enp3s0 description Leaf_L2
+ !
+ address-family ipv4 unicast
+  network 10.10.255.1/32
+  neighbor enp2s0 activate
+  neighbor enp2s0 soft-reconfiguration inbound
+  neighbor enp3s0 activate
+  neighbor enp3s0 soft-reconfiguration inbound
+  maximum-paths 2
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  neighbor enp2s0 activate
+  neighbor enp3s0 activate
+ exit-address-family
+exit
+!
+end
+
+C:\Users\nh1221>
