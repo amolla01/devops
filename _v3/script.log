@@ -11,10 +11,10 @@ TASK [mikrotik_base : preflight | Wait for SSH port 22 to accept connections] **
 ok: [Exit_Router2]
 
 TASK [mikrotik_base : preflight | Probe SSH connectivity] *******************************************************************************************************************************************************
-ok: [Exit_Router1]
+ok: [Exit_Router2]
 
 TASK [mikrotik_base : preflight | Probe SSH connectivity] *******************************************************************************************************************************************************
-ok: [Exit_Router2]
+ok: [Exit_Router1]
 
 TASK [mikrotik_base : preflight | Assert SSH connectivity succeeded] ********************************************************************************************************************************************
 ok: [Exit_Router1] =>
@@ -27,23 +27,21 @@ ok: [Exit_Router2] =>
     msg: SSH to Exit_Router2 (172.16.2.99) — OK
 
 TASK [mikrotik_base : preflight | Gather RouterOS version] ******************************************************************************************************************************************************
-ok: [Exit_Router1]
+ok: [Exit_Router2]
 
 TASK [mikrotik_base : preflight | Gather RouterOS version] ******************************************************************************************************************************************************
-ok: [Exit_Router2]
+ok: [Exit_Router1]
 
 TASK [mikrotik_base : preflight | Display RouterOS identity] ****************************************************************************************************************************************************
 ok: [Exit_Router1] =>
     msg: 'Exit_Router1: RouterOS device reachable | version: 7.16 (stable)'
-
-TASK [Phase 1 | Configure BGP peering (MikroTik)] ***************************************************************************************************************************************************************
-included: mikrotik_base for Exit_Router1
 
 TASK [mikrotik_base : preflight | Display RouterOS identity] ****************************************************************************************************************************************************
 ok: [Exit_Router2] =>
     msg: 'Exit_Router2: RouterOS device reachable | version: 7.16 (stable)'
 
 TASK [Phase 1 | Configure BGP peering (MikroTik)] ***************************************************************************************************************************************************************
+included: mikrotik_base for Exit_Router1
 included: mikrotik_base for Exit_Router2
 
 TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
@@ -68,42 +66,190 @@ TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS po
 skipping: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
 skipping: [Exit_Router2]
 
-TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
-[ERROR]: Task failed: Action failed: Unable to resolve the live fabric interface on Exit_Router1. Inventory expects ether2, but running RouterOS data ports are none. Fix the CHR NIC ordering or inventory before re-running day1.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:53:3
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router1] =>
+    msg: 'Using ether2 as the live fabric interface on Exit_Router1. Running RouterOS
+        data ports: ether2'
 
-51   tags: [day1, interfaces, bgp, verify]
-52
-53 - name: "day1 | Fail when the KVM fabric interface is ambiguous"
-     ^ column 3
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
+        data ports: ether3'
+
+TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+changed: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)))
+
+TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
+
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1] => (item=ether2)
+
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3)
+
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3)
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+changed: [Exit_Router1] => (item=ether2)
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Verify BGP connections] ************************************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Verify BGP connections] ************************************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows] ***************************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows] ***************************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Display BGP neighbor sessions] *****************************************************************************************************************************************************
+ok: [Exit_Router1] =>
+    msg: |-
+        ┌─── BGP Neighbor Sessions ────────────────────────────────────────────
+        Flags: E - established
+        └──────────────────────────────────────────────────────────────────────
+
+
+TASK [mikrotik_base : day1 | Display BGP neighbor sessions] *****************************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: |-
+        ┌─── BGP Neighbor Sessions ────────────────────────────────────────────
+        Flags: E - established
+        └──────────────────────────────────────────────────────────────────────
+
+TASK [mikrotik_base : day1 | Assert at least one BGP session exists] ********************************************************************************************************************************************
+[ERROR]: Task failed: Action failed: No concrete BGP session rows were returned on Exit_Router1. RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:168:3
+
+166   tags: [day1, verify]
+167
+168 - name: "day1 | Assert at least one BGP session exists"
+      ^ column 3
 
 fatal: [Exit_Router1]: FAILED! =>
+    assertion: _bgp_session_rows | length > 0
     changed: false
-    msg: Unable to resolve the live fabric interface on Exit_Router1. Inventory expects
-        ether2, but running RouterOS data ports are none. Fix the CHR NIC ordering or
-        inventory before re-running day1.
+    evaluated_to: false
+    msg: No concrete BGP session rows were returned on Exit_Router1. RouterOS only reported
+        the legend/header, which means the border-leaf session is not actually established.
 
-TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
-[ERROR]: Task failed: Action failed: Unable to resolve the live fabric interface on Exit_Router2. Inventory expects ether2, but running RouterOS data ports are none. Fix the CHR NIC ordering or inventory before re-running day1.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:53:3
+TASK [mikrotik_base : day1 | Assert at least one BGP session exists] ********************************************************************************************************************************************
+[ERROR]: Task failed: Action failed: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:168:3
 
-51   tags: [day1, interfaces, bgp, verify]
-52
-53 - name: "day1 | Fail when the KVM fabric interface is ambiguous"
-     ^ column 3
+      tags: [day1, verify]
+ 67
+
+168 - name: "day1 | Assert at least one BGP session exists"
+      ^ column 3
 
 fatal: [Exit_Router2]: FAILED! =>
+    assertion: _bgp_session_rows | length > 0
     changed: false
-    msg: Unable to resolve the live fabric interface on Exit_Router2. Inventory expects
-        ether2, but running RouterOS data ports are none. Fix the CHR NIC ordering or
-        inventory before re-running day1.
+    evaluated_to: false
+    msg: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported
+        the legend/header, which means the border-leaf session is not actually established.
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=58   changed=2    unreachable=0    failed=0    skipped=47   rescued=0    ignored=0
-Border_Leaf2               : ok=58   changed=2    unreachable=0    failed=0    skipped=47   rescued=0    ignored=0
-Exit_Router1               : ok=10   changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
-Exit_Router2               : ok=10   changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+Border_Leaf1               : ok=58   changed=1    unreachable=0    failed=0    skipped=47   rescued=0    ignored=0
+Border_Leaf2               : ok=58   changed=1    unreachable=0    failed=0    skipped=47   rescued=0    ignored=0
+Exit_Router1               : ok=20   changed=5    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+Exit_Router2               : ok=21   changed=5    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+
+
+
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+
+
+Press F1 for help
+
+[admin@Exit_Router1] > /routing/bgp/session/print
+Flags: E - established
+[admin@Exit_Router1] > /routing/bgp/connection/print
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf1"
+     remote.address=10.0.253.0/32 .as=65021
+     local.address=10.0.253.1 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.1 as=65253 hold-time=3m keepalive-time=1m address-families=ip
+[admin@Exit_Router1] > quit
+interrupted
+Connection to 172.16.2.98 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml --limit "Border_Leaf1,Border_Leaf2,Exit_Router1,Exit_^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+
+
+
+  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
+
+
+Press F1 for help
+
+[admin@Exit_Router2] > /routing/bgp/session/print
+Flags: E - established
+[admin@Exit_Router2] > /routing/bgp/connection/print
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf2"
+     remote.address=10.0.253.2/32 .as=65022
+     local.address=10.0.253.3 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.2 as=65254 hold-time=3m keepalive-time=1m address-families=ip
+[admin@Exit_Router2] >
