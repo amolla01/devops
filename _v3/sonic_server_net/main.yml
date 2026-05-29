@@ -104,6 +104,17 @@
   changed_when: true
   tags: [configure]
 
+- name: "Server-Net | Disable TX offloads on fabric interfaces"
+  ansible.builtin.shell:
+    cmd: >-
+      ethtool -K {{ item.name }} tx off tso off gso off gro off
+  become: true
+  loop: "{{ _server_interfaces }}"
+  loop_control:
+    label: "{{ item.name }}"
+  changed_when: true
+  tags: [configure]
+
 - name: "Server-Net | Enable IPv6 and IP forwarding on fabric interfaces"
   ansible.builtin.sysctl:
     name: "{{ item.0 }}"
@@ -164,6 +175,10 @@
             link-local: [ipv6]
             ipv6-address-generation: eui64
             accept-ra: false
+            transmit-checksum-offload: false
+            tcp-segmentation-offload: false
+            generic-segmentation-offload: false
+            generic-receive-offload: false
       {% endfor %}
   become: true
   notify: restart_networking
