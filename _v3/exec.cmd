@@ -91,3 +91,41 @@ All Leaf↔Server sessions: Established with route counts (server loopbacks + su
 Border_Leaf↔Exit_Router: Established with route exchange
 L2VPN EVPN AF: Still active on switches (from prior run) but no host-originated Type-2/5 routes yet — those appear only after deploy_evpn_overlay.yml
 The underlay (IPv4 unicast) is fully verifiable without EVPN. EVPN adds the overlay tenant routes on top.
+
+YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY
+The Connect/never state persists because IPv6 link-local addresses aren't being assigned to the interfaces. The netplan link-local: [ipv6] directive isn't reliably triggering auto-configuration.
+Let me gather diagnostics first to confirm the root cause:
+# Run this on Host12_1 to see what's actually on the interfaces:
+ssh Host12_1 "
+echo '=== IPv6 link-local addresses ===';
+ip -6 addr show dev enp2s0 | grep 'inet6 fe80';
+ip -6 addr show dev enp3s0 | grep 'inet6 fe80';
+echo '';
+echo '=== IPv6 forwarding status ===';
+sysctl net.ipv6.conf.all.forwarding net.ipv6.conf.enp2s0.disable_ipv6 net.ipv6.conf.enp3s0.disable_ipv6;
+echo '';
+echo '=== FRR running config ===';
+sudo vtysh -c 'show running-config' | head -20;
+echo '';
+echo '=== BGP state ===';
+sudo vtysh -c 'show bgp summary' | grep 'Neighbor\|State\|Connect\|Idle';
+"
+The fix requires explicitly assigning IPv6 link-local in the netplan config itself before netplan applies. Replace the netplan task with:
+
+Now run the playbook again:
+ansible-playbook playbooks/reused/deploy_server_networking.yml -i inventory/hosts.yml
+
+ssh Host12_1 "ip -6 addr show dev enp2s0 | grep 'inet6 fe80'"
+ssh Host12_1 "ip -6 addr show dev enp3s0 | grep 'inet6 fe80'"
+
+If you see inet6 fe80::xxxx:xxxx:xxxx:xxxx/64, then IPv6 link-local is working. Then check BGP:
+
+ssh Host12_1 "sudo vtysh -c 'show bgp summary' | grep -A5 'Neighbor'"
+
+If still Connect/Idle: The problem is likely L2 connectivity between libvirt VNICs and SONiC switch ports. Run:
+
+# From Host12_1, try to discover the leaf's link-local address
+ssh Host12_1 "ping6 -c 2 -I enp2s0 ff02::1%enp2s0"
+# Should show neighbor discovery responses from Leaf_L1
+
+If 100% packet loss → the virtual network bridge isn't connected to SONiC. If neighbors appear → it's a FRR configuration issue (probably the no bgp ebgp-requires-policy line).
