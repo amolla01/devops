@@ -97,6 +97,36 @@
   changed_when: true
   tags: [configure]
 
+- name: "Server-Net | Enable IPv6 and IP forwarding on fabric interfaces"
+  ansible.builtin.sysctl:
+    name: "{{ item.0 }}"
+    value: "{{ item.1 }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop:
+    - ['net.ipv4.ip_forward', '1']
+    - ['net.ipv6.conf.all.forwarding', '1']
+    - ['net.ipv6.conf.all.disable_ipv6', '0']
+    - ['net.ipv6.conf.default.disable_ipv6', '0']
+  loop_control:
+    label: "{{ item.0 }}={{ item.1 }}"
+  become: true
+  tags: [configure]
+
+- name: "Server-Net | Ensure IPv6 enabled on each fabric interface"
+  ansible.builtin.sysctl:
+    name: "net.ipv6.conf.{{ item.name }}.disable_ipv6"
+    value: '0'
+    sysctl_set: true
+    state: present
+    reload: true
+  loop: "{{ _server_interfaces }}"
+  loop_control:
+    label: "{{ item.name }}"
+  become: true
+  tags: [configure]
+
 - name: "Server-Net | Remove conflicting netplan bond config (KVM uses individual links)"
   ansible.builtin.file:
     path: "/etc/netplan/{{ item }}"
@@ -125,6 +155,8 @@
             dhcp6: false
             mtu: 9000
             link-local: [ipv6]
+            ipv6-address-generation: eui64
+            accept-ra: false
       {% endfor %}
   become: true
   notify: restart_networking
@@ -188,3 +220,38 @@
   ignore_errors: true
   tags: [verify]
 
+# =========================================================================
+# Post-handler BGP stabilization (runs after all handlers complete)
+# =========================================================================
+- name: "Server-Net | Pause for IPv6 link-local and networking stabilization"
+  ansible.builtin.pause:
+    seconds: 3
+  tags: [verify]
+
+- name: "Server-Net | Final FRR restart to establish BGP sessions"
+  ansible.builtin.systemd:
+    name: frr
+    state: restarted
+  become: true
+  tags: [verify]
+
+- name: "Server-Net | Pause for BGP to establish"
+  ansible.builtin.pause:
+    seconds: 2
+  tags: [verify]
+
+- name: "Server-Net | Verify BGP sessions (should be Established or Connect→Active)"
+  ansible.builtin.shell:
+    cmd: "sudo vtysh -c 'show bgp summary' | grep -A 20 'Neighbor'"
+  register: bgp_status
+  changed_when: false
+  failed_when: false
+  become: true
+  tags: [verify]
+
+- name: "Server-Net | Display BGP neighbor status"
+  ansible.builtin.debug:
+    msg: |
+      BGP Neighbor Summary:
+      {{ bgp_status.stdout }}
+  tags: [verify]
