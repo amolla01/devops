@@ -1,0 +1,948 @@
+---
+# =============================================================================
+# sonic_fabric/tasks/apply_patch.yml
+# Incrementally apply the fabric config patch — NO config reload required.
+#
+# Strategy:
+#   1. Verify each fabric port is present in the running PORT table.
+#   2. Apply any required breakout mode change before writing per-port speed.
+#   3. Copy the rendered patch JSON (INTERFACE + BGP_NEIGHBOR + BGP_GLOBALS)
+#      to the switch.
+#   4. Merge patch into Redis with sonic-cfggen --write-to-db.
+#      Only the three patch tables are touched; DEVICE_METADATA, PORT, FEATURE
+#      and all other day-0 tables are preserved exactly as-is.
+#   5. Persist the merged config to /etc/sonic/config_db.json via config save.
+#   6. Bring fabric port(s) admin-up after their speed/port metadata is written.
+#   7. Verify the running PORT speed matches the rendered fabric speed.
+#   8. Restart only the bgp container so bgpcfgd picks up the new BGP config.
+#      swss and syncd are NOT restarted — the data plane remains unaffected.
+#
+# Requires facts set by sonic_fabric/tasks/main.yml:
+#   _fabric_links      — list of interface dicts
+#   rendered_config_path — path to rendered patch JSON on Ansible controller
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Ensure SSH is available before running any commands.
+# The backup phase (sonic-cfggen -d --print-data) and the local render tasks
+# that follow can create a gap during which sshd on a resource-constrained
+# KVM VS may be transiently unavailable. Wait here so that all subsequent
+# command tasks start from a known-good connection.
+# ---------------------------------------------------------------------------
+- name: "apply | Wait for SSH to be reachable before config push"
+  ansible.builtin.wait_for_connection:
+    delay: 2
+    timeout: 60
+    sleep: 5
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 1: Verify each fabric port exists in the running PORT table.
+# ---------------------------------------------------------------------------
+- name: "apply | Check fabric port exists in running config"
+  ansible.builtin.command: >
+    sonic-db-cli APPL_DB exists PORT_TABLE:{{ item.port }}
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _port_exists
+  changed_when: false
+  tags: [deploy, fabric]
+
+- name: "apply | Fail if a fabric port is missing from APPL_DB"
+  ansible.builtin.fail:
+    msg: >-
+      Port {{ item.item.port }} does not exist in APPL_DB PORT_TABLE on
+      {{ inventory_hostname }}. Possible causes:
+        - Port name is wrong for this hwsku (check 'show interfaces status')
+        - Port is a breakout sub-port not yet created (run day-0 first)
+      Run: sudo show interfaces status | grep {{ item.item.port }}
+  when: item.stdout | trim == "0"
+  loop: "{{ _port_exists.results }}"
+  loop_control:
+    label: "{{ item.item.port }}"
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 2: Apply breakout mode first when the host vars request one.
+#         BREAKOUT_CFG in ConfigDB is not enough to update the live port model;
+#         SONiC requires the breakout CLI so portmgrd recreates the port.
+#
+#         NOTE: We intentionally DO NOT use "show interfaces breakout
+#         current-mode" here.  That command reads BREAKOUT_CFG, which day-0
+#         already sets to the target value (e.g. "4x10G") via config reload —
+#         even though portmgrd has NOT yet restructured the PORT table.  The
+#         reliable indicator that a breakout is still needed is the lane count
+#         in CONFIG_DB: a port with multiple lanes (e.g. "77,78,79,80") has NOT
+#         been broken out yet; a port with a single lane ("77") has been.
+# ---------------------------------------------------------------------------
+- name: "apply | Check current lane count for target fabric ports"
+  ansible.builtin.command: >
+    sonic-db-cli CONFIG_DB hget "PORT|{{ item.port }}" lanes
+  loop: "{{ _fabric_links | selectattr('target_breakout_mode', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _current_breakout_mode
+  changed_when: false
+  failed_when: false
+  ignore_unreachable: true
+  retries: 3
+  delay: 10
+  until: not (_current_breakout_mode.unreachable | default(false))
+  tags: [deploy, fabric]
+
+- name: "apply | Apply target breakout mode before patch merge"
+  ansible.builtin.command: >-
+    timeout 180 config interface breakout {{ item.item.port }}
+    {{ item.item.target_breakout_mode }} -f -l -v -y
+  loop: "{{ _current_breakout_mode.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.port }}"
+  when:
+    - not (item.unreachable | default(false))
+    - item.stdout | default('') | length > 0
+    # Multi-lane in CONFIG_DB means the port has NOT been physically broken out
+    - "',' in item.stdout"
+    # Skip when the target is the hardware-default mode (no actual mode change
+    # needed; the port is already at its natural lane configuration).
+    # Compare base mode only — strip the [xG] capability suffix from both sides.
+    # Example: target="1x40G" vs hw_default="1x40G[10G]" → both base="1x40G" → skip.
+    - (item.item.target_breakout_mode | default('') | regex_replace('\\[.*\\]$', '')) !=
+      (item.item.hardware_default_brkout_mode | default('') | regex_replace('\\[.*\\]$', ''))
+    # KVM VS has no platform.json — breakout CLI is never available
+    - not (is_kvm | default(false) | bool)
+  register: _breakout_apply
+  changed_when: true
+  tags: [deploy, fabric]
+
+- name: "apply | Record whether breakout changed"
+  ansible.builtin.set_fact:
+    _breakout_changed: >-
+      {{ (_breakout_apply.results | default([])
+          | selectattr('changed', 'defined')
+          | selectattr('changed') | list | length) > 0 }}
+  tags: [deploy, fabric]
+
+- name: "apply | Reset connection cache after breakout change"
+  ansible.builtin.meta: reset_connection
+
+- name: "apply | Wait for SSH after breakout change"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 120
+  when: _breakout_changed | default(false)
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 3: Push patch JSON to the switch.
+# ---------------------------------------------------------------------------
+- name: "apply | Copy fabric patch JSON to switch"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' scp \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      '{{ rendered_config_path }}' \
+      {{ ansible_user }}@{{ ansible_host }}:/tmp/sonic_fabric_patch.json
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _patch_copy
+  changed_when: true
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 3b: Re-establish Ansible module transport after delegate_to scp.
+#          The scp copy uses delegate_to: localhost which tears down the
+#          module-push path (sftp/scp bootstrap) to the target. The next
+#          direct command task fails with empty SSH error without this.
+# ---------------------------------------------------------------------------
+- name: "apply | Re-establish Ansible SSH after patch copy"
+  ansible.builtin.wait_for_connection:
+    delay: 0
+    timeout: 60
+    sleep: 5
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 4: Merge patch tables into running Redis config.
+#         sonic-cfggen -d reads ALL current tables from DB.
+#         -j /tmp/... overlays the three patch tables on top.
+#         --write-to-db writes the merged result back to DB.
+#         Tables NOT present in the patch JSON are preserved untouched.
+# ---------------------------------------------------------------------------
+- name: "apply | Merge patch tables into running ConfigDB (Redis)"
+  ansible.builtin.command: >-
+    timeout 60 sonic-cfggen -d -j /tmp/sonic_fabric_patch.json --write-to-db
+  register: _cfggen_merge
+  changed_when: true
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 5: Apply the live fabric port speed.
+#         The ConfigDB merge already persists the desired speed in the PORT table.
+#         The CLI command is only needed when the port's current speed differs
+#         (triggers orchagent to reprogram APPL_DB). On KVM VS, running the
+#         command when speed already matches can hang indefinitely — skip it.
+# ---------------------------------------------------------------------------
+- name: "apply | Check current port speed in ConfigDB before applying"
+  ansible.builtin.shell: >-
+    sonic-db-cli CONFIG_DB hget 'PORT|{{ item.port }}' speed 2>/dev/null || echo ''
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _current_speeds
+  changed_when: false
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Set live fabric port speed after patch merge"
+  ansible.builtin.command: >-
+    timeout 30 config interface speed {{ item.item.port }} {{ item.item.speed }}
+  loop: "{{ _current_speeds.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.port }}={{ item.item.speed }}"
+  register: _speed_apply
+  changed_when: true
+  failed_when: false
+  ignore_unreachable: true
+  when:
+    - fabric_mode != 'rollback'
+    - item.stdout is defined
+    - item.stdout != item.item.speed
+  tags: [deploy, fabric]
+
+# Step 5b: Re-establish SSH after port speed changes.
+#          Bringing ports up can briefly disrupt the management path on KVM VS.
+- name: "apply | Wait for SSH after port speed changes"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 120
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 6: Persist the merged config to /etc/sonic/config_db.json.
+#         config save -y reads the current Redis state (which now contains
+#         the merged fabric tables) and writes it to disk. This ensures
+#         fabric config survives a reboot.
+#         On KVM VS, SSH can drop during save due to I/O pressure — retry.
+# ---------------------------------------------------------------------------
+- name: "apply | Persist merged config to /etc/sonic/config_db.json"
+  ansible.builtin.command: config save -y
+  register: _config_save
+  changed_when: true
+  ignore_unreachable: true
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Wait for SSH after config save (if connection dropped)"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 120
+  when:
+    - fabric_mode != 'rollback'
+    - _config_save is defined
+    - _config_save.unreachable is defined and _config_save.unreachable
+  tags: [deploy, fabric]
+
+- name: "apply | Retry config save after SSH recovery"
+  ansible.builtin.command: config save -y
+  register: _config_save_retry
+  changed_when: true
+  when:
+    - fabric_mode != 'rollback'
+    - _config_save is defined
+    - _config_save.unreachable is defined and _config_save.unreachable
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Rollback steps: Remove fabric links from ConfigDB and bring ports down.
+# Only executed when fabric_mode=rollback.
+# ---------------------------------------------------------------------------
+- name: "apply | [ROLLBACK] Bring fabric ports admin-down"
+  ansible.builtin.command: "timeout 30 config interface shutdown {{ item.port }}"
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  changed_when: true
+  failed_when: false
+  when: fabric_mode == 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | [ROLLBACK] Remove BGP_NEIGHBOR entries from ConfigDB"
+  ansible.builtin.shell: |
+    {% for iface in _fabric_links %}
+    sonic-db-cli CONFIG_DB del 'BGP_NEIGHBOR|{{ iface.port }}' 2>/dev/null || true
+    {% endfor %}
+  changed_when: true
+  when: fabric_mode == 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | [ROLLBACK] Remove INTERFACE IPv6 entries from ConfigDB"
+  ansible.builtin.shell: |
+    {% for iface in _fabric_links %}
+    sonic-db-cli CONFIG_DB del 'INTERFACE|{{ iface.port }}' 2>/dev/null || true
+    sonic-db-cli CONFIG_DB del 'INTERFACE|{{ iface.port }}|' 2>/dev/null || true
+    # Remove any key matching INTERFACE|<port>|* pattern
+    keys=$(sonic-db-cli CONFIG_DB keys 'INTERFACE|{{ iface.port }}|*' 2>/dev/null)
+    for k in $keys; do
+      sonic-db-cli CONFIG_DB del "$k" 2>/dev/null || true
+    done
+    {% endfor %}
+  changed_when: true
+  when: fabric_mode == 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | [ROLLBACK] Persist rolled-back config to disk"
+  ansible.builtin.command: config save -y
+  changed_when: true
+  when: fabric_mode == 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 7: Bring fabric interface(s) admin-up.
+#         Do this only after the PORT table has the intended hardware-aware
+#         speed so a native 40G leaf uplink does not start life as stale 10G.
+# ---------------------------------------------------------------------------
+- name: "apply | Bring fabric interface(s) admin-up"
+  ansible.builtin.command: "timeout 30 config interface startup {{ item.port }}"
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _startup_result
+  changed_when: true
+  failed_when: >-
+    _startup_result.rc | default(0) not in [0, 124]
+    and not (_startup_result.unreachable | default(false))
+  ignore_unreachable: true
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# config interface startup triggers a syncd/portmgrd netlink event that can
+# restart sshd on a resource-constrained KVM VS. Kill the dead ControlMaster
+# socket and wait for sshd to recover before the next read/restart steps.
+- name: "apply | Kill stale ControlMaster socket after config interface startup"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Reset connection cache after config interface startup"
+  ansible.builtin.meta: reset_connection
+
+- name: "apply | Wait for SSH port 22 to recover after interface startup"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_startup
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_startup.stdout"
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Re-establish SSH after config interface startup"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_interface_startup
+  changed_when: false
+  retries: 10
+  delay: 10
+  until: "'ok' in (_ssh_after_interface_startup.stdout | default(''))"
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 7b: Retry any fabric port startups that failed due to SSH drop.
+#          The initial loop uses ignore_unreachable so if SSH dies mid-loop,
+#          the surviving ports are already up and we only retry the ones
+#          that got an unreachable result.
+# ---------------------------------------------------------------------------
+- name: "apply | Retry startup for ports that hit SSH drop"
+  ansible.builtin.command: "timeout 30 config interface startup {{ item.item.port }}"
+  loop: "{{ _startup_result.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.port }}"
+  when:
+    - fabric_mode != 'rollback'
+    - item.unreachable | default(false)
+  register: _startup_retry
+  changed_when: true
+  failed_when: _startup_retry.rc | default(0) not in [0, 124]
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 8: Verify the configured PORT speed matches the rendered fabric speed.
+#         On breakout-aware platforms APPL_DB can reflect the hardware-resolved
+#         live speed after link bring-up, so CONFIG_DB is the authoritative
+#         source for the rendered admin value.
+# ---------------------------------------------------------------------------
+- name: "apply | Check configured fabric port speed after merge"
+  ansible.builtin.command: >
+    sonic-db-cli CONFIG_DB hget PORT\|{{ item.port }} speed
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _configured_port_speed
+  changed_when: false
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Fail if configured fabric port speed does not match rendered speed"
+  ansible.builtin.assert:
+    that:
+      - item.stdout | trim == item.item.speed | string
+    fail_msg: >-
+      {{ inventory_hostname }} {{ item.item.port }} is configured at
+      {{ item.stdout | trim | default('unknown') }} Mbps but the fabric patch
+      rendered {{ item.item.speed }} Mbps (hardware default={{ item.item.hardware_default_speed | default('n/a') }}, breakout={{ item.item.hardware_default_brkout_mode | default('n/a') or 'n/a' }}).
+      Check the port model for this hwsku before proceeding to BGP.
+    quiet: true
+  loop: "{{ _configured_port_speed.results }}"
+  loop_control:
+    label: "{{ item.item.port }}"
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Check live fabric port speed after merge"
+  ansible.builtin.command: >
+    sonic-db-cli APPL_DB hget PORT_TABLE:{{ item.port }} speed
+  loop: "{{ _fabric_links }}"
+  loop_control:
+    label: "{{ item.port }}"
+  register: _live_port_speed
+  changed_when: false
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+- name: "apply | Report live fabric port speed after merge"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} {{ item.item.port }}:
+      CONFIG_DB speed={{ item.item.speed }} Mbps (authoritative),
+      APPL_DB live speed={{ item.stdout | trim | default('unknown') }} Mbps.
+      On KVM VS the virtual ASIC always reports hardware-native speed in APPL_DB
+      regardless of CONFIG_DB — this discrepancy is expected and non-fatal.
+  loop: "{{ _live_port_speed.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.port }}"
+  when: fabric_mode != 'rollback'
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 9: Restart only the bgp container.
+#         bgpcfgd (inside bgp container) reads BGP_GLOBALS + DEVICE_METADATA
+#         + BGP_NEIGHBOR from ConfigDB and generates FRR configuration.
+#         A restart ensures it picks up the newly written tables cleanly.
+#         After the container is active, Step 10 configures FRR directly via
+#         vtysh as an authoritative fallback — bgpcfgd timing and version
+#         differences on KVM VS make sole reliance on it unreliable.
+#         swss and syncd are NOT touched — data plane is unaffected.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Step 9 pre: Clear the saved FRR BGP router config BEFORE stopping the
+#             container.
+#             vtysh 'write' (Step 10b) persists the neighbour config to
+#             /etc/sonic/frr/bgpd.conf.  If the fabric port changed between
+#             runs (e.g. Ethernet68 → Ethernet0), bgpd reads the stale saved
+#             config on restart, tries to bind to the old interface, and
+#             crashes before Step 10b can reprogram it.  Symptom:
+#               Wait for bgpd to be responsive: ok   (bgpd briefly alive)
+#               Configure FRR BGP via vtysh: FAILED  (bgpd is not running)
+#             Clearing 'router bgp' and calling 'write' here writes an empty
+#             bgpd.conf to disk so the restarted bgpd initialises with no
+#             stale neighbours and remains stable throughout Step 10b.
+#             failed_when: false — if bgpd is already down, skip silently.
+# ---------------------------------------------------------------------------
+- name: "apply | Clear stale FRR BGP router config before container restart"
+  ansible.builtin.shell: |
+    docker exec bgp vtysh \
+      -c "configure terminal" \
+      -c "no router bgp" \
+      -c "end" \
+      -c "write" 2>/dev/null
+  changed_when: false
+  failed_when: false
+  tags: [deploy, fabric]
+
+# Drop the page cache immediately before restarting bgp. On a 2GB KVM VS
+# the page cache can hold 400–600MB. Freeing it before the bgp container
+# restart gives Docker enough headroom to stop and start the container
+# without hitting the OOM killer, which would deadlock the Docker daemon.
+# On a 2GB KVM VS, `systemctl restart bgp` is a single atomic operation
+# bound by systemd's DefaultTimeoutStopSec (~90s). Docker needs up to ~120s
+# to drain FRR state and stop the container, so the combined restart hits
+# the systemd timeout and fails.
+# Fix: split into stop → cache drop → start --no-block. Using --no-block on
+# both stop and start means systemd launches the state transition and returns
+# immediately without waiting for activation — the wait loop below polls
+# until bgp is active, giving up to 2 minutes regardless of systemd timeout.
+- name: "apply | Stop bgp service before restart (no-block)"
+  ansible.builtin.shell: systemctl stop bgp --no-block 2>/dev/null; true
+  changed_when: true
+  ignore_unreachable: true
+  tags: [deploy, fabric]
+
+# Stopping the bgp container causes a load spike on memory-constrained KVM VS.
+# SSH may drop during the stop — recover before polling container state.
+- name: "apply | Recover SSH after bgp stop"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 120
+  tags: [deploy, fabric]
+
+- name: "apply | Wait for bgp container to fully stop"
+  ansible.builtin.shell: |
+    for i in $(seq 1 36); do
+      st=$(systemctl is-active bgp 2>/dev/null)
+      [ "$st" = "inactive" ] || [ "$st" = "failed" ] && exit 0
+      sleep 5
+    done; exit 0
+  changed_when: false
+  ignore_unreachable: true
+  tags: [deploy, fabric]
+
+- name: "apply | Recover SSH after bgp stop wait"
+  ansible.builtin.wait_for_connection:
+    delay: 3
+    timeout: 90
+  tags: [deploy, fabric]
+
+- name: "apply | Drop page cache after bgp stop (prevent OOM on 2GB KVM VS)"
+  ansible.builtin.shell:
+    cmd: sync && echo 3 > /proc/sys/vm/drop_caches
+  changed_when: false
+  ignore_unreachable: true
+  tags: [deploy, fabric]
+
+- name: "apply | Recover SSH after page cache drop"
+  ansible.builtin.wait_for_connection:
+    delay: 3
+    timeout: 90
+  tags: [deploy, fabric]
+
+- name: "apply | Start bgp service after stop (no-block)"
+  ansible.builtin.shell: systemctl start bgp --no-block
+  register: _bgp_start
+  changed_when: true
+  failed_when: _bgp_start.rc != 0
+  tags: [deploy, fabric]
+
+- name: "apply | Wait for bgp container to become active"
+  ansible.builtin.command: systemctl is-active bgp
+  register: _bgp_active
+  retries: 24
+  delay: 5
+  until: _bgp_active.rc == 0
+  changed_when: false
+  ignore_unreachable: true
+  tags: [deploy, fabric]
+
+- name: "apply | Recover SSH after bgp start"
+  ansible.builtin.wait_for_connection:
+    delay: 3
+    timeout: 120
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 10a: Wait for bgpd daemon to be responsive inside the bgp container.
+#           systemctl is-active returns 0 as soon as the CONTAINER starts,
+#           but the FRR daemons (zebra → bgpd) take an additional 15–60 s
+#           to load config files and begin accepting vtysh connections.
+#           Sending vtysh commands before bgpd is ready gives:
+#             "bgpd is not running"
+#           Poll until vtysh can connect successfully.
+# ---------------------------------------------------------------------------
+- name: "apply | Wait for bgpd to be responsive inside bgp container"
+  ansible.builtin.shell: |
+    docker exec bgp vtysh -c "show version" > /dev/null 2>&1
+  register: _bgpd_responsive
+  retries: 30
+  delay: 5
+  until: _bgpd_responsive.rc == 0
+  changed_when: false
+  tags: [deploy, fabric]
+
+# Brief stability pause: bgpd may respond to 'show version' during an early
+# init window but crash immediately after if it encounters a config error.
+# Waiting 5 s and then re-confirming bgpd is still alive ensures we do not
+# send configure commands into a daemon that is mid-crash.
+- name: "apply | Confirm bgpd is stable after responsive check"
+  ansible.builtin.shell: |
+    sleep 5
+    docker exec bgp vtysh -c "show bgp summary" > /dev/null 2>&1
+  register: _bgpd_stable
+  retries: 6
+  delay: 10
+  until: _bgpd_stable.rc == 0
+  changed_when: false
+  tags: [deploy, fabric]
+
+# ---------------------------------------------------------------------------
+# Step 10b: Configure FRR directly via vtysh.
+#           In SONiC split routing mode, ConfigDB changes made by
+#           sonic-cfggen do NOT update FRR.  The SCS FRR doc explains:
+#             "If an FRR configuration already exists, it will be used
+#              instead of generating a new one from the SONiC config."
+#           The BGP_GLOBALS + DEVICE_METADATA patch we wrote to ConfigDB
+#           keeps SONiC tooling (show commands, etc.) consistent, but FRR
+#           itself must be configured directly via vtysh.  `write` persists
+#           the result to /etc/sonic/frr/bgpd.conf for reboots — this is the
+#           correct authoritative method for split mode.
+#
+#           BGP unnumbered design (eBGP over IPv6 link-local):
+#             neighbor <port> interface v6only  → IPv6 link-local peer discovery
+#             neighbor <port> remote-as external → eBGP (accept any remote ASN)
+#             no bgp default ipv4-unicast       → don't auto-activate IPv4 on
+#                                                  new neighbors (explicit only)
+#             no bgp ebgp-requires-policy       → RFC 8212 off: eBGP peers can
+#                                                  exchange prefixes without
+#                                                  explicit import/export policy
+#                                                  (required in FRR 8.x+)
+#             address-family ipv4+ipv6 activate → explicitly enable both AFs
+# ---------------------------------------------------------------------------
+# Read ALL BGP_NEIGHBOR entries from ConfigDB so the vtysh step programs
+# the full set of neighbors — not just the current play's subset.
+# This prevents partial runs from wiping previously configured peers.
+- name: "apply | Read all BGP neighbors from ConfigDB (full topology)"
+  ansible.builtin.shell: |
+    sonic-cfggen -d --var-json BGP_NEIGHBOR 2>/dev/null || echo '{}'
+  register: _all_bgp_neighbors_raw
+  changed_when: false
+  tags: [deploy, fabric]
+
+# Parse keys from ConfigDB BGP_NEIGHBOR table.
+# Keys may be in one of several formats depending on SONiC version:
+#   Simple:       "Ethernet0"
+#   VRF-prefixed: "default|Ethernet0"
+#   IP-based:     "10.0.253.1"
+# We extract the LAST component (after the last |) as the peer identifier.
+# Interface-based peers match ^Ethernet; IP-based peers match an IP pattern.
+# Also build a desc map: peer → neighbor name.
+- name: "apply | Parse full BGP neighbor list from ConfigDB"
+  ansible.builtin.set_fact:
+    _all_bgp_neighbors_full: >-
+      {{ (_all_bgp_neighbors_raw.stdout | from_json).keys()
+         | map('regex_replace', '^.*\\|', '')
+         | select('match', '^Ethernet')
+         | unique | list }}
+    _all_bgp_neighbors_ip: >-
+      {{ (_all_bgp_neighbors_raw.stdout | from_json).keys()
+         | map('regex_replace', '^.*\\|', '')
+         | select('match', '^\\d+\\.\\d+\\.\\d+\\.\\d+$')
+         | unique | list }}
+    _all_bgp_neighbor_descs: >-
+      {{ dict((_all_bgp_neighbors_raw.stdout | from_json)
+              | dict2items
+              | map(attribute='key')
+              | map('regex_replace', '^.*\\|', '')
+              | zip((_all_bgp_neighbors_raw.stdout | from_json)
+                    | dict2items
+                    | map(attribute='value')
+                    | map(attribute='name', default=''))
+              | list) }}
+    _all_bgp_neighbor_asns: >-
+      {{ dict((_all_bgp_neighbors_raw.stdout | from_json)
+              | dict2items
+              | map(attribute='key')
+              | map('regex_replace', '^.*\\|', '')
+              | zip((_all_bgp_neighbors_raw.stdout | from_json)
+                    | dict2items
+                    | map(attribute='value')
+                    | map(attribute='asn', default=''))
+              | list) }}
+  tags: [deploy, fabric]
+
+# Identify IP-based peers from the current play's _fabric_links.
+# Exit interfaces define neighbor_ip for standard BGP (MikroTik, etc.)
+- name: "apply | Identify IP-based BGP peers from fabric_links"
+  ansible.builtin.set_fact:
+    _ip_based_peers: >-
+      {{ _fabric_links | selectattr('neighbor_ip', 'defined') | list }}
+    _ip_based_ports: >-
+      {{ _fabric_links | selectattr('neighbor_ip', 'defined')
+         | map(attribute='port') | list }}
+  tags: [deploy, fabric]
+
+# Determine valid interface-based BGP ports for this host.
+# sonic_fabric actively renders only fabric/uplink ports, but incremental FRR
+# reconciliation must preserve already-correct server downlinks too so that a
+# border-only day1 re-run does not prune host-facing neighbors from FRR.
+# Exit interfaces use IP-based BGP (keyed by neighbor_ip, not port name).
+- name: "apply | Compute valid unnumbered port set"
+  ansible.builtin.set_fact:
+    _valid_unnumbered_ports: >-
+      {{ (uplink_interfaces | default([]) | map(attribute='port') | list
+          + fabric_interfaces | default([]) | map(attribute='port') | list
+          + downlink_interfaces | default([]) | map(attribute='port') | list)
+         | unique | list }}
+  tags: [deploy, fabric]
+
+# Remove stale BGP_NEIGHBOR interface entries from ConfigDB.
+# Stale = key matches ^Ethernet but is NOT in declared uplink/fabric ports.
+# This catches: old wrong port assignments (e.g., Ethernet104/108) AND
+# exit interfaces that previously used unnumbered but now use IP-based BGP.
+# SAFETY: Only runs when all uplink neighbors are in the play (spines in limit),
+# ensuring the correct ports will be re-added by the current render/merge.
+- name: "apply | Remove stale interface-based BGP_NEIGHBOR entries from ConfigDB"
+  ansible.builtin.shell: |
+    {% set stale = _all_bgp_neighbors_full | difference(_valid_unnumbered_ports) %}
+    {% if stale | length > 0 %}
+    {% for port in stale %}
+    redis-cli -n 4 DEL "BGP_NEIGHBOR|{{ port }}" 2>/dev/null || true
+    redis-cli -n 4 DEL "BGP_NEIGHBOR|default|{{ port }}" 2>/dev/null || true
+    {% endfor %}
+    echo "Removed stale entries: {{ stale | join(', ') }}"
+    {% else %}
+    echo "No stale entries found"
+    {% endif %}
+  register: _stale_cleanup
+  changed_when: "'Removed stale' in _stale_cleanup.stdout"
+  when: >-
+    (uplink_interfaces | default([]) | map(attribute='neighbor') | list)
+    | difference(ansible_play_hosts) | length == 0
+  tags: [deploy, fabric]
+
+- name: "apply | Report stale entry cleanup"
+  ansible.builtin.debug:
+    msg: "{{ _stale_cleanup.stdout | default('Skipped — uplink neighbors not all in play') | trim }}"
+  when: _stale_cleanup is not skipped
+  tags: [deploy, fabric]
+
+# Compute the effective neighbor list based on fabric_mode:
+#   incremental — valid ConfigDB neighbors (intersected with declared ports)
+#                 UNION with current play's unnumbered fabric_links
+#   replace     — only the current play's _fabric_links (wipes others from FRR)
+#   rollback    — all ConfigDB neighbors MINUS the current _fabric_links (removes them)
+# NOTE: IP-based ports (exit_interfaces) are excluded from the unnumbered list.
+#       They are handled separately via _ip_based_peers.
+# The intersect with _valid_unnumbered_ports ensures stale/wrong ports (e.g.,
+# Ethernet104/108 when correct ports are Ethernet124/120) are never programmed.
+- name: "apply | Compute effective BGP neighbor list (fabric_mode={{ fabric_mode }})"
+  ansible.builtin.set_fact:
+    _effective_bgp_neighbors: >-
+      {% if fabric_mode == 'replace' -%}
+        {{ _fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='port') | list }}
+      {%- elif fabric_mode == 'rollback' -%}
+        {{ _all_bgp_neighbors_full | difference(_fabric_links | map(attribute='port') | list) | difference(_ip_based_ports) }}
+      {%- else -%}
+        {{ ((_all_bgp_neighbors_full | intersect(_valid_unnumbered_ports))
+            + (_fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='port') | list))
+           | unique | list }}
+      {%- endif %}
+    _effective_bgp_descs: >-
+      {% if fabric_mode == 'replace' -%}
+        {{ dict(_fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='port')
+                | zip(_fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='neighbor')) | list) }}
+      {%- elif fabric_mode == 'rollback' -%}
+        {{ _all_bgp_neighbor_descs }}
+      {%- else -%}
+        {{ _all_bgp_neighbor_descs | combine(
+             dict(_fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='port')
+                  | zip(_fabric_links | rejectattr('neighbor_ip', 'defined') | map(attribute='neighbor')) | list)) }}
+      {%- endif %}
+    _effective_ip_peers: >-
+      {% if fabric_mode == 'rollback' -%}
+        []
+      {%- else -%}
+        {{ _ip_based_peers }}
+      {%- endif %}
+  tags: [deploy, fabric]
+
+- name: "apply | Display effective BGP neighbors for this run"
+  ansible.builtin.debug:
+    msg: >-
+      fabric_mode={{ fabric_mode }} on {{ inventory_hostname }}:
+      {% if fabric_mode == 'rollback' -%}
+        REMOVING {{ _fabric_links | map(attribute='port') | join(', ') }};
+        KEEPING {{ _effective_bgp_neighbors | join(', ') | default('(none)') }}
+      {%- elif fabric_mode == 'replace' -%}
+        AUTHORITATIVE — unnumbered: {{ _effective_bgp_neighbors | join(', ') | default('(none)') }},
+        IP-based: {{ _effective_ip_peers | map(attribute='neighbor_ip') | join(', ') | default('(none)') }}
+      {%- else -%}
+        PRESERVING {{ _effective_bgp_neighbors | length }} unnumbered: {{ _effective_bgp_neighbors | join(', ') }};
+        IP-based: {{ _effective_ip_peers | map(attribute='neighbor_ip') | join(', ') | default('(none)') }}
+      {%- endif %}
+  tags: [deploy, fabric]
+
+- name: "apply | Check live IPv4 address on IP-based fabric interfaces"
+  ansible.builtin.shell: >-
+    ip -4 -o addr show dev {{ item.port }} 2>/dev/null | awk '{print $4}'
+  loop: "{{ _effective_ip_peers }}"
+  loop_control:
+    label: "{{ item.port }}={{ item.local_ip }}"
+  register: _live_ip_peers
+  changed_when: false
+  when:
+    - fabric_mode != 'rollback'
+    - _effective_ip_peers | length > 0
+  tags: [deploy, fabric]
+
+- name: "apply | Assign live IPv4 address on IP-based fabric interfaces"
+  ansible.builtin.command: >-
+    config interface ip add {{ item.item.port }} {{ item.item.local_ip }}
+  loop: "{{ _live_ip_peers.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.port }}={{ item.item.local_ip }}"
+  register: _live_ip_add
+  changed_when: "'already' not in (_live_ip_add.stderr | default(''))"
+  failed_when:
+    - _live_ip_add.rc != 0
+    - "'already' not in (_live_ip_add.stderr | default(''))"
+  when:
+    - fabric_mode != 'rollback'
+    - item.item.local_ip not in (item.stdout_lines | default([]))
+  tags: [deploy, fabric]
+
+- name: "apply | Configure FRR BGP via vtysh (fabric_mode={{ fabric_mode }})"
+  ansible.builtin.shell: |
+    # Remove any existing BGP instance running under a DIFFERENT ASN.
+    old_asn=$(docker exec bgp vtysh -c 'show running-config' 2>/dev/null \
+              | awk '/^router bgp/{print $3; exit}')
+    if [ -n "$old_asn" ] && [ "$old_asn" != "{{ bgp_local_asn }}" ]; then
+      docker exec bgp vtysh \
+        -c "configure terminal" \
+        -c "no router bgp $old_asn" \
+        -c "end"
+    fi
+
+    {% if _effective_bgp_neighbors | length > 0 or _effective_ip_peers | length > 0 -%}
+    # Apply BGP config with both unnumbered (spine-leaf) and IP-based (exit) peers.
+    docker exec bgp vtysh \
+      -c "configure terminal" \
+      -c "router bgp {{ bgp_local_asn }}" \
+      -c "bgp router-id {{ router_id }}" \
+      -c "no bgp default ipv4-unicast" \
+      -c "no bgp ebgp-requires-policy"{% for port in _effective_bgp_neighbors %} \
+      -c "neighbor {{ port }} interface v6only" \
+      -c "neighbor {{ port }} remote-as external" \
+      -c "neighbor {{ port }} description {{ _effective_bgp_descs[port] | default('fabric') }}"{% endfor %}{% for peer in _effective_ip_peers %} \
+      -c "neighbor {{ peer.neighbor_ip }} remote-as {{ peer.neighbor_asn }}" \
+      -c "neighbor {{ peer.neighbor_ip }} description {{ peer.neighbor }}" \
+      -c "neighbor {{ peer.neighbor_ip }} update-source {{ peer.local_ip.split('/')[0] }}"{% endfor %} \
+      -c "address-family ipv4 unicast" \
+      -c "redistribute connected"{% for port in _effective_bgp_neighbors %} \
+      -c "neighbor {{ port }} activate"{% endfor %}{% for peer in _effective_ip_peers %} \
+      -c "neighbor {{ peer.neighbor_ip }} activate"{% endfor %} \
+      -c "exit-address-family" \
+      -c "address-family ipv6 unicast" \
+      -c "redistribute connected"{% for port in _effective_bgp_neighbors %} \
+      -c "neighbor {{ port }} activate"{% endfor %} \
+      -c "exit-address-family" \
+      -c "end" \
+      -c "write"
+    {%- else %}
+    # No neighbors to configure — clear BGP entirely.
+    docker exec bgp vtysh \
+      -c "configure terminal" \
+      -c "no router bgp {{ bgp_local_asn }}" \
+      -c "end" \
+      -c "write" 2>/dev/null || true
+    {%- endif %}
+  register: _vtysh_config
+  retries: 6
+  delay: 10
+  until: _vtysh_config.rc == 0
+  changed_when: true
+  when: fabric_mode != 'rollback' or _effective_bgp_neighbors | length > 0 or
+        (_all_bgp_neighbors_full | length > _effective_bgp_neighbors | length)
+  tags: [deploy, fabric]
+
+- name: "apply | Verify FRR BGP ASN after vtysh config"
+  ansible.builtin.shell: |
+    docker exec bgp vtysh -c "show ip bgp summary" 2>/dev/null \
+      | grep "local AS number"
+  register: _frr_asn_check
+  changed_when: false
+  failed_when: false
+  tags: [deploy, fabric]
+
+- name: "apply | Report FRR BGP ASN"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} FRR BGP: {{ _frr_asn_check.stdout | trim | default('(not available yet)') }}.
+      Expected local AS number {{ bgp_local_asn }}.
+  tags: [deploy, fabric]
+
+# bgp systemd restart triggers a kernel network namespace event that kills
+# the ControlMaster socket. Explicitly stop the OS-level master process and
+# remove the socket file before reconnecting.
+- name: "apply | Kill stale SSH ControlMaster process after bgp restart"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  tags: [deploy, fabric]
+
+- name: "apply | Reset SSH ControlMaster socket after bgp restart"
+  ansible.builtin.meta: reset_connection
+
+- name: "apply | Re-establish SSH connection after bgp restart"
+  ansible.builtin.wait_for_connection:
+    delay: 5
+    timeout: 60
+  tags: [deploy, fabric]
+
+- name: "apply | Confirm fabric operation completed"
+  ansible.builtin.debug:
+    msg: >-
+      {% if fabric_mode == 'rollback' -%}
+      ROLLBACK completed on {{ inventory_hostname }}:
+      removed={{ _fabric_links | map(attribute='port') | list | join(', ') }},
+      remaining_neighbors={{ _effective_bgp_neighbors | join(', ') | default('(none)') }}.
+      {%- elif fabric_mode == 'replace' -%}
+      REPLACE completed on {{ inventory_hostname }}:
+      active_neighbors={{ _effective_bgp_neighbors | join(', ') }},
+      bgp_asn={{ bgp_local_asn }}, router_id={{ router_id }}.
+      {%- else -%}
+      INCREMENTAL deploy on {{ inventory_hostname }}:
+      new_links={{ _fabric_links | map(attribute='port') | list | join(', ') }},
+      total_bgp_neighbors={{ _effective_bgp_neighbors | length }}+{{ _effective_ip_peers | length }}ip,
+      bgp_asn={{ bgp_local_asn }}, router_id={{ router_id }}.
+      {%- endif %}
+      bgp container is active. swss/syncd were NOT restarted.
+  tags: [deploy, fabric]
