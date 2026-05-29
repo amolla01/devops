@@ -131,3 +131,18 @@ ssh Host12_1 "ping6 -c 2 -I enp2s0 ff02::1%enp2s0"
 If 100% packet loss → the virtual network bridge isn't connected to SONiC. If neighbors appear → it's a FRR configuration issue (probably the no bgp ebgp-requires-policy line).
 SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
 ansible localhost -m debug -a "msg='Host12_1 ASN={{ server_asn_map[\"Host12_1\"] }}, Leaf_L1 ASN={{ leaf_asn_map[\"Leaf_L1\"] }}'" -i inventory/hosts.yml
+
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+# 1. Verify the ACTUAL frr.conf has v6only
+sudo cat /etc/frr/frr.conf | grep -A 5 "router bgp"
+
+# 2. Check IPv6 link-locals exist
+ip -6 addr show dev eth1 | grep fe80
+ip -6 addr show dev eth2 | grep fe80
+
+# 3. Check BGP logs
+sudo tail -50 /var/log/frr/bgpd.log
+
+# 4. Check if FRR can see the neighbors
+sudo vtysh -c "show bgp neighbors" | head -40
