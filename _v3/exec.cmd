@@ -198,3 +198,29 @@ Then immediately re-check:
 ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
 If you send the ss, journalctl, and firewall outputs, I can tell you exactly which host-side condition is blocking bgpd.
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+The most likely remaining cause is that you disabled TX offload only on the host-side taps, but not on the leaf-side taps on the same bridges. I also patched the repo automation so future runs apply the fix to all target fabric VMs, not just servers, in deploy_lab_v13.sh:1475.
+
+Test that directly on the hypervisor for the Host12_1 path:
+for vm_br in "Leaf_L1 br-H121-L1" "Leaf_L2 br-H121-L2"; do
+  set -- $vm_br
+  vm="$1"
+  br="$2"
+  tap=$(sudo ovs-vsctl list-ports "$br" | grep '^vnet' | while read -r port; do
+    sudo virsh domiflist "$vm" | grep -q "$port" && echo "$port" && break
+  done)
+  echo "$vm $br -> $tap"
+  sudo ethtool -K "$tap" tx off
+done
+Then restart FRR on the three VMs in that path and recheck:
+ssh Host12_1 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L1 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L2 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+If Host12_1 comes up after that, apply the same leaf-side fix for the rest of the fabric:
+
+Leaf_L1/L2 on br-H121-L1 br-H122-L1 br-H123-L1 br-H121-L2 br-H122-L2 br-H123-L2
+Leaf_L3/L4 on br-H341-L3 br-H342-L3 br-H341-L4 br-H342-L4
+Border_Leaf1/2 on br-HB-BL1 br-HB2-BL1 br-MS-BL1 br-HB-BL2 br-HB2-BL2 br-MS-BL2
+If you want, I can give you one consolidated hypervisor script that fixes all leaf and border-leaf taps in one pass.
