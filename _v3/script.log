@@ -298,4 +298,223 @@ Ethernet68      4      65000       777       779        0    0    0 12:46:04    
 
 Total number of neighbors 5
 
+
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+nh1221@PowerEdge-R810:~$ for vm_br in "Leaf_L1 br-H121-L1" "Leaf_L2 br-H121-L2"; do
+  set -- $vm_br
+  vm="$1"
+  br="$2"
+  tap=$(sudo ovs-vsctl list-ports "$br" | grep '^vnet' | while read -r port; do
+    sudo virsh domiflist "$vm" | grep -q "$port" && echo "$port" && break
+  done)
+  echo "$vm $br -> $tap"
+  sudo ethtool -K "$tap" tx off
+done
+[sudo: authenticate] Password:
+Leaf_L1 br-H121-L1 -> vnet335
+Actual changes:
+tx-checksum-ip-generic: off
+tx-tcp-segmentation: off [not requested]
+tx-tcp-ecn-segmentation: off [not requested]
+tx-tcp6-segmentation: off [not requested]
+Leaf_L2 br-H121-L2 -> vnet408
+Actual changes:
+tx-checksum-ip-generic: off
+tx-tcp-segmentation: off [not requested]
+tx-tcp-ecn-segmentation: off [not requested]
+tx-tcp6-segmentation: off [not requested]
+nh1221@PowerEdge-R810:~$
+C:\Users\nh1221>ssh Host12_1 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never         Idle        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never         Idle        0 Leaf_L2
+
+Total number of neighbors 2
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never         Idle        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never         Idle        0 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+
+C:\Users\nh1221>ssh Leaf_L1 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+Failed to restart frr.service: Unit frr.service not found.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 12
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:03            6        8 Spine_S2
+Ethernet68      4      65000       788       790        0    0    0 12:57:04            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:03            0        0 Spine_S2
+Ethernet68      4      65000       788       790        0    0    0 12:57:04            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 12
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:21            6        8 Spine_S2
+Ethernet68      4      65000       788       790        0    0    0 12:57:22            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.1, local AS number 65011 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:21            0        0 Spine_S2
+Ethernet68      4      65000       788       790        0    0    0 12:57:22            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh Leaf_L2 "sudo systemctl restart frr; sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+Failed to restart frr.service: Unit frr.service not found.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 13
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:21            6        8 Spine_S2
+Ethernet68      4      65000       788       789        0    0    0 12:57:22            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:21            0        0 Spine_S2
+Ethernet68      4      65000       788       789        0    0    0 12:57:22            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 13
+RIB entries 15, using 3360 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:32            6        8 Spine_S2
+Ethernet68      4      65000       788       789        0    0    0 12:57:33            6        8 Spine_S1
+
+Total number of neighbors 5
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.1.2, local AS number 65012 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65101         0         2        0    0    0    never      Connect        0 Host12_1
+Ethernet1       4      65102         0         2        0    0    0    never      Connect        0 Host12_2
+Ethernet2       4      65103         0         2        0    0    0    never      Connect        0 Host12_3
+Ethernet64      4      65000       788       789        0    0    0 12:57:32            0        0 Spine_S2
+Ethernet68      4      65000       788       789        0    0    0 12:57:33            0        0 Spine_S1
+
+Total number of neighbors 5
+
+C:\Users\nh1221>
+
 C:\Users\nh1221>
