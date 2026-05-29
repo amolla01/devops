@@ -1,40 +1,23 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml --limit exit_routers -i inventory/hosts.yml --tags deploy
-
-PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
-
-TASK [Phase 1 | Configure BGP peering (MikroTik)] ***************************************************************************************************************************************************************
-included: mikrotik_base for Exit_Router1
-included: mikrotik_base for Exit_Router2
-
-PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
-skipping: no hosts matched
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Exit_Router1               : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Exit_Router2               : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_server_networking.yml -i inventory/hosts.yml
+
 
 PLAY [Deploy Server Networking (FRR + Fabric Interfaces)] *******************************************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
 ok: [Host34_1]
-ok: [Host12_2]
-ok: [Host34_2]
 ok: [Host12_1]
+ok: [Host34_2]
+ok: [Host12_2]
 ok: [Host12_3]
 ok: [HostB12_1]
 ok: [HostB12_2]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Validate required variables] **********************************************************************************************************************************************
-ok: [Host12_1] =>
+ok: [Host12_2] =>
     changed: false
     msg: All assertions passed
-ok: [Host12_2] =>
+ok: [Host12_1] =>
     changed: false
     msg: All assertions passed
 ok: [Host12_3] =>
@@ -72,15 +55,15 @@ skipping: [Host12_2]
 skipping: [Host12_3]
 skipping: [Host34_1]
 skipping: [Host34_2]
-skipping: [HostB12_1]
 skipping: [HostB12_2]
+skipping: [HostB12_1]
 skipping: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Validate resolved interfaces] *********************************************************************************************************************************************
-ok: [Host12_2] =>
+ok: [Host12_1] =>
     changed: false
     msg: All assertions passed
-ok: [Host12_1] =>
+ok: [Host12_2] =>
     changed: false
     msg: All assertions passed
 ok: [Host12_3] =>
@@ -92,10 +75,10 @@ ok: [Host34_1] =>
 ok: [Host34_2] =>
     changed: false
     msg: All assertions passed
-ok: [HostB12_1] =>
+ok: [HostB12_2] =>
     changed: false
     msg: All assertions passed
-ok: [HostB12_2] =>
+ok: [HostB12_1] =>
     changed: false
     msg: All assertions passed
 ok: [MonitorSrv] =>
@@ -114,13 +97,13 @@ Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_server_net/tasks/main.ym
 
 Use `ansible_facts["fact_name"]` (no `ansible_` prefix) instead.
 
-ok: [Host12_2]
 ok: [Host12_1]
+ok: [Host12_2]
 ok: [Host12_3]
 ok: [Host34_1]
 ok: [Host34_2]
-ok: [HostB12_1]
 ok: [HostB12_2]
+ok: [HostB12_1]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Remap interface list to actual device names] ******************************************************************************************************************************
@@ -134,3103 +117,436 @@ ok: [HostB12_2]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Show resolved fabric interfaces] ******************************************************************************************************************************************
-ok: [Host12_1] => (item=bond0) =>
-    msg: bond0 → Leaf_L1 (peer AS65011)
-ok: [Host12_2] => (item=bond0) =>
-    msg: bond0 → Leaf_L1 (peer AS65011)
-ok: [Host12_2] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L2 (peer AS65012)
 ok: [Host12_1] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L2 (peer AS65012)
-ok: [Host12_3] => (item=bond0) =>
-    msg: bond0 → Leaf_L1 (peer AS65011)
-ok: [Host34_1] => (item=bond0) =>
-    msg: bond0 → Leaf_L3 (peer AS65013)
+    msg: enp2s0 → Leaf_L1 (peer AS65011)
+ok: [Host12_2] => (item=enp2s0) =>
+    msg: enp2s0 → Leaf_L1 (peer AS65011)
+ok: [Host12_1] => (item=enp3s0) =>
+    msg: enp3s0 → Leaf_L2 (peer AS65012)
+ok: [Host12_2] => (item=enp3s0) =>
+    msg: enp3s0 → Leaf_L2 (peer AS65012)
 ok: [Host12_3] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L2 (peer AS65012)
+    msg: enp2s0 → Leaf_L1 (peer AS65011)
 ok: [Host34_1] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L4 (peer AS65014)
-ok: [Host34_2] => (item=bond0) =>
-    msg: bond0 → Leaf_L3 (peer AS65013)
+    msg: enp2s0 → Leaf_L3 (peer AS65013)
+ok: [Host12_3] => (item=enp3s0) =>
+    msg: enp3s0 → Leaf_L2 (peer AS65012)
+ok: [Host34_1] => (item=enp3s0) =>
+    msg: enp3s0 → Leaf_L4 (peer AS65014)
 ok: [Host34_2] => (item=enp2s0) =>
-    msg: enp2s0 → Leaf_L4 (peer AS65014)
-ok: [HostB12_1] => (item=bond0) =>
-    msg: bond0 → Border_Leaf1 (peer AS65021)
-ok: [HostB12_2] => (item=bond0) =>
-    msg: bond0 → Border_Leaf1 (peer AS65021)
+    msg: enp2s0 → Leaf_L3 (peer AS65013)
+ok: [Host34_2] => (item=enp3s0) =>
+    msg: enp3s0 → Leaf_L4 (peer AS65014)
 ok: [HostB12_1] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf2 (peer AS65022)
+    msg: enp2s0 → Border_Leaf1 (peer AS65021)
 ok: [HostB12_2] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf2 (peer AS65022)
-ok: [MonitorSrv] => (item=bond0) =>
-    msg: bond0 → Border_Leaf1 (peer AS65021)
+    msg: enp2s0 → Border_Leaf1 (peer AS65021)
+ok: [HostB12_1] => (item=enp3s0) =>
+    msg: enp3s0 → Border_Leaf2 (peer AS65022)
+ok: [HostB12_2] => (item=enp3s0) =>
+    msg: enp3s0 → Border_Leaf2 (peer AS65022)
 ok: [MonitorSrv] => (item=enp2s0) =>
-    msg: enp2s0 → Border_Leaf2 (peer AS65022)
+    msg: enp2s0 → Border_Leaf1 (peer AS65021)
+ok: [MonitorSrv] => (item=enp3s0) =>
+    msg: enp3s0 → Border_Leaf2 (peer AS65022)
 
 TASK [sonic_server_net : Server-Net | Configure loopback address for BGP] ***************************************************************************************************************************************
-changed: [Host12_2]
-changed: [Host34_2]
+changed: [Host12_3]
 changed: [Host34_1]
 changed: [Host12_1]
-changed: [Host12_3]
-changed: [HostB12_2]
+changed: [Host12_2]
+changed: [Host34_2]
 changed: [MonitorSrv]
 changed: [HostB12_1]
+changed: [HostB12_2]
 
 TASK [sonic_server_net : Server-Net | Bring up fabric interfaces with MTU 9000] *********************************************************************************************************************************
-changed: [Host12_1] => (item=bond0)
-changed: [Host12_2] => (item=bond0)
-changed: [Host12_3] => (item=bond0)
-changed: [Host34_2] => (item=bond0)
-changed: [Host34_1] => (item=bond0)
-changed: [Host12_2] => (item=enp2s0)
 changed: [Host12_1] => (item=enp2s0)
+changed: [Host12_2] => (item=enp2s0)
+changed: [Host34_1] => (item=enp2s0)
 changed: [Host12_3] => (item=enp2s0)
 changed: [Host34_2] => (item=enp2s0)
-changed: [Host34_1] => (item=enp2s0)
-changed: [HostB12_1] => (item=bond0)
-changed: [HostB12_2] => (item=bond0)
-changed: [MonitorSrv] => (item=bond0)
+changed: [Host12_1] => (item=enp3s0)
+changed: [Host12_2] => (item=enp3s0)
+changed: [Host34_1] => (item=enp3s0)
+changed: [Host12_3] => (item=enp3s0)
+changed: [Host34_2] => (item=enp3s0)
 changed: [HostB12_1] => (item=enp2s0)
 changed: [HostB12_2] => (item=enp2s0)
 changed: [MonitorSrv] => (item=enp2s0)
+changed: [HostB12_1] => (item=enp3s0)
+changed: [HostB12_2] => (item=enp3s0)
+changed: [MonitorSrv] => (item=enp3s0)
+
+TASK [sonic_server_net : Server-Net | Remove conflicting netplan bond config (KVM uses individual links)] *******************************************************************************************************
+changed: [Host34_2] => (item=01-fabric-config.yaml)
+changed: [Host12_3] => (item=01-fabric-config.yaml)
+changed: [Host12_1] => (item=01-fabric-config.yaml)
+changed: [Host34_1] => (item=01-fabric-config.yaml)
+changed: [Host12_2] => (item=01-fabric-config.yaml)
+changed: [Host12_3] => (item=20-fabric.yaml)
+changed: [Host34_2] => (item=20-fabric.yaml)
+changed: [Host12_1] => (item=20-fabric.yaml)
+changed: [Host34_1] => (item=20-fabric.yaml)
+changed: [Host12_2] => (item=20-fabric.yaml)
+changed: [HostB12_2] => (item=01-fabric-config.yaml)
+changed: [HostB12_1] => (item=01-fabric-config.yaml)
+changed: [MonitorSrv] => (item=01-fabric-config.yaml)
+changed: [HostB12_2] => (item=20-fabric.yaml)
+changed: [HostB12_1] => (item=20-fabric.yaml)
+changed: [MonitorSrv] => (item=20-fabric.yaml)
 
 TASK [sonic_server_net : Server-Net | Write netplan config for fabric interfaces (persistence)] *****************************************************************************************************************
-changed: [Host12_2]
-changed: [Host34_2]
-changed: [Host12_1]
-changed: [Host12_3]
 changed: [Host34_1]
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host12_3]
+changed: [Host34_2]
+changed: [MonitorSrv]
 changed: [HostB12_1]
 changed: [HostB12_2]
-changed: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Install FRR if not present] ***********************************************************************************************************************************************
+ok: [Host12_1]
 ok: [Host34_2]
-ok: [Host34_1]
 ok: [Host12_2]
 ok: [Host12_3]
-ok: [Host12_1]
+ok: [Host34_1]
+ok: [MonitorSrv]
 ok: [HostB12_1]
 ok: [HostB12_2]
-ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Enable BGP daemon in FRR daemons config] **********************************************************************************************************************************
-ok: [Host34_1]
-ok: [Host34_2]
-ok: [Host12_3]
 ok: [Host12_1]
 ok: [Host12_2]
+ok: [Host34_2]
+ok: [Host34_1]
+ok: [Host12_3]
 ok: [HostB12_1]
 ok: [HostB12_2]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Deploy FRR configuration] *************************************************************************************************************************************************
 changed: [Host12_1]
-changed: [Host12_2]
 changed: [Host34_1]
-changed: [Host12_3]
+changed: [Host12_2]
 changed: [Host34_2]
+changed: [Host12_3]
 changed: [HostB12_1]
 changed: [HostB12_2]
 changed: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Ensure FRR is enabled and running] ****************************************************************************************************************************************
-ok: [Host34_2]
-ok: [Host12_2]
-ok: [Host34_1]
 ok: [Host12_3]
+ok: [Host34_2]
+ok: [Host34_1]
+ok: [Host12_2]
 ok: [Host12_1]
 ok: [HostB12_1]
 ok: [HostB12_2]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Verify loopback is up] ****************************************************************************************************************************************************
+ok: [Host12_1]
 ok: [Host12_2]
+ok: [Host34_1]
 ok: [Host12_3]
 ok: [Host34_2]
-ok: [Host34_1]
-ok: [Host12_1]
 ok: [HostB12_1]
 ok: [HostB12_2]
 ok: [MonitorSrv]
 
 TASK [sonic_server_net : Server-Net | Verify fabric interfaces are UP] ******************************************************************************************************************************************
-[ERROR]: Task failed: Action failed.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_server_net/tasks/main.yml:167:3
-
-165   tags: [verify]
-166
-167 - name: "Server-Net | Verify fabric interfaces are UP"
-      ^ column 3
-
-failed: [Host12_1] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.007174'
-    end: '2026-05-28 23:16:06.584949'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Leaf_L1
-        peer_asn: 65011
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:06.577775'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether fe:fa:74:f5:29:85 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [Host12_2] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.010697'
-    end: '2026-05-28 23:16:06.640333'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Leaf_L1
-        peer_asn: 65011
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:06.629636'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether 2e:00:4a:17:55:91 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [Host34_1] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.008303'
-    end: '2026-05-28 23:16:07.096278'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Leaf_L3
-        peer_asn: 65013
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:07.087975'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether 5e:aa:31:04:b6:8c brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [Host12_3] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.006490'
-    end: '2026-05-28 23:16:07.113756'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Leaf_L1
-        peer_asn: 65011
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:07.107266'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether 92:a5:c9:d5:68:2f brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [Host34_2] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.009576'
-    end: '2026-05-28 23:16:07.230844'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Leaf_L3
-        peer_asn: 65013
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:07.221268'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether ae:e5:b2:01:b9:18 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
 ok: [Host12_1] => (item=enp2s0)
-...ignoring
-ok: [Host12_2] => (item=enp2s0)
-...ignoring
-ok: [Host34_1] => (item=enp2s0)
-...ignoring
-ok: [Host12_3] => (item=enp2s0)
-...ignoring
 ok: [Host34_2] => (item=enp2s0)
-...ignoring
-failed: [HostB12_1] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.008677'
-    end: '2026-05-28 23:16:10.038196'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Border_Leaf1
-        peer_asn: 65021
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:10.029519'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether 1e:83:03:9c:f7:93 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [HostB12_2] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.007689'
-    end: '2026-05-28 23:16:10.050699'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Border_Leaf1
-        peer_asn: 65021
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:10.043010'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether 2a:49:87:38:b6:98 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-failed: [MonitorSrv] (item=bond0) =>
-    ansible_loop_var: item
-    changed: false
-    cmd:
-    - ip
-    - link
-    - show
-    - bond0
-    delta: '0:00:00.006900'
-    end: '2026-05-28 23:16:10.344925'
-    failed_when_result: true
-    item:
-        name: bond0
-        neighbor: Border_Leaf1
-        peer_asn: 65021
-    msg: ''
-    rc: 0
-    start: '2026-05-28 23:16:10.338025'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        5: bond0: <NO-CARRIER,BROADCAST,MULTICAST,MASTER,UP> mtu 9000 qdisc noqueue state DOWN mode DEFAULT group default qlen 1000
-            link/ether ea:67:79:eb:2a:48 brd ff:ff:ff:ff:ff:ff
-    stdout_lines: <omitted>
-ok: [HostB12_2] => (item=enp2s0)
-...ignoring
+ok: [Host12_3] => (item=enp2s0)
+ok: [Host34_1] => (item=enp2s0)
+ok: [Host12_2] => (item=enp2s0)
+ok: [Host12_1] => (item=enp3s0)
+ok: [Host34_2] => (item=enp3s0)
+ok: [Host34_1] => (item=enp3s0)
+ok: [Host12_3] => (item=enp3s0)
+ok: [Host12_2] => (item=enp3s0)
 ok: [HostB12_1] => (item=enp2s0)
-...ignoring
+ok: [HostB12_2] => (item=enp2s0)
 ok: [MonitorSrv] => (item=enp2s0)
-...ignoring
+ok: [HostB12_1] => (item=enp3s0)
+ok: [HostB12_2] => (item=enp3s0)
+ok: [MonitorSrv] => (item=enp3s0)
+
+RUNNING HANDLER [sonic_server_net : restart_frr] ****************************************************************************************************************************************************************
+changed: [Host12_1]
+changed: [Host12_2]
+changed: [Host34_1]
+changed: [Host34_2]
+changed: [Host12_3]
+changed: [HostB12_1]
+changed: [HostB12_2]
+changed: [MonitorSrv]
 
 RUNNING HANDLER [sonic_server_net : restart_networking] *********************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/sonic_server_net/handlers/main.yml:4:3
-
-2 # sonic_server_net/handlers/main.yml
-3
-4 - name: restart_networking
-    ^ column 3
-
-fatal: [Host12_2]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.273508'
-    end: '2026-05-28 23:16:14.224231'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:13.950723'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [Host12_1]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.282375'
-    end: '2026-05-28 23:16:14.226105'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:13.943730'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [Host12_3]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.276235'
-    end: '2026-05-28 23:16:14.568735'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:14.292500'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [Host34_2]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.263866'
-    end: '2026-05-28 23:16:14.573603'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:14.309737'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [Host34_1]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.281229'
-    end: '2026-05-28 23:16:14.591487'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:14.310258'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [HostB12_1]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.297959'
-    end: '2026-05-28 23:16:16.172816'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:15.874857'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [HostB12_2]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.381160'
-    end: '2026-05-28 23:16:16.436350'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:16.055190'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-fatal: [MonitorSrv]: FAILED! =>
-    changed: true
-    cmd:
-    - netplan
-    - apply
-    delta: '0:00:00.266603'
-    end: '2026-05-28 23:16:16.768614'
-    msg: non-zero return code
-    rc: 78
-    start: '2026-05-28 23:16:16.502011'
-    stderr: |-
-        /etc/netplan/60-fabric-bgp.yaml:6:5: Error in network definition: Updated definition 'bond0' changes device type
-            bond0:
-            ^
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
+changed: [Host12_2]
+changed: [Host12_1]
+changed: [Host12_3]
+changed: [Host34_1]
+changed: [Host34_2]
+changed: [HostB12_2]
+changed: [HostB12_1]
+changed: [MonitorSrv]
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-Host12_2                   : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-Host12_3                   : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-Host34_1                   : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-Host34_2                   : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-HostB12_1                  : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-HostB12_2                  : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
-MonitorSrv                 : ok=16   changed=4    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1
+Host12_1                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Host12_2                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Host12_3                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Host34_1                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Host34_2                   : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+HostB12_1                  : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+HostB12_2                  : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+MonitorSrv                 : ok=19   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml --tags verify
-
-PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
-[WARNING]: Using run_once with the free strategy is not currently supported. This task will still be executed for every host in the inventory list.
-
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [Spine_S1 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Spine_S2 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Border_Leaf1 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Border_Leaf2 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-
-TASK [Phase 2 | Verify BGP neighbors are established] ***********************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [Phase 2 | Report BGP state] *******************************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.2.2",
-          "as":65022,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":13,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":9,
-          "peerMemory":6677784,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65106,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65107,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "remoteAs":65108,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":11,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "remoteAs":65106,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet24":{
-              "remoteAs":65107,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet28":{
-              "remoteAs":65108,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003850,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            },
-            "10.0.253.3":{
-              "remoteAs":65254,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Active",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Exit_Router2",
-              "idType":"ipv4"
-            }
-          },
-          "failedPeers":7,
-          "displayedPeers":9,
-          "totalPeers":9,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.2.2",
-          "as":65022,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet20":{
-              "remoteAs":65106,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet24":{
-              "remoteAs":65107,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet28":{
-              "remoteAs":65108,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003850,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "l2VpnEvpn":{
-          "routerId":"10.0.2.2",
-          "as":65022,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":3,
-          "peerMemory":2225928,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65106,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65107,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "remoteAs":65108,
-              "localAs":65022,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":11,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":3,
-          "totalPeers":3,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-
-TASK [Phase 2 | Verify BGP neighbors are established] ***********************************************************************************************************************************************************
-ok: [Spine_S1]
-ok: [Border_Leaf1]
-
-TASK [Phase 2 | Report BGP state] *******************************************************************************************************************************************************************************
-ok: [Spine_S1] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.0.1",
-          "as":65000,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":7,
-          "ribCount":13,
-          "ribMemory":2912,
-          "peerCount":6,
-          "peerMemory":4451856,
-          "peers":{
-            "Ethernet0":{
-              "hostname":"sonic",
-              "remoteAs":65011,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:50",
-              "peerUptimeMsec":6470000,
-              "peerUptimeEstablishedEpoch":1780003830,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "hostname":"sonic",
-              "remoteAs":65012,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "hostname":"sonic",
-              "remoteAs":65013,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:31",
-              "peerUptimeMsec":6451000,
-              "peerUptimeEstablishedEpoch":1780003849,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L3",
-              "idType":"interface"
-            },
-            "Ethernet12":{
-              "hostname":"sonic",
-              "remoteAs":65014,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:27",
-              "peerUptimeMsec":6447000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L4",
-              "idType":"interface"
-            },
-            "Ethernet16":{
-              "hostname":"sonic",
-              "remoteAs":65021,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:27",
-              "peerUptimeMsec":6447000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf1",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "hostname":"sonic",
-              "remoteAs":65022,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003852,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf2",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":0,
-          "displayedPeers":6,
-          "totalPeers":6,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.0.1",
-          "as":65000,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":6,
-          "peerMemory":4451856,
-          "peers":{
-            "Ethernet0":{
-              "hostname":"sonic",
-              "remoteAs":65011,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:50",
-              "peerUptimeMsec":6470000,
-              "peerUptimeEstablishedEpoch":1780003830,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "hostname":"sonic",
-              "remoteAs":65012,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "hostname":"sonic",
-              "remoteAs":65013,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:31",
-              "peerUptimeMsec":6451000,
-              "peerUptimeEstablishedEpoch":1780003849,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L3",
-              "idType":"interface"
-            },
-            "Ethernet12":{
-              "hostname":"sonic",
-              "remoteAs":65014,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:27",
-              "peerUptimeMsec":6447000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L4",
-              "idType":"interface"
-            },
-            "Ethernet16":{
-              "hostname":"sonic",
-              "remoteAs":65021,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:27",
-              "peerUptimeMsec":6447000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf1",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "hostname":"sonic",
-              "remoteAs":65022,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003852,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf2",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":0,
-          "displayedPeers":6,
-          "totalPeers":6,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-
-TASK [Phase 2 | Verify BGP neighbors are established] ***********************************************************************************************************************************************************
-ok: [Spine_S2]
-
-TASK [Phase 2 | Report BGP state] *******************************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.2.1",
-          "as":65021,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":12,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":9,
-          "peerMemory":6677784,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65106,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65107,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "remoteAs":65108,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "remoteAs":65106,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet24":{
-              "remoteAs":65107,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet28":{
-              "remoteAs":65108,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:34",
-              "peerUptimeMsec":6454000,
-              "peerUptimeEstablishedEpoch":1780003845,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003851,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            },
-            "10.0.253.1":{
-              "remoteAs":65253,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Active",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Exit_Router1",
-              "idType":"ipv4"
-            }
-          },
-          "failedPeers":7,
-          "displayedPeers":9,
-          "totalPeers":9,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.2.1",
-          "as":65021,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet20":{
-              "remoteAs":65106,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet24":{
-              "remoteAs":65107,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet28":{
-              "remoteAs":65108,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:34",
-              "peerUptimeMsec":6454000,
-              "peerUptimeEstablishedEpoch":1780003845,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:28",
-              "peerUptimeMsec":6448000,
-              "peerUptimeEstablishedEpoch":1780003851,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "l2VpnEvpn":{
-          "routerId":"10.0.2.1",
-          "as":65021,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":3,
-          "peerMemory":2225928,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65106,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65107,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"HostB12_2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "remoteAs":65108,
-              "localAs":65021,
-              "version":4,
-              "msgRcvd":4,
-              "msgSent":9,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"MonitorSrv",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":3,
-          "totalPeers":3,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-ok: [Spine_S2] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.0.2",
-          "as":65000,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":7,
-          "ribCount":13,
-          "ribMemory":2912,
-          "peerCount":6,
-          "peerMemory":4451856,
-          "peers":{
-            "Ethernet0":{
-              "hostname":"sonic",
-              "remoteAs":65011,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:48",
-              "peerUptimeMsec":6468000,
-              "peerUptimeEstablishedEpoch":1780003832,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "hostname":"sonic",
-              "remoteAs":65012,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:23",
-              "peerUptimeMsec":6443000,
-              "peerUptimeEstablishedEpoch":1780003857,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "hostname":"sonic",
-              "remoteAs":65013,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:20",
-              "peerUptimeMsec":6440000,
-              "peerUptimeEstablishedEpoch":1780003860,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L3",
-              "idType":"interface"
-            },
-            "Ethernet12":{
-              "hostname":"sonic",
-              "remoteAs":65014,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:26",
-              "peerUptimeMsec":6446000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L4",
-              "idType":"interface"
-            },
-            "Ethernet16":{
-              "hostname":"sonic",
-              "remoteAs":65021,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:33",
-              "peerUptimeMsec":6453000,
-              "peerUptimeEstablishedEpoch":1780003847,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf1",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "hostname":"sonic",
-              "remoteAs":65022,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":1,
-              "pfxSnt":7,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf2",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":0,
-          "displayedPeers":6,
-          "totalPeers":6,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.0.2",
-          "as":65000,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":6,
-          "peerMemory":4451856,
-          "peers":{
-            "Ethernet0":{
-              "hostname":"sonic",
-              "remoteAs":65011,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:48",
-              "peerUptimeMsec":6468000,
-              "peerUptimeEstablishedEpoch":1780003832,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "hostname":"sonic",
-              "remoteAs":65012,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:23",
-              "peerUptimeMsec":6443000,
-              "peerUptimeEstablishedEpoch":1780003857,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L2",
-              "idType":"interface"
-            },
-            "Ethernet8":{
-              "hostname":"sonic",
-              "remoteAs":65013,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:20",
-              "peerUptimeMsec":6440000,
-              "peerUptimeEstablishedEpoch":1780003860,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L3",
-              "idType":"interface"
-            },
-            "Ethernet12":{
-              "hostname":"sonic",
-              "remoteAs":65014,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:26",
-              "peerUptimeMsec":6446000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Leaf_L4",
-              "idType":"interface"
-            },
-            "Ethernet16":{
-              "hostname":"sonic",
-              "remoteAs":65021,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:33",
-              "peerUptimeMsec":6453000,
-              "peerUptimeEstablishedEpoch":1780003847,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf1",
-              "idType":"interface"
-            },
-            "Ethernet20":{
-              "hostname":"sonic",
-              "remoteAs":65022,
-              "localAs":65000,
-              "version":4,
-              "msgRcvd":119,
-              "msgSent":118,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:25",
-              "peerUptimeMsec":6445000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Border_Leaf2",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":0,
-          "displayedPeers":6,
-          "totalPeers":6,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-
-PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
-
-TASK [Phase 0 | Assert automation profile is supported] *********************************************************************************************************************************************************
-ok: [Leaf_L1 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Leaf_L2 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Leaf_L3 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-ok: [Leaf_L4 -> localhost] =>
-    changed: false
-    msg: automation_profile=ubuntu_r810_kvm (QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU))
-
-TASK [Phase 2 | Verify BGP neighbors are established] ***********************************************************************************************************************************************************
-ok: [Leaf_L3]
-ok: [Leaf_L2]
-
-TASK [Phase 2 | Report BGP state] *******************************************************************************************************************************************************************************
-ok: [Leaf_L2] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.1.2",
-          "as":65012,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":13,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65101,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_1",
-              "idType":"interface"
-            },
-            "Ethernet1":{
-              "remoteAs":65102,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_2",
-              "idType":"interface"
-            },
-            "Ethernet2":{
-              "remoteAs":65103,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_3",
-              "idType":"interface"
-            },
-            "Ethernet64":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:30",
-              "peerUptimeMsec":6450000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet68":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:31",
-              "peerUptimeMsec":6451000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.1.2",
-          "as":65012,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65101,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_1",
-              "idType":"interface"
-            },
-            "Ethernet1":{
-              "remoteAs":65102,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_2",
-              "idType":"interface"
-            },
-            "Ethernet2":{
-              "remoteAs":65103,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_3",
-              "idType":"interface"
-            },
-            "Ethernet64":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:30",
-              "peerUptimeMsec":6450000,
-              "peerUptimeEstablishedEpoch":1780003855,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet68":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65012,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:31",
-              "peerUptimeMsec":6451000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-ok: [Leaf_L3] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.1.3",
-          "as":65013,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":13,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":4,
-          "peerMemory":2967904,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65104,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65105,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_2",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:26",
-              "peerUptimeMsec":6446000,
-              "peerUptimeEstablishedEpoch":1780003860,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:36",
-              "peerUptimeMsec":6456000,
-              "peerUptimeEstablishedEpoch":1780003850,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":2,
-          "displayedPeers":4,
-          "totalPeers":4,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.1.3",
-          "as":65013,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":4,
-          "peerMemory":2967904,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65104,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65105,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_2",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:26",
-              "peerUptimeMsec":6446000,
-              "peerUptimeEstablishedEpoch":1780003860,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65013,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:36",
-              "peerUptimeMsec":6456000,
-              "peerUptimeEstablishedEpoch":1780003850,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":2,
-          "displayedPeers":4,
-          "totalPeers":4,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-
-TASK [Phase 2 | Verify BGP neighbors are established] ***********************************************************************************************************************************************************
-ok: [Leaf_L1]
-ok: [Leaf_L4]
-
-TASK [Phase 2 | Report BGP state] *******************************************************************************************************************************************************************************
-ok: [Leaf_L1] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.1.1",
-          "as":65011,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":12,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65101,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_1",
-              "idType":"interface"
-            },
-            "Ethernet1":{
-              "remoteAs":65102,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_2",
-              "idType":"interface"
-            },
-            "Ethernet2":{
-              "remoteAs":65103,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_3",
-              "idType":"interface"
-            },
-            "Ethernet64":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:55",
-              "peerUptimeMsec":6475000,
-              "peerUptimeEstablishedEpoch":1780003829,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet68":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:56",
-              "peerUptimeMsec":6476000,
-              "peerUptimeEstablishedEpoch":1780003828,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.1.1",
-          "as":65011,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":5,
-          "peerMemory":3709880,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65101,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_1",
-              "idType":"interface"
-            },
-            "Ethernet1":{
-              "remoteAs":65102,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_2",
-              "idType":"interface"
-            },
-            "Ethernet2":{
-              "remoteAs":65103,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host12_3",
-              "idType":"interface"
-            },
-            "Ethernet64":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:55",
-              "peerUptimeMsec":6475000,
-              "peerUptimeEstablishedEpoch":1780003829,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet68":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65011,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":120,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:56",
-              "peerUptimeMsec":6476000,
-              "peerUptimeEstablishedEpoch":1780003828,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":3,
-          "displayedPeers":5,
-          "totalPeers":5,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-ok: [Leaf_L4] =>
-    msg: |-
-        BGP summary: {
-        "ipv4Unicast":{
-          "routerId":"10.0.1.4",
-          "as":65014,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":13,
-          "ribCount":15,
-          "ribMemory":3360,
-          "peerCount":4,
-          "peerMemory":2967904,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65104,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":504,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Active",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65105,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_2",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:32",
-              "peerUptimeMsec":6452000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:33",
-              "peerUptimeMsec":6453000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":6,
-              "pfxSnt":8,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":2,
-          "displayedPeers":4,
-          "totalPeers":4,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        ,
-        "ipv6Unicast":{
-          "routerId":"10.0.1.4",
-          "as":65014,
-          "vrfId":0,
-          "vrfName":"default",
-          "tableVersion":0,
-          "ribCount":0,
-          "ribMemory":0,
-          "peerCount":4,
-          "peerMemory":2967904,
-          "peers":{
-            "Ethernet0":{
-              "remoteAs":65104,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":504,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Active",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_1",
-              "idType":"interface"
-            },
-            "Ethernet4":{
-              "remoteAs":65105,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":0,
-              "msgSent":0,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"never",
-              "peerUptimeMsec":0,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Idle",
-              "peerState":"OK",
-              "connectionsEstablished":0,
-              "connectionsDropped":0,
-              "desc":"Host34_2",
-              "idType":"interface"
-            },
-            "Ethernet120":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:32",
-              "peerUptimeMsec":6452000,
-              "peerUptimeEstablishedEpoch":1780003854,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S2",
-              "idType":"interface"
-            },
-            "Ethernet124":{
-              "hostname":"sonic",
-              "remoteAs":65000,
-              "localAs":65014,
-              "version":4,
-              "msgRcvd":118,
-              "msgSent":119,
-              "tableVersion":0,
-              "outq":0,
-              "inq":0,
-              "peerUptime":"01:47:33",
-              "peerUptimeMsec":6453000,
-              "peerUptimeEstablishedEpoch":1780003853,
-              "pfxRcd":0,
-              "pfxSnt":0,
-              "state":"Established",
-              "peerState":"OK",
-              "connectionsEstablished":1,
-              "connectionsDropped":0,
-              "desc":"Spine_S1",
-              "idType":"interface"
-            }
-          },
-          "failedPeers":2,
-          "displayedPeers":4,
-          "totalPeers":4,
-          "dynamicPeers":0,
-          "bestPath":{
-            "multiPathRelax":"false"
-          }
-        }
-        }
-
-PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
-
-PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host12_3]
-ok: [Host34_2]
-ok: [Host34_1]
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [HostB12_1]
-ok: [MonitorSrv]
-ok: [HostB12_2]
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Border_Leaf2               : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host12_1                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host12_2                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host12_3                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_1                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_2                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-HostB12_1                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-HostB12_2                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L1                    : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L2                    : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L3                    : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L4                    : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-MonitorSrv                 : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Spine_S1                   : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Spine_S2                   : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-% Can't open configuration file /etc/frr/vtysh.conf due to 'Permission denied'.
-Exiting: failed to connect to any daemons.
-Hint: if this seems wrong, try running me as a privileged user!
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.10.255.1, local AS number 65101 vrf-id 0
-BGP table version 2
-RIB entries 5, using 960 bytes of memory
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
 Peers 2, using 1448 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-eth1            4      65011         0         0        0    0    0    never         Idle        0 Leaf_L1
-eth2            4      65012         0         0        0    0    0    never         Idle        0 Leaf_L2
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
 
 Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo ls -al /etc/netplan"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-total 28
-drwxr-xr-x   2 root root 4096 May 28 23:15 .
-drwxr-xr-x 111 root root 4096 May 28 06:31 ..
--rw-------   1 root root 1169 May 28 01:53 01-fabric-config.yaml
--rw-------   1 root root   85 May 26 01:17 10-loopback.yaml
--rw-------   1 root root  179 May 26 01:17 20-fabric.yaml
--rw-------   1 root root  327 May 23 15:50 50-cloud-init.yaml
--rw-------   1 root root  298 May 28 23:15 60-fabric-bgp.yaml
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/01-fabric-config.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-# Netplan fabric configuration — managed by Ansible
-# Ansible managed
-#
-# KVM Lab Note: Ubuntu Noble cloud images use predictable interface names:
-#   enp1s0 = PCI bus 1 slot 0 (mgmt NIC0)
-#   enp2s0 = PCI bus 2 slot 0 (fabric NIC1 → first leaf)
-#   enp3s0 = PCI bus 3 slot 0 (fabric NIC2 → second leaf)
-#
-# Physical Hardware: Uses eth0/eth1/eth2 (or eno1/eno2 depending on NIC vendor)
-#
-# The netplan variable in host_vars uses logical names (eth0/eth1/eth2) for
-# physical hardware. For KVM lab, interface names are auto-mapped below.
-#
-network:
-    bonds:
-        bond0:
-            addresses:
-            - 10.10.12.1/24
-            interfaces:
-            - eth1
-            - eth2
-            mtu: 9000
-            parameters:
-                mii-monitor-interval: 100
-                mode: active-backup
-                primary: eth1
-    ethernets:
-        eth0:
-            dhcp4: true
-            dhcp4-overrides:
-                use-dns: false
-                use-routes: false
-        eth1:
-            dhcp4: false
-            mtu: 9000
-        eth2:
-            dhcp4: false
-            mtu: 9000
-    renderer: networkd
-    version: 2
-    vlans: {}
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.41' (ED25519) to the list of known hosts.
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/10-loopback.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-network:
-  version: 2
-  ethernets:
-    lo:
-      addresses:
-        - 10.10.255.1/32
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/10-fabric.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-cat: /etc/netplan/10-fabric.yaml: No such file or directory
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/20-fabric.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-network:
-  version: 2
-  ethernets:
-    enp2s0:
-      dhcp4: false
-      link-local: [ipv6]
-      mtu: 9000
-    enp3s0:
-      dhcp4: false
-      link-local: [ipv6]
-      mtu: 9000
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/50-cloud-init.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-network:
-  version: 2
-  ethernets:
-    enp1s0:
-      dhcp4: false
-      addresses: ["172.16.2.40/24"]
-      routes:
-        - to: default
-          via: 172.16.2.1
-          metric: 9999
-        - to: 192.168.255.0/24
-          via: 172.16.2.1
-          metric: 100
-      nameservers:
-        addresses: ["8.8.8.8", "8.8.4.4"]
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1 "sudo cat /etc/netplan/60-fabric-bgp.yaml"
-Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
-# Managed by Ansible (sonic_server_net role) — do not edit
-network:
-  version: 2
-  renderer: networkd
-  ethernets:
-    bond0:
-      dhcp4: false
-      dhcp6: false
-      mtu: 9000
-      link-local: [ipv6]
-    enp2s0:
-      dhcp4: false
-      dhcp6: false
-      mtu: 9000
-      link-local: [ipv6]
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.2, local AS number 65102 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_3 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.42' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.3, local AS number 65103 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65011         0         0        0    0    0    never      Connect        0 Leaf_L1
+enp3s0          4      65012         0         0        0    0    0    never      Connect        0 Leaf_L2
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.43' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.11, local AS number 65104 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65013         0         0        0    0    0    never      Connect        0 Leaf_L3
+enp3s0          4      65014         0         2        0    0    0    never      Connect        0 Leaf_L4
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.44' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.12, local AS number 65105 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65013         0         0        0    0    0    never      Connect        0 Leaf_L3
+enp3s0          4      65014         0         2        0    0    0    never      Connect        0 Leaf_L4
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.45' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.100, local AS number 65106 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
+enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.46' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.101, local AS number 65107 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
+enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.10.255.102, local AS number 65108 vrf-id 0
+BGP table version 1
+RIB entries 1, using 192 bytes of memory
+Peers 2, using 1448 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+enp2s0          4      65021         0         0        0    0    0    never         Idle        0 Border_Leaf1
+enp3s0          4      65022         0         0        0    0    0    never         Idle        0 Border_Leaf2
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 12
+RIB entries 15, using 3360 bytes of memory
+Peers 9, using 6521 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
+Ethernet8       4      65108         4         9        0    0    0    never         Idle        0 MonitorSrv
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       209       211        0    0    0 03:18:21            6        8 Spine_S2
+Ethernet124     4      65000       209       211        0    0    0 03:18:15            6        8 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never       Active        0 Exit_Router1
+
+Total number of neighbors 9
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       209       211        0    0    0 03:18:21            0        0 Spine_S2
+Ethernet124     4      65000       209       211        0    0    0 03:18:15            0        0 Spine_S1
+
+Total number of neighbors 5
+
+L2VPN EVPN Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 3, using 2174 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
+Ethernet8       4      65108         4         9        0    0    0    never         Idle        0 MonitorSrv
+
+Total number of neighbors 3
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 13
+RIB entries 15, using 3360 bytes of memory
+Peers 9, using 6521 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
+Ethernet8       4      65108         4        11        0    0    0    never         Idle        0 MonitorSrv
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       209       211        0    0    0 03:18:38            6        8 Spine_S2
+Ethernet124     4      65000       209       211        0    0    0 03:18:41            6        8 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+
+Total number of neighbors 9
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet24      4      65107         0         0        0    0    0    never         Idle        0 HostB12_2
+Ethernet28      4      65108         0         0        0    0    0    never         Idle        0 MonitorSrv
+Ethernet120     4      65000       209       211        0    0    0 03:18:38            0        0 Spine_S2
+Ethernet124     4      65000       209       211        0    0    0 03:18:41            0        0 Spine_S1
+
+Total number of neighbors 5
+
+L2VPN EVPN Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 3, using 2174 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet0       4      65106         0         0        0    0    0    never         Idle        0 HostB12_1
+Ethernet4       4      65107         4         9        0    0    0    never         Idle        0 HostB12_2
+Ethernet8       4      65108         4        11        0    0    0    never         Idle        0 MonitorSrv
+
+Total number of neighbors 3
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show running-configuration'"
+Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
+% Unknown command: show running-configuration
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show running-config'"
+Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
+Building configuration...
+
+Current configuration:
+!
+frr version 8.4.4
+frr defaults datacenter
+hostname monitorsrv
+log syslog informational
+no ip forwarding
+no ipv6 forwarding
+service integrated-vtysh-config
+!
+router bgp 65108
+ bgp router-id 10.10.255.102
+ bgp bestpath as-path multipath-relax
+ neighbor enp2s0 interface remote-as 65021
+ neighbor enp2s0 description Border_Leaf1
+ neighbor enp3s0 interface remote-as 65022
+ neighbor enp3s0 description Border_Leaf2
+ !
+ address-family ipv4 unicast
+  network 10.10.255.102/32
+  neighbor enp2s0 soft-reconfiguration inbound
+  neighbor enp3s0 soft-reconfiguration inbound
+  maximum-paths 2
+ exit-address-family
+exit
+!
+end
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
