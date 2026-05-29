@@ -183,4 +183,18 @@ for vm in "${!VM_BRIDGES[@]}"; do
   done
 done
 One secondary issue remains on the border leaves: Border_Leaf1 and Border_Leaf2 show stale extra neighbors on Ethernet20/24/28 and an old numbered peer in your live output. That is separate cleanup. First get one host pair established by applying the tap offload fix; if it works, I can help clean the border leaf neighbor drift next.
-
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+The next discriminating checks on Host12_1 are:
+ssh Host12_1 "sudo ss -ltnp | grep ':179 ' || true"
+ssh Host12_1 "sudo systemctl status frr --no-pager -l"
+ssh Host12_1 "sudo journalctl -u frr -n 100 --no-pager"
+ssh Host12_1 "sudo ufw status verbose || true"
+ssh Host12_1 "sudo iptables -S || true"
+ssh Host12_1 "sudo nft list ruleset || true"
+ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
+If you want a quick manual probe before more logs, run this on Host12_1:
+ssh Host12_1 "sudo ufw allow 179/tcp; sudo iptables -I INPUT -p tcp --dport 179 -j ACCEPT; sudo ip6tables -I INPUT -p tcp --dport 179 -j ACCEPT; sudo systemctl restart frr"
+Then immediately re-check:
+ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
+ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
+If you send the ss, journalctl, and firewall outputs, I can tell you exactly which host-side condition is blocking bgpd.
