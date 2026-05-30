@@ -97,5 +97,64 @@ nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/interface etherne
 Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
 expected end of command (line 1 column 32)
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ 
+
+cccccccccccccccccccccccccccccc
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet547 tx off
+Actual changes:
+tx-checksum-ip-generic: off
+tx-tcp-segmentation: off [not requested]
+tx-tcp-ecn-segmentation: off [not requested]
+tx-tcp6-segmentation: off [not requested]
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet580 tx off
+Actual changes:
+tx-checksum-ip-generic: off
+tx-tcp-segmentation: off [not requested]
+tx-tcp-ecn-segmentation: off [not requested]
+tx-tcp6-segmentation: off [not requested]
+nh1221@PowerEdge-R810:~$
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 18
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     11143     11145        0    0    0 09:16:19            1       18 HostB12_1
+Ethernet24      4      65107     11142     11144        0    0    0 09:16:15            1       18 HostB12_2
+Ethernet28      4      65108     11142     11144        0    0    0 09:16:15            1       18 MonitorSrv
+Ethernet120     4      65000       575       577        0    0    0 09:16:14           12       18 Spine_S2
+Ethernet124     4      65000       574       577        0    0    0 09:16:14           10       18 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000       575       577        0    0    0 09:16:14            0        0 Spine_S2
+Ethernet124     4      65000       574       577        0    0    0 09:16:14            0        0 Spine_S1
+
+Total number of neighbors 2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
 nh1221@PowerEdge-R810:~$ sudo systemctl restart openvswitch-switch
 nh1221@PowerEdge-R810:~$
