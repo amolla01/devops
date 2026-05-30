@@ -1,4 +1,6 @@
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml --limit exit_routers -i inventory/hosts.yml --tags deploy
 
 PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
@@ -51,14 +53,10 @@ ok: [Exit_Router2] =>
         data ports: ether3'
 
 TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
-changed: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
-
-TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
 changed: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)))
 
 TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
 
 TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
 changed: [Exit_Router1] => (item=ether2)
@@ -71,6 +69,10 @@ changed: [Exit_Router1] => (item=ether2)
 
 TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
 changed: [Exit_Router2] => (item=ether3)
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
 
 TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 ok: [Exit_Router2] => (item=ether3)
@@ -78,29 +80,35 @@ ok: [Exit_Router2] => (item=ether3)
 TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 ok: [Exit_Router1] => (item=ether2)
 
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router1]
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 
 TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
 changed: [Exit_Router2]
 
-TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0))
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
 changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2))
 
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0))
+
 TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
 changed: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
 changed: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
 
 TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
 changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
 
 TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
 
 TASK [mikrotik_base : day1 | Verify BGP connections] ************************************************************************************************************************************************************
 ok: [Exit_Router2]
@@ -109,23 +117,16 @@ TASK [mikrotik_base : day1 | Verify BGP connections] ***************************
 ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
-ok: [Exit_Router2]
+ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows] ***************************************************************************************************************************************************
 ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Parse concrete BGP session rows] ***************************************************************************************************************************************************
 ok: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Display BGP neighbor sessions] *****************************************************************************************************************************************************
-ok: [Exit_Router2] =>
-    msg: |-
-        ┌─── BGP Neighbor Sessions ────────────────────────────────────────────
-        Flags: E - established
-        └──────────────────────────────────────────────────────────────────────
-
-TASK [mikrotik_base : day1 | Parse concrete BGP session rows] ***************************************************************************************************************************************************
-ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Display BGP neighbor sessions] *****************************************************************************************************************************************************
 ok: [Exit_Router1] =>
@@ -134,21 +135,12 @@ ok: [Exit_Router1] =>
         Flags: E - established
         └──────────────────────────────────────────────────────────────────────
 
-TASK [mikrotik_base : day1 | Assert at least one BGP session exists] ********************************************************************************************************************************************
-[ERROR]: Task failed: Action failed: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:199:3
-
-197   tags: [day1, verify]
-198
-199 - name: "day1 | Assert at least one BGP session exists"
-      ^ column 3
-
-fatal: [Exit_Router2]: FAILED! =>
-    assertion: _bgp_session_rows | length > 0
-    changed: false
-    evaluated_to: false
-    msg: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported
-        the legend/header, which means the border-leaf session is not actually established.
+TASK [mikrotik_base : day1 | Display BGP neighbor sessions] *****************************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: |-
+        ┌─── BGP Neighbor Sessions ────────────────────────────────────────────
+        Flags: E - established
+        └──────────────────────────────────────────────────────────────────────
 
 TASK [mikrotik_base : day1 | Assert at least one BGP session exists] ********************************************************************************************************************************************
 [ERROR]: Task failed: Action failed: No concrete BGP session rows were returned on Exit_Router1. RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
@@ -166,8 +158,146 @@ fatal: [Exit_Router1]: FAILED! =>
     msg: No concrete BGP session rows were returned on Exit_Router1. RouterOS only reported
         the legend/header, which means the border-leaf session is not actually established.
 
+TASK [mikrotik_base : day1 | Assert at least one BGP session exists] ********************************************************************************************************************************************
+[ERROR]: Task failed: Action failed: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:199:3
+
+197   tags: [day1, verify]
+198
+199 - name: "day1 | Assert at least one BGP session exists"
+      ^ column 3
+
+fatal: [Exit_Router2]: FAILED! =>
+    assertion: _bgp_session_rows | length > 0
+    changed: false
+    evaluated_to: false
+    msg: No concrete BGP session rows were returned on Exit_Router2. RouterOS only reported
+        the legend/header, which means the border-leaf session is not actually established.
+
 PLAY RECAP ******************************************************************************************************************************************************************************************************
 Exit_Router1               : ok=17   changed=7    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
 Exit_Router2               : ok=18   changed=7    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 "/routing bgp connection print detail"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf1"
+     remote.address=10.0.253.0/32 .as=65021
+     local.address=10.0.253.1 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.1
+     templates="" as=65253 hold-time=3m keepalive-time=1m address-families=ip
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 "/routing bgp session print detail"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: E - established
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 "/routing bgp connection print detail"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf2"
+     remote.address=10.0.253.2/32 .as=65022
+     local.address=10.0.253.3 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.2
+     templates="" as=65254 hold-time=3m keepalive-time=1m address-families=ip
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 "/routing bgp session print detail"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: E - established
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 13213
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     18646     38714        0    0    0 00:00:34            0       18 HostB12_1
+Ethernet24      4      65107     18608     37574        0    0    0 00:00:20            0       18 HostB12_2
+Ethernet28      4      65108     18647     37473        0    0    0 00:00:41            0       18 MonitorSrv
+Ethernet120     4      65000      1685      7939        0    0    0 09:13:00           15       18 Spine_S2
+Ethernet124     4      65000      5340     11379        0    0    0 00:00:45           15       18 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000      1685      7939        0    0    0 09:13:00            0        0 Spine_S2
+Ethernet124     4      65000      5340     11379        0    0    0 00:00:45            0        0 Spine_S1
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 13213
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     18646     38722        0    0    0 00:00:59            0       18 HostB12_1
+Ethernet24      4      65107     18608     37583        0    0    0 00:00:45            0       18 HostB12_2
+Ethernet28      4      65108     18647     37482        0    0    0 00:01:06            0       18 MonitorSrv
+Ethernet120     4      65000      1685      7939        0    0    0 09:13:25           15       18 Spine_S2
+Ethernet124     4      65000      5341     11380        0    0    0 00:01:10           15       18 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000      1685      7939        0    0    0 09:13:25            0        0 Spine_S2
+Ethernet124     4      65000      5341     11380        0    0    0 00:01:10            0        0 Spine_S1
+
+Total number of neighbors 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 18
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     13975     13977        0    0    0 11:37:53            1       18 HostB12_1
+Ethernet24      4      65107     13973     13976        0    0    0 11:37:49            1       18 HostB12_2
+Ethernet28      4      65108     13973     13976        0    0    0 11:37:49            1       18 MonitorSrv
+Ethernet120     4      65000       716       718        0    0    0 11:37:48           12       18 Spine_S2
+Ethernet124     4      65000       715       718        0    0    0 11:37:48           10       18 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000       716       718        0    0    0 11:37:48            0        0 Spine_S2
+Ethernet124     4      65000       715       718        0    0    0 11:37:48            0        0 Spine_S1
+
+Total number of neighbors 2
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
