@@ -402,3 +402,40 @@ Show me the output of steps 1–3 and I'll identify exactly which tap devices to
 
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+Key findings from the ethtool -k Ethernet0 output inside SONiC:
+
+rx-checksumming: off [fixed]
+RX checksum is already OFF and FIXED — it can't be changed. The kernel is doing software verification of TCP checksums, and the nf_conntrack_checksum=0 only affects conntrack — NOT the TCP stack's own validation. TCP tcp_v4_rcv() still drops packets with bad checksums.
+
+The fix must be on the hypervisor or MikroTik sender side. You have:
+
+vnet613 = Exit_Router1's fabric tap on br-BL1-ER1
+vnet615 = Exit_Router2's fabric tap on br-BL2-ER2
+Run these on the R810 hypervisor:
+# Disable TX checksum offload on MikroTik's fabric tap devices
+# This forces the host TAP layer to compute full checksums
+sudo ethtool -K vnet613 tx off
+sudo ethtool -K vnet615 tx off
+
+# Also check what BL1/BL2 tap devices are on those bridges
+sudo virsh domiflist Border_Leaf1
+sudo virsh domiflist Border_Leaf2
+
+# Show the fabric bridge members
+ip link show master br-BL1-ER1
+ip link show master br-BL2-ER2
+After disabling TX offload on the tap devices, test from Lab-ControlNode:
+
+ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+# Wait 10 seconds
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+
+If ethtool -K vnet613 tx off fails or doesn't help (virtio feature negotiation can be sticky), try the MikroTik-side fix from Lab-ControlNode:
+# Disable TX offload inside MikroTik RouterOS
+ssh Exit_Router1 "/interface ethernet set ether2 tx-offload=no"
+ssh Exit_Router2 "/interface ethernet set ether3 tx-offload=no"
+Once we confirm which approach works, I'll integrate it into the playbook.
+
+Claude Opus 4.6 • 3x
