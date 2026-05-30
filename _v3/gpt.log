@@ -7,22 +7,8 @@ skipping: no hosts matched
 PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
 
 TASK [Phase 1 | Configure BGP peering (MikroTik)] ***************************************************************************************************************************************************************
-included: mikrotik_base for Exit_Router1
 included: mikrotik_base for Exit_Router2
-
-TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
-ok: [Exit_Router1] =>
-    ansible_facts:
-        fabric_interfaces:
-        -   description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
-            local_ip: 10.0.253.1/31
-            neighbor: Border_Leaf1
-            neighbor_asn: 65021
-            neighbor_ip: 10.0.253.0
-            neighbor_port: Ethernet0
-            port: ether2
-            speed: '10000'
-    changed: false
+included: mikrotik_base for Exit_Router1
 
 TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
 ok: [Exit_Router2] =>
@@ -38,25 +24,19 @@ ok: [Exit_Router2] =>
             speed: '10000'
     changed: false
 
-TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
+TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
 ok: [Exit_Router1] =>
     ansible_facts:
-        discovered_interpreter_python: /mnt/c/Users/nh1221/data-center/venv/bin/python3.12
+        fabric_interfaces:
+        -   description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
+            local_ip: 10.0.253.1/31
+            neighbor: Border_Leaf1
+            neighbor_asn: 65021
+            neighbor_ip: 10.0.253.0
+            neighbor_port: Ethernet0
+            port: ether2
+            speed: '10000'
     changed: false
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/interface ethernet print where running=yes'  | grep -oE 'ether[0-9]+'  | awk '!seen[$0]++'
-    delta: '0:00:01.863419'
-    end: '2026-05-30 12:06:28.475786'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:26.612367'
-    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: |-
-        ether1
-        ether2
-    stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
 ok: [Exit_Router2] =>
@@ -65,12 +45,12 @@ ok: [Exit_Router2] =>
     changed: false
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/interface ethernet print where running=yes'  | grep -oE 'ether[0-9]+'  | awk '!seen[$0]++'
-    delta: '0:00:01.863713'
-    end: '2026-05-30 12:06:28.475959'
+    delta: '0:00:01.650813'
+    end: '2026-05-30 13:00:22.248675'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:26.612246'
+    start: '2026-05-30 13:00:20.597862'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: |-
@@ -78,18 +58,38 @@ ok: [Exit_Router2] =>
         ether3
     stdout_lines: <omitted>
 
-TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
-ok: [Exit_Router2] =>
+TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
+ok: [Exit_Router1] =>
     ansible_facts:
-        _running_data_ports:
-        - ether3
+        discovered_interpreter_python: /mnt/c/Users/nh1221/data-center/venv/bin/python3.12
     changed: false
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/interface ethernet print where running=yes'  | grep -oE 'ether[0-9]+'  | awk '!seen[$0]++'
+    delta: '0:00:01.648076'
+    end: '2026-05-30 13:00:22.246195'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:20.598119'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: |-
+        ether1
+        ether2
+    stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
 ok: [Exit_Router1] =>
     ansible_facts:
         _running_data_ports:
         - ether2
+    changed: false
+
+TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    ansible_facts:
+        _running_data_ports:
+        - ether3
     changed: false
 
 TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
@@ -129,6 +129,11 @@ ok: [Exit_Router1] =>
     msg: 'Using ether2 as the live fabric interface on Exit_Router1. Running RouterOS
         data ports: ether2'
 
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
+        data ports: ether3'
+
 TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
 skipping: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)))  =>
     ansible_loop_var: item
@@ -147,11 +152,6 @@ skipping: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 E
 skipping: [Exit_Router1] =>
     changed: false
     msg: All items skipped
-
-TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
-ok: [Exit_Router2] =>
-    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
-        data ports: ether3'
 
 TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
 skipping: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))  =>
@@ -173,39 +173,13 @@ skipping: [Exit_Router2] =>
     msg: All items skipped
 
 TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router2] => (item=ether3) =>
-    ansible_loop_var: item
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address remove [find interface=ether3]'
-    delta: '0:00:00.669210'
-    end: '2026-05-30 12:06:30.475519'
-    failed_when_result: false
-    item:
-        description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
-        local_ip: 10.0.253.3/31
-        neighbor: Border_Leaf2
-        neighbor_asn: 65022
-        neighbor_ip: 10.0.253.2
-        neighbor_port: Ethernet0
-        port: ether3
-        speed: '10000'
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:29.806309'
-    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
 changed: [Exit_Router1] => (item=ether2) =>
     ansible_loop_var: item
     changed: true
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/ip address remove [find interface=ether2]'
-    delta: '0:00:00.745135'
-    end: '2026-05-30 12:06:30.486656'
+    delta: '0:00:00.753843'
+    end: '2026-05-30 13:00:24.290944'
     failed_when_result: false
     item:
         description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
@@ -218,24 +192,20 @@ changed: [Exit_Router1] => (item=ether2) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:29.741521'
+    start: '2026-05-30 13:00:23.537101'
     stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
 changed: [Exit_Router2] => (item=ether3) =>
     ansible_loop_var: item
     changed: true
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address add address=10.0.253.3/31 interface=ether3'
-    delta: '0:00:00.673621'
-    end: '2026-05-30 12:06:31.718114'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address remove [find interface=ether3]'
+    delta: '0:00:00.733796'
+    end: '2026-05-30 13:00:24.290944'
     failed_when_result: false
     item:
         description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
@@ -248,7 +218,7 @@ changed: [Exit_Router2] => (item=ether3) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:31.044493'
+    start: '2026-05-30 13:00:23.557148'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
@@ -260,8 +230,8 @@ changed: [Exit_Router1] => (item=ether2) =>
     changed: true
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/ip address add address=10.0.253.1/31 interface=ether2'
-    delta: '0:00:00.732694'
-    end: '2026-05-30 12:06:31.774182'
+    delta: '0:00:00.762162'
+    end: '2026-05-30 13:00:25.626936'
     failed_when_result: false
     item:
         description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
@@ -274,20 +244,20 @@ changed: [Exit_Router1] => (item=ether2) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:31.041488'
+    start: '2026-05-30 13:00:24.864774'
     stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
-TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
-ok: [Exit_Router2] => (item=ether3) =>
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address print where interface=ether3'
-    delta: '0:00:00.680103'
-    end: '2026-05-30 12:06:33.003022'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address add address=10.0.253.3/31 interface=ether3'
+    delta: '0:00:00.873581'
+    end: '2026-05-30 13:00:25.738075'
     failed_when_result: false
     item:
         description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
@@ -300,13 +270,10 @@ ok: [Exit_Router2] => (item=ether3) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:32.322919'
+    start: '2026-05-30 13:00:24.864494'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
-    stdout: |-
-        Columns: ADDRESS, NETWORK, INTERFACE
-         # ADDRESS        NETWORK     INTERFACE
-        13 10.0.253.3/31  10.0.253.2  ether3
+    stdout: ''
     stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
@@ -315,8 +282,8 @@ ok: [Exit_Router1] => (item=ether2) =>
     changed: false
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/ip address print where interface=ether2'
-    delta: '0:00:00.657646'
-    end: '2026-05-30 12:06:33.030060'
+    delta: '0:00:00.926410'
+    end: '2026-05-30 13:00:27.166908'
     failed_when_result: false
     item:
         description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
@@ -329,55 +296,23 @@ ok: [Exit_Router1] => (item=ether2) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:32.372414'
+    start: '2026-05-30 13:00:26.240498'
     stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: |-
         Columns: ADDRESS, NETWORK, INTERFACE
          # ADDRESS        NETWORK     INTERFACE
-        15 10.0.253.1/31  10.0.253.0  ether2
+        17 10.0.253.1/31  10.0.253.0  ether2
     stdout_lines: <omitted>
 
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router2] =>
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip firewall filter remove [find where comment~"accept-bgp"]'
-    delta: '0:00:00.761676'
-    end: '2026-05-30 12:06:34.159609'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:33.397933'
-    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router1] =>
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/ip firewall filter remove [find where comment~"accept-bgp"]'
-    delta: '0:00:00.753204'
-    end: '2026-05-30 12:06:34.183804'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:33.430600'
-    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2)) =>
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+ok: [Exit_Router2] => (item=ether3) =>
     ansible_loop_var: item
-    changed: true
+    changed: false
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '{ :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.2/32 dst-port=179 comment=accept-bgp-Border_Leaf2 place-before=$i } }'
-    delta: '0:00:00.664090'
-    end: '2026-05-30 12:06:35.398838'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip address print where interface=ether3'
+    delta: '0:00:00.810195'
+    end: '2026-05-30 13:00:27.166880'
     failed_when_result: false
     item:
         description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
@@ -390,7 +325,46 @@ changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2)) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:34.734748'
+    start: '2026-05-30 13:00:26.356685'
+    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: |-
+        Columns: ADDRESS, NETWORK, INTERFACE
+         # ADDRESS        NETWORK     INTERFACE
+        15 10.0.253.3/31  10.0.253.2  ether3
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1] =>
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/ip firewall filter remove [find where comment~"accept-bgp"]'
+    delta: '0:00:00.648386'
+    end: '2026-05-30 13:00:28.197402'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:27.549016'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router2] =>
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/ip firewall filter remove [find where comment~"accept-bgp"]'
+    delta: '0:00:00.650980'
+    end: '2026-05-30 13:00:28.225334'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:27.574354'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
@@ -402,8 +376,8 @@ changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0)) =>
     changed: true
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '{ :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-Border_Leaf1 place-before=$i } }'
-    delta: '0:00:00.648096'
-    end: '2026-05-30 12:06:35.398435'
+    delta: '0:00:00.805972'
+    end: '2026-05-30 13:00:29.571366'
     failed_when_result: false
     item:
         description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
@@ -416,82 +390,20 @@ changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0)) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:34.750339'
+    start: '2026-05-30 13:00:28.765394'
     stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
-changed: [Exit_Router1] =>
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp connection remove [find]'
-    delta: '0:00:00.682280'
-    end: '2026-05-30 12:06:36.447476'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:35.765196'
-    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
-changed: [Exit_Router2] =>
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp connection remove [find]'
-    delta: '0:00:00.680086'
-    end: '2026-05-30 12:06:36.445375'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:35.765289'
-    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021)) =>
+changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2)) =>
     ansible_loop_var: item
     changed: true
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp connection add name=to_Border_Leaf1 remote.address=10.0.253.0/32 remote.as=65021 local.role=ebgp local.address=10.0.253.1 router-id=10.0.99.1 routing-table=main templates="" as=65253 disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
-    delta: '0:00:00.662652'
-    end: '2026-05-30 12:06:37.647342'
-    failed_when_result: false
-    item:
-        description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
-        local_ip: 10.0.253.1/31
-        neighbor: Border_Leaf1
-        neighbor_asn: 65021
-        neighbor_ip: 10.0.253.0
-        neighbor_port: Ethernet0
-        port: ether2
-        speed: '10000'
-    msg: ''
-    rc: 0
-    start: '2026-05-30 12:06:36.984690'
-    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022)) =>
-    ansible_loop_var: item
-    changed: true
-    cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp connection add name=to_Border_Leaf2 remote.address=10.0.253.2/32 remote.as=65022 local.role=ebgp local.address=10.0.253.3 router-id=10.0.99.2 routing-table=main templates="" as=65254 disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
-    delta: '0:00:00.765435'
-    end: '2026-05-30 12:06:37.750034'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '{ :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.2/32 dst-port=179 comment=accept-bgp-Border_Leaf2 place-before=$i } }'
+    delta: '0:00:00.781771'
+    end: '2026-05-30 13:00:29.571415'
     failed_when_result: false
     item:
         description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
@@ -504,23 +416,115 @@ changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022)) =>
         speed: '10000'
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:36.984599'
+    start: '2026-05-30 13:00:28.789644'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router2] =>
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp connection remove [find]'
+    delta: '0:00:00.615296'
+    end: '2026-05-30 13:00:30.575884'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:29.960588'
+    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router1] =>
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp connection remove [find]'
+    delta: '0:00:00.615513'
+    end: '2026-05-30 13:00:30.576210'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:29.960697'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021)) =>
+    ansible_loop_var: item
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp connection add name=to_Border_Leaf1 remote.address=10.0.253.0/32 remote.as=65021 local.role=ebgp local.address=10.0.253.1 router-id=10.0.99.1 routing-table=main templates="" as=65253 disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
+    delta: '0:00:02.117559'
+    end: '2026-05-30 13:00:33.245956'
+    failed_when_result: false
+    item:
+        description: Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)
+        local_ip: 10.0.253.1/31
+        neighbor: Border_Leaf1
+        neighbor_asn: 65021
+        neighbor_ip: 10.0.253.0
+        neighbor_port: Ethernet0
+        port: ether2
+        speed: '10000'
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:31.128397'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022)) =>
+    ansible_loop_var: item
+    changed: true
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp connection add name=to_Border_Leaf2 remote.address=10.0.253.2/32 remote.as=65022 local.role=ebgp local.address=10.0.253.3 router-id=10.0.99.2 routing-table=main templates="" as=65254 disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
+    delta: '0:00:02.112821'
+    end: '2026-05-30 13:00:33.242294'
+    failed_when_result: false
+    item:
+        description: Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)
+        local_ip: 10.0.253.3/31
+        neighbor: Border_Leaf2
+        neighbor_asn: 65022
+        neighbor_ip: 10.0.253.2
+        neighbor_port: Ethernet0
+        port: ether3
+        speed: '10000'
+    msg: ''
+    rc: 0
+    start: '2026-05-30 13:00:31.129473'
+    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
 
 TASK [mikrotik_base : day1 | Verify BGP connections] ************************************************************************************************************************************************************
 ok: [Exit_Router1] =>
     changed: false
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp connection print'
-    delta: '0:00:00.787788'
-    end: '2026-05-30 12:06:38.855146'
+    delta: '0:00:00.671757'
+    end: '2026-05-30 13:00:34.278800'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:38.067358'
+    start: '2026-05-30 13:00:33.607043'
     stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: |-
@@ -537,12 +541,12 @@ ok: [Exit_Router2] =>
     changed: false
     cmd: |-
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp connection print'
-    delta: '0:00:00.697559'
-    end: '2026-05-30 12:06:38.860237'
+    delta: '0:00:00.674093'
+    end: '2026-05-30 13:00:34.281136'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:38.162678'
+    start: '2026-05-30 13:00:33.607043'
     stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: |-
@@ -555,33 +559,33 @@ ok: [Exit_Router2] =>
     stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
-ok: [Exit_Router1] =>
+ok: [Exit_Router2] =>
     changed: false
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp session print detail'
-    delta: '0:00:00.691251'
-    end: '2026-05-30 12:06:39.950490'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp session print detail'
+    delta: '0:00:00.709826'
+    end: '2026-05-30 13:00:35.350396'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:39.259239'
-    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    start: '2026-05-30 13:00:34.640570'
+    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: 'Flags: E - established '
     stdout_lines: <omitted>
 
 TASK [mikrotik_base : day1 | Gather BGP peer/session state] *****************************************************************************************************************************************************
-ok: [Exit_Router2] =>
+ok: [Exit_Router1] =>
     changed: false
     cmd: |-
-        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '/routing bgp session print detail'
-    delta: '0:00:00.724685'
-    end: '2026-05-30 12:06:39.984034'
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '/routing bgp session print detail'
+    delta: '0:00:00.709482'
+    end: '2026-05-30 13:00:35.350250'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-05-30 12:06:39.259349'
-    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
+    start: '2026-05-30 13:00:34.640768'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
     stderr_lines: <omitted>
     stdout: 'Flags: E - established '
     stdout_lines: <omitted>
@@ -647,5 +651,19 @@ fatal: [Exit_Router2]: FAILED! =>
 PLAY RECAP ******************************************************************************************************************************************************************************************************
 Exit_Router1               : ok=16   changed=6    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
 Exit_Router2               : ok=17   changed=6    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml --limit exit_routers -i inventory/hosts.yml --tags verify -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
+
+PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
