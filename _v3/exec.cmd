@@ -376,3 +376,29 @@ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
 This is a well-known KVM inter-VM issue: when two VMs on the same hypervisor communicate through a Linux bridge, TX checksum offload on the sender can leave incomplete checksums if the bridge doesn't finalize them. ICMP/ping works because ICMP checksum is computed in software by MikroTik, but TCP relies on NIC offload which the virtual NIC never actually performs.
 
 Once confirmed working, I'll add it to the playbook for persistence across reboots.
+MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+Run these on Lab-ControlNode (NOT ssh'd into any VM):
+# 1. Verify ethtool didn't actually take effect inside SONiC
+ssh Border_Leaf1 "ethtool -k Ethernet0 | grep -i checksum"
+
+# 2. Find the tap devices for the Exit Router VMs
+sudo virsh domiflist Exit_Router1
+sudo virsh domiflist Exit_Router2
+
+# 3. Show the bridge topology to identify which tap connects ER↔BL
+brctl show
+# OR
+bridge link show
+
+# 4. Once you identify the tap device for ER1's fabric interface,
+#    disable TX offload on it (example — replace with actual tap name):
+#    sudo ethtool -K vnetX tx off
+
+# 5. Also try this inside SONiC — it's a different approach that
+#    disables conntrack checksum verification:
+ssh Border_Leaf1 "sudo sysctl -w net.netfilter.nf_conntrack_checksum=0"
+ssh Border_Leaf2 "sudo sysctl -w net.netfilter.nf_conntrack_checksum=0"
+Show me the output of steps 1–3 and I'll identify exactly which tap devices to fix. The bridge/tap layout will tell us which virtual NIC feeds Ethernet0 on each border leaf.
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
