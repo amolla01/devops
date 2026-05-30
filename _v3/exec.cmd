@@ -334,3 +334,21 @@ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
 ssh Exit_Router1 "/routing/bgp/session/print"
 
 You should see the E flag (Established) on both sides.
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+The problem must be at the TCP level. There could be stale conntrack entries from the earlier blocked attempts, or an OUTPUT chain issue on SONiC. Run these diagnostics:
+# 1. Check SONiC OUTPUT chain (maybe blocking outbound BGP)
+ssh Border_Leaf1 "sudo iptables -L OUTPUT -n --line-numbers"
+
+# 2. Packet capture — the definitive test (what's actually on the wire?)
+ssh Border_Leaf1 "sudo timeout 10 tcpdump -i Ethernet0 -n 'tcp port 179' 2>&1 | head -30"
+
+# 3. Flush MikroTik stale conntrack entries from prior blocked attempts
+ssh Exit_Router1 "/ip firewall connection remove [find where dst-address~\"10.0.253\" or src-address~\"10.0.253\"]"
+
+# 4. Toggle the MikroTik BGP connection to force a clean TCP retry
+ssh Exit_Router1 "/routing bgp connection disable to_Border_Leaf1; :delay 3; /routing bgp connection enable to_Border_Leaf1"
+
+# 5. Then check immediately
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+ssh Exit_Router1 "/routing/bgp/session/print"
+The tcpdump (#2) is the most important — it will show us whether SYN packets are actually being sent/received and what happens to them (SYN-ACK? RST? Nothing?). That will pinpoint exactly where the connection is breaking.
