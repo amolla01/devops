@@ -536,4 +536,65 @@ sudo virsh destroy Exit_Router1; sudo virsh start Exit_Router1sudo virsh
 This tells QEMU to not negotiate VIRTIO_NET_F_CSUM with the MikroTik guest on the fabric NIC, forcing it to compute full TCP checksums in software. This is the only 100% permanent fix — survives OVS restarts, VM reboots, everything.
 
 Start with re-applying ethtool + tcpdump to confirm the theory. If checksums are still bad, go with the libvirt XML edit.
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
 
+The problem is clear now. The libvirt XML shows <source network='br-BL1-ER1'/> with type='network' — this means it's going through a libvirt virtual network (not a raw OVS bridge). The <driver> element you added earlier was probably placed wrong or the network's portgroup overrides it.
+
+The key observation from tcpdump: every packet FROM MikroTik has cksum 0x0e31 (incorrect) — this is the constant partial pseudo-header checksum. The <driver> edit didn't take effect because the VMs were re-created but the virtio feature negotiation still includes VIRTIO_NET_F_CSUM.
+
+The correct XML fix — add csum='off' on the guest side (not host):
+
+<interface type='network'>
+  <mac address='52:54:00:0f:cd:fb'/>
+  <source network='br-BL1-ER1'/>
+  <model type='virtio'/>
+  <driver name='vhost' queues='1'>
+    <guest csum='off' tso4='off' tso6='off'/>
+  </driver>
+  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+</interface>
+
+On R810:
+
+# Exit_Router1
+sudo virsh edit Exit_Router1
+# Find the interface with source network='br-BL1-ER1' and add the <driver> block above
+
+# Exit_Router2 — same but for br-BL2-ER2
+sudo virsh edit Exit_Router2
+
+# Cold restart both
+sudo virsh destroy Exit_Router1; sudo virsh start Exit_Router1
+sudo virsh destroy Exit_Router2; sudo virsh start Exit_Router2
+
+However — if MikroTik RouterOS ignores the virtio feature negotiation (which is possible since it's a closed-source kernel), then the only guaranteed fix is the SONiC receiving kernel must accept bad checksums.
+
+Since rx-checksumming: off [fixed] means the NIC isn't offloading, the TCP stack itself is validating. The only remaining option is an iptables NOTRACK rule that prevents conntrack from dropping packets, combined with a kernel module trick:
+
+Simpler alternative — add iptables NOTRACK + accept on BL1/BL2:
+
+# On Border_Leaf1 (via virsh console since SSH from R810 doesn't have keys):
+sudo iptables -t raw -A PREROUTING -i Ethernet0 -p tcp --dport 179 -j NOTRACK
+sudo iptables -t raw -A PREROUTING -i Ethernet0 -p tcp --sport 179 -j NOTRACK
+sudo iptables -t raw -A OUTPUT -o Ethernet0 -p tcp --dport 179 -j NOTRACK
+sudo iptables -t raw -A OUTPUT -o Ethernet0 -p tcp --sport 179 -j NOTRACK
+
+# On Border_Leaf2 (same):
+sudo iptables -t raw -A PREROUTING -i Ethernet0 -p tcp --dport 179 -j NOTRACK
+sudo iptables -t raw -A PREROUTING -i Ethernet0 -p tcp --sport 179 -j NOTRACK
+sudo iptables -t raw -A OUTPUT -o Ethernet0 -p tcp --dport 179 -j NOTRACK
+sudo iptables -t raw -A OUTPUT -o Ethernet0 -p tcp --sport 179 -j NOTRACK
+
+But wait — the REAL issue is that the TCP stack rejects bad checksums regardless of iptables. The only real fix is one of:
+
+virsh edit with <guest csum='off'/> — tells QEMU to NOT advertise checksum offload to MikroTik guest
+If that doesn't work — use e1000 model instead of virtio for the fabric NIC (e1000 doesn't support TX checksum offload):
+Try option 1 first (<guest csum='off'/>), destroy+start, then verify with tcpdump. If checksums are still bad, switch to e1000.
+
+Claude Opus 4.6 • 3x
+
+sudo virsh edit Exit_Router1
+# Change: <model type='virtio'/> → <model type='e1000'/>
+# (only on the br-BL1-ER1 interface, NOT the management one)
+
+Try option 1 first (<guest csum='off'/>), destroy+start, then verify with tcpdump. If checksums are still bad, switch to e1000.
