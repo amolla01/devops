@@ -158,3 +158,325 @@ Total number of neighbors 2
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
 nh1221@PowerEdge-R810:~$ sudo systemctl restart openvswitch-switch
 nh1221@PowerEdge-R810:~$
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ ethtool -k vnet547 | grep tx-checksum
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+nh1221@PowerEdge-R810:~$ ethtool -k vnet580 | grep tx-checksum
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet547 tx off
+[sudo: authenticate] Password:
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet580 tx off
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet613 tx off
+nh1221@PowerEdge-R810:~$ sudo ethtool -K vnet615 tx off
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo virsh edit Exit_Router1
+Select an editor.  To change later, run select-editor again.
+  1. /bin/nano        <---- easiest
+  2. /usr/bin/vim.tiny
+  3. /bin/ed
+
+Choose 1-3 [1]: 1
+Domain 'Exit_Router1' XML configuration edited.
+
+nh1221@PowerEdge-R810:~$ sudo virsh destroy Exit_Router1;
+Domain 'Exit_Router1' destroyed
+
+nh1221@PowerEdge-R810:~$ sudo virsh start Exit_Router1
+Domain 'Exit_Router1' started
+
+nh1221@PowerEdge-R810:~$ sudo virsh start Exit_Router2
+error: Domain is already active
+
+nh1221@PowerEdge-R810:~$ sudo virsh edit Exit_Router2
+Domain 'Exit_Router2' XML configuration edited.
+
+nh1221@PowerEdge-R810:~$ sudo virsh destroy Exit_Router2
+Domain 'Exit_Router2' destroyed
+
+nh1221@PowerEdge-R810:~$ sudo virsh start Exit_Router2
+Domain 'Exit_Router2' started
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 | head -20"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:12:40.134767 IP (tos 0xc0, ttl 255, id 21321, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.37895 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x2da5), seq 1779768482, win 64240, options [mss 1460,sackOK,TS val 3273470680 ecr 0,nop,wscale 7], length 0
+14:12:41.154759 IP (tos 0xc0, ttl 255, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.179 > 10.0.253.0.34181: Flags [S.], cksum 0x0e31 (incorrect -> 0x2569), seq 3207197524, ack 819929844, win 65160, options [mss 1460,sackOK,TS val 3273471700 ecr 2532178065,nop,wscale 7], length 0
+14:12:41.154862 IP (tos 0xc0, ttl 255, id 21322, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.37895 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x29a9), seq 1779768482, win 64240, options [mss 1460,sackOK,TS val 3273471700 ecr 0,nop,wscale 7], length 0
+14:12:43.234819 IP (tos 0xc0, ttl 255, id 21323, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.37895 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x2189), seq 1779768482, win 64240, options [mss 1460,sackOK,TS val 3273473780 ecr 0,nop,wscale 7], length 0
+14:12:47.314660 IP (tos 0xc0, ttl 255, id 21324, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.37895 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x1199), seq 1779768482, win 64240, options [mss 1460,sackOK,TS val 3273477860 ecr 0,nop,wscale 7], length 0
+14:12:48.945826 IP (tos 0xc0, ttl 1, id 17706, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.0.34181 > 10.0.253.1.179: Flags [S], cksum 0x3ff3 (correct), seq 819929843, win 63420, options [mss 9060,sackOK,TS val 2532209570 ecr 0,nop,wscale 9], length 0
+14:12:48.951133 IP (tos 0xc0, ttl 255, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.179 > 10.0.253.0.34181: Flags [S.], cksum 0x0e31 (incorrect -> 0x06f4), seq 3207197524, ack 819929844, win 65160, options [mss 1460,sackOK,TS val 3273479497 ecr 2532178065,nop,wscale 7], length 0
+14:12:50.144706 IP (tos 0xc0, ttl 255, id 118, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.43105 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x6b2c), seq 1025888406, win 64240, options [mss 1460,sackOK,TS val 3273480690 ecr 0,nop,wscale 7], length 0
+14:12:51.154435 IP (tos 0xc0, ttl 255, id 119, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.43105 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x673a), seq 1025888406, win 64240, options [mss 1460,sackOK,TS val 3273481700 ecr 0,nop,wscale 7], length 0
+14:12:53.234502 IP (tos 0xc0, ttl 255, id 120, offset 0, flags [DF], proto TCP (6), length 60)
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 "
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:13:05.474158 IP (tos 0xc0, ttl 255, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.179 > 10.0.253.0.34181: Flags [S.], cksum 0x0e31 (incorrect -> 0xc668), seq 3207197524, ack 819929844, win 65160, options [mss 1460,sackOK,TS val 3273496020 ecr 2532178065,nop,wscale 7], length 0
+14:13:07.394152 IP (tos 0xc0, ttl 255, id 32050, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.41867 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x5e2c), seq 2822386677, win 64240, options [mss 1460,sackOK,TS val 3273497940 ecr 0,nop,wscale 7], length 0
+14:13:10.164270 IP (tos 0xc0, ttl 255, id 20902, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.42663 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x4496), seq 434687471, win 64240, options [mss 1460,sackOK,TS val 3273500710 ecr 0,nop,wscale 7], length 0
+14:13:11.233765 IP (tos 0xc0, ttl 255, id 20903, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.42663 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x4068), seq 434687471, win 64240, options [mss 1460,sackOK,TS val 3273501780 ecr 0,nop,wscale 7], length 0
+14:13:13.313983 IP (tos 0xc0, ttl 255, id 20904, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.42663 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x3848), seq 434687471, win 64240, options [mss 1460,sackOK,TS val 3273503860 ecr 0,nop,wscale 7], length 0
+14:13:17.393735 IP (tos 0xc0, ttl 255, id 20905, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.42663 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x2858), seq 434687471, win 64240, options [mss 1460,sackOK,TS val 3273507940 ecr 0,nop,wscale 7], length 0
+
+6 packets captured
+6 packets received by filter
+0 packets dropped by kernel
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 12133
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     18572     35727        0    0    0 00:03:00            0       18 HostB12_1
+Ethernet24      4      65107     18534     34591        0    0    0 00:02:46            0       18 HostB12_2
+Ethernet28      4      65108     18575     34491        0    0    0 00:00:06            0       18 MonitorSrv
+Ethernet120     4      65000      1575      7757        0    0    0 07:23:49           15       18 Spine_S2
+Ethernet124     4      65000      4512     10515        0    0    0 00:00:12           15       18 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000      1575      7757        0    0    0 07:23:49            0        0 Spine_S2
+Ethernet124     4      65000      4512     10515        0    0    0 00:00:12            0        0 Spine_S1
+
+Total number of neighbors 2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 12163
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     18576     35885        0    0    0 00:02:42            0       18 HostB12_1
+Ethernet24      4      65107     18538     34747        0    0    0 00:02:28            0       18 HostB12_2
+Ethernet28      4      65108     18577     34627        0    0    0 00:02:49            0       18 MonitorSrv
+Ethernet120     4      65000      1581      7765        0    0    0 07:29:33           15       18 Spine_S2
+Ethernet124     4      65000      4537     10541        0    0    0 00:02:55           15       18 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000      1581      7765        0    0    0 07:29:33            0        0 Spine_S2
+Ethernet124     4      65000      4537     10541        0    0    0 00:02:55            0        0 Spine_S1
+
+Total number of neighbors 2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 18
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106     11896     11898        0    0    0 09:53:57            1       18 HostB12_1
+Ethernet24      4      65107     11895     11897        0    0    0 09:53:53            1       18 HostB12_2
+Ethernet28      4      65108     11895     11897        0    0    0 09:53:53            1       18 MonitorSrv
+Ethernet120     4      65000       612       614        0    0    0 09:53:52           12       18 Spine_S2
+Ethernet124     4      65000       611       614        0    0    0 09:53:52           10       18 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000       612       614        0    0    0 09:53:52            0        0 Spine_S2
+Ethernet124     4      65000       611       614        0    0    0 09:53:52            0        0 Spine_S1
+
+Total number of neighbors 2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 | head -20"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:29:38.329472 IP (tos 0xc0, ttl 255, id 29878, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.36163 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xfefc), seq 4074913733, win 64240, options [mss 1460,sackOK,TS val 3274488900 ecr 0,nop,wscale 7], length 0
+14:29:41.129311 IP (tos 0xc0, ttl 255, id 45047, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.41951 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xe191), seq 1141828216, win 64240, options [mss 1460,sackOK,TS val 3274491700 ecr 0,nop,wscale 7], length 0
+14:29:42.169255 IP (tos 0xc0, ttl 255, id 45048, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.41951 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xdd81), seq 1141828216, win 64240, options [mss 1460,sackOK,TS val 3274492740 ecr 0,nop,wscale 7], length 0
+14:29:44.249277 IP (tos 0xc0, ttl 255, id 45049, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.41951 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xd561), seq 1141828216, win 64240, options [mss 1460,sackOK,TS val 3274494820 ecr 0,nop,wscale 7], length 0
+14:29:48.329061 IP (tos 0xc0, ttl 255, id 45050, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.41951 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xc571), seq 1141828216, win 64240, options [mss 1460,sackOK,TS val 3274498900 ecr 0,nop,wscale 7], length 0
+
+5 packets captured
+5 packets received by filter
+0 packets dropped by kernel
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 | head -20"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:30:11.160155 IP (tos 0xc0, ttl 255, id 43371, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.45933 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xe277), seq 727427108, win 64240, options [mss 1460,sackOK,TS val 882221147 ecr 0,nop,wscale 7], length 0
+14:30:12.711872 IP (tos 0xc0, ttl 1, id 37053, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.2.33317 > 10.0.253.3.179: Flags [S], cksum 0x6c4a (correct), seq 2778174413, win 63420, options [mss 9060,sackOK,TS val 4077979889 ecr 0,nop,wscale 9], length 0
+14:30:12.718091 IP (tos 0xc0, ttl 255, id 0, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.179 > 10.0.253.2.33317: Flags [S.], cksum 0x0e35 (incorrect -> 0x150a), seq 3126711542, ack 2778174414, win 65160, options [mss 1460,sackOK,TS val 882222705 ecr 4077915308,nop,wscale 7], length 0
+14:30:15.240096 IP (tos 0xc0, ttl 255, id 43372, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.45933 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xd287), seq 727427108, win 64240, options [mss 1460,sackOK,TS val 882225227 ecr 0,nop,wscale 7], length 0
+14:30:18.051387 IP (tos 0xc0, ttl 255, id 41001, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.43449 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xc78c), seq 1537114516, win 64240, options [mss 1460,sackOK,TS val 882228039 ecr 0,nop,wscale 7], length 0
+14:30:19.080078 IP (tos 0xc0, ttl 255, id 41002, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.43449 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xc388), seq 1537114516, win 64240, options [mss 1460,sackOK,TS val 882229067 ecr 0,nop,wscale 7], length 0
+14:30:21.159945 IP (tos 0xc0, ttl 255, id 41003, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.43449 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xbb68), seq 1537114516, win 64240, options [mss 1460,sackOK,TS val 882231147 ecr 0,nop,wscale 7], length 0
+
+7 packets captured
+7 packets received by filter
+0 packets dropped by kernel
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+
+<domain type='kvm'>
+  <name>Exit_Router1</name>
+  <uuid>b0b6d780-fbbf-4eab-9d7b-b3573cf7449e</uuid>
+  <memory unit='KiB'>1048576</memory>
+  <currentMemory unit='KiB'>1048576</currentMemory>
+  <vcpu placement='static'>1</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-i440fx-resolute'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <cpu mode='host-passthrough' check='none' migratable='on'/>
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no'/>
+    <suspend-to-disk enabled='no'/>
+  </pm>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/home/nh1221/dc_lab/disks/Exit_Router1.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </disk>
+    <controller type='usb' index='0' model='ich9-ehci1'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x7'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci1'>
+      <master startport='0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0' multifunction='on'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci2'>
+      <master startport='2'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x1'/>
+    </controller>
+    <controller type='usb' index='0' model='ich9-uhci3'>
+      <master startport='4'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x2'/>
+    </controller>
+    <controller type='pci' index='0' model='pci-root'/>
+    <interface type='network'>
+      <mac address='52:54:00:09:95:29'/>
+      <source network='dc-mgmt'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+    </interface>
+    <interface type='network'>
+      <mac address='52:54:00:0f:cd:fb'/>
+      <source network='br-BL1-ER1'/>
+      <model type='virtio'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+    </interface>
+    <serial type='pty'>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <input type='mouse' bus='ps2'/>
+    <input type='keyboard' bus='ps2'/>
+    <audio id='1' type='none'/>
+    <memballoon model='virtio'>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+    </memballoon>
+  </devices>
+</domain>	
