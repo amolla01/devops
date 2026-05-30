@@ -1,0 +1,116 @@
+---
+# server_base/tasks/day1_network.yml
+# Day-1 network configuration for Ubuntu bare-metal servers.
+# Configures: Netplan (bond, interfaces), FRR (eBGP to leaf pair).
+
+- name: "day1 | Install required network packages"
+  ansible.builtin.apt:
+    name: "{{ server_packages | default(['frr', 'frr-pythontools', 'lldpd']) }}"
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+  environment:
+    http_proxy: "{{ server_http_proxy | default(lookup('env', 'HTTP_PROXY') | default(omit, true)) }}"
+    https_proxy: "{{ server_https_proxy | default(lookup('env', 'HTTPS_PROXY') | default(omit, true)) }}"
+  tags: [day1, deploy, packages, frr]
+
+- name: "day1 | Detect fabric interfaces"
+  ansible.builtin.set_fact:
+    _server_fabric_ifaces: >-
+      {{
+        ansible_interfaces
+        | reject('equalto', 'lo')
+        | reject('equalto', ansible_default_ipv4.interface | default(''))
+        | reject('match', '^docker|^br-|^veth|^virbr|^tun|^tap|^bond|^dummy')
+        | sort
+        | list
+      }}
+  tags: [day1, deploy, netplan, bgp]
+
+- name: "day1 | Report detected fabric interfaces"
+  ansible.builtin.debug:
+    msg: "Fabric interfaces on {{ inventory_hostname }}: {{ _server_fabric_ifaces | join(', ') }}"
+  tags: [day1, deploy, netplan, bgp]
+
+- name: "day1 | Deploy Netplan fabric configuration"
+  ansible.builtin.template:
+    src: netplan_fabric.yaml.j2
+    dest: "{{ netplan_config_path }}"
+    mode: "0600"
+    backup: yes
+  register: _netplan_config
+  tags: [day1, deploy, netplan]
+
+- name: "day1 | Apply Netplan configuration"
+  ansible.builtin.command: netplan apply
+  when: _netplan_config.changed
+  tags: [day1, deploy, netplan]
+
+- name: "day1 | Disable fabric NIC offloads"
+  ansible.builtin.command:
+    cmd: "ethtool -K {{ item }} tx off tso off gso off gro off"
+  loop: "{{ _server_fabric_ifaces | default([]) }}"
+  loop_control:
+    label: "{{ item }}"
+  changed_when: true
+  when: (_server_fabric_ifaces | default([])) | length > 0
+  tags: [day1, deploy, netplan, bgp]
+
+- name: "day1 | Enable FRR daemons"
+  ansible.builtin.lineinfile:
+    path: /etc/frr/daemons
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+    state: present
+  loop: "{{ frr_daemons | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}={{ item.value }}"
+  notify: restart frr
+  tags: [day1, deploy, frr, bgp]
+
+- name: "day1 | Deploy FRR configuration"
+  ansible.builtin.template:
+    src: frr.conf.j2
+    dest: "{{ frr_config_path }}"
+    mode: "0640"
+    owner: frr
+    group: frr
+    backup: yes
+  notify: restart frr
+  tags: [day1, deploy, frr, bgp]
+
+- name: "day1 | Ensure FRR is enabled and running"
+  ansible.builtin.systemd:
+    name: frr
+    enabled: yes
+    state: started
+  tags: [day1, deploy, frr, bgp]
+
+- name: "day1 | Verify bond interface is up"
+  ansible.builtin.command: ip link show bond0
+  register: _bond_status
+  changed_when: false
+  failed_when: false
+  tags: [day1, verify, netplan]
+
+- name: "day1 | Verify BGP session status"
+  ansible.builtin.command: vtysh -c "show bgp summary"
+  register: _bgp_summary
+  changed_when: false
+  failed_when: false
+  tags: [day1, verify, frr, bgp]
+
+- name: "day1 | Network deployment summary"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      Day-1 Network Complete: {{ hostname }} (Ubuntu Server)
+      ============================================================
+      Bond:         bond0 ({{ bond_ip }})
+      Interfaces:   {{ netplan.network.bonds.bond0.interfaces | join(', ') }}
+      BGP ASN:      {{ frr_bgp.local_asn }}
+      Router-ID:    {{ frr_bgp.router_id }}
+      Peers:        {{ frr_bgp.neighbors | map(attribute='description') | join(', ') }}
+      Bond status:  {{ 'UP' if 'UP' in (_bond_status.stdout | default('')) else 'DOWN/PENDING' }}
+      ============================================================
+  tags: [day1, verify]
