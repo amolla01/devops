@@ -1,87 +1,74 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "ping -c 3 10.0.253.1"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-PING 10.0.253.1 (10.0.253.1) 56(84) bytes of data.
-64 bytes from 10.0.253.1: icmp_seq=1 ttl=64 time=0.806 ms
-64 bytes from 10.0.253.1: icmp_seq=2 ttl=64 time=1.23 ms
-64 bytes from 10.0.253.1: icmp_seq=3 ttl=64 time=0.976 ms
+Microsoft Windows [Version 10.0.26200.8457]
+(c) Microsoft Corporation. All rights reserved.
 
---- 10.0.253.1 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2002ms
-rtt min/avg/max/mdev = 0.806/1.004/1.230/0.174 ms
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "ip neigh show dev Ethernet0"
-   ning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
- 0.0.253.1 lladdr 52:54:00:0f:cd:fb REACHABLE
+C:\Users\nh1221>wsl -d Ubuntu-24.04
+Welcome to Ubuntu 24.04.3 LTS (GNU/Linux 6.6.114.1-microsoft-standard-WSL2 x86_64)
 
-fe80::fc54:ff:fefb:51d3 lladdr fe:54:00:fb:51:d3 STALE
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo iptables -L INPUT -n --line-numbers | head -50"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-Chain INPUT (policy ACCEPT)
-num  target     prot opt source               destination
-1    ACCEPT     0    --  127.0.0.1            0.0.0.0/0
-2    ACCEPT     0    --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
-3    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 8
-4    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 0
-5    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 3
-6    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 11
-7    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:67:68
-8    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:546:547
-9    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:179
-10   DROP       0    --  0.0.0.0/0            10.0.2.1
-11   ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2
-12   ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 udp dpts:1025:65535
-13   ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 tcp dpts:1025:65535
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show run' | grep -B2 -A8 '10.0.253'"
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
 
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
- neighbor Ethernet124 description Spine_S1
- neighbor Ethernet124 bfd
- neighbor 10.0.253.1 remote-as 65253
- neighbor 10.0.253.1 description Exit_Router1
- neighbor 10.0.253.1 bfd
- neighbor 10.0.253.1 disable-connected-check
- neighbor 10.0.253.1 update-source 10.0.253.0
- !
- address-family ipv4 unicast
-  redistribute connected
-  neighbor Ethernet20 activate
-  neighbor Ethernet24 activate
-  neighbor Ethernet28 activate
-  neighbor Ethernet120 activate
-  neighbor Ethernet124 activate
-  neighbor 10.0.253.1 activate
- exit-address-family
- !
- address-family ipv6 unicast
-  redistribute connected
-  neighbor Ethernet120 activate
-  neighbor Ethernet124 activate
- exit-address-family
- !
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1
+ System information as of Sat May 30 00:07:19 CDT 2026
+
+  System load:  0.07                Processes:             36
+  Usage of /:   0.4% of 1006.85GB   Users logged in:       1
+  Memory usage: 7%                  IPv4 address for eth6: 192.168.9.199
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+This message is shown once a day. To disable it please create the
+/home/nh1221/.hushlogin file.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-Border_Leaf1 place-before=[find where comment~\"drop-all-else\" and chain=input]"
 Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-
-
-
-  MMM      MMM       KKK                          TTTTTTTTTTT      KKK
-  MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
-  MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
-  MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
-  MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
-  MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
-
-  MikroTik RouterOS 7.16 (c) 1999-2024       https://www.mikrotik.com/
-
-
-Press F1 for help
-
-[admin@Exit_Router1] > /ping 10.0.253.0 count=3 interface=ether2
-  SEQ HOST                                     SIZE TTL TIME       STATUS
-    0 10.0.253.0                                 56  64 1ms212us
-    1 10.0.253.0                                 56  64 1ms303us
-    2 10.0.253.0                                 56  64 1ms398us
-    sent=3 received=3 packet-loss=0% min-rtt=1ms212us avg-rtt=1ms304us max-rtt=1ms398us
-
-[admin@Exit_Router1] > /ip/firewall/filter/print
+invalid internal item number
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh exit_router1 "/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=
+[:index [find where comment~\"drop-all-else\" and chain=input] 0]"
+^C
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=
+[:index [find where comment~\"drop-all-else\" and chain=input] 0]"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+bad command name index (line 1 column 150)
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/ip firewall filter print count-only; /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=[find where comment~\"drop-all-else\" and chain=input]"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+21
+invalid internal item number
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "{ /ip firewall filter print count-only; /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=[find where comment~\"drop-all-else\" and chain=input] }"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+21
+invalid internal item number
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/ip firewall filter print count-only; :local targetID [find where comment~\"drop-all-else\" and chain=input]; /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=\$targetID"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+expected end of command (line 1 column 75)
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 << 'EOF'
+/ip firewall filter print count-only
+:local target [ /ip firewall filter find where comment~"drop-all-else" and chain="input" ]
+/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=$target
+EOF
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+21
+no such item
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 << 'EOF'
+{
+  /ip firewall filter print count-only
+  :local targetID [/ip firewall filter find where comment~"drop-all-else" and chain="input"]
+  /ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=$targetID
+}
+EOF
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+missing closing brace (line 1 column 2)
+21
+no such item
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "{ /ip firewall filter print count-only; :foreach i in=[/ip firewall filter find where comment~\"drop-all-else\" and chain=input] do={ /ip firewallfilter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-border_leaf1 place-before=\$i } }"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+21
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/ip firewall filter print where chain=input"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
 Flags: X - disabled, I - invalid; D - dynamic
  0    ;;; accept-established
       chain=input action=accept connection-state=established,related
@@ -90,46 +77,203 @@ Flags: X - disabled, I - invalid; D - dynamic
       chain=input action=accept protocol=icmp
 
  2    ;;; accept-ssh-mgmt
-      chain=input action=accept protocol=tcp src-address=172.16.2.0/24 dst-port=22
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
 
- 3    ;;; accept-bfd
-      chain=input action=accept protocol=udp src-address=10.0.253.0/24 dst-port=3784,3785
+ 4    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
- 4    ;;; drop-all-else
+18    ;;; accept-bgp-border_leaf1
+      chain=input action=accept protocol=tcp src-address=10.0.253.0
+      dst-port=179
+
+ 5    ;;; drop-all-else
       chain=input action=drop
 
- 5    ;;; fwd-established
-      chain=forward action=accept connection-state=established,related
-
- 6    ;;; fwd-fabric-out
-      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
-
- 7    ;;; drop-invalid-fwd
-      chain=forward action=drop connection-state=invalid
-
- 8    ;;; accept-established
+ 9    ;;; accept-established
       chain=input action=accept connection-state=established,related
 
- 9    ;;; accept-icmp
+10    ;;; accept-icmp
       chain=input action=accept protocol=icmp
 
-10    ;;; accept-ssh-mgmt
-      chain=input action=accept protocol=tcp src-address=172.16.2.0/24 dst-port=22
+11    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
 
-11    ;;; accept-bfd
-      chain=input action=accept protocol=udp src-address=10.0.253.0/24 dst-port=3784,3785
+13    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-12    ;;; drop-all-else
+19    ;;; accept-bgp-border_leaf1
+      chain=input action=accept protocol=tcp src-address=10.0.253.0
+      dst-port=179
+
+14    ;;; drop-all-else
       chain=input action=drop
 
-13    ;;; fwd-established
-      chain=forward action=accept connection-state=established,related
+20    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-14    ;;; fwd-fabric-out
-      chain=forward action=accept src-address=10.0.0.0/8 out-interface=ether1
+21    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-15    ;;; drop-invalid-fwd
-      chain=forward action=drop connection-state=invalid
+22    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
 
-16    ;;; accept-bfd
--- [Q quit|D dump|down]
+23    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
+
+24    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router2 "{ /ip firewall filter print count-only; :foreach i in=[/ip firewall filter find where comment~\"drop-all-else\" and chain=input] do={ /ip firewall
+filter add chain=input action=accept protocol=tcp src-address=10.0.253.2/32 dst-port=179 comment=accept-bgp-border_leaf2 place-before=\$i } }"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+21
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router2 "/ip firewall filter print where chain=input"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: X - disabled, I - invalid; D - dynamic
+ 0    ;;; accept-established
+      chain=input action=accept connection-state=established,related
+
+ 1    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
+
+ 2    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
+
+ 4    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+18    ;;; accept-bgp-border_leaf2
+      chain=input action=accept protocol=tcp src-address=10.0.253.2
+      dst-port=179
+
+ 5    ;;; drop-all-else
+      chain=input action=drop
+
+ 9    ;;; accept-established
+      chain=input action=accept connection-state=established,related
+
+10    ;;; accept-icmp
+      chain=input action=accept protocol=icmp
+
+11    ;;; accept-ssh-mgmt
+      chain=input action=accept protocol=tcp src-address=172.16.2.0/24
+      dst-port=22
+
+13    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+19    ;;; accept-bgp-border_leaf2
+      chain=input action=accept protocol=tcp src-address=10.0.253.2
+      dst-port=179
+
+14    ;;; drop-all-else
+      chain=input action=drop
+
+20    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+21    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+22    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+23    ;;; accept-bgp-fabric
+      chain=input action=accept protocol=tcp src-address=10.0.253.0/24
+      dst-port=179
+
+24    ;;; accept-bfd
+      chain=input action=accept protocol=udp src-address=10.0.253.0/24
+      dst-port=3784,3785
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 2674
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106      6350      8211        0    0    0 00:00:08           16       18 HostB12_1
+Ethernet24      4      65107      6303      7604        0    0    0 00:00:05           16       18 HostB12_2
+Ethernet28      4      65108      6345      8055        0    0    0 00:00:05           16       18 MonitorSrv
+Ethernet120     4      65000       398      2436        0    0    0 00:02:01           15       18 Spine_S2
+Ethernet124     4      65000       396      2419        0    0    0 00:01:58           15       18 Spine_S1
+10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000       398      2436        0    0    0 00:02:01            0        0 Spine_S2
+Ethernet124     4      65000       396      2419        0    0    0 00:01:58            0        0 Spine_S1
+
+Total number of neighbors 2
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/routing/bgp/session/print"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: E - established
+ 0   name="to_Border_Leaf1-1"
+     remote.address=10.0.253.0 .as=0 .hold-time=infinity
+     local.address=10.0.253.1 .as=65253 .id=10.0.99.1 .cluster-id=10.0.99.1
+     .capabilities=mp,rr,gr,as4 .afi=ip ebgp
+     prefix-count=0
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router1 "/routing/bgp/connection/print"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf1"
+     remote.address=10.0.253.0 .as=65021
+     local.address=10.0.253.1 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.1 as=65253
+     hold-time=3m keepalive-time=1m address-families=ip
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router2 "/routing/bgp/session/print"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: E - established
+ 0   name="to_Border_Leaf2-1"
+     remote.address=10.0.253.2 .as=0 .hold-time=infinity
+     local.address=10.0.253.3 .as=65254 .id=10.0.99.2 .cluster-id=10.0.99.2
+     .capabilities=mp,rr,gr,as4 .afi=ip ebgp
+     prefix-count=0
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh Exit_Router2 "/routing/bgp/connection/print"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf2"
+     remote.address=10.0.253.2 .as=65022
+     local.address=10.0.253.3 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.2 as=65254
+     hold-time=3m keepalive-time=1m address-families=ip
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
