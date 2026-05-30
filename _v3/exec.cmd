@@ -439,3 +439,30 @@ ssh Exit_Router2 "/interface ethernet set ether3 tx-offload=no"
 Once we confirm which approach works, I'll integrate it into the playbook.
 
 Claude Opus 4.6 • 3x
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+Now I can see the full picture. The bridges are OVS bridges (that's why ip link show master returned empty). Key info:
+
+vnet613 = Exit_Router1's fabric NIC on br-BL1-ER1
+vnet547 = Border_Leaf1's Ethernet0 on br-BL1-ER1
+vnet615 = Exit_Router2's fabric NIC on br-BL2-ER2
+vnet580 = Border_Leaf2's Ethernet0 on br-BL2-ER2
+We disabled TX offload on the wrong side (vnet613/615 = MikroTik's taps). The fix needs to be on the SONiC receiving side taps — vnet547 and vnet580. When TX offload is disabled on these, the host kernel must compute the full checksum BEFORE injecting the packet into the SONiC VM:
+
+Run on R810:
+
+sudo ethtool -K vnet547 tx off
+sudo ethtool -K vnet580 tx off
+
+Then from Lab-ControlNode:
+
+ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+# Wait 10 seconds
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+
+
+Why this works: SONiC's virtio shows rx-checksumming: off [fixed] — it did NOT negotiate VIRTIO_NET_F_GUEST_CSUM with the host. So the host can't tell SONiC to skip validation. By disabling TX offload on vnet547/vnet580, the host's dev_queue_xmit() calls skb_checksum_help() to finalize the partial checksum before delivering through the virtio ring to SONiC.
+
+Claude Opus 4.6 • 3x
