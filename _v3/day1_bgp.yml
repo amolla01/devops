@@ -12,7 +12,7 @@
   ansible.builtin.set_fact:
     fabric_interfaces: "{{ fabric_interfaces_real if (automation_profile | default('') == 'real_hardware' and fabric_interfaces_real is defined) else fabric_interfaces_kvm }}"
   when: fabric_interfaces is not defined and (fabric_interfaces_kvm is defined or fabric_interfaces_real is defined)
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Probe running ethernet interfaces on KVM CHR"
   ansible.builtin.shell: |
@@ -25,7 +25,7 @@
   when:
     - automation_profile | default('') != 'real_hardware'
     - fabric_interfaces | default([]) | length == 1
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Parse running data interfaces on KVM CHR"
   ansible.builtin.set_fact:
@@ -39,7 +39,7 @@
   when:
     - automation_profile | default('') != 'real_hardware'
     - fabric_interfaces | default([]) | length == 1
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Rebind KVM fabric interface to the live RouterOS port"
   ansible.builtin.set_fact:
@@ -50,7 +50,7 @@
     - fabric_interfaces | default([]) | length == 1
     - _running_data_ports | default([]) | length == 1
     - fabric_interfaces[0].port != _running_data_ports[0]
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Fail when the KVM fabric interface is ambiguous"
   ansible.builtin.fail:
@@ -64,7 +64,7 @@
     - fabric_interfaces | default([]) | length == 1
     - fabric_interfaces[0].port not in (_running_data_ports | default([]))
     - (_running_data_ports | default([]) | length) != 1
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Report resolved KVM fabric interface"
   ansible.builtin.debug:
@@ -74,7 +74,7 @@
   when:
     - automation_profile | default('') != 'real_hardware'
     - fabric_interfaces | default([]) | length == 1
-  tags: [day1, interfaces, bgp, verify]
+  tags: [deploy, day1, interfaces, bgp]
 
 - name: "day1 | Configure fabric-facing interface speed"
   ansible.builtin.shell: |
@@ -84,7 +84,10 @@
     label: "{{ item.port }} ({{ item.description }})"
   changed_when: true
   failed_when: false
-  tags: [day1, interfaces]
+  when:
+    - automation_profile | default('') == 'real_hardware'
+    - item.speed is defined
+  tags: [deploy, day1, interfaces]
 
 - name: "day1 | Remove existing IP on fabric interface (idempotent re-run)"
   ansible.builtin.shell: |
@@ -95,7 +98,7 @@
   changed_when: true
   failed_when: false
   when: fabric_interfaces | selectattr('local_ip', 'defined') | list | length > 0
-  tags: [day1, interfaces]
+  tags: [deploy, day1, interfaces]
 
 - name: "day1 | Add IP address to fabric interface"
   ansible.builtin.shell: |
@@ -107,7 +110,7 @@
   changed_when: _ip_add_result.rc == 0
   failed_when: _ip_add_result.rc != 0
   when: fabric_interfaces | selectattr('local_ip', 'defined') | list | length > 0
-  tags: [day1, interfaces]
+  tags: [deploy, day1, interfaces]
 
 - name: "day1 | Verify IP is present on fabric interface"
   ansible.builtin.shell: |
@@ -119,14 +122,14 @@
   changed_when: false
   failed_when: item.local_ip.split('/')[0] not in (_ip_verify.stdout | default(''))
   when: fabric_interfaces | selectattr('local_ip', 'defined') | list | length > 0
-  tags: [day1, interfaces]
+  tags: [deploy, day1, interfaces]
 
 - name: "day1 | Remove stale BGP firewall accept rules (idempotent re-run)"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/ip firewall filter remove [find where comment~"accept-bgp"]'
   changed_when: true
   failed_when: false
-  tags: [day1, bgp]
+  tags: [deploy, day1, bgp]
 
 - name: "day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer"
   ansible.builtin.shell: |
@@ -137,14 +140,14 @@
   changed_when: true
   failed_when: false
   when: fabric_interfaces | selectattr('neighbor_ip', 'defined') | list | length > 0
-  tags: [day1, bgp]
+  tags: [deploy, day1, bgp]
 
 - name: "day1 | Remove existing BGP connections (idempotent re-run)"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/routing bgp connection remove [find]'
   changed_when: true
   failed_when: false
-  tags: [day1, bgp]
+  tags: [deploy, day1, bgp]
 
 - name: "day1 | Configure BGP connection to neighbor"
   ansible.builtin.shell: |
@@ -155,7 +158,7 @@
   changed_when: true
   failed_when: false
   when: fabric_interfaces | selectattr('neighbor_ip', 'defined') | list | length > 0
-  tags: [day1, bgp]
+  tags: [deploy, day1, bgp]
 
 - name: "day1 | Verify BGP connections"
   ansible.builtin.shell: |
