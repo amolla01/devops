@@ -352,3 +352,27 @@ ssh Exit_Router1 "/routing bgp connection disable to_Border_Leaf1; :delay 3; /ro
 ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
 ssh Exit_Router1 "/routing/bgp/session/print"
 The tcpdump (#2) is the most important — it will show us whether SYN packets are actually being sent/received and what happens to them (SYN-ACK? RST? Nothing?). That will pinpoint exactly where the connection is breaking.
+EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+The tcpdump is conclusive. Look at the verbose output:
+10.0.253.1.44089 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xc155)
+Every packet from MikroTik has an INVALID TCP checksum (0x0e31 — same value across all packets with different payloads). This is the partial pseudo-header checksum — MikroTik CHR is relying on TX checksum offload but the KVM virtual bridge passes the packet to BL1's VM without computing the final checksum.
+
+BL1's kernel validates the checksum, finds it wrong, and silently drops the packet. That's why:
+ER1→BL1 SYNs: dropped (no SYN-ACK sent)
+BL1→ER1 SYN gets a SYN-ACK from ER1, but BL1 drops that SYN-ACK too (bad checksum) → no ACK
+Fix — disable RX checksum validation on Ethernet0:
+
+ssh Border_Leaf1 "sudo ethtool -K Ethernet0 rx off"
+ssh Border_Leaf2 "sudo ethtool -K Ethernet0 rx off"
+
+# Force BGP retry
+ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+
+# Verify (wait 5-10 seconds)
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+
+This is a well-known KVM inter-VM issue: when two VMs on the same hypervisor communicate through a Linux bridge, TX checksum offload on the sender can leave incomplete checksums if the bridge doesn't finalize them. ICMP/ping works because ICMP checksum is computed in software by MikroTik, but TCP relies on NIC offload which the virtual NIC never actually performs.
+
+Once confirmed working, I'll add it to the playbook for persistence across reboots.
