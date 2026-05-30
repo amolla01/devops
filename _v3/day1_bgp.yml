@@ -133,7 +133,7 @@
 
 - name: "day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '{ :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$i } }'
+    {{ mikrotik_ssh_cmd }} '{ :local inserted false; :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$i; :set inserted true; :break; }; :if (!$inserted) do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }}; } }'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP accept ← {{ item.neighbor }} ({{ item.neighbor_ip }})"
