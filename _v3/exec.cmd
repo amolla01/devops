@@ -466,3 +466,74 @@ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
 Why this works: SONiC's virtio shows rx-checksumming: off [fixed] — it did NOT negotiate VIRTIO_NET_F_GUEST_CSUM with the host. So the host can't tell SONiC to skip validation. By disabling TX offload on vnet547/vnet580, the host's dev_queue_xmit() calls skb_checksum_help() to finalize the partial checksum before delivering through the virtio ring to SONiC.
 
 Claude Opus 4.6 • 3x
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+
+Analyzed TCP SYN issue with MikroTik and BL1
+The OVS restart likely reset the ethtool settings on the tap devices. Let me give you the correct sequence. First, verify the settings are still applied after the OVS restart, then do a tcpdump to confirm:
+
+On R810 hypervisor:
+# 1. Check if ethtool settings survived the OVS restart
+ethtool -k vnet547 | grep tx-checksum
+ethtool -k vnet580 | grep tx-checksum
+
+# 2. Re-apply (they were likely reset)
+sudo ethtool -K vnet547 tx off
+sudo ethtool -K vnet580 tx off
+
+# 3. Also disable on the MikroTik side taps (belt + suspenders)
+sudo ethtool -K vnet613 tx off
+sudo ethtool -K vnet615 tx off
+
+
+# 1. Check if ethtool settings survived the OVS restartethtool -k vnet547 | grep tx-checksumethtool -k vnet580 | grep tx-checksum# 2. Re-apply (they were likely reset)sudo ethtool -K vnet547 tx offsudo ethtool -K vnet580 tx off# 3. Also disable on the MikroTik side taps (belt + suspenders)sudo ethtool -K vnet613 tx offsudo ethtool -K vnet615 tx off
+Then from Lab-ControlNode — do tcpdump FIRST to verify checksums are fixed:
+
+# Clear BGP
+ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+
+# Immediately capture — look for "correct" instead of "incorrect"
+ssh Border_Leaf1 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 | head -20"
+
+
+# Clear BGPssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"# Immediately capture — look for "correct" instead of "incorrect"ssh Border_Leaf1 "sudo timeout 15 tcpdump -i Ethernet0 -n -v 'tcp port 179' 2>&1 | head -20"
+If checksums are STILL incorrect after re-applying ethtool, then OVS is bypassing the kernel TX path. In that case, the permanent fix is to edit the MikroTik VM's libvirt XML to disable checksum offload at the QEMU/virtio level:
+
+On R810:
+
+# Edit Exit_Router1 — find the interface with source bridge='br-BL1-ER1'
+sudo virsh edit Exit_Router1
+
+
+
+# Edit Exit_Router1 — find the interface with source bridge='br-BL1-ER1'sudo virsh edit Exit_Router1
+Find this block:
+<interface type='bridge'>
+  <source bridge='br-BL1-ER1'/>
+  <model type='virtio'/>
+  ...
+</interface>
+
+<interface type='bridge'>  <source bridge='br-BL1-ER1'/>  <model type='virtio'/>  ...</interface>
+Add the <driver> element:
+<interface type='bridge'>
+  <source bridge='br-BL1-ER1'/>
+  <model type='virtio'/>
+  <driver>
+    <host csum='off' gso='off' tso4='off' tso6='off'/>
+  </driver>
+  ...
+</interface>
+
+<interface type='bridge'>  <source bridge='br-BL1-ER1'/>  <model type='virtio'/>  <driver>    <host csum='off' gso='off' tso4='off' tso6='off'/>  </driver>  ...</interface>
+Do the same for Exit_Router2 (bridge br-BL2-ER2), then cold-restart both:
+
+sudo virsh destroy Exit_Router1; sudo virsh start Exit_Router1
+sudo virsh destroy Exit_Router2; sudo virsh start Exit_Router2
+
+
+sudo virsh destroy Exit_Router1; sudo virsh start Exit_Router1sudo virsh destroy Exit_Router2; sudo virsh start Exit_Router2
+This tells QEMU to not negotiate VIRTIO_NET_F_CSUM with the MikroTik guest on the fabric NIC, forcing it to compute full TCP checksums in software. This is the only 100% permanent fix — survives OVS restarts, VM reboots, everything.
+
+Start with re-applying ethtool + tcpdump to confirm the theory. If checksums are still bad, go with the libvirt XML edit.
+
