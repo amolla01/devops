@@ -11,28 +11,13 @@ deploy_day1.yml. The wrapper maps day0 and day1 directly to those playbooks in d
 
 Run these from /mnt/c/Users/nh1221/data-center/_v3:
 
-./deploy_lab_v3.sh \
-  --remote-v13-host nh1221@R810 \
-  --ssh-key /mnt/c/Users/nh1221/.ssh/id_dc_lab \
-  --profile ubuntu_r810_kvm \
-  kvm-validate
+./deploy_lab_v3.sh --remote-v13-host nh1221@R810 --ssh-key /mnt/c/Users/nh1221/.ssh/id_dc_lab --profile ubuntu_r810_kvm kvm-validate
 
-  ansible-playbook playbooks/reused/deploy_day0.yml \
-  -i inventory/hosts.yml \
-  -e automation_profile=ubuntu_r810_kvm \
-  -v
+  ansible-playbook playbooks/reused/deploy_day0.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm -v
 
-  ansible-playbook playbooks/reused/deploy_day1.yml \
-  -i inventory/hosts.yml \
-  -e automation_profile=ubuntu_r810_kvm \
-  --tags deploy \
-  -v
+  ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --tags deploy -v
 
-  ansible-playbook playbooks/reused/deploy_day1.yml \
-  -i inventory/hosts.yml \
-  -e automation_profile=ubuntu_r810_kvm \
-  --tags verify \
-  -v
+  ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --tags verify -v
 
   That full sequence covers all three areas you asked for:
 
@@ -47,19 +32,9 @@ If you want the wrapper form instead of raw playbooks, the equivalent high-level
 But for your current troubleshooting, the raw ansible-playbook form is better because you can separate deploy from verify.
 
 If the full-lab verify still fails and you want to focus only on the exit routers afterward, use:
-ansible-playbook playbooks/reused/deploy_day1.yml \
-  -i inventory/hosts.yml \
-  -e automation_profile=ubuntu_r810_kvm \
-  --limit exit_routers \
-  --tags deploy \
-  -v
+ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit exit_routers --tags deploy -v
 
-  ansible-playbook playbooks/reused/deploy_day1.yml \
-  -i inventory/hosts.yml \
-  -e automation_profile=ubuntu_r810_kvm \
-  --limit exit_routers \
-  --tags verify \
-  -v
+  ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit exit_routers --tags verify -v
 
   If you also want the post-playbook verification commands, run these right after --tags verify:
 
