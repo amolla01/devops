@@ -25,14 +25,20 @@ ok: [Border_Leaf2]
 
 TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
 ok: [Border_Leaf1]
-ok: [Border_Leaf2]
 
 TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
 skipping: [Border_Leaf1]
-skipping: [Border_Leaf2]
+
+TASK [sonic_fabric : fabric | Validate local hardware profile mapping] ******************************************************************************************************************************************
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
 skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : fabric | Check current port breakout mode matches expected (real hardware)] ****************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_fabric : fabric | Report breakout pre-check result] *************************************************************************************************************************************************
 skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : fabric | Fail if no interfaces match play hosts] *******************************************************************************************************************************************
@@ -40,8 +46,8 @@ skipping: [Border_Leaf1]
 skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : fabric | Resolve interface metadata from hardware files] ***********************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
 ok: [Border_Leaf2 -> localhost]
+ok: [Border_Leaf1 -> localhost]
 
 TASK [sonic_fabric : fabric | Use hardware-resolved interface metadata] *****************************************************************************************************************************************
 ok: [Border_Leaf1]
@@ -58,8 +64,8 @@ ok: [Border_Leaf2] =>
         Ethernet0(speed=10000, hw=40000, breakout=1x40G[10G])'
 
 TASK [sonic_fabric : fabric | Ensure local render directory exists] *********************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
 ok: [Border_Leaf2 -> localhost]
+ok: [Border_Leaf1 -> localhost]
 
 TASK [sonic_fabric : fabric | Render fabric config_db.json] *****************************************************************************************************************************************************
 ok: [Border_Leaf2 -> localhost]
@@ -78,25 +84,38 @@ ok: [Border_Leaf1]
 ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Check fabric port exists in running config] ****************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf1] => (item=Ethernet124)
-ok: [Border_Leaf2] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf1] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet120)
+ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_fabric : apply | Fail if a fabric port is missing from APPL_DB] *************************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet124)
+
+TASK [sonic_fabric : apply | Check fabric port exists in running config] ****************************************************************************************************************************************
 ok: [Border_Leaf2] => (item=Ethernet0)
 
 TASK [sonic_fabric : apply | Fail if a fabric port is missing from APPL_DB] *************************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet120)
+skipping: [Border_Leaf1] => (item=Ethernet0)
+skipping: [Border_Leaf1]
 skipping: [Border_Leaf2] => (item=Ethernet124)
 skipping: [Border_Leaf2] => (item=Ethernet120)
 skipping: [Border_Leaf2] => (item=Ethernet0)
 skipping: [Border_Leaf2]
 
-TASK [sonic_fabric : apply | Check fabric port exists in running config] ****************************************************************************************************************************************
+TASK [sonic_fabric : apply | Check current lane count for target fabric ports] **********************************************************************************************************************************
 ok: [Border_Leaf1] => (item=Ethernet0)
 
-TASK [sonic_fabric : apply | Fail if a fabric port is missing from APPL_DB] *************************************************************************************************************************************
-skipping: [Border_Leaf1] => (item=Ethernet124)
-skipping: [Border_Leaf1] => (item=Ethernet120)
+TASK [sonic_fabric : apply | Apply target breakout mode before patch merge] *************************************************************************************************************************************
 skipping: [Border_Leaf1] => (item=Ethernet0)
+skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Record whether breakout changed] ***************************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Wait for SSH after breakout change] ************************************************************************************************************************************************
 skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Check current lane count for target fabric ports] **********************************************************************************************************************************
@@ -106,62 +125,53 @@ TASK [sonic_fabric : apply | Apply target breakout mode before patch merge] ****
 skipping: [Border_Leaf2] => (item=Ethernet0)
 skipping: [Border_Leaf2]
 
-TASK [sonic_fabric : apply | Check current lane count for target fabric ports] **********************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet0)
-
-TASK [sonic_fabric : apply | Apply target breakout mode before patch merge] *************************************************************************************************************************************
-skipping: [Border_Leaf1] => (item=Ethernet0)
-skipping: [Border_Leaf1]
-
 TASK [sonic_fabric : apply | Record whether breakout changed] ***************************************************************************************************************************************************
 ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Wait for SSH after breakout change] ************************************************************************************************************************************************
 skipping: [Border_Leaf2]
 
-TASK [sonic_fabric : apply | Record whether breakout changed] ***************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : apply | Wait for SSH after breakout change] ************************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
 TASK [sonic_fabric : apply | Copy fabric patch JSON to switch] **************************************************************************************************************************************************
-changed: [Border_Leaf2 -> localhost]
 changed: [Border_Leaf1 -> localhost]
+changed: [Border_Leaf2 -> localhost]
 
 TASK [sonic_fabric : apply | Re-establish Ansible SSH after patch copy] *****************************************************************************************************************************************
-ok: [Border_Leaf2]
 ok: [Border_Leaf1]
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Merge patch tables into running ConfigDB (Redis)] **********************************************************************************************************************************
-changed: [Border_Leaf2]
 changed: [Border_Leaf1]
+changed: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Wait for SSH to stabilise after ConfigDB merge] ************************************************************************************************************************************
-ok: [Border_Leaf2]
 ok: [Border_Leaf1]
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Check current port speed in ConfigDB before applying] ******************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf1] => (item=Ethernet124)
-ok: [Border_Leaf2] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf1] => (item=Ethernet120)
-ok: [Border_Leaf2] => (item=Ethernet0)
+ok: [Border_Leaf2] => (item=Ethernet120)
 ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_fabric : apply | Set live fabric port speed after patch merge] **************************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet124=40000)
+skipping: [Border_Leaf1] => (item=Ethernet120=40000)
+skipping: [Border_Leaf1] => (item=Ethernet0=10000)
+skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Check current port speed in ConfigDB before applying] ******************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet0)
 
 TASK [sonic_fabric : apply | Set live fabric port speed after patch merge] **************************************************************************************************************************************
 skipping: [Border_Leaf2] => (item=Ethernet124=40000)
 skipping: [Border_Leaf2] => (item=Ethernet120=40000)
 skipping: [Border_Leaf2] => (item=Ethernet0=10000)
-skipping: [Border_Leaf1] => (item=Ethernet124=40000)
 skipping: [Border_Leaf2]
-skipping: [Border_Leaf1] => (item=Ethernet120=40000)
-skipping: [Border_Leaf1] => (item=Ethernet0=10000)
-skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Wait for SSH after port speed changes] *********************************************************************************************************************************************
-ok: [Border_Leaf2]
 ok: [Border_Leaf1]
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Persist merged config to /etc/sonic/config_db.json] ********************************************************************************************************************************
 changed: [Border_Leaf1]
@@ -184,11 +194,11 @@ skipping: [Border_Leaf1]
 TASK [sonic_fabric : apply | [ROLLBACK] Remove INTERFACE IPv6 entries from ConfigDB] ****************************************************************************************************************************
 skipping: [Border_Leaf1]
 
-TASK [sonic_fabric : apply | [ROLLBACK] Persist rolled-back config to disk] *************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
 TASK [sonic_fabric : apply | Persist merged config to /etc/sonic/config_db.json] ********************************************************************************************************************************
 changed: [Border_Leaf2]
+
+TASK [sonic_fabric : apply | [ROLLBACK] Persist rolled-back config to disk] *************************************************************************************************************************************
+skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Wait for SSH after config save (if connection dropped)] ****************************************************************************************************************************
 skipping: [Border_Leaf2]
@@ -212,20 +222,20 @@ TASK [sonic_fabric : apply | [ROLLBACK] Persist rolled-back config to disk] ****
 skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Bring fabric interface(s) admin-up] ************************************************************************************************************************************************
-changed: [Border_Leaf1] => (item=Ethernet124)
 changed: [Border_Leaf2] => (item=Ethernet124)
-changed: [Border_Leaf1] => (item=Ethernet120)
+changed: [Border_Leaf1] => (item=Ethernet124)
 changed: [Border_Leaf2] => (item=Ethernet120)
-changed: [Border_Leaf1] => (item=Ethernet0)
+changed: [Border_Leaf1] => (item=Ethernet120)
 changed: [Border_Leaf2] => (item=Ethernet0)
+changed: [Border_Leaf1] => (item=Ethernet0)
 
 TASK [sonic_fabric : apply | Kill stale ControlMaster socket after config interface startup] ********************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
 ok: [Border_Leaf2 -> localhost]
+ok: [Border_Leaf1 -> localhost]
 
 TASK [sonic_fabric : apply | Wait for SSH port 22 to recover after interface startup] ***************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
 ok: [Border_Leaf2 -> localhost]
+ok: [Border_Leaf1 -> localhost]
 
 TASK [sonic_fabric : apply | Re-establish SSH after config interface startup] ***********************************************************************************************************************************
 ok: [Border_Leaf2 -> localhost]
@@ -255,10 +265,10 @@ ok: [Border_Leaf1] => (item=Ethernet0)
 
 TASK [sonic_fabric : apply | Fail if configured fabric port speed does not match rendered speed] ****************************************************************************************************************
 ok: [Border_Leaf2] => (item=Ethernet124)
-ok: [Border_Leaf2] => (item=Ethernet120)
 ok: [Border_Leaf1] => (item=Ethernet124)
-ok: [Border_Leaf2] => (item=Ethernet0)
+ok: [Border_Leaf2] => (item=Ethernet120)
 ok: [Border_Leaf1] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet0)
 ok: [Border_Leaf1] => (item=Ethernet0)
 
 TASK [sonic_fabric : apply | Check live fabric port speed after merge] ******************************************************************************************************************************************
@@ -376,42 +386,42 @@ ok: [Border_Leaf2]
 TASK [sonic_fabric : apply | Identify IP-based BGP peers from fabric_links] *************************************************************************************************************************************
 ok: [Border_Leaf2]
 
-TASK [sonic_fabric : apply | Compute valid unnumbered port set] *************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Remove stale interface-based BGP_NEIGHBOR entries from ConfigDB] *******************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Report stale entry cleanup] ********************************************************************************************************************************************************
-skipping: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Compute effective BGP neighbor list (fabric_mode=incremental)] *********************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Display effective BGP neighbors for this run] **************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: |-
-        fabric_mode=incremental on Border_Leaf2: PRESERVING 2 unnumbered: Ethernet120, Ethernet124;
-          downlinks: Ethernet20, Ethernet24, Ethernet28;
-          IP-based: 10.0.253.3
-
 TASK [sonic_fabric : apply | Read all BGP neighbors from ConfigDB (full topology)] ******************************************************************************************************************************
 ok: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Compute valid unnumbered port set] *************************************************************************************************************************************************
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Parse full BGP neighbor list from ConfigDB] ****************************************************************************************************************************************
 ok: [Border_Leaf1]
 
+TASK [sonic_fabric : apply | Remove stale interface-based BGP_NEIGHBOR entries from ConfigDB] *******************************************************************************************************************
+skipping: [Border_Leaf2]
+
 TASK [sonic_fabric : apply | Identify IP-based BGP peers from fabric_links] *************************************************************************************************************************************
 ok: [Border_Leaf1]
 
+TASK [sonic_fabric : apply | Report stale entry cleanup] ********************************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
 TASK [sonic_fabric : apply | Compute valid unnumbered port set] *************************************************************************************************************************************************
 ok: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Compute effective BGP neighbor list (fabric_mode=incremental)] *********************************************************************************************************************
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Remove stale interface-based BGP_NEIGHBOR entries from ConfigDB] *******************************************************************************************************************
 skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Report stale entry cleanup] ********************************************************************************************************************************************************
 skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : apply | Display effective BGP neighbors for this run] **************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: |-
+        fabric_mode=incremental on Border_Leaf2: PRESERVING 2 unnumbered: Ethernet124, Ethernet120;
+          downlinks: Ethernet20, Ethernet24, Ethernet28;
+          IP-based: 10.0.253.3
 
 TASK [sonic_fabric : apply | Compute effective BGP neighbor list (fabric_mode=incremental)] *********************************************************************************************************************
 ok: [Border_Leaf1]
@@ -419,7 +429,7 @@ ok: [Border_Leaf1]
 TASK [sonic_fabric : apply | Display effective BGP neighbors for this run] **************************************************************************************************************************************
 ok: [Border_Leaf1] =>
     msg: |-
-        fabric_mode=incremental on Border_Leaf1: PRESERVING 2 unnumbered: Ethernet120, Ethernet124;
+        fabric_mode=incremental on Border_Leaf1: PRESERVING 2 unnumbered: Ethernet124, Ethernet120;
           downlinks: Ethernet20, Ethernet24, Ethernet28;
           IP-based: 10.0.253.1
 
@@ -439,64 +449,49 @@ skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Configure FRR BGP via vtysh (fabric_mode=incremental)] *****************************************************************************************************************************
 changed: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Verify FRR BGP ASN after vtysh config] *********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
-TASK [sonic_fabric : apply | Report FRR BGP ASN] ****************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: 'Border_Leaf2 FRR BGP: BGP router identifier 10.0.2.2, local AS number 65022
-        vrf-id 0. Expected local AS number 65022.'
-
-TASK [sonic_fabric : apply | Configure FRR BGP via vtysh (fabric_mode=incremental)] *****************************************************************************************************************************
 changed: [Border_Leaf1]
-
-TASK [sonic_fabric : apply | Kill stale SSH ControlMaster process after bgp restart] ****************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
 
 TASK [sonic_fabric : apply | Verify FRR BGP ASN after vtysh config] *********************************************************************************************************************************************
 ok: [Border_Leaf1]
+ok: [Border_Leaf2]
 
 TASK [sonic_fabric : apply | Report FRR BGP ASN] ****************************************************************************************************************************************************************
 ok: [Border_Leaf1] =>
     msg: 'Border_Leaf1 FRR BGP: BGP router identifier 10.0.2.1, local AS number 65021
         vrf-id 0. Expected local AS number 65021.'
+ok: [Border_Leaf2] =>
+    msg: 'Border_Leaf2 FRR BGP: BGP router identifier 10.0.2.2, local AS number 65022
+        vrf-id 0. Expected local AS number 65022.'
 
 TASK [sonic_fabric : apply | Kill stale SSH ControlMaster process after bgp restart] ****************************************************************************************************************************
 ok: [Border_Leaf1 -> localhost]
+ok: [Border_Leaf2 -> localhost]
 
 TASK [sonic_fabric : apply | Re-establish SSH connection after bgp restart] *************************************************************************************************************************************
 ok: [Border_Leaf2]
+ok: [Border_Leaf1]
 
 TASK [sonic_fabric : apply | Confirm fabric operation completed] ************************************************************************************************************************************************
 ok: [Border_Leaf2] =>
     msg: 'INCREMENTAL deploy on Border_Leaf2: new_links=Ethernet124, Ethernet120, Ethernet0,
         total_bgp_neighbors=2+3dl+1ip, bgp_asn=65022, router_id=10.0.2.2. bgp container
         is active. swss/syncd were NOT restarted.'
-
-TASK [sonic_fabric : verify | Kill stale ControlMaster socket before verify] ************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_fabric : verify | Wait for SSH port 22 before verify] ***********************************************************************************************************************************************
-ok: [Border_Leaf2 -> localhost]
-
-TASK [sonic_fabric : apply | Re-establish SSH connection after bgp restart] *************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : apply | Confirm fabric operation completed] ************************************************************************************************************************************************
 ok: [Border_Leaf1] =>
     msg: 'INCREMENTAL deploy on Border_Leaf1: new_links=Ethernet124, Ethernet120, Ethernet0,
         total_bgp_neighbors=2+3dl+1ip, bgp_asn=65021, router_id=10.0.2.1. bgp container
         is active. swss/syncd were NOT restarted.'
 
 TASK [sonic_fabric : verify | Kill stale ControlMaster socket before verify] ************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost]
+ok: [Border_Leaf1 -> localhost]
+
+TASK [sonic_fabric : verify | Wait for SSH port 22 before verify] ***********************************************************************************************************************************************
+ok: [Border_Leaf2 -> localhost]
 ok: [Border_Leaf1 -> localhost]
 
 TASK [sonic_fabric : verify | Re-establish SSH before verify] ***************************************************************************************************************************************************
 ok: [Border_Leaf2]
-
-TASK [sonic_fabric : verify | Wait for SSH port 22 before verify] ***********************************************************************************************************************************************
-ok: [Border_Leaf1 -> localhost]
+ok: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Wait for bgp + swss + syncd to stabilize] *****************************************************************************************************************************************
 ok: [Border_Leaf2]
@@ -504,38 +499,28 @@ ok: [Border_Leaf2]
 TASK [sonic_fabric : verify | Kill stale ControlMaster after stability gate] ************************************************************************************************************************************
 ok: [Border_Leaf2 -> localhost]
 
-TASK [sonic_fabric : verify | Re-establish SSH before verify] ***************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : verify | Re-establish SSH after stability gate] ********************************************************************************************************************************************
-ok: [Border_Leaf2]
-
 TASK [sonic_fabric : verify | Wait for bgp + swss + syncd to stabilize] *****************************************************************************************************************************************
 ok: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Kill stale ControlMaster after stability gate] ************************************************************************************************************************************
 ok: [Border_Leaf1 -> localhost]
 
-TASK [sonic_fabric : verify | Check fabric port admin status] ***************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet124)
-
 TASK [sonic_fabric : verify | Re-establish SSH after stability gate] ********************************************************************************************************************************************
+ok: [Border_Leaf2]
 ok: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Check fabric port admin status] ***************************************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf1] => (item=Ethernet124)
-ok: [Border_Leaf2] => (item=Ethernet0)
+ok: [Border_Leaf2] => (item=Ethernet120)
 ok: [Border_Leaf1] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet0)
+ok: [Border_Leaf1] => (item=Ethernet0)
 
 TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
 ok: [Border_Leaf2] => (item=Ethernet124)
 ok: [Border_Leaf2] => (item=Ethernet120)
-
-TASK [sonic_fabric : verify | Check fabric port admin status] ***************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet0)
-
-TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet124)
 ok: [Border_Leaf2] => (item=Ethernet0)
 
 TASK [sonic_fabric : verify | Report port status] ***************************************************************************************************************************************************************
@@ -546,6 +531,9 @@ ok: [Border_Leaf2] => (item=Ethernet120) =>
 ok: [Border_Leaf2] => (item=Ethernet0) =>
     msg: 'Ethernet0 admin=up oper=up ✓ LINK UP '
 
+TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet120)
+
 TASK [sonic_fabric : verify | Dump port detail when oper=down (KVM bridge diagnostic)] **************************************************************************************************************************
 skipping: [Border_Leaf2] => (item=Ethernet124)
 skipping: [Border_Leaf2] => (item=Ethernet120)
@@ -559,30 +547,48 @@ skipping: [Border_Leaf2] => (item=Ethernet0)
 skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet124)
+ok: [Border_Leaf1] => (item=Ethernet0)
+
+TASK [sonic_fabric : verify | Report port status] ***************************************************************************************************************************************************************
+ok: [Border_Leaf1] => (item=Ethernet124) =>
+    msg: 'Ethernet124 admin=up oper=up ✓ LINK UP '
+ok: [Border_Leaf1] => (item=Ethernet120) =>
+    msg: 'Ethernet120 admin=up oper=up ✓ LINK UP '
+ok: [Border_Leaf1] => (item=Ethernet0) =>
+    msg: 'Ethernet0 admin=up oper=up ✓ LINK UP '
 
 TASK [sonic_fabric : verify | Check BGP session summary] ********************************************************************************************************************************************************
 ok: [Border_Leaf2]
 
-TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet120)
+TASK [sonic_fabric : verify | Dump port detail when oper=down (KVM bridge diagnostic)] **************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet124)
 
 TASK [sonic_fabric : verify | Parse BGP session state] **********************************************************************************************************************************************************
 ok: [Border_Leaf2]
+
+TASK [sonic_fabric : verify | Dump port detail when oper=down (KVM bridge diagnostic)] **************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet120)
 
 TASK [sonic_fabric : verify | Report BGP neighbor states] *******************************************************************************************************************************************************
 ok: [Border_Leaf2] =>
     msg: |-
         BGP Summary for Border_Leaf2 (AS 65022):
           Ethernet20: state=Established, pfxRcd=1
-          Ethernet24: state=Established, pfxRcd=0
+          Ethernet24: state=Established, pfxRcd=1
           Ethernet28: state=Established, pfxRcd=1
           Ethernet120: state=Established, pfxRcd=13
           Ethernet124: state=Established, pfxRcd=13
           10.0.253.3: state=Connect, pfxRcd=0
 
-TASK [sonic_fabric : verify | Check fabric port oper status] ****************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet0)
+TASK [sonic_fabric : verify | Dump port detail when oper=down (KVM bridge diagnostic)] **************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet0)
+skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : verify | Show port diagnostic output] ******************************************************************************************************************************************************
+skipping: [Border_Leaf1] => (item=Ethernet124)
+skipping: [Border_Leaf1] => (item=Ethernet120)
+skipping: [Border_Leaf1] => (item=Ethernet0)
+skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Check BFD session states] *********************************************************************************************************************************************************
 ok: [Border_Leaf2]
@@ -590,70 +596,31 @@ ok: [Border_Leaf2]
 TASK [sonic_fabric : verify | Parse BFD peer data] **************************************************************************************************************************************************************
 skipping: [Border_Leaf2]
 
-TASK [sonic_fabric : verify | Report port status] ***************************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet124) =>
-    msg: 'Ethernet124 admin=up oper=up ✓ LINK UP '
-
 TASK [sonic_fabric : verify | Report BFD session status] ********************************************************************************************************************************************************
 ok: [Border_Leaf2] =>
     msg: |-
         BFD Sessions for Border_Leaf2:
           BFD sessions not yet established (peers may still be negotiating)
 
-TASK [sonic_fabric : verify | Report port status] ***************************************************************************************************************************************************************
-ok: [Border_Leaf1] => (item=Ethernet120) =>
-    msg: 'Ethernet120 admin=up oper=up ✓ LINK UP '
-ok: [Border_Leaf1] => (item=Ethernet0) =>
-    msg: 'Ethernet0 admin=up oper=up ✓ LINK UP '
-
 TASK [sonic_fabric : verify | Warn if BFD sessions not all Up] **************************************************************************************************************************************************
 skipping: [Border_Leaf2]
-
-TASK [sonic_fabric : verify | Dump port detail when oper=down (KVM bridge diagnostic)] **************************************************************************************************************************
-skipping: [Border_Leaf1] => (item=Ethernet124)
-skipping: [Border_Leaf1] => (item=Ethernet120)
-skipping: [Border_Leaf1] => (item=Ethernet0)
-skipping: [Border_Leaf1]
-
-TASK [sonic_fabric : verify | Show port diagnostic output] ******************************************************************************************************************************************************
-skipping: [Border_Leaf1] => (item=Ethernet124)
-skipping: [Border_Leaf1] => (item=Ethernet120)
-skipping: [Border_Leaf1] => (item=Ethernet0)
-skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Check BGP session summary] ********************************************************************************************************************************************************
 ok: [Border_Leaf1]
 
-TASK [sonic_fabric : verify | Check LLDP neighbors] *************************************************************************************************************************************************************
-ok: [Border_Leaf2]
-
 TASK [sonic_fabric : verify | Parse BGP session state] **********************************************************************************************************************************************************
 ok: [Border_Leaf1]
-
-TASK [sonic_fabric : verify | Report LLDP neighbors] ************************************************************************************************************************************************************
-ok: [Border_Leaf2] =>
-    msg: |-
-        LLDP Neighbors on fabric ports:
-        Interface:    Ethernet120, via: LLDP, RID: 5, Time: 0 day, 12:52:18
-        Interface:    Ethernet124, via: LLDP, RID: 4, Time: 0 day, 12:52:18
-        Interface:    Ethernet0, via: LLDP, RID: 6, Time: 0 day, 10:55:14
-
-TASK [sonic_fabric : verify | Assert expected LLDP neighbor count (real hardware)] ******************************************************************************************************************************
-skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : verify | Report BGP neighbor states] *******************************************************************************************************************************************************
 ok: [Border_Leaf1] =>
     msg: |-
         BGP Summary for Border_Leaf1 (AS 65021):
           Ethernet20: state=Established, pfxRcd=0
-          Ethernet24: state=Established, pfxRcd=1
-          Ethernet28: state=Idle, pfxRcd=0
-          Ethernet120: state=Established, pfxRcd=15
-          Ethernet124: state=Established, pfxRcd=15
+          Ethernet24: state=Established, pfxRcd=0
+          Ethernet28: state=Established, pfxRcd=0
+          Ethernet120: state=Established, pfxRcd=14
+          Ethernet124: state=Established, pfxRcd=14
           10.0.253.1: state=Connect, pfxRcd=0
-
-TASK [sonic_fabric : verify | Report LLDP mismatch (real hardware)] *********************************************************************************************************************************************
-skipping: [Border_Leaf2]
 
 TASK [sonic_fabric : verify | Check BFD session states] *********************************************************************************************************************************************************
 ok: [Border_Leaf1]
@@ -668,6 +635,40 @@ ok: [Border_Leaf1] =>
           BFD sessions not yet established (peers may still be negotiating)
 
 TASK [sonic_fabric : verify | Warn if BFD sessions not all Up] **************************************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : verify | Check LLDP neighbors] *************************************************************************************************************************************************************
+ok: [Border_Leaf2]
+
+TASK [sonic_fabric : verify | Report LLDP neighbors] ************************************************************************************************************************************************************
+ok: [Border_Leaf2] =>
+    msg: |-
+        LLDP Neighbors on fabric ports:
+        Interface:    Ethernet120, via: LLDP, RID: 5, Time: 0 day, 13:31:14
+        Interface:    Ethernet124, via: LLDP, RID: 4, Time: 0 day, 13:31:14
+        Interface:    Ethernet0, via: LLDP, RID: 6, Time: 0 day, 11:34:10
+
+TASK [sonic_fabric : verify | Assert expected LLDP neighbor count (real hardware)] ******************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_fabric : verify | Report LLDP mismatch (real hardware)] *********************************************************************************************************************************************
+skipping: [Border_Leaf2]
+
+TASK [sonic_fabric : verify | Check LLDP neighbors] *************************************************************************************************************************************************************
+ok: [Border_Leaf1]
+
+TASK [sonic_fabric : verify | Report LLDP neighbors] ************************************************************************************************************************************************************
+ok: [Border_Leaf1] =>
+    msg: |-
+        LLDP Neighbors on fabric ports:
+        Interface:    Ethernet120, via: LLDP, RID: 5, Time: 0 day, 13:31:24
+        Interface:    Ethernet124, via: LLDP, RID: 4, Time: 0 day, 13:31:25
+        Interface:    Ethernet0, via: LLDP, RID: 6, Time: 0 day, 11:34:15
+
+TASK [sonic_fabric : verify | Assert expected LLDP neighbor count (real hardware)] ******************************************************************************************************************************
+skipping: [Border_Leaf1]
+
+TASK [sonic_fabric : verify | Report LLDP mismatch (real hardware)] *********************************************************************************************************************************************
 skipping: [Border_Leaf1]
 
 TASK [sonic_fabric : verify | Check IPv6 link-local addresses on fabric ports] **********************************************************************************************************************************
@@ -695,23 +696,6 @@ ok: [Border_Leaf2] =>
         Neighbors:      Spine_S1, Spine_S2, Exit_Router2
         ============================================
 
-TASK [sonic_fabric : verify | Check LLDP neighbors] *************************************************************************************************************************************************************
-ok: [Border_Leaf1]
-
-TASK [sonic_fabric : verify | Report LLDP neighbors] ************************************************************************************************************************************************************
-ok: [Border_Leaf1] =>
-    msg: |-
-        LLDP Neighbors on fabric ports:
-        Interface:    Ethernet120, via: LLDP, RID: 5, Time: 0 day, 12:52:32
-        Interface:    Ethernet124, via: LLDP, RID: 4, Time: 0 day, 12:52:33
-        Interface:    Ethernet0, via: LLDP, RID: 6, Time: 0 day, 10:55:23
-
-TASK [sonic_fabric : verify | Assert expected LLDP neighbor count (real hardware)] ******************************************************************************************************************************
-skipping: [Border_Leaf1]
-
-TASK [sonic_fabric : verify | Report LLDP mismatch (real hardware)] *********************************************************************************************************************************************
-skipping: [Border_Leaf1]
-
 TASK [sonic_fabric : verify | Wait for at least one BGP session to reach Established] ***************************************************************************************************************************
 ok: [Border_Leaf2]
 
@@ -719,9 +703,6 @@ TASK [sonic_fabric : verify | Report BGP establish result before ping test] ****
 ok: [Border_Leaf2] =>
     msg: 'BGP establish check on Border_Leaf2: at least one session Established — proceeding
         with ping'
-
-TASK [sonic_fabric : verify | Discover peer IPv6 link-local from FRR BGP neighbor state] ************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet124)
 
 TASK [sonic_fabric : verify | Check IPv6 link-local addresses on fabric ports] **********************************************************************************************************************************
 ok: [Border_Leaf1]
@@ -749,7 +730,7 @@ ok: [Border_Leaf1] =>
         ============================================
 
 TASK [sonic_fabric : verify | Discover peer IPv6 link-local from FRR BGP neighbor state] ************************************************************************************************************************
-ok: [Border_Leaf2] => (item=Ethernet120)
+ok: [Border_Leaf2] => (item=Ethernet124)
 
 TASK [sonic_fabric : verify | Wait for at least one BGP session to reach Established] ***************************************************************************************************************************
 ok: [Border_Leaf1]
@@ -760,6 +741,7 @@ ok: [Border_Leaf1] =>
         with ping'
 
 TASK [sonic_fabric : verify | Discover peer IPv6 link-local from FRR BGP neighbor state] ************************************************************************************************************************
+ok: [Border_Leaf2] => (item=Ethernet120)
 ok: [Border_Leaf2] => (item=Ethernet0)
 ok: [Border_Leaf1] => (item=Ethernet124)
 
@@ -817,21 +799,23 @@ Border_Leaf2               : ok=70   changed=5    unreachable=0    failed=0    s
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo systemctl restart bgp"
 Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo systemctl restart bgp"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 56
+BGP table version 83
 RIB entries 35, using 7840 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         2        63        0    0    0 00:01:11            0       18 HostB12_1
-Ethernet24      4      65107        54       157        0    0    0 00:00:08            1       18 HostB12_2
-Ethernet28      4      65108        64        65        0    0    0 00:01:15            1       18 MonitorSrv
-Ethernet120     4      65000        40        42        0    0    0 00:01:11           13       18 Spine_S2
-Ethernet124     4      65000        41        40        0    0    0 00:01:05           15       18 Spine_S1
+Ethernet20      4      65106        99       144        0    0    0 00:00:01         Idle        0 HostB12_1
+Ethernet24      4      65107        51       137        0    0    0 00:00:07           16       18 HostB12_2
+Ethernet28      4      65108        92       142        0    0    0 00:00:07           16       18 MonitorSrv
+Ethernet120     4      65000        29        68        0    0    0 00:00:49           15       18 Spine_S2
+Ethernet124     4      65000        27        56        0    0    0 00:00:46           15       18 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -843,27 +827,25 @@ RIB entries 0, using 0 bytes of memory
 Peers 2, using 1449 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet120     4      65000        40        42        0    0    0 00:01:11            0        0 Spine_S2
-Ethernet124     4      65000        41        40        0    0    0 00:01:05            0        0 Spine_S1
+Ethernet120     4      65000        29        68        0    0    0 00:00:49            0        0 Spine_S2
+Ethernet124     4      65000        27        56        0    0    0 00:00:46            0        0 Spine_S1
 
 Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 6750
-RIB entries 35, using 7840 bytes of memory
+BGP table version 16
+RIB entries 31, using 6944 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106     15060     15075        0    0    0 00:53:16            5       18 HostB12_1
-Ethernet24      4      65107     14452     20083        0    0    0 00:00:07            1       18 HostB12_2
-Ethernet28      4      65108     14538     19940        0    0    0 00:00:00         Idle        0 MonitorSrv
-Ethernet120     4      65000      5400      6788        0    0    0 00:52:32           14       18 Spine_S2
-Ethernet124     4      65000      2221      3202        0    0    0 10:24:27           10       18 Spine_S1
+Ethernet20      4      65106        32        34        0    0    0 00:00:46            1       16 HostB12_1
+Ethernet24      4      65107        30        32        0    0    0 00:00:42            1       16 HostB12_2
+Ethernet28      4      65108        30        32        0    0    0 00:00:42            1       16 MonitorSrv
+Ethernet120     4      65000        18        20        0    0    0 00:00:41           10       16 Spine_S2
+Ethernet124     4      65000        18        20        0    0    0 00:00:41           10       16 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
 
 Total number of neighbors 6
@@ -875,59 +857,25 @@ RIB entries 0, using 0 bytes of memory
 Peers 2, using 1449 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet120     4      65000      5400      6788        0    0    0 00:52:32            0        0 Spine_S2
-Ethernet124     4      65000      2221      3202        0    0    0 10:24:27            0        0 Spine_S1
+Ethernet120     4      65000        18        20        0    0    0 00:00:41            0        0 Spine_S2
+Ethernet124     4      65000        18        20        0    0    0 00:00:41            0        0 Spine_S1
 
 Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 6794
-RIB entries 35, using 7840 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106     15132     15148        0    0    0 00:54:42            1       18 HostB12_1
-Ethernet24      4      65107     14523     20288        0    0    0 00:00:03            1       18 HostB12_2
-Ethernet28      4      65108     14735     20146        0    0    0 00:00:05           15       18 MonitorSrv
-Ethernet120     4      65000      5428      6833        0    0    0 00:53:58           14       18 Spine_S2
-Ethernet124     4      65000      2257      3247        0    0    0 10:25:53           10       18 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1449 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet120     4      65000      5428      6833        0    0    0 00:53:58            0        0 Spine_S2
-Ethernet124     4      65000      2257      3247        0    0    0 10:25:53            0        0 Spine_S1
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo systemctl restart bgp"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 58
+BGP table version 110
 RIB entries 35, using 7840 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106         2        63        0    0    0 00:01:12            0       18 HostB12_1
-Ethernet24      4      65107        54       156        0    0    0 00:00:09            1       18 HostB12_2
-Ethernet28      4      65108         2        65        0    0    0 00:01:16            0       18 MonitorSrv
-Ethernet120     4      65000        33        42        0    0    0 00:01:12           15       18 Spine_S2
-Ethernet124     4      65000        40        42        0    0    0 00:01:16           14       18 Spine_S1
+Ethernet20      4      65106       201       270        0    0    0 00:00:02           16       18 HostB12_1
+Ethernet24      4      65107       139       234        0    0    0 00:00:00         Idle        0 HostB12_2
+Ethernet28      4      65108       180       249        0    0    0 00:00:00         Idle        0 MonitorSrv
+Ethernet120     4      65000        30        96        0    0    0 00:01:31           15       18 Spine_S2
+Ethernet124     4      65000        28        84        0    0    0 00:01:28           15       18 Spine_S1
 10.0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
@@ -939,28 +887,57 @@ RIB entries 0, using 0 bytes of memory
 Peers 2, using 1449 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet120     4      65000        33        42        0    0    0 00:01:12            0        0 Spine_S2
-Ethernet124     4      65000        40        42        0    0    0 00:01:16            0        0 Spine_S1
+Ethernet120     4      65000        30        96        0    0    0 00:01:31            0        0 Spine_S2
+Ethernet124     4      65000        28        84        0    0    0 00:01:28            0        0 Spine_S1
 
 Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 118
+RIB entries 35, using 7840 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       224       300        0    0    0 00:00:08           16       18 HostB12_1
+Ethernet24      4      65107       178       279        0    0    0 00:00:05           16       18 HostB12_2
+Ethernet28      4      65108       219       296        0    0    0 00:00:05           16       18 MonitorSrv
+Ethernet120     4      65000        30       104        0    0    0 00:01:47           15       18 Spine_S2
+Ethernet124     4      65000        28        92        0    0    0 00:01:44           15       18 Spine_S1
+   0.253.1      4      65253         0         0        0    0    0    never      Connect        0 Exit_Router1
+
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 2, using 1449 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet120     4      65000        30       104        0    0    0 00:01:47            0        0 Spine_S2
+Ethernet124     4      65000        28        92        0    0    0 00:01:44            0        0 Spine_S1
+
+Total number of neighbors 2
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
 Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 6849
-RIB entries 35, using 7840 bytes of memory
+BGP table version 16
+RIB entries 31, using 6944 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106     15232     15248        0    0    0 00:57:03            1       18 HostB12_1
-Ethernet24      4      65107     14635     20602        0    0    0 00:00:04            1       18 HostB12_2
-Ethernet28      4      65108     14912     20319        0    0    0 00:01:36            4       18 MonitorSrv
-Ethernet120     4      65000      5468      6889        0    0    0 00:56:19           10       18 Spine_S2
-Ethernet124     4      65000      2307      3303        0    0    0 10:28:14           13       18 Spine_S1
+Ethernet20      4      65106        46        48        0    0    0 00:01:28            1       16 HostB12_1
+Ethernet24      4      65107        45        47        0    0    0 00:01:24            1       16 HostB12_2
+Ethernet28      4      65108        45        47        0    0    0 00:01:24            1       16 MonitorSrv
+Ethernet120     4      65000        19        21        0    0    0 00:01:23           10       16 Spine_S2
+Ethernet124     4      65000        19        21        0    0    0 00:01:23           10       16 Spine_S1
 10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
 
 Total number of neighbors 6
@@ -972,98 +949,12 @@ RIB entries 0, using 0 bytes of memory
 Peers 2, using 1449 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet120     4      65000      5468      6889        0    0    0 00:56:19            0        0 Spine_S2
-Ethernet124     4      65000      2307      3303        0    0    0 10:28:14            0        0 Spine_S1
+   ernet120     4      65000        19        21        0    0    0 00:01:23            0        0 Spine_S2
+ thernet124     4      65000        19        21        0    0    0 00:01:23            0        0 Spine_S1
+
 
 Total number of neighbors 2
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.45' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.100, local AS number 65106 vrf-id 0
-BGP table version 2353
-RIB entries 35, using 6720 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       585       844        0    0    0 00:01:36         Idle        0 Border_Leaf1
-sonic(enp3s0)   4      65022      3433      3418        0    0    0 00:57:21           17       18 Border_Leaf2
-
-Total number of neighbors 2
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.100, local AS number 65106 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       585       844        0    0    0 00:01:36         Idle        0 Border_Leaf1
-sonic(enp3s0)   4      65022      3433      3418        0    0    0 00:57:21        NoNeg    NoNeg Border_Leaf2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh HostB12_2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.46' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.101, local AS number 65107 vrf-id 0
-BGP table version 1
-RIB entries 1, using 192 bytes of memory
-   rs 2, using 1448 KiB of memory
-
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       684      2336        0    0    0 00:00:04            0        1 Border_Leaf1
-sonic(enp3s0)   4      65022       692      2497        0    0    0 00:00:03            0        1 Border_Leaf2
-
-Total number of neighbors 2
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.101, local AS number 65107 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       684      2336        0    0    0 00:00:04        NoNeg    NoNeg Border_Leaf1
-sonic(enp3s0)   4      65022       692      2497        0    0    0 00:00:03        NoNeg    NoNeg Border_Leaf2
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh MonitorSrv "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.47' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.102, local AS number 65108 vrf-id 0
-BGP table version 252
-RIB entries 35, using 6720 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       904      2371        0    0    0 00:02:32           17       18 Border_Leaf1
-sonic(enp3s0)   4      65022       806      2843        0    0    0 00:02:35           17       18 Border_Leaf2
-
-Total number of neighbors 2
-
-   6 Unicast Summary (VRF default):
- GP router identifier 10.10.255.102, local AS number 65108 vrf-id 0
-
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-sonic(enp2s0)   4      65021       904      2371        0    0    0 00:02:32        NoNeg    NoNeg Border_Leaf1
-sonic(enp3s0)   4      65022       806      2843        0    0    0 00:02:35        NoNeg    NoNeg Border_Leaf2
-
-Total number of neighbors 2
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1
 Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
 
@@ -1087,15 +978,21 @@ Flags: E - established
      remote.address=10.0.253.0 .as=0 .hold-time=infinity
      local.address=10.0.253.1 .as=65253 .id=10.0.99.1 .cluster-id=10.0.99.1 .capabilities=mp,rr,gr,as4 .afi=ip ebgp
      prefix-count=0
+[admin@Exit_Router1] >
+[admin@Exit_Router1] >
 [admin@Exit_Router1] > /routing/bgp/connection/print
 Flags: D - dynamic, X - disabled, I - inactive
  0   name="to_Border_Leaf1"
      remote.address=10.0.253.0 .as=65021
      local.address=10.0.253.1 .role=ebgp
      connect=yes listen=yes routing-table=main router-id=10.0.99.1 as=65253 hold-time=3m keepalive-time=1m address-families=ip
-[admin@Exit_Router1] > exit
-bad command name exit (line 1 column 1)
 [admin@Exit_Router1] >
+[admin@Exit_Router1] > /routing/bgp/session/print
+Flags: E - established
+ 0   name="to_Border_Leaf1-1"
+     remote.address=10.0.253.0 .as=0 .hold-time=infinity
+     local.address=10.0.253.1 .as=65253 .id=10.0.99.1 .cluster-id=10.0.99.1 .capabilities=mp,rr,gr,as4 .afi=ip ebgp
+     prefix-count=0
 [admin@Exit_Router1] >
 [admin@Exit_Router1] > quit
 interrupted
