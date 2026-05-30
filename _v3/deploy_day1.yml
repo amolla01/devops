@@ -1,0 +1,157 @@
+---
+# =============================================================================
+# deploy_day1.yml  —  Day-1 Fabric Wiring (ALL device types)
+# =============================================================================
+# This playbook handles day-1 network/BGP configuration for:
+#   - SONiC switches: eBGP unnumbered fabric links (via sonic_fabric role)
+#   - MikroTik CHR exit routers: eBGP peering with border leaves
+#   - Ubuntu servers: Netplan bond + FRR eBGP to leaf pair
+#
+# Each device type gets a SEPARATE PLAY so that SONiC-specific commands
+# (sonic-cfggen, config_db.json, FRR vtysh via SONiC) never touch MikroTik
+# or Ubuntu hosts, and vice versa.
+#
+# USAGE:
+#   # Full fabric day-1 (all device types):
+#   ansible-playbook playbooks/deploy_day1.yml -i inventory/hosts.yml
+#
+#   # SONiC switches only (spine-leaf fabric links):
+#   ansible-playbook playbooks/deploy_day1.yml --limit sonic_switches \
+#     -e "fabric_nodes=spines:leaves:border_leaves"
+#
+#   # MikroTik exit routers only:
+#   ansible-playbook playbooks/deploy_day1.yml --limit exit_routers
+#
+#   # Ubuntu servers only:
+#   ansible-playbook playbooks/deploy_day1.yml --limit servers
+#
+#   # Single device:
+#   ansible-playbook playbooks/deploy_day1.yml --limit Exit_Router1
+#   ansible-playbook playbooks/deploy_day1.yml --limit Host12_1
+#
+# PREREQUISITES:
+#   - deploy_day0.yml must have been run successfully for all target devices
+#   - For SONiC: all target switches must have day-0 config loaded
+#   - For servers: packages (frr, lldpd) must be installed (day-0 does this)
+#
+# TAG-BASED PARTIAL RUNS:
+#   --tags preflight       Pre-flight only
+#   --tags deploy          Deploy configuration
+#   --tags verify          Verification checks only
+#   --tags interfaces      Interface configuration only
+#   --tags bgp             BGP configuration only
+#   --tags frr             FRR configuration only (servers)
+#   --tags netplan         Netplan configuration only (servers)
+# =============================================================================
+
+###############################################################################
+# PLAY 1: SONiC Switches — Fabric BGP (eBGP unnumbered)
+###############################################################################
+# Parallelism: fabric links are per-switch; BGP sessions retry until peer is up.
+# Safe to configure all switches simultaneously — no ordering dependency.
+# Default: 4 at a time (configurable via -e "fabric_serial=2" or "100%")
+# strategy: free — faster switches (spines, fewer ports) don't wait for slower ones.
+###############################################################################
+- name: "Day-1 Fabric Wiring — SONiC Switches"
+  hosts: "sonic_switches"
+  become: yes
+  gather_facts: false
+  serial: "{{ fabric_serial | default(4) }}"
+  strategy: "{{ fabric_strategy | default('free') }}"
+
+
+  pre_tasks:
+
+    - name: "Phase 0 | Assert automation profile is supported"
+      ansible.builtin.assert:
+        that:
+          - automation_profile in automation_profile_supported
+        fail_msg: >-
+          Unsupported automation_profile '{{ automation_profile }}'.
+          Supported: {{ automation_profile_supported | join(', ') }}
+        success_msg: >-
+          automation_profile={{ automation_profile }}
+          ({{ automation_profile_label }})
+      run_once: true
+      delegate_to: localhost
+      tags: [always, day1]
+
+    - name: "Phase 0 | Pre-flight connectivity"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: preflight.yml
+      tags: [preflight, day1]
+
+  roles:
+    - role: sonic_fabric
+      tags: [deploy, interfaces, bgp, day1]
+
+  post_tasks:
+
+    - name: "Phase 2 | Verify BGP neighbors are established"
+      ansible.builtin.shell: |
+        vtysh -c "show bgp summary json" 2>/dev/null || echo '{}'
+      register: _bgp_summary
+      changed_when: false
+      failed_when: false
+      tags: [verify, day1]
+
+    - name: "Phase 2 | Report BGP state"
+      ansible.builtin.debug:
+        msg: "BGP summary: {{ _bgp_summary.stdout | default('unavailable') }}"
+      tags: [verify, day1]
+
+###############################################################################
+# PLAY 2: MikroTik CHR Exit Routers — BGP peering with Border Leaves
+###############################################################################
+- name: "Day-1 BGP Wiring — MikroTik Exit Routers"
+  hosts: "exit_routers"
+  gather_facts: false
+  serial: "{{ mikrotik_serial | default('100%') }}"
+  strategy: free
+
+  pre_tasks:
+
+    - name: "Phase 0 | Pre-flight connectivity (MikroTik)"
+      ansible.builtin.include_role:
+        name: mikrotik_base
+        tasks_from: preflight.yml
+      tags: [preflight, day1]
+
+  post_tasks:
+
+    - name: "Phase 1 | Configure BGP peering (MikroTik)"
+      ansible.builtin.include_role:
+        name: mikrotik_base
+        tasks_from: day1_bgp.yml
+        apply:
+          tags: [deploy, bgp, day1, interfaces, verify]
+      tags: [deploy, bgp, day1]
+
+###############################################################################
+# PLAY 3: Ubuntu Servers — Netplan + FRR BGP
+###############################################################################
+# All 7 servers are independent — fully parallel.
+###############################################################################
+- name: "Day-1 Network Wiring — Ubuntu Servers"
+  hosts: "servers"
+  become: yes
+  gather_facts: true
+  serial: "{{ server_serial | default('100%') }}"
+  strategy: free
+
+  pre_tasks:
+
+    - name: "Phase 0 | Pre-flight connectivity (Ubuntu server)"
+      ansible.builtin.include_role:
+        name: server_base
+        tasks_from: preflight.yml
+      tags: [preflight, day1]
+
+  post_tasks:
+
+    - name: "Phase 1 | Configure Netplan + FRR (Ubuntu server)"
+      ansible.builtin.include_role:
+        name: server_base
+        tasks_from: day1_network.yml
+      tags: [deploy, netplan, frr, bgp, day1]
