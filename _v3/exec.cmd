@@ -315,3 +315,22 @@ If ping in step 1 fails → problem is ARP or routing. If ping works but iptable
 
 ssh Border_Leaf1 "sudo iptables -I INPUT -p tcp -s 10.0.253.1 --dport 179 -j ACCEPT"
 ssh Border_Leaf2 "sudo iptables -I INPUT -p tcp -s 10.0.253.3 --dport 179 -j ACCEPT"
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Immediate fix (run now, no playbook needed):
+# Exit_Router1 — accept BGP from Border_Leaf1
+ssh Exit_Router1 "/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.0/32 dst-port=179 comment=accept-bgp-Border_Leaf1 place-before=[find where comment~\"drop-all-else\" and chain=input]"
+
+# Exit_Router2 — accept BGP from Border_Leaf2
+ssh Exit_Router2 "/ip firewall filter add chain=input action=accept protocol=tcp src-address=10.0.253.2/32 dst-port=179 comment=accept-bgp-Border_Leaf2 place-before=[find where comment~\"drop-all-else\" and chain=input]"
+
+After adding those rules, the BGP session should come up within ~30 seconds (the ConnectRetry timer). You can also force an immediate retry:
+
+ssh Border_Leaf1 "sudo vtysh -c 'clear bgp 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'clear bgp 10.0.253.3'"
+
+Then verify:
+
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary' | grep 10.0.253"
+ssh Exit_Router1 "/routing/bgp/session/print"
+
+You should see the E flag (Established) on both sides.
