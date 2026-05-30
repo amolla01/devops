@@ -57,3 +57,19 @@ If you want, I can turn that into one copy-paste runbook block with comments for
 GPT-5.4 • 1x
 
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Then check live RouterOS state directly, because that is the cheapest discriminating check now:
+ssh Exit_Router1 "/ip firewall filter print detail"
+ssh Exit_Router1 "/ip address print detail"
+ssh Exit_Router1 "/interface ethernet print detail where running=yes"
+ssh Exit_Router1 "/routing bgp session print detail"
+
+ssh Exit_Router2 "/ip firewall filter print detail"
+ssh Exit_Router2 "/ip address print detail"
+ssh Exit_Router2 "/interface ethernet print detail where running=yes"
+ssh Exit_Router2 "/routing bgp session print detail"
+
+For the server-side Idle peers, the next useful step is separate and should not be mixed with the exit-router check:
+
+Run --limit servers --tags deploy -v.
+Run --limit "servers,leaves,border_leaves" --tags verify -v.
+If the leaves still show host peers at msgRcvd=0/msgSent=0, capture one server’s ip -o link, cat /etc/netplan/*.yaml, and sudo vtysh -c "show bgp summary" output.
