@@ -282,3 +282,36 @@ ssh Host12_1 "sudo systemctl restart frr"
 ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
 ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
+
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+
+LLDP works (proving L2 / KVM bridge is fine), so the block is at L3 (ARP/IP) or L4 (iptables/firewall).
+
+Run these diagnostics (in order):
+
+# 1. L3 ping test — most critical
+ssh Border_Leaf1 "ping -c 3 10.0.253.1"
+
+# 2. ARP table — is MAC resolved?
+ssh Border_Leaf1 "ip neigh show dev Ethernet0"
+
+# 3. SONiC iptables (Control Plane ACL) — is TCP/179 being dropped?
+ssh Border_Leaf1 "sudo iptables -L INPUT -n --line-numbers | head -50"
+
+# 4. Verify FRR running config after bgpcfgd rebuild
+ssh Border_Leaf1 "sudo vtysh -c 'show run' | grep -B2 -A8 '10.0.253'"
+
+# 5. From MikroTik Exit_Router1 — can IT ping BL1?
+#    /ping 10.0.253.0 count=3 interface=ether2
+
+# 6. From MikroTik Exit_Router1 — any firewall blocking?
+#    /ip/firewall/filter/print
+
+The most likely root cause (given LLDP works but TCP doesn't):
+
+SONiC CACL — caclmgrd hasn't added the iptables rule for the new IP peer (restarting bgp does NOT restart caclmgrd)
+ARP not resolving — SONiC needs to ARP for 10.0.253.1 but something is preventing broadcast/reply
+If ping in step 1 fails → problem is ARP or routing. If ping works but iptables shows a DROP for port 179 without a matching ACCEPT for 10.0.253.1 → fix with:
+
+ssh Border_Leaf1 "sudo iptables -I INPUT -p tcp -s 10.0.253.1 --dport 179 -j ACCEPT"
+ssh Border_Leaf2 "sudo iptables -I INPUT -p tcp -s 10.0.253.3 --dport 179 -j ACCEPT"
