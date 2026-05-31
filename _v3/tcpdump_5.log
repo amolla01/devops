@@ -1,0 +1,112 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.1"'
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+ neighbor Ethernet124 interface v6only remote-as external
+ neighbor Ethernet124 description Spine_S1
+ neighbor Ethernet124 bfd
+ neighbor 10.0.253.1 remote-as 65253
+ neighbor 10.0.253.1 description Exit_Router1
+ neighbor 10.0.253.1 disable-connected-check
+ neighbor 10.0.253.1 update-source 10.0.253.0
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+  neighbor Ethernet124 activate
+  neighbor 10.0.253.1 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.3"'
+
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+ neighbor Ethernet124 interface v6only remote-as external
+ neighbor Ethernet124 description Spine_S1
+ neighbor Ethernet124 bfd
+ neighbor 10.0.253.3 remote-as 65254
+ neighbor 10.0.253.3 description Exit_Router2
+ neighbor 10.0.253.3 disable-connected-check
+ neighbor 10.0.253.3 update-source 10.0.253.2
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+  neighbor Ethernet124 activate
+  neighbor 10.0.253.3 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  redistribute connected
+  neighbor Ethernet20 activate
+  neighbor Ethernet24 activate
+  neighbor Ethernet28 activate
+  neighbor Ethernet120 activate
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh -t nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1267 host 10.0.253.0 and port 179 -vv"
+[sudo: authenticate] Password:
+tcpdump: listening on vnet1267, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+
+0 packets captured
+0 packets received by filter
+0 packets dropped by kernel
+Connection to 192.168.9.198 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh -t nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1269 host 10.0.253.2 and port 179 -vv"
+[sudo: authenticate] Password:
+tcpdump: listening on vnet1269, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+
+0 packets captured
+0 packets received by filter
+0 packets dropped by kernel
+Connection to 192.168.9.198 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.1 and port 179 -vv"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:42:37.993742 IP (tos 0xc0, ttl 255, id 52126, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.39985 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xabb0), seq 2506326295, win 64240, options [mss 1460,sackOK,TS val 3358070740 ecr 0,nop,wscale 7], length 0
+13:42:40.824036 IP (tos 0xc0, ttl 255, id 14154, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.44443 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x84d5), seq 1281741944, win 64240, options [mss 1460,sackOK,TS val 3358073570 ecr 0,nop,wscale 7], length 0
+13:42:41.833661 IP (tos 0xc0, ttl 255, id 14155, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.44443 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x80e3), seq 1281741944, win 64240, options [mss 1460,sackOK,TS val 3358074580 ecr 0,nop,wscale 7], length 0
+13:42:43.913589 IP (tos 0xc0, ttl 255, id 14156, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.44443 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x78c3), seq 1281741944, win 64240, options [mss 1460,sackOK,TS val 3358076660 ecr 0,nop,wscale 7], length 0
+13:42:46.530835 IP (tos 0xc0, ttl 1, id 28158, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.0.37309 > 10.0.253.1.179: Flags [S], cksum 0xa567 (correct), seq 3561631103, win 63420, options [mss 9060,sackOK,TS val 2616807155 ecr 0,nop,wscale 9], length 0
+13:42:46.536105 IP (tos 0xc0, ttl 64, id 0, offset 0, flags [DF], proto TCP (6), length 40)
+    10.0.253.1.179 > 10.0.253.0.37309: Flags [R.], cksum 0x0d93 (correct), seq 0, ack 3561631104, win 0, length 0
+
+6 packets captured
+6 packets received by filter
+0 packets dropped by kernel
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.3 and port 179 -vv"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:42:52.824577 IP (tos 0xc0, ttl 255, id 47326, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.43939 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0xb5ec), seq 3721203660, win 64240, options [mss 1460,sackOK,TS val 965784987 ecr 0,nop,wscale 7], length 0
+13:42:55.625950 IP (tos 0xc0, ttl 255, id 25320, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.37685 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x994e), seq 1720955168, win 64240, options [mss 1460,sackOK,TS val 965787789 ecr 0,nop,wscale 7], length 0
+13:42:56.664476 IP (tos 0xc0, ttl 255, id 25321, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.37685 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x9540), seq 1720955168, win 64240, options [mss 1460,sackOK,TS val 965788827 ecr 0,nop,wscale 7], length 0
+13:42:58.744468 IP (tos 0xc0, ttl 255, id 25322, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.37685 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x8d20), seq 1720955168, win 64240, options [mss 1460,sackOK,TS val 965790907 ecr 0,nop,wscale 7], length 0
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1267 host 10.0.253.0 and port 179 -vv"
+sudo: A terminal is required to authenticate
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1269 host 10.0.253.2 and port 179 -vv"
+sudo: A terminal is required to authenticate
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 "/routing bgp connection disable [find where name=\"to_Border_Leaf1\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf1\"]"
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 "/routing bgp connection disable [find where name=\"to_Border_Leaf2\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf2\"]"
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
