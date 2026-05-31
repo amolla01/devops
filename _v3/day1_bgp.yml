@@ -222,6 +222,20 @@
   failed_when: false
   tags: [day1, verify]
 
+- name: "day1 | Gather BGP connection count"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection print count-only'
+  register: _bgp_connection_count
+  changed_when: false
+  failed_when: false
+  tags: [deploy, day1, bgp, verify]
+
+- name: "day1 | Parse BGP connection count"
+  ansible.builtin.set_fact:
+    _bgp_connection_count_value: >-
+      {{ (_bgp_connection_count.stdout | default('0') | trim | int) }}
+  tags: [deploy, day1, bgp, verify]
+
 - name: "day1 | Gather immediate BGP session state after deploy"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/routing bgp session print detail'
@@ -262,7 +276,7 @@
   changed_when: false
   failed_when: false
   when:
-    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_connection_count_value | default(0) | int) > 0
     - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
@@ -272,13 +286,16 @@
       {{ inventory_hostname }} has a configured RouterOS BGP connection but no concrete
       /routing bgp session rows.
 
+      RouterOS reported {{ _bgp_connection_count_value | default(0) | int }} configured BGP connections
+      via /routing bgp connection print count-only.
+
       RouterOS reported {{ _bgp_session_count_value_deploy | default(0) | int }} live BGP sessions
       via /routing bgp session print count-only.
 
       RouterOS diagnostic snapshot:
       {{ _bgp_no_session_diag.stdout | default('(no diagnostic output)') }}
   when:
-    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_connection_count_value | default(0) | int) > 0
     - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
@@ -289,7 +306,7 @@
       The BGP connection object exists, but RouterOS did not instantiate a live session.
       See the preceding diagnostic snapshot for routing-id, template, connection, and log state.
   when:
-    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_connection_count_value | default(0) | int) > 0
     - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
