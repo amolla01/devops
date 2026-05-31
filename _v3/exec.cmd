@@ -255,6 +255,7 @@ EOF"
 Then immediately check:
 ssh Host12_1 "sudo vtysh -c 'show bgp summary'"
 ssh Host12_1 "sudo vtysh -c 'show bgp neighbor enp2s0 json'"
+ssh Host12_1 "sudo vtysh -c 'show bgp summary' -c 'show bgp neighbors enp2s0' -c 'show bgp neighbors enp3s0'"
 ssh Leaf_L1 "sudo vtysh -c 'show bgp summary'"
 ssh Leaf_L2 "sudo vtysh -c 'show bgp summary'"
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
