@@ -1,120 +1,199 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing id print detail'; ssh Exit_Router1 '/routing bgp template print detail'; ssh Exit_Router2 '/routing id print detail'; ssh Exit_Router2 '/routing bgp template print detail'
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: X - disabled, D - dynamic, I - inactive
- 0 D name="main" dynamic-id=10.0.99.1 select-dynamic-id=only-vrf
-     select-from-vrf=main
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Exit_Router1:Exit_Router2" --tags deploy
 
- 1   name="main" id=10.0.99.1
+PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
+skipping: no hosts matched
 
- 2   name="main" id=10.0.99.1
+PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
 
- 3   name="main" id=10.0.99.1
+TASK [Phase 1 | Configure BGP peering (MikroTik)] ***************************************************************************************************************************************************************
+included: mikrotik_base for Exit_Router1
+included: mikrotik_base for Exit_Router2
 
- 4   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
+ok: [Exit_Router1]
 
- 5   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] ***********************************************************************************************************************************
+ok: [Exit_Router2]
 
- 6   name="default" id=10.0.99.1
+TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
+ok: [Exit_Router2]
 
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main router-id=10.0.253.1 as=65253
-      hold-time=3m keepalive-time=1m address-families=ip
+TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
+ok: [Exit_Router1]
 
- 1    name="fabric" routing-table=main router-id=10.0.99.1 as=65253
-      address-families=ip
+TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
+ok: [Exit_Router2]
 
- 2    name="fabric" routing-table=main router-id=10.0.99.1 as=65253
-      address-families=ip
+TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
+ok: [Exit_Router1]
 
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: X - disabled, D - dynamic, I - inactive
- 0 D name="main" dynamic-id=10.0.99.2 select-dynamic-id=only-vrf
-     select-from-vrf=main
+TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+ok: [Exit_Router2]
 
- 1   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+skipping: [Exit_Router1]
 
- 2   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
+skipping: [Exit_Router1]
 
- 3   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
+skipping: [Exit_Router2]
 
- 4   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router1] =>
+    msg: 'Using ether2 as the live fabric interface on Exit_Router1. Running RouterOS
+        data ports: ether2'
 
- 5   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
+        data ports: ether3'
 
- 6   name="default" id=10.0.99.2
+TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+skipping: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)))
+skipping: [Exit_Router1]
 
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main router-id=10.0.253.3 as=65254
-      hold-time=3m keepalive-time=1m address-families=ip
+TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+skipping: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
+skipping: [Exit_Router2]
 
- 1    name="fabric" routing-table=main router-id=10.0.99.2 as=65254
-      address-families=ip
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3)
 
- 2    name="fabric" routing-table=main router-id=10.0.99.2 as=65254
-      address-families=ip
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1] => (item=ether2)
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing id print detail'
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: X - disabled, D - dynamic, I - inactive
- 0 D name="main" dynamic-id=10.0.99.1 select-dynamic-id=only-vrf
-     select-from-vrf=main
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
 
- 1   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
 
- 2   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+changed: [Exit_Router2] => (item=ether3)
 
- 3   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
+changed: [Exit_Router1] => (item=ether2)
 
- 4   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
 
- 5   name="main" id=10.0.99.1
+TASK [mikrotik_base : day1 | Add IP address to fabric interface] ************************************************************************************************************************************************
 
- 6   name="default" id=10.0.99.1
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+ok: [Exit_Router1] => (item=ether2)
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing bgp template print detail'
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main router-id=10.0.253.1 as=65253
-      hold-time=3m keepalive-time=1m address-families=ip
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+ok: [Exit_Router2] => (item=ether3)
 
- 1    name="fabric" routing-table=main router-id=10.0.99.1 as=65253
-      address-families=ip
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 
- 2    name="fabric" routing-table=main router-id=10.0.99.1 as=65253
-      address-families=ip
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$  ssh Exit_Router2 '/routing id print detail'
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: X - disabled, D - dynamic, I - inactive
- 0 D name="main" dynamic-id=10.0.99.2 select-dynamic-id=only-vrf
-     select-from-vrf=main
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router2]
 
- 1   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1]
 
- 2   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Ensure default RouterOS BGP template has local ASN] ********************************************************************************************************************************
+changed: [Exit_Router1]
 
- 3   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Ensure default RouterOS BGP template has local ASN] ********************************************************************************************************************************
+changed: [Exit_Router2]
 
- 4   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Ensure default RouterOS routing-id matches inventory] ******************************************************************************************************************************
+changed: [Exit_Router2]
 
- 5   name="main" id=10.0.99.2
+TASK [mikrotik_base : day1 | Ensure default RouterOS routing-id matches inventory] ******************************************************************************************************************************
+changed: [Exit_Router1]
 
- 6   name="default" id=10.0.99.2
+TASK [mikrotik_base : day1 | Remove stale RouterOS fabric BGP templates] ****************************************************************************************************************************************
+changed: [Exit_Router2]
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ Exit_Router2 '/routing bgp template print detail'
-Exit_Router2: command not found
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 '/routing bgp template print detail'
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: * - default; X - disabled, I - inactive
- 0 *  name="default" routing-table=main router-id=10.0.253.3 as=65254
-      hold-time=3m keepalive-time=1m address-families=ip
+TASK [mikrotik_base : day1 | Remove stale RouterOS fabric BGP templates] ****************************************************************************************************************************************
+changed: [Exit_Router1]
 
- 1    name="fabric" routing-table=main router-id=10.0.99.2 as=65254
-      address-families=ip
+TASK [mikrotik_base : day1 | Create RouterOS fabric BGP template with inventory router-id] **********************************************************************************************************************
+changed: [Exit_Router1]
 
- 2    name="fabric" routing-table=main router-id=10.0.99.2 as=65254
-      address-families=ip
+TASK [mikrotik_base : day1 | Create RouterOS fabric BGP template with inventory router-id] **********************************************************************************************************************
+changed: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Probe legacy RouterOS BGP instance support] ****************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Ensure legacy RouterOS BGP instance matches inventory] *****************************************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Probe legacy RouterOS BGP instance support] ****************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Ensure legacy RouterOS BGP instance matches inventory] *****************************************************************************************************************************
+skipping: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0))
+
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2))
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
+changed: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
+
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
+
+TASK [mikrotik_base : day1 | Gather immediate BGP session state after deploy] ***********************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Gather immediate BGP session state after deploy] ***********************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Gather immediate BGP session count after deploy] ***********************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Gather immediate BGP session count after deploy] ***********************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Parse immediate BGP session count after deploy] ************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Parse immediate BGP session count after deploy] ************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows after deploy] **************************************************************************************************************************************
+ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Warn when BGP connection exists but no live RouterOS session formed] ***************************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows after deploy] **************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Report RouterOS BGP diagnostics when no live session formed] ***********************************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Warn when BGP connection exists but no live RouterOS session formed] ***************************************************************************************************************
+skipping: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Fail deploy when RouterOS BGP connection exists but no live session formed] ********************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Report RouterOS BGP diagnostics when no live session formed] ***********************************************************************************************************************
+skipping: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Fail deploy when RouterOS BGP connection exists but no live session formed] ********************************************************************************************************
+skipping: [Exit_Router2]
+
+PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Exit_Router1               : ok=21   changed=10   unreachable=0    failed=0    skipped=7    rescued=0    ignored=0
+Exit_Router2               : ok=22   changed=10   unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
