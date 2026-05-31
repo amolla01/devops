@@ -59,3 +59,15 @@ What I’m looking for:
 If rp_filter is strict or the route/interface state is wrong, debug_bl1_eth0.sh will show it directly.
 If diagnose_port_bridge.sh ... Ethernet0 ... shows Ethernet0 mapped to the wrong ethN or wrong OVS bridge, that is the root cause.
 If verbose tcpdump shows bad TCP checksum on the SYN that reaches BL1, then we are back in packet-integrity territory despite the current NIC model.
+
+cd /mnt/c/Users/nh1221/data-center/_v1/troubleshooting-scripts
+chmod +x diagnose_border_exit_bgp.sh
+./diagnose_border_exit_bgp.sh --profile bl1-er1
+./diagnose_border_exit_bgp.sh --profile bl2-er2
+
+It also supports fully custom arguments if you want to point it at another pair later:
+
+./diagnose_border_exit_bgp.sh \
+  --bl-name Border_Leaf1 --bl-mgmt 172.16.2.31 \
+  --er-name Exit_Router1 --er-mgmt 172.16.2.98 \
+  --bl-port Ethernet0 --bl-ip 10.0.253.0 --er-ip 10.0.253.1
