@@ -76,6 +76,22 @@
       delegate_to: localhost
       tags: [always, day1]
 
+    - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
+      ansible.builtin.shell: |
+        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
+          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+            [ -n "$tap" ] || continue
+            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            echo "$vm:$tap"
+          done
+        done
+      delegate_to: localhost
+      run_once: true
+      register: _kvm_tap_offload_fix
+      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      when: automation_profile | default('') != 'real_hardware'
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Pre-flight connectivity"
       ansible.builtin.include_role:
         name: sonic_base
@@ -112,6 +128,22 @@
 
   pre_tasks:
 
+    - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
+      ansible.builtin.shell: |
+        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
+          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+            [ -n "$tap" ] || continue
+            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            echo "$vm:$tap"
+          done
+        done
+      delegate_to: localhost
+      run_once: true
+      register: _kvm_tap_offload_fix
+      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      when: automation_profile | default('') != 'real_hardware'
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Pre-flight connectivity (MikroTik)"
       ansible.builtin.include_role:
         name: mikrotik_base
@@ -139,6 +171,22 @@
   strategy: free
 
   pre_tasks:
+
+    - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
+      ansible.builtin.shell: |
+        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
+          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+            [ -n "$tap" ] || continue
+            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            echo "$vm:$tap"
+          done
+        done
+      delegate_to: localhost
+      run_once: true
+      register: _kvm_tap_offload_fix
+      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      when: automation_profile | default('') != 'real_hardware'
+      tags: [preflight, deploy, day1]
 
     - name: "Phase 0 | Pre-flight connectivity (Ubuntu server)"
       ansible.builtin.include_role:
