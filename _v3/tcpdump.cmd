@@ -25,4 +25,10 @@ data-center/_v1/troubleshooting-scripts/debug_bl1_bgp_ns.sh
 
 And if it points to bridge attachment or wrong fabric port mapping, run:
 data-center/_v1/troubleshooting-scripts/diagnose_port_bridge.sh
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1/troubleshooting-scripts$ ./diagnose_port_bridge.sh
+Usage: ./diagnose_port_bridge.sh <vm_name> <sonic_port> <mgmt_ip>
 
+Examples:
+  ./diagnose_port_bridge.sh Border_Leaf1 Ethernet124 172.16.2.31
+  ./diagnose_port_bridge.sh Leaf_L1 Ethernet0 172.16.2.21
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1/troubleshooting-scripts$
