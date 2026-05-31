@@ -147,3 +147,49 @@ Natural next steps:
 
 Paste the output of ovs-vsctl list-ports br-BL1-ER1 and ovs-vsctl list-ports br-BL2-ER2, and I’ll tell you exactly which interfaces to run ethtool -K ... tx off on.
 If you want this fixed permanently, I can patch the _v3 automation so Phase 0 reliably discovers and disables offload on the actual bridge ports instead of missing them.
+
+
+On R810, run the fuller offload disable against the four bridge ports you already identified:
+sudo ethtool -K vnet1201 tx off tso off gso off gro off
+sudo ethtool -K vnet1267 tx off tso off gso off gro off
+sudo ethtool -K vnet1234 tx off tso off gso off gro off
+sudo ethtool -K vnet1269 tx off tso off gso off gro off
+
+Verify those flags actually stuck:
+
+sudo ethtool -k vnet1201 | grep -E 'tx-check|tcp-segmentation|generic-segmentation|generic-receive'
+sudo ethtool -k vnet1267 | grep -E 'tx-check|tcp-segmentation|generic-segmentation|generic-receive'
+sudo ethtool -k vnet1234 | grep -E 'tx-check|tcp-segmentation|generic-segmentation|generic-receive'
+sudo ethtool -k vnet1269 | grep -E 'tx-check|tcp-segmentation|generic-segmentation|generic-receive'
+Rerun the generalized diag first, not deploy:
+cd /mnt/c/Users/nh1221/data-center/_v3/troubleshooting-scripts
+./diagnose_border_exit_bgp.sh --profile bl1-er1
+./diagnose_border_exit_bgp.sh --profile bl2-er2
+
+Use this on R810 for the same user that your R810_HOST points to, which looks like nh1221@R810.
+
+SSH to R810 and confirm the binary paths:
+ssh nh1221@R810
+command -v ovs-vsctl
+command -v virsh
+command -v ethtool
+
+Create a narrow sudoers rule with visudo:
+sudo visudo -f /etc/sudoers.d/nh1221-kvm-offload
+Put this in that file, adjusting paths only if step 1 showed different ones:
+Cmnd_Alias KVM_OFFLOAD_CMDS = /usr/bin/ovs-vsctl, /usr/bin/virsh, /usr/sbin/ethtool, /sbin/ethtool
+nh1221 ALL=(root) NOPASSWD: KVM_OFFLOAD_CMDS
+Fix permissions on the sudoers file:
+sudo chmod 440 /etc/sudoers.d/nh1221-kvm-offload
+sudo chown root:root /etc/sudoers.d/nh1221-kvm-offload
+Verify the exact non-interactive commands now work:
+sudo -n ovs-vsctl list-br
+sudo -n virsh list
+sudo -n ethtool -k vnet1201
+Verify the same flow works over SSH from your control host:
+ssh nh1221@R810 'sudo -n ovs-vsctl list-br'
+ssh nh1221@R810 'sudo -n virsh list'
+ssh nh1221@R810 'sudo -n ethtool -k vnet1201'
+Then rerun just the preflight/deploy slice you care about:
+cd /mnt/c/Users/nh1221/data-center/_v3
+ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Border_Leaf1:Border_Leaf2:Exit_Router1:Exit_Router2" --tags deploy
