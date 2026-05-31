@@ -620,3 +620,12 @@ If it still stays in Connect after this exact role fix, the remaining highest-pr
 GPT-5.4 • 1x
 OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
 "ssh Exit_Router1 '/interface ethernet print detail where running=yes; /ip address print detail where interface~"ether"; /ip firewall filter print detail where comment~"accept-bgp"; /ip firewall connection print where dst-port=179 or src-port=179; /routing bgp connection print detail; /routing bgp session print detail'"
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+
+
+Sync day1_bgp.yml, rerun the exit-router deploy, then check:
+
+ssh Exit_Router1 '/routing bgp connection print detail; /routing bgp session print detail; /ip firewall connection print where dst-port=179 or src-port=179'
+ssh Exit_Router2 '/routing bgp connection print detail; /routing bgp session print detail; /ip firewall connection print where dst-port=179 or src-port=179'
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
