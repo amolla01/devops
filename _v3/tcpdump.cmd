@@ -211,3 +211,16 @@ At that point the next useful test is simultaneous packet capture on:
 Border leaf fabric port
 The matching R810 vnet port
 The CHR side
+Run these on the control node:
+ssh Border_Leaf1 "sudo vtysh -c 'show running-config' | sed -n '/^router bgp/,/^!/p' | grep -A6 -B2 'neighbor 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'show running-config' | sed -n '/^router bgp/,/^!/p' | grep -A6 -B2 'neighbor 10.0.253.3'"
+
+If those come back clean, the next step is one synchronized handshake capture to prove where the SYN-ACK dies:
+ssh Border_Leaf1 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.1 and port 179 -vv"
+ssh Border_Leaf2 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.3 and port 179 -vv"
+ssh nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1267 host 10.0.253.0 and port 179 -vv"
+ssh nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1269 host 10.0.253.2 and port 179 -vv"
+
+Then, during those captures, trigger a fresh connect attempt from each CHR:
+ssh Exit_Router1 "/routing bgp connection disable [find where name=\"to_Border_Leaf1\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf1\"]"
+ssh Exit_Router2 "/routing bgp connection disable [find where name=\"to_Border_Leaf2\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf2\"]"
