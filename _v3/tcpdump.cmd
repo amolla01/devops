@@ -212,8 +212,22 @@ Border leaf fabric port
 The matching R810 vnet port
 The CHR side
 Run these on the control node:
-ssh Border_Leaf1 "sudo vtysh -c 'show running-config' | sed -n '/^router bgp/,/^!/p' | grep -A6 -B2 'neighbor 10.0.253.1'"
-ssh Border_Leaf2 "sudo vtysh -c 'show running-config' | sed -n '/^router bgp/,/^!/p' | grep -A6 -B2 'neighbor 10.0.253.3'"
+ssh Border_Leaf1 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.1"'
+ssh Border_Leaf2 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.3"'
+
+The next commands to run are:
+
+Check whether FRR has a password/MD5 configured for those exact numbered neighbors:
+
+
+ssh Border_Leaf1 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.1"'
+ssh Border_Leaf2 'sudo vtysh -c "show running-config" | grep -A8 -B3 "neighbor 10.0.253.3"'
+
+
+If you still want the R810 tap capture, force a tty for sudo:
+ssh -t nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1267 host 10.0.253.0 and port 179 -vv"
+ssh -t nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1269 host 10.0.253.2 and port 179 -vv"
+
 
 If those come back clean, the next step is one synchronized handshake capture to prove where the SYN-ACK dies:
 ssh Border_Leaf1 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.1 and port 179 -vv"
