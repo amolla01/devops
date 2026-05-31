@@ -1,0 +1,61 @@
+! FRR configuration — managed by Ansible
+! {{ ansible_managed }}
+frr version 8.4
+frr defaults traditional
+hostname {{ hostname }}
+log syslog informational
+ip forwarding
+ipv6 forwarding
+service integrated-vtysh-config
+!
+{# Map physical interface names (eth1/eth2) to KVM names (enp2s0/enp3s0) when on KVM #}
+{% set _is_kvm = automation_profile | default('win11_kvm') in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] %}
+{% set _phy2kvm = {
+     physical_interface_map.fabric0: kvm_interface_map.fabric0,
+     physical_interface_map.fabric1: kvm_interface_map.fabric1,
+     physical_interface_map.mgmt:    kvm_interface_map.mgmt
+   } if _is_kvm else {} %}
+!
+interface lo
+ ip address {{ loopback_ip }}
+!
+{% for neighbor in frr_bgp.neighbors %}
+{% set _iface = _phy2kvm[neighbor.interface] | default(neighbor.interface) %}
+interface {{ _iface }}
+ description {{ neighbor.description }}
+!
+{% endfor %}
+router bgp {{ frr_bgp.local_asn }}
+ bgp router-id {{ frr_bgp.router_id }}
+ bgp bestpath as-path multipath-relax
+ no bgp ebgp-requires-policy
+ !
+{% for neighbor in frr_bgp.neighbors %}
+{% set _iface = _phy2kvm[neighbor.interface] | default(neighbor.interface) %}
+ neighbor {{ _iface }} interface remote-as {{ neighbor.remote_asn }}
+ neighbor {{ _iface }} description {{ neighbor.description }}
+ neighbor {{ _iface }} capability extended-nexthop
+{% endfor %}
+ !
+ address-family ipv4 unicast
+  redistribute connected
+{% for network in frr_bgp.networks | default([]) %}
+  network {{ network }}
+{% endfor %}
+{% for neighbor in frr_bgp.neighbors %}
+{% set _iface = _phy2kvm[neighbor.interface] | default(neighbor.interface) %}
+  neighbor {{ _iface }} activate
+  neighbor {{ _iface }} soft-reconfiguration inbound
+{% endfor %}
+  maximum-paths {{ bgp_ecmp_max_paths | default(8) }}
+ exit-address-family
+ !
+ address-family ipv6 unicast
+{% for neighbor in frr_bgp.neighbors %}
+{% set _iface = _phy2kvm[neighbor.interface] | default(neighbor.interface) %}
+  neighbor {{ _iface }} activate
+{% endfor %}
+ exit-address-family
+!
+line vty
+!
