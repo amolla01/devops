@@ -64,14 +64,6 @@
   failed_when: false
   tags: [day0, bgp]
 
-- name: "day0 | Ensure BGP instance exists"
-  ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst] = 0) do={ /routing/bgp/instance add name=main as={{ bgp_local_asn }} router-id={{ router_id }}; } else={ /routing/bgp/instance set $inst as={{ bgp_local_asn }} router-id={{ router_id }}; } }'
-  register: _bgp_instance_result
-  changed_when: _bgp_instance_result.rc == 0
-  failed_when: _bgp_instance_result.rc != 0
-  tags: [day0, bgp]
-
 - name: "day0 | Configure management interface address"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/ip address add address={{ mgmt_ip }} interface={{ mgmt_interface.port }} comment=Management'

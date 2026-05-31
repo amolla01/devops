@@ -124,14 +124,6 @@
   when: fabric_interfaces | selectattr('local_ip', 'defined') | list | length > 0
   tags: [deploy, day1, interfaces]
 
-- name: "day1 | Ensure RouterOS BGP instance exists"
-  ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst] = 0) do={ /routing/bgp/instance add name=main as={{ bgp_local_asn }} router-id={{ router_id }}; } else={ /routing/bgp/instance set $inst as={{ bgp_local_asn }} router-id={{ router_id }}; } }'
-  register: _bgp_instance_result
-  changed_when: _bgp_instance_result.rc == 0
-  failed_when: _bgp_instance_result.rc != 0
-  tags: [deploy, day1, bgp]
-
 - name: "day1 | Remove stale BGP firewall accept rules (idempotent re-run)"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/ip firewall filter remove [find where comment~"accept-bgp"]'
@@ -160,7 +152,7 @@
 
 - name: "day1 | Configure BGP connection to neighbor"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }}/32 remote.as={{ item.neighbor_asn }} instance=main local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates="" as={{ bgp_local_asn }} disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates="" as={{ bgp_local_asn }} disabled=no connect=yes listen=no address-families=ip hold-time=3m keepalive-time=1m'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP → {{ item.neighbor }} (AS{{ item.neighbor_asn }})"
@@ -177,6 +169,39 @@
   changed_when: false
   failed_when: false
   tags: [day1, verify]
+
+- name: "day1 | Gather immediate BGP session state after deploy"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp session print detail'
+  register: _bgp_sessions_deploy
+  changed_when: false
+  failed_when: false
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Parse concrete BGP session rows after deploy"
+  ansible.builtin.set_fact:
+    _bgp_session_rows_deploy: >-
+      {{
+        (_bgp_sessions_deploy.stdout_lines | default([]))
+        | reject('match', '^Flags:')
+        | reject('match', '^\\s*$')
+        | list
+      }}
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Warn when BGP connection exists but no live RouterOS session formed"
+  ansible.builtin.debug:
+    msg: >-
+      {{ inventory_hostname }} has a configured RouterOS BGP connection but no concrete
+      /routing bgp session rows yet. This usually means the CHR transport path is still
+      broken rather than BGP syntax being wrong. Border leaf will remain in Connect until
+      TCP/179 completes. On this KVM lab the known durable fix is the CHR fabric NIC model
+      used at VM creation time: exit-router VMs created before the rtl8139 fabric-NIC change
+      in deploy_lab_v13.sh can keep showing header-only session output here.
+  when:
+    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_session_rows_deploy | default([]) | length) == 0
+  tags: [deploy, day1, bgp]
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Enhanced Verification: BGP Neighbors, Routes, and LLDP
