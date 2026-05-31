@@ -666,3 +666,8 @@ ssh Exit_Router1 '/routing bgp template print detail; /routing bgp connection pr
 ssh Exit_Router2 '/routing bgp template print detail; /routing bgp connection print detail; /routing bgp session print detail'
 ssh Border_Leaf1 "sudo vtysh -c 'show bgp neighbors 10.0.253.1'"
 ssh Border_Leaf2 "sudo vtysh -c 'show bgp neighbors 10.0.253.3'"
+QQQQQQQQQQQQQQQQQQQQQQQQQQQQ
+ssh Exit_Router1 '/routing bgp connection print detail; /routing bgp session print detail'
+ssh Exit_Router2 '/routing bgp connection print detail; /routing bgp session print detail'
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp neighbors 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp neighbors 10.0.253.3'"
