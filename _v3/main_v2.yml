@@ -13,10 +13,10 @@
 #   the spine-facing ports stale. That is exactly how a border-only day-1 run
 #   can appear to "drop" spine adjacencies.
 #
-#   Solution: sonic_fabric owns only switch fabric ports plus exit-router links,
-#   so always include local fabric_interfaces/uplink_interfaces/exit_interfaces.
-#   Server downlinks remain the responsibility of sonic_leaf_server and are not
-#   part of this role's local patch set.
+#   Solution: sonic_fabric must also own local server downlinks because the
+#   active day-1 path programs leaf<->server BGP here. Those ports need the
+#   same ConfigDB INTERFACE link-local settings as other unnumbered peers,
+#   otherwise FRR stays at "Waiting for Peer IPv6 LLA" on both ends.
 #
 # Prerequisites: Day-0 config must already be applied (sonic_day0 role).
 # Input vars:
@@ -53,6 +53,7 @@
         (fabric_interfaces | default([]))
         + (uplink_interfaces | default([]))
         + (exit_interfaces | default([]))
+        + (downlink_interfaces | default([]))
       }}
   tags: [render, fabric]
 
@@ -242,3 +243,11 @@
   ansible.builtin.set_fact:
     rendered_config_path: "{{ _fabric_rendered.dest }}"
   tags: [render, fabric]
+
+- name: "fabric | Apply rendered fabric patch"
+  ansible.builtin.import_tasks: apply_patch.yml
+  tags: [deploy, fabric]
+
+- name: "fabric | Run post-deploy verification"
+  ansible.builtin.import_tasks: verify.yml
+  tags: [verify, fabric]
