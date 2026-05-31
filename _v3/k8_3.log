@@ -1,0 +1,98 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml -K
+BECOME password:
+
+PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Display automation profile] *******************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        Automation Profile: ubuntu_r810_kvm
+        Controllers: Host12_1, Host34_1, HostB12_1
+        Workers: Host12_2, Host12_3, Host34_2
+        All kube_nodes: Host12_1, Host34_1, HostB12_1, Host12_2, Host12_3, Host34_2
+
+TASK [Install system packages for KubeSpray] ********************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Clone KubeSpray repository] *******************************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Create Python virtual environment] ************************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install KubeSpray requirements in venv] *******************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install Helm binary on deployer] **************************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Display KubeSpray readiness] ******************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        KubeSpray v2.24.1 ready at: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../kubespray
+        Virtual env: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../kubespray/venv
+        Helm: Downloading https://get.helm.sh/helm-v3.21.0-linux-amd64.tar.gz
+        Verifying checksum... Done.
+        Preparing to install helm into /usr/local/bin
+        helm installed into /usr/local/bin/helm
+        v3.21.0+ge0878d4
+        Profile: ubuntu_r810_kvm
+
+PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
+
+TASK [Validate kube_nodes group is populated] *******************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    msg: All assertions passed
+
+TASK [Create KubeSpray inventory directory] *********************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Create KubeSpray inventory directory (k8s-cluster)] *******************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
+[ERROR]: Task failed: Could not find or access '../roles/kubespray/templates/kubespray_hosts.yml.j2'
+Searched in:
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2 on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:128:7
+
+126         mode: '0755'
+127
+128     - name: Generate KubeSpray hosts.yml
+          ^ column 7
+
+<<< caused by >>>
+
+Could not find or access '../roles/kubespray/templates/kubespray_hosts.yml.j2'
+Searched in:
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+        /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2 on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option
+
+fatal: [localhost]: FAILED! =>
+    changed: false
+    msg: |-
+        Could not find or access '../roles/kubespray/templates/kubespray_hosts.yml.j2'
+        Searched in:
+                /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+                /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2
+                /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/templates/../roles/kubespray/templates/kubespray_hosts.yml.j2
+                /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/../roles/kubespray/templates/kubespray_hosts.yml.j2 on the Ansible Controller.
+        If you are using a module and expect the file to exist on the remote, see the remote_src option
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+localhost                  : ok=11   changed=6    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
