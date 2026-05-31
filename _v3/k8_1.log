@@ -1,20 +1,64 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml -K
+BECOME password:
 
-PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
+PLAY [Preflight Download: Stage all deployment artifacts to /opt/fabric-cache/] *********************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-[ERROR]: Task failed: Premature end of stream waiting for become success.
->>> Standard Error
-sudo: a password is required
+ok: [localhost]
+
+TASK [Create cache directories] *********************************************************************************************************************************************************************************
+ok: [localhost] => (item=/opt/fabric-cache/binaries)
+ok: [localhost] => (item=/opt/fabric-cache/images)
+ok: [localhost] => (item=/opt/fabric-cache/kubespray)
+ok: [localhost] => (item=/opt/fabric-cache/kubespray-repo)
+ok: [localhost] => (item=/opt/fabric-cache/maas)
+ok: [localhost] => (item=/opt/fabric-cache/helm-charts)
+ok: [localhost] => (item=/opt/fabric-cache/apt-packages)
+ok: [localhost] => (item=/opt/fabric-cache/pip-packages)
+
+TASK [binaries | Download kubectl v1.29.4] **********************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [binaries | Download helm v3.14.4] *************************************************************************************************************************************************************************
+skipping: [localhost]
+
+TASK [binaries | Download yq v4.44.1] ***************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [binaries | Download k9s v0.32.4] **************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [binaries | Download argocd v2.11.3] ***********************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [binaries | Download cephadm 18.2.2] ***********************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [images | Download cirros 0.6.2] ***************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [images | Download Ubuntu 22.04 cloud image] ***************************************************************************************************************************************************************
+changed: [localhost]
+
+TASK [images | Download Ubuntu 24.04 live-server ISO (for Packer builds)] ***************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: Request failed
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/preflight_download.yml:242:7
+
+240       tags: [images, openstack, openstack_helm]
+241
+242     - name: "images | Download Ubuntu 24.04 live-server ISO (for Packer builds)"
+          ^ column 7
 
 fatal: [localhost]: FAILED! =>
     changed: false
-    msg: |-
-        Task failed: Premature end of stream waiting for become success.
-        >>> Standard Error
-        sudo: a password is required
+    dest: /opt/fabric-cache/images/ubuntu-24.04-live-server-amd64.iso
+    elapsed: 0
+    msg: Request failed
+    response: 'HTTP Error 404: Not Found'
+    status_code: 404
+    url: https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+localhost                  : ok=9    changed=2    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
