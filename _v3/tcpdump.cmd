@@ -193,3 +193,21 @@ ssh nh1221@R810 'sudo -n ethtool -k vnet1201'
 Then rerun just the preflight/deploy slice you care about:
 cd /mnt/c/Users/nh1221/data-center/_v3
 ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Border_Leaf1:Border_Leaf2:Exit_Router1:Exit_Router2" --tags deploy
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+So what we are doing now is this:
+
+Eliminate the environment mismatch.
+Run the deploy only after exporting the env file, so the automation really uses nh1221@R810:
+cd /mnt/c/Users/nh1221/data-center/_v3
+set -a
+source ./.deploy_lab_v3.env
+set +a
+echo "$R810_HOST"
+Re-run the same deploy and confirm the Phase 0 label changes behavior.
+It should no longer effectively fall back to plain R810.
+ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Border_Leaf1:Border_Leaf2:Exit_Router1:Exit_Router2" --tags deploy
+If the peers are still Active, localize the failure hop, not the config shape.
+At that point the next useful test is simultaneous packet capture on:
+Border leaf fabric port
+The matching R810 vnet port
+The CHR side
