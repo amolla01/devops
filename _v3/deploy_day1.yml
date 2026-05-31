@@ -129,13 +129,17 @@
 
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+        ssh {{ item.alias | quote }} 'if ! sudo -n true >/dev/null 2>&1; then
+          echo "__sudo_unavailable__"
+          exit 0
+        fi
+        for vm in {{ item.vms | join(" ") }}; do
           sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
             [ -n "$br" ] || continue
             sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
               [ -n "$tap" ] || continue
               sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
-              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              sudo -n ethtool -K "$tap" tx off tso off gso off gro off 2>/dev/null || true
               echo "$vm:$tap"
             done
           done
@@ -146,7 +150,7 @@
       become: false
       delegate_to: localhost
       register: _kvm_tap_offload_fix
-      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      changed_when: ((_kvm_tap_offload_fix.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
         - inventory_hostname == (ansible_play_hosts_all | first)
@@ -159,8 +163,10 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
-             if ((item.stdout_lines | default([])) | length) > 0
+          {{ 'Could not disable hypervisor tap offload via ' ~ item.item.alias ~ ' because remote sudo requires a password. Run the offload fix directly on that hypervisor or configure passwordless sudo for ovs-vsctl, virsh, and ethtool.'
+             if ('__sudo_unavailable__' in (item.stdout_lines | default([])))
+             else 'Applied hypervisor tap offload fix via ' ~ item.item.alias ~ ' for: ' ~ (((item.stdout_lines | default([])) | select('search', ':vnet') | list) | join(', '))
+             if (((item.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0)
              else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
@@ -261,13 +267,17 @@
 
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+        ssh {{ item.alias | quote }} 'if ! sudo -n true >/dev/null 2>&1; then
+          echo "__sudo_unavailable__"
+          exit 0
+        fi
+        for vm in {{ item.vms | join(" ") }}; do
           sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
             [ -n "$br" ] || continue
             sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
               [ -n "$tap" ] || continue
               sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
-              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              sudo -n ethtool -K "$tap" tx off tso off gso off gro off 2>/dev/null || true
               echo "$vm:$tap"
             done
           done
@@ -278,7 +288,7 @@
       become: false
       delegate_to: localhost
       register: _kvm_tap_offload_fix
-      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      changed_when: ((_kvm_tap_offload_fix.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
         - inventory_hostname == (ansible_play_hosts_all | first)
@@ -291,8 +301,10 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
-             if ((item.stdout_lines | default([])) | length) > 0
+          {{ 'Could not disable hypervisor tap offload via ' ~ item.item.alias ~ ' because remote sudo requires a password. Run the offload fix directly on that hypervisor or configure passwordless sudo for ovs-vsctl, virsh, and ethtool.'
+             if ('__sudo_unavailable__' in (item.stdout_lines | default([])))
+             else 'Applied hypervisor tap offload fix via ' ~ item.item.alias ~ ' for: ' ~ (((item.stdout_lines | default([])) | select('search', ':vnet') | list) | join(', '))
+             if (((item.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0)
              else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
@@ -385,13 +397,17 @@
 
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+        ssh {{ item.alias | quote }} 'if ! sudo -n true >/dev/null 2>&1; then
+          echo "__sudo_unavailable__"
+          exit 0
+        fi
+        for vm in {{ item.vms | join(" ") }}; do
           sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
             [ -n "$br" ] || continue
             sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
               [ -n "$tap" ] || continue
               sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
-              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              sudo -n ethtool -K "$tap" tx off tso off gso off gro off 2>/dev/null || true
               echo "$vm:$tap"
             done
           done
@@ -402,7 +418,7 @@
       become: false
       delegate_to: localhost
       register: _kvm_tap_offload_fix
-      changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
+      changed_when: ((_kvm_tap_offload_fix.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
         - inventory_hostname == (ansible_play_hosts_all | first)
@@ -415,8 +431,10 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
-             if ((item.stdout_lines | default([])) | length) > 0
+          {{ 'Could not disable hypervisor tap offload via ' ~ item.item.alias ~ ' because remote sudo requires a password. Run the offload fix directly on that hypervisor or configure passwordless sudo for ovs-vsctl, virsh, and ethtool.'
+             if ('__sudo_unavailable__' in (item.stdout_lines | default([])))
+             else 'Applied hypervisor tap offload fix via ' ~ item.item.alias ~ ' for: ' ~ (((item.stdout_lines | default([])) | select('search', ':vnet') | list) | join(', '))
+             if (((item.stdout_lines | default([])) | select('search', ':vnet') | list | length) > 0)
              else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
