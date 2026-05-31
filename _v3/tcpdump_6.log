@@ -1,0 +1,98 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+rx-checksumming: off [fixed]
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off [requested on]
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+tcp-segmentation-offload: off
+        tx-tcp-segmentation: off [requested on]
+generic-segmentation-offload: on
+generic-receive-offload: on
+large-receive-offload: off [fixed]
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"
+> ;
+> ^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+rx-checksumming: off [fixed]
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off [requested on]
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+tcp-segmentation-offload: off
+        tx-tcp-segmentation: off [requested on]
+generic-segmentation-offload: on
+generic-receive-offload: on
+large-receive-offload: off [fixed]
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 'sudo ethtool -K Ethernet0 rx off tx off tso off gso off gro off || true'
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 'sudo ethtool -K Ethernet0 rx off tx off tso off gso off gro off || true'
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+rx-checksumming: off [fixed]
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+tcp-segmentation-offload: off
+        tx-tcp-segmentation: off
+generic-segmentation-offload: off
+generic-receive-offload: off
+large-receive-offload: off [fixed]
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+rx-checksumming: off [fixed]
+tx-checksumming: off
+        tx-checksum-ipv4: off [fixed]
+        tx-checksum-ip-generic: off
+        tx-checksum-ipv6: off [fixed]
+        tx-checksum-fcoe-crc: off [fixed]
+        tx-checksum-sctp: off [fixed]
+tcp-segmentation-offload: off
+        tx-tcp-segmentation: off
+generic-segmentation-offload: off
+generic-receive-offload: off
+large-receive-offload: off [fixed]
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing bgp connection disable [find where name="to_Border_Leaf1"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf1"]'
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 '/routing bgp connection disable [find where name="to_Border_Leaf2"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf2"]'
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.1 and port 179 -vv"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:58:11.009282 IP (tos 0xc0, ttl 255, id 799, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.43023 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xad25), seq 2776770279, win 64240, options [mss 1460,sackOK,TS val 3359003780 ecr 0,nop,wscale 7], length 0
+13:58:15.089345 IP (tos 0xc0, ttl 255, id 800, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.43023 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0x9d35), seq 2776770279, win 64240, options [mss 1460,sackOK,TS val 3359007860 ecr 0,nop,wscale 7], length 0
+13:58:17.879625 IP (tos 0xc0, ttl 255, id 29356, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.33837 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xca7f), seq 1000963186, win 64240, options [mss 1460,sackOK,TS val 3359010650 ecr 0,nop,wscale 7], length 0
+13:58:18.929240 IP (tos 0xc0, ttl 255, id 29357, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.33837 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xc665), seq 1000963186, win 64240, options [mss 1460,sackOK,TS val 3359011700 ecr 0,nop,wscale 7], length 0
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.3 and port 179 -vv"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+13:58:26.101607 IP (tos 0xc0, ttl 255, id 58490, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.44785 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x2cd0), seq 2767949992, win 64240, options [mss 1460,sackOK,TS val 966718289 ecr 0,nop,wscale 7], length 0
+13:58:27.120375 IP (tos 0xc0, ttl 255, id 58491, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.44785 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x28d6), seq 2767949992, win 64240, options [mss 1460,sackOK,TS val 966719307 ecr 0,nop,wscale 7], length 0
+13:58:29.200293 IP (tos 0xc0, ttl 255, id 58492, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.44785 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x20b6), seq 2767949992, win 64240, options [mss 1460,sackOK,TS val 966721387 ecr 0,nop,wscale 7], length 0
+13:58:33.279912 IP (tos 0xc0, ttl 255, id 58493, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.44785 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x10c6), seq 2767949992, win 64240, options [mss 1460,sackOK,TS val 966725467 ecr 0,nop,wscale 7], length 0
+
+4 packets captured
+4 packets received by filter
+0 packets dropped by kernel
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
