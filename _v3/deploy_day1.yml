@@ -72,9 +72,12 @@
         success_msg: >-
           automation_profile={{ automation_profile }}
           ({{ automation_profile_label }})
+      vars:
+        ansible_become: false
+      connection: local
       become: false
-      run_once: true
       delegate_to: localhost
+      when: inventory_hostname == (ansible_play_hosts_all | first)
       tags: [always, day1]
 
     - name: "Phase 0 | Build hypervisor tap-offload work list"
@@ -84,9 +87,13 @@
             vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
           - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
             vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
-      when: automation_profile | default('') != 'real_hardware'
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
-      run_once: true
       delegate_to: localhost
       tags: [preflight, deploy, day1]
 
@@ -99,13 +106,16 @@
             echo "$vm:$tap"
           done
         done'
+      vars:
+        ansible_become: false
+      connection: local
       become: false
       delegate_to: localhost
-      run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - item.vms | length > 0
       loop: "{{ _kvm_hypervisor_work | default([]) }}"
       loop_control:
@@ -116,14 +126,17 @@
       ansible.builtin.debug:
         msg: >-
           {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      vars:
+        ansible_become: false
+      connection: local
       become: false
-      run_once: true
       delegate_to: localhost
       loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
       loop_control:
         label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
@@ -170,9 +183,13 @@
             vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
           - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
             vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
-      when: automation_profile | default('') != 'real_hardware'
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
-      run_once: true
       delegate_to: localhost
       tags: [preflight, deploy, day1]
 
@@ -185,13 +202,16 @@
             echo "$vm:$tap"
           done
         done'
+      vars:
+        ansible_become: false
+      connection: local
       become: false
       delegate_to: localhost
-      run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - item.vms | length > 0
       loop: "{{ _kvm_hypervisor_work | default([]) }}"
       loop_control:
@@ -202,14 +222,17 @@
       ansible.builtin.debug:
         msg: >-
           {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      vars:
+        ansible_become: false
+      connection: local
       become: false
-      run_once: true
       delegate_to: localhost
       loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
       loop_control:
         label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
@@ -248,9 +271,13 @@
             vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
           - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
             vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
-      when: automation_profile | default('') != 'real_hardware'
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
-      run_once: true
       delegate_to: localhost
       tags: [preflight, deploy, day1]
 
@@ -263,13 +290,16 @@
             echo "$vm:$tap"
           done
         done'
+      vars:
+        ansible_become: false
+      connection: local
       become: false
       delegate_to: localhost
-      run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - item.vms | length > 0
       loop: "{{ _kvm_hypervisor_work | default([]) }}"
       loop_control:
@@ -280,14 +310,17 @@
       ansible.builtin.debug:
         msg: >-
           {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      vars:
+        ansible_become: false
+      connection: local
       become: false
-      run_once: true
       delegate_to: localhost
       loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
       loop_control:
         label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
       when:
         - automation_profile | default('') != 'real_hardware'
+        - inventory_hostname == (ansible_play_hosts_all | first)
         - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
