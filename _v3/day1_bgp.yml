@@ -230,6 +230,20 @@
   failed_when: false
   tags: [deploy, day1, bgp]
 
+- name: "day1 | Gather immediate BGP session count after deploy"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp session print count-only'
+  register: _bgp_session_count_deploy
+  changed_when: false
+  failed_when: false
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Parse immediate BGP session count after deploy"
+  ansible.builtin.set_fact:
+    _bgp_session_count_value_deploy: >-
+      {{ (_bgp_session_count_deploy.stdout | default('0') | trim | int) }}
+  tags: [deploy, day1, bgp]
+
 - name: "day1 | Parse concrete BGP session rows after deploy"
   ansible.builtin.set_fact:
     _bgp_session_rows_deploy: >-
@@ -249,7 +263,7 @@
   failed_when: false
   when:
     - (_bgp_connections.stdout | default('')) is search('to_')
-    - (_bgp_session_rows_deploy | default([]) | length) == 0
+    - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
 - name: "day1 | Report RouterOS BGP diagnostics when no live session formed"
@@ -258,11 +272,14 @@
       {{ inventory_hostname }} has a configured RouterOS BGP connection but no concrete
       /routing bgp session rows.
 
+      RouterOS reported {{ _bgp_session_count_value_deploy | default(0) | int }} live BGP sessions
+      via /routing bgp session print count-only.
+
       RouterOS diagnostic snapshot:
       {{ _bgp_no_session_diag.stdout | default('(no diagnostic output)') }}
   when:
     - (_bgp_connections.stdout | default('')) is search('to_')
-    - (_bgp_session_rows_deploy | default([]) | length) == 0
+    - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
 - name: "day1 | Fail deploy when RouterOS BGP connection exists but no live session formed"
@@ -273,7 +290,7 @@
       See the preceding diagnostic snapshot for routing-id, template, connection, and log state.
   when:
     - (_bgp_connections.stdout | default('')) is search('to_')
-    - (_bgp_session_rows_deploy | default([]) | length) == 0
+    - (_bgp_session_count_value_deploy | default(0) | int) == 0
   tags: [deploy, day1, bgp]
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -286,6 +303,20 @@
   register: _bgp_sessions
   changed_when: false
   failed_when: false
+  tags: [day1, verify]
+
+- name: "day1 | Gather BGP peer/session count"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp session print count-only'
+  register: _bgp_session_count
+  changed_when: false
+  failed_when: false
+  tags: [day1, verify]
+
+- name: "day1 | Parse BGP peer/session count"
+  ansible.builtin.set_fact:
+    _bgp_session_count_value: >-
+      {{ (_bgp_session_count.stdout | default('0') | trim | int) }}
   tags: [day1, verify]
 
 - name: "day1 | Parse concrete BGP session rows"
@@ -310,12 +341,12 @@
 - name: "day1 | Assert at least one BGP session exists"
   ansible.builtin.assert:
     that:
-      - _bgp_session_rows | length > 0
+      - _bgp_session_count_value | int > 0
     fail_msg: >-
-      No concrete BGP session rows were returned on {{ inventory_hostname }}.
-      RouterOS only reported the legend/header, which means the border-leaf session is not actually established.
+      RouterOS reported {{ _bgp_session_count_value | int }} live BGP sessions on {{ inventory_hostname }}.
+      The border-leaf session is not actually established.
     success_msg: >-
-      RouterOS returned {{ _bgp_session_rows | length }} concrete BGP session row(s) on {{ inventory_hostname }}.
+      RouterOS returned {{ _bgp_session_count_value | int }} live BGP session(s) on {{ inventory_hostname }}.
   tags: [day1, verify]
 
 - name: "day1 | Gather BGP advertised routes"
