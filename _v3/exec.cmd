@@ -629,3 +629,8 @@ ssh Exit_Router1 '/routing bgp connection print detail; /routing bgp session pri
 ssh Exit_Router2 '/routing bgp connection print detail; /routing bgp session print detail; /ip firewall connection print where dst-port=179 or src-port=179'
 ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
 ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+
+
+
+"ssh Border_Leaf1 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.1'; ping -c 3 10.0.253.1"; echo '===SPLIT==='; ssh Border_Leaf2 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.3'; ping -c 3 10.0.253.3""
