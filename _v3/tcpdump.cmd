@@ -71,3 +71,79 @@ It also supports fully custom arguments if you want to point it at another pair 
   --bl-name Border_Leaf1 --bl-mgmt 172.16.2.31 \
   --er-name Exit_Router1 --er-mgmt 172.16.2.98 \
   --bl-port Ethernet0 --bl-ip 10.0.253.0 --er-ip 10.0.253.1
+What to do next
+
+On the hypervisor, find the actual tap/vnet ports on the two border-exit bridges:
+
+sudo ovs-vsctl list-ports br-BL1-ER1
+sudo ovs-vsctl list-ports br-BL2-ER2
+
+Disable TX offload on every vnet*/tap interface attached to those two bridges:
+
+sudo ethtool -K <iface> tx off
+If each bridge has two VM-side ports, do it for both ports on each bridge.
+
+Verify the change:
+sudo ethtool -k <iface> | grep tx-checksumming
+You want it to report off.
+
+Re-run the new diagnostic script first, not the playbook:
+cd /mnt/c/Users/nh1221/data-center/_v3/troubleshooting-scripts
+./diagnose_border_exit_bgp.sh --profile bl1-er1
+./diagnose_border_exit_bgp.sh --profile bl2-er2
+
+
+The generalized diagnostics are enough now. I’m not gathering more context; I’m tying the results back to the automation behavior and the next concrete remediation step.
+
+The new script gave the decisive result.
+
+This is the smoking gun:
+On both Border_Leaf1 and Border_Leaf2, tcpdump on Ethernet0 sees SYNs from the exit routers with bad TCP checksums:
+
+cksum 0x0e31 (incorrect -> 0xae2d)
+cksum 0x0e35 (incorrect -> 0x7771)
+
+At the same time:
+FRR is listening on 0.0.0.0:179
+rp_filter is 0
+iptables is allowing TCP/179
+the numbered /31 IPs are correct
+the RouterOS peer object is present
+
+So the current failure is not BGP config anymore. It is packet integrity on the KVM fabric path, and it lines up exactly with the earlier “hypervisor tap TX offload fix” path not applying:
+
+No matching hypervisor tap interfaces were found via R810
+
+That part is the real defect now.
+
+What to do next
+
+On the hypervisor, find the actual tap/vnet ports on the two border-exit bridges:
+Disable TX offload on every vnet*/tap interface attached to those two bridges:
+If each bridge has two VM-side ports, do it for both ports on each bridge.
+
+Verify the change:
+You want it to report off.
+
+Re-run the new diagnostic script first, not the playbook:
+What should change:
+The tcpdump section should stop showing the incorrect checksum warning on the SYNs.
+BL1/BL2 should start replying with SYN-ACK.
+Then the SONiC neighbors should move out of Active.
+
+Only after that, rerun:
+
+ansible-playbook playbooks/reused/deploy_day1.yml \
+  -i inventory/hosts.yml \
+  -e automation_profile=ubuntu_r810_kvm \
+  --limit "Exit_Router1:Exit_Router2" \
+  --tags deploy
+
+Important conclusion:
+The automation already told us the root gap:
+the hypervisor tap-offload discovery missed these interfaces, so the checksum fix never touched the real ports.
+
+Natural next steps:
+
+Paste the output of ovs-vsctl list-ports br-BL1-ER1 and ovs-vsctl list-ports br-BL2-ER2, and I’ll tell you exactly which interfaces to run ethtool -K ... tx off on.
+If you want this fixed permanently, I can patch the _v3 automation so Phase 0 reliably discovers and disables offload on the actual bridge ports instead of missing them.
