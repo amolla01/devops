@@ -200,7 +200,7 @@
 
 - name: "day1 | Configure BGP connection to neighbor"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} template=default local.role=ebgp disabled=no connect=yes listen=no'
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }}/32 remote.as={{ item.neighbor_asn }} local.address={{ item.local_ip.split("/")[0] }} template=default local.role=ebgp disabled=no connect=yes listen=no'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP → {{ item.neighbor }} (AS{{ item.neighbor_asn }})"
