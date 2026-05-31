@@ -1,285 +1,164 @@
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ virsh list --all
- Id   Name           State
-------------------------------
- 62   Spine_S1       running
- 63   Spine_S2       running
- 64   Leaf_L1        running
- 65   Leaf_L2        running
- 66   Leaf_L3        running
- 67   Leaf_L4        running
- 68   Border_Leaf1   running
- 69   Border_Leaf2   running
- 70   Exit_Router1   running
- 71   Exit_Router2   running
- 72   Host12_1       running
- 73   Host12_2       running
- 74   Host12_3       running
- 75   Host34_1       running
- 76   Host34_2       running
- 77   HostB12_1      running
- 78   HostB12_2      running
- 79   MonitorSrv     running
-
-nh1221@PowerEdge-R810:~$ virsh domiflist Exit_Router1
- Interface   Type      Source       Model     MAC
------------------------------------------------------------------
- vnet1266    network   dc-mgmt      virtio    52:54:00:09:95:29
- vnet1267    bridge    br-BL1-ER1   rtl8139   52:54:00:0f:cd:fb
-
-nh1221@PowerEdge-R810:~$ virsh domiflist Exit_Router2
- Interface   Type      Source       Model     MAC
------------------------------------------------------------------
- vnet1268    network   dc-mgmt      virtio    52:54:00:41:cb:8d
- vnet1269    bridge    br-BL2-ER2   rtl8139   52:54:00:90:b6:46
-
-nh1221@PowerEdge-R810:~$ sudo virsh edit Exit_Router1
-[sudo: authenticate] Password:
-Domain 'Exit_Router1' XML configuration not changed.
-
-nh1221@PowerEdge-R810:~$ sudo virsh edit Exit_Router2
-Domain 'Exit_Router2' XML configuration not changed.
-
-nh1221@PowerEdge-R810:~$
-
-<domain type='kvm'>
-  <name>Exit_Router1</name>
-  <uuid>69e0f58e-3ba4-48a1-9ff6-4112e04f2d2a</uuid>
-  <memory unit='KiB'>2097152</memory>
-  <currentMemory unit='KiB'>2097152</currentMemory>
-  <vcpu placement='static'>2</vcpu>
-  <os>
-    <type arch='x86_64' machine='pc-i440fx-resolute'>hvm</type>
-    <boot dev='hd'/>
-  </os>
-  <features>
-    <acpi/>
-    <apic/>
-  </features>
-  <cpu mode='host-passthrough' check='none' migratable='on'/>
-  <clock offset='utc'>
-    <timer name='rtc' tickpolicy='catchup'/>
-    <timer name='pit' tickpolicy='delay'/>
-    <timer name='hpet' present='no'/>
-  </clock>
-  <on_poweroff>destroy</on_poweroff>
-  <on_reboot>restart</on_reboot>
-  <on_crash>destroy</on_crash>
-  <pm>
-    <suspend-to-mem enabled='no'/>
-    <suspend-to-disk enabled='no'/>
-  </pm>
-  <devices>
-    <emulator>/usr/bin/qemu-system-x86_64</emulator>
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='/home/nh1221/dc_lab/disks/Exit_Router1.qcow2'/>
-      <target dev='vda' bus='virtio'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-    </disk>
-    <controller type='usb' index='0' model='ich9-ehci1'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x7'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci1'>
-      <master startport='0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0' multifunction='on'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci2'>
-      <master startport='2'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x1'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci3'>
-      <master startport='4'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x2'/>
-    </controller>
-    <controller type='pci' index='0' model='pci-root'/>
-    <interface type='network'>
-      <mac address='52:54:00:09:95:29'/>
-      <source network='dc-mgmt'/>
-      <model type='virtio'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-    </interface>
-    <interface type='network'>
-      <mac address='52:54:00:0f:cd:fb'/>
-      <source network='br-BL1-ER1'/>
-      <model type='rtl8139'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-    </interface>
-    <serial type='pty'>
-      <target type='isa-serial' port='0'>
-        <model name='isa-serial'/>
-      </target>
-    </serial>
-    <console type='pty'>
-      <target type='serial' port='0'/>
-    </console>
-    <input type='mouse' bus='ps2'/>
-    <input type='keyboard' bus='ps2'/>
-    <audio id='1' type='none'/>
-    <memballoon model='virtio'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </memballoon>
-  </devices>
-</domain>
-
-<domain type='kvm'>
-  <name>Exit_Router2</name>
-  <uuid>346f9844-54c3-4da8-a192-3ae5f86ab50c</uuid>
-  <memory unit='KiB'>2097152</memory>
-  <currentMemory unit='KiB'>2097152</currentMemory>
-  <vcpu placement='static'>2</vcpu>
-  <os>
-    <type arch='x86_64' machine='pc-i440fx-resolute'>hvm</type>
-    <boot dev='hd'/>
-  </os>
-  <features>
-    <acpi/>
-    <apic/>
-  </features>
-  <cpu mode='host-passthrough' check='none' migratable='on'/>
-  <clock offset='utc'>
-    <timer name='rtc' tickpolicy='catchup'/>
-    <timer name='pit' tickpolicy='delay'/>
-    <timer name='hpet' present='no'/>
-  </clock>
-  <on_poweroff>destroy</on_poweroff>
-  <on_reboot>restart</on_reboot>
-  <on_crash>destroy</on_crash>
-  <pm>
-    <suspend-to-mem enabled='no'/>
-    <suspend-to-disk enabled='no'/>
-  </pm>
-  <devices>
-    <emulator>/usr/bin/qemu-system-x86_64</emulator>
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='qcow2'/>
-      <source file='/home/nh1221/dc_lab/disks/Exit_Router2.qcow2'/>
-      <target dev='vda' bus='virtio'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-    </disk>
-    <controller type='usb' index='0' model='ich9-ehci1'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x7'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci1'>
-      <master startport='0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x0' multifunction='on'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci2'>
-      <master startport='2'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x1'/>
-    </controller>
-    <controller type='usb' index='0' model='ich9-uhci3'>
-      <master startport='4'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x04' function='0x2'/>
-    </controller>
-    <controller type='pci' index='0' model='pci-root'/>
-    <interface type='network'>
-      <mac address='52:54:00:41:cb:8d'/>
-      <source network='dc-mgmt'/>
-      <model type='virtio'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-    </interface>
-    <interface type='network'>
-      <mac address='52:54:00:90:b6:46'/>
-      <source network='br-BL2-ER2'/>
-      <model type='rtl8139'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-    </interface>
-    <serial type='pty'>
-      <target type='isa-serial' port='0'>
-        <model name='isa-serial'/>
-      </target>
-    </serial>
-    <console type='pty'>
-      <target type='serial' port='0'/>
-    </console>
-    <input type='mouse' bus='ps2'/>
-    <input type='keyboard' bus='ps2'/>
-    <audio id='1' type='none'/>
-    <memballoon model='virtio'>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-    </memballoon>
-  </devices>
-</domain>	
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/interface ethernet print detail where running=yes; /ip address print detail where interface~"ether"; /ip firewall filter print detail where comment~"accept-bgp"; /ip firewall connection print where dst-port=179 or src-port=179; /routing bgp connection print detail; /routing bgp session print detail'
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: X - disabled, R - running; S - slave
- 0 R  name="ether1" default-name="ether1" mtu=1500
-      mac-address=52:54:00:09:95:29 orig-mac-address=52:54:00:09:95:29
-      arp=enabled arp-timeout=auto loop-protect=default
-      loop-protect-status=off loop-protect-send-interval=5s
-      loop-protect-disable-time=5m disable-running-check=no
-      auto-negotiation=yes advertise="" cable-settings=default
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
 
- 1 R  name="ether2" default-name="ether2" mtu=1500
-      mac-address=52:54:00:0F:CD:FB orig-mac-address=52:54:00:0F:CD:FB
-      arp=enabled arp-timeout=auto loop-protect=default
-      loop-protect-status=off loop-protect-send-interval=5s
-      loop-protect-disable-time=5m disable-running-check=no
-      auto-negotiation=yes advertise="" cable-settings=default
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 127
+RIB entries 37, using 8288 bytes of memory
+Peers 6, using 4348 KiB of memory
 
-Flags: X - disabled, I - invalid, D - dynamic; S - slave
- 1 D  address=172.16.2.98/24 network=172.16.2.0 interface=ether1
-      actual-interface=ether1
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       190       199        0    0    0 01:16:40            6       19 HostB12_1
+Ethernet24      4      65107       122       769        0    0    0 00:01:05            0       19 HostB12_2
+Ethernet28      4      65108       125       771        0    0    0 00:01:04            0       19 MonitorSrv
+Ethernet120     4      65000       484       496        0    0    0 06:11:27           15       19 Spine_S2
+Ethernet124     4      65000       484       496        0    0    0 06:11:11           15       19 Spine_S1
+10.0.253.1      4      65253         0         2        0    0    0    never       Active        0 Exit_Router1
 
- 4    address=10.0.253.1/31 network=10.0.253.0 interface=ether2
-      actual-interface=ether2
+Total number of neighbors 6
 
-Flags: X - disabled, I - invalid; D - dynamic
-21    ;;; accept-bgp-Border_Leaf1
-      chain=input action=accept protocol=tcp src-address=10.0.253.0
-      dst-port=179
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       190       199        0    0    0 01:16:40            0        0 HostB12_1
+Ethernet24      4      65107       122       769        0    0    0 00:01:05            0        0 HostB12_2
+Ethernet28      4      65108       125       771        0    0    0 00:01:04            0        0 MonitorSrv
+Ethernet120     4      65000       484       496        0    0    0 06:11:27            0        0 Spine_S2
+Ethernet124     4      65000       484       496        0    0    0 06:11:11            0        0 Spine_S1
+
+Total number of neighbors 5
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.1'; ping -c 3 10.0.253.1"; echo '===SPLIT===';
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+Ethernet0              10.0.253.0/31        up/up         Exit_Router1    10.0.253.1
+Loopback0              10.0.2.1/32          up/up         N/A             N/A
+docker0                240.127.1.1/24       up/down       N/A             N/A
+BGP neighbor is 10.0.253.1, remote AS 65253, local AS 65021, external link
+  Local Role: undefined
+  Remote Role: undefined
+ Description: Exit_Router1
+  BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.2.1
+  BGP state = Active
+  Last read 06:49:51, Last write 06:12:30
+  Hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured conditional advertisements interval is 60 seconds
+  Graceful restart information:
+    Local GR Mode: Helper*
+
+    Remote GR Mode: NotApplicable
+
+    R bit: False
+    N bit: False
+    Timers:
+      Configured Restart Time(sec): 120
+      Received Restart Time(sec): 0
+  Message statistics:
+    Inq depth is 0
+    Outq depth is 0
+                         Sent       Rcvd
+    Opens:                  1          0
+    Notifications:          1          0
+    Updates:                0          0
+    Keepalives:             0          0
+    Route Refresh:          0          0
+    Capability:             0          0
+    Total:                  2          0
+  Minimum time between advertisement runs is 0 seconds
+  Update source is 10.0.253.0
+
+ For address family: IPv4 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  0 accepted prefixes
+
+  Connections established 0; dropped 0
+  Last reset 06:49:51,  Notification sent (Hold Timer Expired)
+  External BGP neighbor may be up to 1 hops away.
+BGP Connect Retry Timer in Seconds: 120
+Next connect timer due in 62 seconds
+Read thread: off  Write thread: off  FD used: -1
+
+  BFD: Type: single hop
+  Detect Multiplier: 3, Min Rx interval: 300, Min Tx interval: 300
+  Status: Unknown, Last update: never
 
 
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf1"
-     remote.address=10.0.253.0/32 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     connect=yes listen=yes routing-table=main router-id=10.0.99.1
-     templates="" as=65253 hold-time=3m keepalive-time=1m address-families=ip
+PING 10.0.253.1 (10.0.253.1) 56(84) bytes of data.
+64 bytes from 10.0.253.1: icmp_seq=1 ttl=64 time=1.48 ms
+64 bytes from 10.0.253.1: icmp_seq=2 ttl=64 time=1.05 ms
+64 bytes from 10.0.253.1: icmp_seq=3 ttl=64 time=0.680 ms
 
-Flags: E - established
+--- 10.0.253.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.680/1.070/1.482/0.327 ms
+===SPLIT===
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.3'; ping -c 3 10.0.253.3"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+Ethernet0              10.0.253.2/31        up/up         Exit_Router2    10.0.253.3
+Loopback0              10.0.2.2/32          up/up         N/A             N/A
+docker0                240.127.1.1/24       up/down       N/A             N/A
+BGP neighbor is 10.0.253.3, remote AS 65254, local AS 65022, external link
+  Local Role: undefined
+  Remote Role: undefined
+ Description: Exit_Router2
+  BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.2.2
+  BGP state = Active
+  Last read 06:50:51, Last write never
+  Hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured conditional advertisements interval is 60 seconds
+  Graceful restart information:
+    Local GR Mode: Helper*
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 '/interface ethernet print detail where running=yes; /ip address print detail where interface~"ether"; /ip firewall filter pr
-int detail where comment~"accept-bgp"; /ip firewall connection print where dst-port=179 or src-port=179; /routing bgp connection print detail; /routing bgp session print detail'
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: X - disabled, R - running; S - slave
- 0 R  name="ether1" default-name="ether1" mtu=1500
-      mac-address=52:54:00:41:CB:8D orig-mac-address=52:54:00:41:CB:8D
-      arp=enabled arp-timeout=auto loop-protect=default
-      loop-protect-status=off loop-protect-send-interval=5s
-      loop-protect-disable-time=5m disable-running-check=no
-      auto-negotiation=yes advertise="" cable-settings=default
+    Remote GR Mode: NotApplicable
 
- 1 R  name="ether3" default-name="ether2" mtu=1500
-      mac-address=52:54:00:CF:AF:EF orig-mac-address=52:54:00:CF:AF:EF
-      arp=enabled arp-timeout=auto loop-protect=default
-      loop-protect-status=off loop-protect-send-interval=5s
-      loop-protect-disable-time=5m disable-running-check=no
-      auto-negotiation=yes advertise="" cable-settings=default
+    R bit: False
+    N bit: False
+    Timers:
+      Configured Restart Time(sec): 120
+      Received Restart Time(sec): 0
+  Message statistics:
+    Inq depth is 0
+    Outq depth is 0
+                         Sent       Rcvd
+    Opens:                  0          0
+    Notifications:          0          0
+    Updates:                0          0
+    Keepalives:             0          0
+    Route Refresh:          0          0
+    Capability:             0          0
+    Total:                  0          0
+  Minimum time between advertisement runs is 0 seconds
+  Update source is 10.0.253.2
 
-Flags: X - disabled, I - invalid, D - dynamic; S - slave
- 1 D  address=172.16.2.99/24 network=172.16.2.0 interface=ether1
-      actual-interface=ether1
+ For address family: IPv4 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  0 accepted prefixes
 
- 4    address=10.0.253.3/31 network=10.0.253.2 interface=ether3
-      actual-interface=ether3
+  Connections established 0; dropped 0
+  Last reset 06:50:51,  Waiting for peer OPEN
+  External BGP neighbor may be up to 1 hops away.
+BGP Connect Retry Timer in Seconds: 120
+Next connect timer due in 34 seconds
+Read thread: off  Write thread: off  FD used: -1
 
-Flags: X - disabled, I - invalid; D - dynamic
-21    ;;; accept-bgp-Border_Leaf2
-      chain=input action=accept protocol=tcp src-address=10.0.253.2
-      dst-port=179
+  BFD: Type: single hop
+  Detect Multiplier: 3, Min Rx interval: 300, Min Tx interval: 300
+  Status: Unknown, Last update: never
 
 
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf2"
-     remote.address=10.0.253.2/32 .as=65022
-     local.address=10.0.253.3 .role=ebgp
-     connect=yes listen=yes routing-table=main router-id=10.0.99.2
-     templates="" as=65254 hold-time=3m keepalive-time=1m address-families=ip
+PING 10.0.253.3 (10.0.253.3) 56(84) bytes of data.
+64 bytes from 10.0.253.3: icmp_seq=1 ttl=64 time=4.69 ms
+64 bytes from 10.0.253.3: icmp_seq=2 ttl=64 time=1.09 ms
+64 bytes from 10.0.253.3: icmp_seq=3 ttl=64 time=1.31 ms
 
-Flags: E - established
-
+--- 10.0.253.3 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 1.087/2.362/4.689/1.647 ms
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
