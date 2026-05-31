@@ -678,5 +678,5 @@ ssh Exit_Router2 '/log print where topics~"route|routing|bgp"'
 QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ
 ssh Exit_Router1 '/routing bgp session print count-only'; ssh Exit_Router1 '/routing bgp session print terse'; ssh Exit_Router2 '/routing bgp session print count-only'; ssh Exit_Router2 '/routing bgp session print terse'
 QQQQQQQQQQQQQQQ
-/routing bgp connection print count-only for configured peers
-/routing bgp session print count-only for live sessions
+ssh Exit_Router1 '/routing bgp connection print count-only'
+ssh Exit_Router1 '/routing bgp session print count-only'
