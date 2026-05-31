@@ -290,3 +290,40 @@ One more small correction: your runtime playbook still has my earlier bad sudo p
 
 Paste the two post-trigger nstat outputs. That should tell us which branch to pursue next.
 
+
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Immediate fix — run this on R810:
+
+First, confirm the theory by checking kernel drop counters:
+ssh Border_Leaf1 'cat /proc/net/snmp | grep Tcp'
+Look for InCsumErrors — it will be non-zero and increasing.
+
+Then apply the fix. The simplest approach is to change the NIC model to virtio with checksum offload disabled at the host level:
+sudo virsh destroy Exit_Router1
+sudo EDITOR="sed -i \"/<source bridge='br-BL1-ER1'\/>/,/<\/interface>/{s/<model type='rtl8139'\/>/<model type='virtio'\/>\n        <driver><host csum='off' gso='off' tso4='off' tso6='off'\/><\/driver>/}\"" virsh edit Exit_Router1
+sudo virsh start Exit_Router1
+
+sudo virsh destroy Exit_Router2
+sudo EDITOR="sed -i \"/<source bridge='br-BL2-ER2'\/>/,/<\/interface>/{s/<model type='rtl8139'\/>/<model type='virtio'\/>\n        <driver><host csum='off' gso='off' tso4='off' tso6='off'\/><\/driver>/}\"" virsh edit Exit_Router2
+sudo virsh start Exit_Router2
+The <host csum='off'/> tells QEMU to not advertise VIRTIO_NET_F_CSUM to the guest, forcing RouterOS to compute full checksums in software before handing the packet to the virtual NIC. The packets will then arrive at the SONiC VMs with correct checksums.
+
+If the sed-based virsh edit is too fragile, you can do it manually:
+sudo virsh destroy Exit_Router1
+sudo virsh edit Exit_Router1
+Find the interface block with bridge='br-BL1-ER1', change:
+<model type='rtl8139'/>
+to:
+
+<model type='virtio'/>
+<driver>
+  <host csum='off' gso='off' tso4='off' tso6='off'/>
+</driver>
+
+Then sudo virsh start Exit_Router1. Repeat for Exit_Router2 / br-BL2-ER2.
+
+After the VMs come back up, the RouterOS ether2/ether3 interface names will shift because virtio enumerates differently. The playbook's KVM interface rebind logic should handle that automatically on the next deploy.
+
+Let me also save this finding to repo memory so we don't re-investigate it:
+
+Compacted conversation
