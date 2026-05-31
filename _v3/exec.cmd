@@ -604,3 +604,18 @@ XXXXXXXXXXXXXXXXXXXXXXX
 ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Leaf_L1:Leaf_L2:Leaf_L3:Leaf_L4:Border_Leaf1:Border_Leaf2" --tags deploy
 ssh Leaf_L1 "show ipv6 interfaces | grep -E 'Ethernet0|Ethernet1|Ethernet2'"
 ssh Host12_1 "sudo vtysh -c 'show bgp summary' -c 'show bgp neighbors enp2s0' -c 'show bgp neighbors enp3s0'"
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+
+Next step is to sync those two files and rerun:
+
+ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Exit_Router1:Exit_Router2" --tags deploy
+ssh Exit_Router1 "/routing bgp session print detail"
+ssh Exit_Router2 "/routing bgp session print detail"
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Expected change: RouterOS should show at least one concrete session row instead of only the Flags header, and the border-leaf 10.0.253.1 / 10.0.253.3 peers should move off Connect.
+
+If it still stays in Connect after this exact role fix, the remaining highest-probability root cause is no longer BGP syntax. It becomes the CHR VM transport path itself, especially a stale exit-router VM that was created before the rtl8139 fabric-NIC change in deploy_lab_v13.sh. In that case I’d take the next pass on the VM-side evidence rather than keep changing BGP knobs blindly.
+
+GPT-5.4 • 1x
+OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
