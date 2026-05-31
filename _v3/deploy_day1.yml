@@ -76,20 +76,51 @@
       delegate_to: localhost
       tags: [always, day1]
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
+      when: automation_profile | default('') != 'real_hardware'
+      run_once: true
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
-          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
             [ -n "$tap" ] || continue
-            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
             echo "$vm:$tap"
           done
-        done
+        done'
       delegate_to: localhost
       run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
-      when: automation_profile | default('') != 'real_hardware'
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - item.vms | length > 0
+      loop: "{{ _kvm_hypervisor_work | default([]) }}"
+      loop_control:
+        label: "{{ item.alias }} => {{ item.vms | join(',') }}"
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Report hypervisor tap TX offload result"
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      run_once: true
+      delegate_to: localhost
+      loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
     - name: "Phase 0 | Pre-flight connectivity"
@@ -128,20 +159,51 @@
 
   pre_tasks:
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
+      when: automation_profile | default('') != 'real_hardware'
+      run_once: true
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
-          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
             [ -n "$tap" ] || continue
-            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
             echo "$vm:$tap"
           done
-        done
+        done'
       delegate_to: localhost
       run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
-      when: automation_profile | default('') != 'real_hardware'
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - item.vms | length > 0
+      loop: "{{ _kvm_hypervisor_work | default([]) }}"
+      loop_control:
+        label: "{{ item.alias }} => {{ item.vms | join(',') }}"
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Report hypervisor tap TX offload result"
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      run_once: true
+      delegate_to: localhost
+      loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
     - name: "Phase 0 | Pre-flight connectivity (MikroTik)"
@@ -172,20 +234,51 @@
 
   pre_tasks:
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Spine_S1', 'Spine_S2', 'Leaf_L1', 'Leaf_L2', 'Border_Leaf1', 'Border_Leaf2', 'Exit_Router1', 'Exit_Router2', 'Host12_1', 'Host12_2', 'Host12_3', 'HostB12_1', 'HostB12_2', 'MonitorSrv']) }}"
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts | intersect(['Leaf_L3', 'Leaf_L4', 'Host34_1', 'Host34_2']) }}"
+      when: automation_profile | default('') != 'real_hardware'
+      run_once: true
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
-        for vm in {{ ((groups['sonic_switches'] | default([])) + (groups['exit_routers'] | default([])) + (groups['servers'] | default([]))) | unique | join(' ') }}; do
-          sudo virsh domiflist "$vm" 2>/dev/null | awk '/vnet/ {print $1}' | while read -r tap; do
+        ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
+          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
             [ -n "$tap" ] || continue
-            sudo ethtool -K "$tap" tx off 2>/dev/null || true
+            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
             echo "$vm:$tap"
           done
-        done
+        done'
       delegate_to: localhost
       run_once: true
       register: _kvm_tap_offload_fix
       changed_when: (_kvm_tap_offload_fix.stdout_lines | default([]) | length) > 0
-      when: automation_profile | default('') != 'real_hardware'
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - item.vms | length > 0
+      loop: "{{ _kvm_hypervisor_work | default([]) }}"
+      loop_control:
+        label: "{{ item.alias }} => {{ item.vms | join(',') }}"
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Report hypervisor tap TX offload result"
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+      run_once: true
+      delegate_to: localhost
+      loop: "{{ _kvm_tap_offload_fix.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.alias if (item.item is defined) else 'hypervisor' }}"
+      when:
+        - automation_profile | default('') != 'real_hardware'
+        - not (item.skipped | default(false))
       tags: [preflight, deploy, day1]
 
     - name: "Phase 0 | Pre-flight connectivity (Ubuntu server)"
