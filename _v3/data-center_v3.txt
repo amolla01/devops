@@ -16,33 +16,28 @@ TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] **
 ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
-ok: [Exit_Router2]
+ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
-ok: [Exit_Router1]
-
-TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
 ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
 ok: [Exit_Router1]
 
-TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
 ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
 skipping: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
 skipping: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Fail when the KVM fabric interface is ambiguous] ***********************************************************************************************************************************
-skipping: [Exit_Router1]
-
-TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
-ok: [Exit_Router2] =>
-    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
-        data ports: ether3'
 
 TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
 ok: [Exit_Router1] =>
@@ -50,12 +45,17 @@ ok: [Exit_Router1] =>
         data ports: ether2'
 
 TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
-skipping: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
-skipping: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
 skipping: [Exit_Router1] => (item=ether2 (Exit_Router1 ether2 → Border_Leaf1 Ethernet0 (KVM fabric NIC)))
 skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Report resolved KVM fabric interface] **********************************************************************************************************************************************
+ok: [Exit_Router2] =>
+    msg: 'Using ether3 as the live fabric interface on Exit_Router2. Running RouterOS
+        data ports: ether3'
+
+TASK [mikrotik_base : day1 | Configure fabric-facing interface speed] *******************************************************************************************************************************************
+skipping: [Exit_Router2] => (item=ether3 (Exit_Router2 ether2 → Border_Leaf2 Ethernet0 (KVM fabric NIC)))
+skipping: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Remove existing IP on fabric interface (idempotent re-run)] ************************************************************************************************************************
 changed: [Exit_Router1] => (item=ether2)
@@ -75,11 +75,15 @@ ok: [Exit_Router1] => (item=ether2)
 TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 ok: [Exit_Router2] => (item=ether3)
 
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router1]
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
+
+TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 
 TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
 changed: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
+changed: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Ensure default RouterOS BGP template has local ASN] ********************************************************************************************************************************
 changed: [Exit_Router1]
@@ -104,6 +108,12 @@ changed: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Create RouterOS fabric BGP template with inventory router-id] **********************************************************************************************************************
 changed: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Probe legacy RouterOS BGP instance support] ****************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Ensure legacy RouterOS BGP instance matches inventory] *****************************************************************************************************************************
+skipping: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Probe legacy RouterOS BGP instance support] ****************************************************************************************************************************************
 ok: [Exit_Router1]
@@ -111,17 +121,15 @@ ok: [Exit_Router1]
 TASK [mikrotik_base : day1 | Ensure legacy RouterOS BGP instance matches inventory] *****************************************************************************************************************************
 skipping: [Exit_Router1]
 
-TASK [mikrotik_base : day1 | Probe legacy RouterOS BGP instance support] ****************************************************************************************************************************************
-ok: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Ensure legacy RouterOS BGP instance matches inventory] *****************************************************************************************************************************
-skipping: [Exit_Router2]
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2))
 
 TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
 changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0))
 
 TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2))
+
+TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
 
 TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
 changed: [Exit_Router2]
@@ -130,28 +138,28 @@ TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)
 changed: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
 changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
 
-TASK [mikrotik_base : day1 | Gather immediate BGP session state after deploy] ***********************************************************************************************************************************
-ok: [Exit_Router2]
+TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
+changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
 
 TASK [mikrotik_base : day1 | Gather immediate BGP session state after deploy] ***********************************************************************************************************************************
 ok: [Exit_Router1]
 
-TASK [mikrotik_base : day1 | Parse concrete BGP session rows after deploy] **************************************************************************************************************************************
+TASK [mikrotik_base : day1 | Gather immediate BGP session state after deploy] ***********************************************************************************************************************************
 ok: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Warn when BGP connection exists but no live RouterOS session formed] ***************************************************************************************************************
-skipping: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Parse concrete BGP session rows after deploy] **************************************************************************************************************************************
 ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Warn when BGP connection exists but no live RouterOS session formed] ***************************************************************************************************************
 skipping: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Parse concrete BGP session rows after deploy] **************************************************************************************************************************************
+ok: [Exit_Router2]
+
+TASK [mikrotik_base : day1 | Warn when BGP connection exists but no live RouterOS session formed] ***************************************************************************************************************
+skipping: [Exit_Router2]
 
 PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
 skipping: no hosts matched
@@ -159,6 +167,30 @@ skipping: no hosts matched
 PLAY RECAP ******************************************************************************************************************************************************************************************************
 Exit_Router1               : ok=19   changed=10   unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
 Exit_Router2               : ok=20   changed=10   unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing bgp connection print detail; /routing bgp session print detail'
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf1"
+     remote.address=10.0.253.0 .as=65021
+     local.default-address=10.0.253.1 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.1
+     templates=fabric as=65253 hold-time=3m keepalive-time=1m
+     address-families=ip
+
+Flags: E - established
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 '/routing bgp connection print detail; /routing bgp session print detail'
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf2"
+     remote.address=10.0.253.2 .as=65022
+     local.default-address=10.0.253.3 .role=ebgp
+     connect=yes listen=yes routing-table=main router-id=10.0.99.2
+     templates=fabric as=65254 hold-time=3m keepalive-time=1m
+     address-families=ip
+
+Flags: E - established
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 '/routing bgp template print detail; /routing bgp connection print detail; /routing bgp session print detail'
 Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
@@ -173,7 +205,7 @@ Flags: D - dynamic, X - disabled, I - inactive
  0   name="to_Border_Leaf1"
      remote.address=10.0.253.0 .as=65021
      local.default-address=10.0.253.1 .role=ebgp
-     connect=yes listen=no routing-table=main router-id=10.0.99.1
+     connect=yes listen=yes routing-table=main router-id=10.0.99.1
      templates=fabric as=65253 hold-time=3m keepalive-time=1m
      address-families=ip
 
@@ -192,7 +224,7 @@ Flags: D - dynamic, X - disabled, I - inactive
  0   name="to_Border_Leaf2"
      remote.address=10.0.253.2 .as=65022
      local.default-address=10.0.253.3 .role=ebgp
-     connect=yes listen=no routing-table=main router-id=10.0.99.2
+     connect=yes listen=yes routing-table=main router-id=10.0.99.2
      templates=fabric as=65254 hold-time=3m keepalive-time=1m
      address-families=ip
 
@@ -205,8 +237,8 @@ BGP neighbor is 10.0.253.1, remote AS 65253, local AS 65021, external link
   Remote Role: undefined
  Description: Exit_Router1
   BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.2.1
-  BGP state = Active
-  Last read 08:22:28, Last write 07:45:07
+  BGP state = Connect
+  Last read 08:34:09, Last write 07:56:48
   Hold time is 180 seconds, keepalive interval is 60 seconds
   Configured hold time is 180 seconds, keepalive interval is 60 seconds
   Configured conditional advertisements interval is 60 seconds
@@ -240,11 +272,11 @@ BGP neighbor is 10.0.253.1, remote AS 65253, local AS 65021, external link
   0 accepted prefixes
 
   Connections established 0; dropped 0
-  Last reset 08:22:28,  Notification sent (Hold Timer Expired)
+  Last reset 08:34:09,  Notification sent (Hold Timer Expired)
   External BGP neighbor may be up to 1 hops away.
 BGP Connect Retry Timer in Seconds: 120
-Next connect timer due in 26 seconds
-Read thread: off  Write thread: off  FD used: -1
+Next connect timer due in 45 seconds
+Read thread: off  Write thread: off  FD used: 31
 
   BFD: Type: single hop
   Detect Multiplier: 3, Min Rx interval: 300, Min Tx interval: 300
@@ -258,8 +290,8 @@ BGP neighbor is 10.0.253.3, remote AS 65254, local AS 65022, external link
   Remote Role: undefined
  Description: Exit_Router2
   BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.2.2
-  BGP state = Active
-  Last read 08:23:08, Last write never
+  BGP state = Connect
+  Last read 08:34:51, Last write never
   Hold time is 180 seconds, keepalive interval is 60 seconds
   Configured hold time is 180 seconds, keepalive interval is 60 seconds
   Configured conditional advertisements interval is 60 seconds
@@ -293,11 +325,11 @@ BGP neighbor is 10.0.253.3, remote AS 65254, local AS 65022, external link
   0 accepted prefixes
 
   Connections established 0; dropped 0
-  Last reset 08:23:08,  Waiting for peer OPEN
+  Last reset 08:34:51,  Waiting for peer OPEN
   External BGP neighbor may be up to 1 hops away.
 BGP Connect Retry Timer in Seconds: 120
-Next connect timer due in 16 seconds
-Read thread: off  Write thread: off  FD used: -1
+Next connect timer due in 34 seconds
+Read thread: off  Write thread: off  FD used: 26
 
   BFD: Type: single hop
   Detect Multiplier: 3, Min Rx interval: 300, Min Tx interval: 300
@@ -309,17 +341,17 @@ Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 250
+BGP table version 266
 RIB entries 37, using 8288 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       406       415        0    0    0 02:49:58            6       19 HostB12_1
-Ethernet24      4      65107       226      1712        0    0    0 00:00:45            0       19 HostB12_2
-Ethernet28      4      65108       225      1712        0    0    0 00:00:47            0       19 MonitorSrv
-Ethernet120     4      65000       700       712        0    0    0 07:44:45           15       19 Spine_S2
-Ethernet124     4      65000       700       712        0    0    0 07:44:29           15       19 Spine_S1
-10.0.253.1      4      65253         0         2        0    0    0    never       Active        0 Exit_Router1
+Ethernet20      4      65106       434       443        0    0    0 03:01:38            6       19 HostB12_1
+Ethernet24      4      65107       238      1832        0    0    0 00:00:21            0       19 HostB12_2
+Ethernet28      4      65108       237      1833        0    0    0 00:00:23            0       19 MonitorSrv
+Ethernet120     4      65000       728       740        0    0    0 07:56:25           15       19 Spine_S2
+Ethernet124     4      65000       728       740        0    0    0 07:56:09           15       19 Spine_S1
+10.0.253.1      4      65253         0         2        0    0    0    never      Connect        0 Exit_Router1
 
 Total number of neighbors 6
 
@@ -330,11 +362,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       406       415        0    0    0 02:49:58            0        0 HostB12_1
-Ethernet24      4      65107       226      1712        0    0    0 00:00:45            0        0 HostB12_2
-Ethernet28      4      65108       225      1712        0    0    0 00:00:47            0        0 MonitorSrv
-Ethernet120     4      65000       700       712        0    0    0 07:44:45            0        0 Spine_S2
-Ethernet124     4      65000       700       712        0    0    0 07:44:29            0        0 Spine_S1
+Ethernet20      4      65106       434       443        0    0    0 03:01:38            0        0 HostB12_1
+Ethernet24      4      65107       238      1832        0    0    0 00:00:21            0        0 HostB12_2
+Ethernet28      4      65108       237      1833        0    0    0 00:00:23            0        0 MonitorSrv
+Ethernet120     4      65000       728       740        0    0    0 07:56:25            0        0 Spine_S2
+Ethernet124     4      65000       728       740        0    0    0 07:56:09            0        0 Spine_S1
 
 Total number of neighbors 5
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
@@ -342,17 +374,17 @@ Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
 
 IPv4 Unicast Summary (VRF default):
 BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
-BGP table version 242
+BGP table version 258
 RIB entries 37, using 8288 bytes of memory
 Peers 6, using 4348 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       407       408        0    0    0 02:50:05           15       19 HostB12_1
-Ethernet24      4      65107       406       408        0    0    0 02:50:05            2       19 HostB12_2
-Ethernet28      4      65108       406       408        0    0    0 02:50:05            2       19 MonitorSrv
-Ethernet120     4      65000       700       704        0    0    0 07:44:54           14       19 Spine_S2
-Ethernet124     4      65000       700       704        0    0    0 07:44:27           14       19 Spine_S1
-10.0.253.3      4      65254         0         0        0    0    0    never       Active        0 Exit_Router2
+Ethernet20      4      65106       434       435        0    0    0 03:01:45           15       19 HostB12_1
+Ethernet24      4      65107       433       435        0    0    0 03:01:45            2       19 HostB12_2
+Ethernet28      4      65108       433       435        0    0    0 03:01:45            2       19 MonitorSrv
+Ethernet120     4      65000       728       732        0    0    0 07:56:34           14       19 Spine_S2
+Ethernet124     4      65000       728       732        0    0    0 07:56:07           14       19 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
 
 Total number of neighbors 6
 
@@ -363,11 +395,11 @@ RIB entries 0, using 0 bytes of memory
 Peers 5, using 3623 KiB of memory
 
 Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106       407       408        0    0    0 02:50:05            0        0 HostB12_1
-Ethernet24      4      65107       406       408        0    0    0 02:50:05            0        0 HostB12_2
-Ethernet28      4      65108       406       408        0    0    0 02:50:05            0        0 MonitorSrv
-Ethernet120     4      65000       700       704        0    0    0 07:44:54            0        0 Spine_S2
-Ethernet124     4      65000       700       704        0    0    0 07:44:27            0        0 Spine_S1
+Ethernet20      4      65106       434       435        0    0    0 03:01:45            0        0 HostB12_1
+Ethernet24      4      65107       433       435        0    0    0 03:01:45            0        0 HostB12_2
+Ethernet28      4      65108       433       435        0    0    0 03:01:45            0        0 MonitorSrv
+Ethernet120     4      65000       728       732        0    0    0 07:56:34            0        0 Spine_S2
+Ethernet124     4      65000       728       732        0    0    0 07:56:07            0        0 Spine_S1
 
 Total number of neighbors 5
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
