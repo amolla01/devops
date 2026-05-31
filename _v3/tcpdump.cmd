@@ -326,4 +326,7 @@ After the VMs come back up, the RouterOS ether2/ether3 interface names will shif
 
 Let me also save this finding to repo memory so we don't re-investigate it:
 
-Compacted conversation
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+If you want to validate the checksum fix before the full playbook run, you can do a quick check right after the VMs boot:
+# On R810, watch the BL1 tap for CHR SYNs:
+sudo tcpdump -i vnet1267 -vvn 'tcp port 179' -c 5
