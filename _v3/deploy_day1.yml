@@ -80,6 +80,36 @@
       when: inventory_hostname == (ansible_play_hosts_all | first)
       tags: [always, day1]
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r810_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r620_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Build hypervisor tap-offload work list"
       ansible.builtin.set_fact:
         _kvm_hypervisor_work:
@@ -91,7 +121,7 @@
         ansible_become: false
       connection: local
       when:
-        - automation_profile | default('') != 'real_hardware'
+        - automation_profile | default('') not in ['real_hardware', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm']
         - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
       delegate_to: localhost
@@ -100,10 +130,14 @@
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
         ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
-          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
-            [ -n "$tap" ] || continue
-            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
-            echo "$vm:$tap"
+          sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
+            [ -n "$br" ] || continue
+            sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
+              [ -n "$tap" ] || continue
+              sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
+              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              echo "$vm:$tap"
+            done
           done
         done'
       vars:
@@ -125,7 +159,9 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
+             if ((item.stdout_lines | default([])) | length) > 0
+             else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
       connection: local
@@ -176,6 +212,36 @@
 
   pre_tasks:
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r810_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r620_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Build hypervisor tap-offload work list"
       ansible.builtin.set_fact:
         _kvm_hypervisor_work:
@@ -187,7 +253,7 @@
         ansible_become: false
       connection: local
       when:
-        - automation_profile | default('') != 'real_hardware'
+        - automation_profile | default('') not in ['real_hardware', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm']
         - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
       delegate_to: localhost
@@ -196,10 +262,14 @@
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
         ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
-          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
-            [ -n "$tap" ] || continue
-            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
-            echo "$vm:$tap"
+          sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
+            [ -n "$br" ] || continue
+            sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
+              [ -n "$tap" ] || continue
+              sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
+              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              echo "$vm:$tap"
+            done
           done
         done'
       vars:
@@ -221,7 +291,9 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
+             if ((item.stdout_lines | default([])) | length) > 0
+             else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
       connection: local
@@ -264,6 +336,36 @@
 
   pre_tasks:
 
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R810_HOST') | default('R810', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r810_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
+    - name: "Phase 0 | Build hypervisor tap-offload work list (profile-driven)"
+      ansible.builtin.set_fact:
+        _kvm_hypervisor_work:
+          - alias: "{{ lookup('ansible.builtin.env', 'R620_HOST') | default('R620', true) }}"
+            vms: "{{ ansible_play_hosts }}"
+      vars:
+        ansible_become: false
+      connection: local
+      when:
+        - automation_profile == 'ubuntu_r620_kvm'
+        - inventory_hostname == (ansible_play_hosts_all | first)
+      become: false
+      delegate_to: localhost
+      tags: [preflight, deploy, day1]
+
     - name: "Phase 0 | Build hypervisor tap-offload work list"
       ansible.builtin.set_fact:
         _kvm_hypervisor_work:
@@ -275,7 +377,7 @@
         ansible_become: false
       connection: local
       when:
-        - automation_profile | default('') != 'real_hardware'
+        - automation_profile | default('') not in ['real_hardware', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm']
         - inventory_hostname == (ansible_play_hosts_all | first)
       become: false
       delegate_to: localhost
@@ -284,10 +386,14 @@
     - name: "Phase 0 | Disable hypervisor tap TX offload for KVM fabric VMs"
       ansible.builtin.shell: |
         ssh {{ item.alias | quote }} 'for vm in {{ item.vms | join(" ") }}; do
-          sudo -n virsh domiflist "$vm" 2>/dev/null | awk '"'"'/vnet/ {print $1}'"'"' | while read -r tap; do
-            [ -n "$tap" ] || continue
-            sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
-            echo "$vm:$tap"
+          sudo -n ovs-vsctl list-br 2>/dev/null | while read -r br; do
+            [ -n "$br" ] || continue
+            sudo -n ovs-vsctl list-ports "$br" 2>/dev/null | grep '^vnet' | while read -r tap; do
+              [ -n "$tap" ] || continue
+              sudo -n virsh domiflist "$vm" 2>/dev/null | grep -q "$tap" || continue
+              sudo -n ethtool -K "$tap" tx off 2>/dev/null || true
+              echo "$vm:$tap"
+            done
           done
         done'
       vars:
@@ -309,7 +415,9 @@
     - name: "Phase 0 | Report hypervisor tap TX offload result"
       ansible.builtin.debug:
         msg: >-
-          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', ')) }}
+          {{ 'Applied hypervisor tap TX-offload fix via ' ~ item.item.alias ~ ' for: ' ~ ((item.stdout_lines | default([])) | join(', '))
+             if ((item.stdout_lines | default([])) | length) > 0
+             else 'No matching hypervisor tap interfaces were found via ' ~ item.item.alias ~ ' for: ' ~ (item.item.vms | join(', ')) }}
       vars:
         ansible_become: false
       connection: local
