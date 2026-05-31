@@ -670,3 +670,274 @@ Examples:
 
 ┌─── Step 1: Actual ethN Mapping (from syslog) ──────────────────────
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v1/troubleshooting-scripts$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3/troubleshooting-scripts$ ./diagnose_border_exit_bgp.sh --profile bl1-er1
+====================================================================
+ Border-Leaf <-> Exit-Router BGP Diagnosis
+ Border Leaf: Border_Leaf1 (172.16.2.31)
+ Exit Router: Exit_Router1 (172.16.2.98)
+ Fabric Link: Ethernet0 | 10.0.253.0 <-> 10.0.253.1
+ Capture:     5s
+====================================================================
+
+=== TCP 179 from Border_Leaf1 -> Exit_Router1 (10.0.253.1:179) ===
+Note: a refusal here is informational if RouterOS is configured with listen=no.
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+bash: connect: Connection refused
+bash: line 1: /dev/tcp/10.0.253.1/179: Connection refused
+CLOSED
+
+=== TCP probe from Exit_Router1 -> Border_Leaf1 (10.0.253.0:179) ===
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+  status: connecting
+
+  status: connecting
+
+  status: connecting
+
+
+=== Loopback TCP probe on Exit_Router1 (informational) ===
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+  status: connecting
+
+  status: connecting
+
+  status: connecting
+
+
+=== Border_Leaf1 BGP neighbor detail for 10.0.253.1 ===
+  BGP state = Active
+  Last read 01:01:57, Last write never
+    Opens:                  0          0
+  Connections established 0; dropped 0
+  Last reset 01:01:57,  Waiting for peer OPEN
+BGP Connect Retry Timer in Seconds: 120
+Read thread: off  Write thread: off  FD used: -1
+
+=== Exit_Router1 BGP template/connection/session detail ===
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: * - default; X - disabled, I - inactive
+ 0 *  name="default" routing-table=main router-id=10.0.99.1 as=65253
+      hold-time=3m keepalive-time=1m address-families=ip
+
+ 1    name="fabric" routing-table=main router-id=10.0.99.1 as=65253
+      hold-time=3m keepalive-time=1m address-families=ip
+
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf1"
+     remote.address=10.0.253.0 .as=65021
+     local.default-address=10.0.253.1 .role=ebgp
+     connect=yes listen=no routing-table=main router-id=10.0.99.1
+     templates=default as=65253 hold-time=3m keepalive-time=1m
+     address-families=ip
+
+Flags: E - established
+
+
+=== Border_Leaf1 listening sockets on TCP/179 ===
+LISTEN 0      3          127.0.0.1:2605      0.0.0.0:*    users:(("bgpd",pid=1011791,fd=19))
+LISTEN 0      512          0.0.0.0:179       0.0.0.0:*    users:(("bgpd",pid=1011791,fd=24))
+LISTEN 0      512             [::]:179          [::]:*    users:(("bgpd",pid=1011791,fd=25))
+
+=== Border_Leaf1 active connections involving 10.0.253.x ===
+
+=== Border_Leaf1 interface state for Ethernet0 ===
+416: Ethernet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9100 qdisc mq state UNKNOWN group default qlen 1000
+    link/ether 00:e0:ec:57:12:01 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.253.0/31 scope global Ethernet0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::2e0:ecff:fe57:1201/64 scope link
+       valid_lft forever preferred_lft forever
+
+10.0.253.0/31 dev Ethernet0 proto kernel scope link src 10.0.253.0
+
+rp_filter(Ethernet0):
+0
+rp_filter(all):
+0
+
+=== Border_Leaf1 iptables port-179 view ===
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination
+1    ACCEPT     0    --  127.0.0.1            0.0.0.0/0
+2    ACCEPT     0    --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+3    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 8
+4    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 0
+5    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 3
+6    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 11
+7    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:67:68
+8    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:546:547
+9    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:179
+10   DROP       0    --  0.0.0.0/0            10.0.2.1
+11   ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2
+12   ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 udp dpts:1025:65535
+13   ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 tcp dpts:1025:65535
+
+ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:179
+
+=== Border_Leaf1 tcpdump on Ethernet0 for 5s ===
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+11:50:31.555265 IP (tos 0xc0, ttl 255, id 39379, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.46397 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xae2d), seq 447579264, win 64240, options [mss 1460,sackOK,TS val 3351344127 ecr 0,nop,wscale 7], length 0
+11:50:32.568303 IP (tos 0xc0, ttl 255, id 39380, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.1.46397 > 10.0.253.0.179: Flags [S], cksum 0x0e31 (incorrect -> 0xaa38), seq 447579264, win 64240, options [mss 1460,sackOK,TS val 3351345140 ecr 0,nop,wscale 7], length 0
+
+2 packets captured
+3 packets received by filter
+0 packets dropped by kernel
+
+=== Exit_Router1 route for 10.0.253.0/31 ===
+Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
+Flags: D - DYNAMIC; A - ACTIVE; c - CONNECT
+Columns: DST-ADDRESS, GATEWAY, DISTANCE
+    DST-ADDRESS    GATEWAY  DISTANCE
+DAc 10.0.253.0/31  ether2          0
+
+
+=== Border_Leaf1 port-to-bridge trace for Ethernet0 ===
+═══════════════════════════════════════════════════════════════════════
+ Port-to-Bridge Diagnosis
+ VM: Border_Leaf1 | Port: Ethernet0 | IP: 172.16.2.31
+ Date: 2026-05-31T06:50:52-05:00
+═══════════════════════════════════════════════════════════════════════
+
+┌─── Step 1: Actual ethN Mapping (from syslog) ──────────────────────
+
+Diagnosis complete.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3/troubleshooting-scripts$ ./diagnose_border_exit_bgp.sh --profile bl2-er2
+====================================================================
+ Border-Leaf <-> Exit-Router BGP Diagnosis
+ Border Leaf: Border_Leaf2 (172.16.2.32)
+ Exit Router: Exit_Router2 (172.16.2.99)
+ Fabric Link: Ethernet0 | 10.0.253.2 <-> 10.0.253.3
+ Capture:     5s
+====================================================================
+
+=== TCP 179 from Border_Leaf2 -> Exit_Router2 (10.0.253.3:179) ===
+Note: a refusal here is informational if RouterOS is configured with listen=no.
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+bash: connect: Connection refused
+bash: line 1: /dev/tcp/10.0.253.3/179: Connection refused
+CLOSED
+
+=== TCP probe from Exit_Router2 -> Border_Leaf2 (10.0.253.2:179) ===
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+  status: connecting
+
+  status: connecting
+
+  status: connecting
+
+
+=== Loopback TCP probe on Exit_Router2 (informational) ===
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+  status: connecting
+
+  status: connecting
+
+  status: connecting
+
+
+=== Border_Leaf2 BGP neighbor detail for 10.0.253.3 ===
+  BGP state = Active
+  Last read 01:02:29, Last write never
+    Opens:                  0          0
+  Connections established 0; dropped 0
+  Last reset 01:02:29,  Waiting for peer OPEN
+BGP Connect Retry Timer in Seconds: 120
+Read thread: off  Write thread: off  FD used: -1
+
+=== Exit_Router2 BGP template/connection/session detail ===
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: * - default; X - disabled, I - inactive
+ 0 *  name="default" routing-table=main router-id=10.0.99.2 as=65254
+      hold-time=3m keepalive-time=1m address-families=ip
+
+ 1    name="fabric" routing-table=main router-id=10.0.99.2 as=65254
+      hold-time=3m keepalive-time=1m address-families=ip
+
+Flags: D - dynamic, X - disabled, I - inactive
+ 0   name="to_Border_Leaf2"
+     remote.address=10.0.253.2 .as=65022
+     local.default-address=10.0.253.3 .role=ebgp
+     connect=yes listen=no routing-table=main router-id=10.0.99.2
+     templates=default as=65254 hold-time=3m keepalive-time=1m
+     address-families=ip
+
+Flags: E - established
+ 0   remote.address=10.0.253.2 .as=0 .hold-time=infinity
+     local.address=10.0.253.3 .as=0 ebgp
+     prefix-count=0
+
+
+=== Border_Leaf2 listening sockets on TCP/179 ===
+LISTEN 0      512          0.0.0.0:179       0.0.0.0:*    users:(("bgpd",pid=1002110,fd=24))
+LISTEN 0      512             [::]:179          [::]:*    users:(("bgpd",pid=1002110,fd=25))
+
+=== Border_Leaf2 active connections involving 10.0.253.x ===
+
+=== Border_Leaf2 interface state for Ethernet0 ===
+376: Ethernet0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9100 qdisc mq state UNKNOWN group default qlen 1000
+    link/ether 00:e0:ec:57:12:02 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.253.2/31 scope global Ethernet0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::2e0:ecff:fe57:1202/64 scope link
+       valid_lft forever preferred_lft forever
+
+10.0.253.2/31 dev Ethernet0 proto kernel scope link src 10.0.253.2
+
+rp_filter(Ethernet0):
+0
+rp_filter(all):
+0
+
+=== Border_Leaf2 iptables port-179 view ===
+Chain INPUT (policy ACCEPT)
+num  target     prot opt source               destination
+1    ACCEPT     0    --  127.0.0.1            0.0.0.0/0
+2    ACCEPT     0    --  0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+3    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 8
+4    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 0
+5    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 3
+6    ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            icmptype 11
+7    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:67:68
+8    ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            udp dpts:546:547
+9    ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:179
+10   DROP       0    --  0.0.0.0/0            10.0.2.2
+11   ACCEPT     1    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2
+12   ACCEPT     17   --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 udp dpts:1025:65535
+13   ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            TTL match TTL < 2 tcp dpts:1025:65535
+
+ACCEPT     6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:179
+
+=== Border_Leaf2 tcpdump on Ethernet0 for 5s ===
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+tcpdump: listening on Ethernet0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+11:51:01.720533 IP (tos 0xc0, ttl 255, id 3943, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.36353 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x7771), seq 2686980579, win 64240, options [mss 1460,sackOK,TS val 959073709 ecr 0,nop,wscale 7], length 0
+11:51:02.759530 IP (tos 0xc0, ttl 255, id 3944, offset 0, flags [DF], proto TCP (6), length 60)
+    10.0.253.3.36353 > 10.0.253.2.179: Flags [S], cksum 0x0e35 (incorrect -> 0x7363), seq 2686980579, win 64240, options [mss 1460,sackOK,TS val 959074747 ecr 0,nop,wscale 7], length 0
+
+2 packets captured
+2 packets received by filter
+0 packets dropped by kernel
+
+=== Exit_Router2 route for 10.0.253.2/31 ===
+Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
+Flags: D - DYNAMIC; A - ACTIVE; c - CONNECT
+Columns: DST-ADDRESS, GATEWAY, DISTANCE
+    DST-ADDRESS    GATEWAY  DISTANCE
+DAc 10.0.253.2/31  ether3          0
+
+
+=== Border_Leaf2 port-to-bridge trace for Ethernet0 ===
+═══════════════════════════════════════════════════════════════════════
+ Port-to-Bridge Diagnosis
+ VM: Border_Leaf2 | Port: Ethernet0 | IP: 172.16.2.32
+ Date: 2026-05-31T06:51:21-05:00
+═══════════════════════════════════════════════════════════════════════
+
+┌─── Step 1: Actual ethN Mapping (from syslog) ──────────────────────
+
+Diagnosis complete.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3/troubleshooting-scripts$
