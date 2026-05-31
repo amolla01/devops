@@ -263,3 +263,30 @@ What we want to see next:
 If you start seeing 10.0.253.0.179 > 10.0.253.1.x: Flags [S.] and the equivalent on Border_Leaf2, then the checksum/offload path was the blocker.
 If you still see only inbound SYNs and no SYN-ACK, then the next step is kernel-level counters on SONiC for dropped TCP/checksum packets, because by then we’ve ruled out MD5 and largely ruled out simple bridge wiring.
 
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+The cheapest discriminating check now is kernel counters on the border leaves. Run these exactly in this order.
+
+First, zero and read the relevant counters:
+ssh Border_Leaf1 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+ssh Border_Leaf2 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+
+ssh Border_Leaf1 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'ssh Border_Leaf2 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+Then trigger fresh BGP connection attempts:
+ssh Exit_Router1 '/routing bgp connection disable [find where name="to_Border_Leaf1"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf1"]'
+ssh Exit_Router2 '/routing bgp connection disable [find where name="to_Border_Leaf2"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf2"]'
+
+ssh Exit_Router1 '/routing bgp connection disable [find where name="to_Border_Leaf1"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf1"]'ssh Exit_Router2 '/routing bgp connection disable [find where name="to_Border_Leaf2"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf2"]'
+Then immediately read the counters again:
+ssh Border_Leaf1 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+ssh Border_Leaf2 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+
+ssh Border_Leaf1 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'ssh Border_Leaf2 'sudo nstat -az | egrep "TcpExtTCPMD5|TcpInErrs|TcpInCsumErrors|IpInDiscards|IpInHdrErrors|IpInAddrErrors|TcpExtListenDrops|TcpExtListenOverflows"'
+How to read the result:
+
+If TcpExtTCPMD5* counters increase, Linux is rejecting the SYNs because of MD5 handling.
+If TcpInCsumErrors or TcpInErrs increases, the SYNs are being dropped as bad TCP packets.
+If neither moves, we step one layer lower and inspect FRR/kernel binding behavior on port 179.
+One more small correction: your runtime playbook still has my earlier bad sudo probe. Copy the updated deploy_day1.yml before the next deploy so the false remote sudo requires a password warning goes away. But that is separate from the current Active issue.
+
+Paste the two post-trigger nstat outputs. That should tell us which branch to pursue next.
+
