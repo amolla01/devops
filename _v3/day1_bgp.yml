@@ -147,6 +147,21 @@
   failed_when: _routing_id_result.rc != 0
   tags: [deploy, day1, bgp]
 
+- name: "day1 | Remove stale RouterOS fabric BGP templates"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp template remove [find where name="fabric"]'
+  changed_when: true
+  failed_when: false
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Create RouterOS fabric BGP template with inventory router-id"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp template add name=fabric routing-table=main router-id={{ router_id }} as={{ bgp_local_asn }} hold-time=3m keepalive-time=1m address-families=ip'
+  register: _fabric_template_result
+  changed_when: _fabric_template_result.rc == 0
+  failed_when: _fabric_template_result.rc != 0
+  tags: [deploy, day1, bgp]
+
 - name: "day1 | Probe legacy RouterOS BGP instance support"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/routing bgp instance print'
@@ -188,7 +203,7 @@
     {% if (_bgp_instance_probe.rc | default(1)) == 0 %}
     {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} instance=main local.role=ebgp disabled=no connect=yes listen=no'
     {% else %}
-    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} template=default local.role=ebgp disabled=no connect=yes listen=no'
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} template=fabric local.role=ebgp disabled=no connect=yes listen=no'
     {% endif %}
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
