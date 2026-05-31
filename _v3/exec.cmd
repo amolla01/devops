@@ -599,3 +599,8 @@ sudo virsh edit Exit_Router1
 # (only on the br-BL1-ER1 interface, NOT the management one)
 
 Try option 1 first (<guest csum='off'/>), destroy+start, then verify with tcpdump. If checksums are still bad, switch to e1000.
+
+XXXXXXXXXXXXXXXXXXXXXXX
+ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml -e automation_profile=ubuntu_r810_kvm --limit "Leaf_L1:Leaf_L2:Leaf_L3:Leaf_L4:Border_Leaf1:Border_Leaf2" --tags deploy
+ssh Leaf_L1 "show ipv6 interfaces | grep -E 'Ethernet0|Ethernet1|Ethernet2'"
+ssh Host12_1 "sudo vtysh -c 'show bgp summary' -c 'show bgp neighbors enp2s0' -c 'show bgp neighbors enp3s0'"
