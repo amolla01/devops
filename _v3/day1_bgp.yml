@@ -139,6 +139,14 @@
   failed_when: _bgp_template_result.rc != 0
   tags: [deploy, day1, bgp]
 
+- name: "day1 | Ensure default RouterOS routing-id matches inventory"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '{ :if ([:len [/routing id find where name="default"]] > 0) do={ /routing id set [find where name="default"] id={{ router_id }} } else={ /routing id add name=default id={{ router_id }} } }'
+  register: _routing_id_result
+  changed_when: _routing_id_result.rc == 0
+  failed_when: _routing_id_result.rc != 0
+  tags: [deploy, day1, bgp]
+
 - name: "day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '{ :local anchor ""; :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ :if ([:len $anchor] = 0) do={ :set anchor $i } }; :if ([:len $anchor] > 0) do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$anchor; } else={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }}; } }'

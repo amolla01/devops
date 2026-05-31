@@ -57,9 +57,9 @@
   changed_when: true
   tags: [day0, dns]
 
-- name: "day0 | Set router-id for BGP"
+- name: "day0 | Set default router-id for BGP"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/routing id add name=main id={{ router_id }}'
+    {{ mikrotik_ssh_cmd }} '{ :if ([:len [/routing id find where name="default"]] > 0) do={ /routing id set [find where name="default"] id={{ router_id }} } else={ /routing id add name=default id={{ router_id }} } }'
   changed_when: true
   failed_when: false
   tags: [day0, bgp]
