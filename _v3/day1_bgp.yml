@@ -124,6 +124,14 @@
   when: fabric_interfaces | selectattr('local_ip', 'defined') | list | length > 0
   tags: [deploy, day1, interfaces]
 
+- name: "day1 | Ensure RouterOS BGP instance exists"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst] = 0) do={ /routing/bgp/instance add name=main as={{ bgp_local_asn }} router-id={{ router_id }}; } else={ /routing/bgp/instance set $inst as={{ bgp_local_asn }} router-id={{ router_id }}; } }'
+  register: _bgp_instance_result
+  changed_when: _bgp_instance_result.rc == 0
+  failed_when: _bgp_instance_result.rc != 0
+  tags: [deploy, day1, bgp]
+
 - name: "day1 | Remove stale BGP firewall accept rules (idempotent re-run)"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '/ip firewall filter remove [find where comment~"accept-bgp"]'
@@ -133,12 +141,13 @@
 
 - name: "day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '{ :local inserted false; :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$i; :set inserted true; :break; }; :if (!$inserted) do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }}; } }'
+    {{ mikrotik_ssh_cmd }} '{ :local anchor ""; :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ :if ([:len $anchor] = 0) do={ :set anchor $i } }; :if ([:len $anchor] > 0) do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$anchor; } else={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }}; } }'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP accept ← {{ item.neighbor }} ({{ item.neighbor_ip }})"
-  changed_when: true
-  failed_when: false
+  register: _bgp_firewall_add_result
+  changed_when: _bgp_firewall_add_result.rc == 0
+  failed_when: _bgp_firewall_add_result.rc != 0
   when: fabric_interfaces | selectattr('neighbor_ip', 'defined') | list | length > 0
   tags: [deploy, day1, bgp]
 
@@ -151,12 +160,13 @@
 
 - name: "day1 | Configure BGP connection to neighbor"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }}/32 remote.as={{ item.neighbor_asn }} local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates="" as={{ bgp_local_asn }} disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }}/32 remote.as={{ item.neighbor_asn }} instance=main local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates="" as={{ bgp_local_asn }} disabled=no connect=yes listen=yes address-families=ip hold-time=3m keepalive-time=1m'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP → {{ item.neighbor }} (AS{{ item.neighbor_asn }})"
-  changed_when: true
-  failed_when: false
+  register: _bgp_connection_add_result
+  changed_when: _bgp_connection_add_result.rc == 0
+  failed_when: _bgp_connection_add_result.rc != 0
   when: fabric_interfaces | selectattr('neighbor_ip', 'defined') | list | length > 0
   tags: [deploy, day1, bgp]
 

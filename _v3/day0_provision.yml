@@ -1,0 +1,112 @@
+---
+# mikrotik_base/tasks/day0_provision.yml
+# Day-0 base provisioning for MikroTik CHR / RouterOS devices.
+# Sets: system identity, management IP, NTP, disables unused services,
+#       configures BGP instance basics.
+#
+# Uses ansible_connection=local with direct SSH exec commands.
+# RouterOS has no Python; network_cli prompt detection times out on WSL/KVM.
+# Direct SSH exec (single command per session) is 100% reliable.
+
+- name: "day0 | Set system identity (hostname)"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/system identity set name={{ hostname }}'
+  register: _result
+  changed_when: _result.rc == 0
+  tags: [day0, identity]
+
+- name: "day0 | Enable NTP client"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/system ntp client set enabled=yes'
+  changed_when: true
+  failed_when: false
+  tags: [day0, ntp]
+
+- name: "day0 | Add NTP server"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/system ntp client servers add address={{ ntp_servers[0] }}'
+  changed_when: true
+  failed_when: false
+  tags: [day0, ntp]
+
+- name: "day0 | Disable unnecessary services"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/ip service disable {{ item }}'
+  loop:
+    - www
+    - api
+    - ftp
+    - telnet
+    - www-ssl
+    - api-ssl
+  loop_control:
+    label: "disable {{ item }}"
+  changed_when: true
+  failed_when: false
+  tags: [day0, hardening]
+
+- name: "day0 | Enable SSH service"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/ip service enable ssh'
+  changed_when: true
+  tags: [day0, hardening]
+
+- name: "day0 | Configure DNS servers"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/ip dns set servers={{ dns_servers | join(",") }} allow-remote-requests=no'
+  changed_when: true
+  tags: [day0, dns]
+
+- name: "day0 | Set router-id for BGP"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing id add name=main id={{ router_id }}'
+  changed_when: true
+  failed_when: false
+  tags: [day0, bgp]
+
+- name: "day0 | Ensure BGP instance exists"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst] = 0) do={ /routing/bgp/instance add name=main as={{ bgp_local_asn }} router-id={{ router_id }}; } else={ /routing/bgp/instance set $inst as={{ bgp_local_asn }} router-id={{ router_id }}; } }'
+  register: _bgp_instance_result
+  changed_when: _bgp_instance_result.rc == 0
+  failed_when: _bgp_instance_result.rc != 0
+  tags: [day0, bgp]
+
+- name: "day0 | Configure management interface address"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/ip address add address={{ mgmt_ip }} interface={{ mgmt_interface.port }} comment=Management'
+  changed_when: true
+  failed_when: false
+  tags: [day0, mgmt]
+
+- name: "day0 | Set default gateway"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/ip route add dst-address=0.0.0.0/0 gateway={{ mgmt_gateway }} comment=default-mgmt'
+  changed_when: true
+  failed_when: false
+  tags: [day0, mgmt]
+
+- name: "day0 | Verify identity was set"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/system identity print'
+  register: _identity_check
+  changed_when: false
+  tags: [day0, verify]
+
+- name: "day0 | Deployment summary"
+  ansible.builtin.debug:
+    msg: |
+      ============================================================
+      Day-0 Deployment Complete: {{ hostname }} (MikroTik CHR)
+      ============================================================
+      Identity:     {{ _identity_check.stdout | default(hostname) | trim }}
+      Router-ID:    {{ router_id }}
+      Management:   {{ mgmt_ip }} via {{ mgmt_interface.port }}
+      Gateway:      {{ mgmt_gateway }}
+      BGP ASN:      {{ bgp_local_asn }}
+      NTP:          {{ ntp_servers[0] }}
+      Services:     SSH only (www/api/ftp/telnet disabled)
+      ============================================================
+      NEXT: deploy_day1.yml for BGP peering with Border Leaves
+      ============================================================
+  tags: [day0, verify]
