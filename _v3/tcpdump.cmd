@@ -238,3 +238,28 @@ ssh nh1221@R810 "sudo timeout 10 tcpdump -ni vnet1269 host 10.0.253.2 and port 1
 Then, during those captures, trigger a fresh connect attempt from each CHR:
 ssh Exit_Router1 "/routing bgp connection disable [find where name=\"to_Border_Leaf1\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf1\"]"
 ssh Exit_Router2 "/routing bgp connection disable [find where name=\"to_Border_Leaf2\"]; :delay 2; /routing bgp connection enable [find where name=\"to_Border_Leaf2\"]"
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXX
+ssh Border_Leaf1 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+ssh Border_Leaf2 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+
+Then disable guest-side offloads for the exit-router-facing port:
+ssh Border_Leaf1 'sudo ethtool -K Ethernet0 rx off tx off tso off gso off gro off || true'
+ssh Border_Leaf2 'sudo ethtool -K Ethernet0 rx off tx off tso off gso off gro off || true'
+
+Then verify:
+ssh Border_Leaf1 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+ssh Border_Leaf2 'sudo ethtool -k Ethernet0 | egrep "rx-check|tx-check|tcp-segmentation|generic-segmentation|generic-receive|large-receive"'
+
+After that, trigger fresh connection attempts and capture again:
+ssh Exit_Router1 '/routing bgp connection disable [find where name="to_Border_Leaf1"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf1"]'
+ssh Exit_Router2 '/routing bgp connection disable [find where name="to_Border_Leaf2"]; :delay 2; /routing bgp connection enable [find where name="to_Border_Leaf2"]'
+ssh Border_Leaf1 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.1 and port 179 -vv"
+ssh Border_Leaf2 "sudo timeout 10 tcpdump -ni Ethernet0 host 10.0.253.3 and port 179 -vv"
+
+What we want to see next:
+
+If you start seeing 10.0.253.0.179 > 10.0.253.1.x: Flags [S.] and the equivalent on Border_Leaf2, then the checksum/offload path was the blocker.
+If you still see only inbound SYNs and no SYN-ACK, then the next step is kernel-level counters on SONiC for dropped TCP/checksum packets, because by then we’ve ruled out MD5 and largely ruled out simple bridge wiring.
+
