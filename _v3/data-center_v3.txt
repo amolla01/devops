@@ -16,16 +16,16 @@ TASK [mikrotik_base : day1 | Resolve fabric interfaces (profile-conditional)] **
 ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
-ok: [Exit_Router1]
+ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Probe running ethernet interfaces on KVM CHR] **************************************************************************************************************************************
-ok: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
-ok: [Exit_Router2]
+ok: [Exit_Router1]
 
 TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
 ok: [Exit_Router1]
+
+TASK [mikrotik_base : day1 | Parse running data interfaces on KVM CHR] ******************************************************************************************************************************************
+ok: [Exit_Router2]
 
 TASK [mikrotik_base : day1 | Rebind KVM fabric interface to the live RouterOS port] *****************************************************************************************************************************
 skipping: [Exit_Router1]
@@ -75,246 +75,122 @@ ok: [Exit_Router1] => (item=ether2)
 TASK [mikrotik_base : day1 | Verify IP is present on fabric interface] ******************************************************************************************************************************************
 ok: [Exit_Router2] => (item=ether3)
 
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router1]
+TASK [mikrotik_base : day1 | Ensure RouterOS BGP instance exists] ***********************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/mikrotik_base/tasks/day1_bgp.yml:127:3
 
-TASK [mikrotik_base : day1 | Remove stale BGP firewall accept rules (idempotent re-run)] ************************************************************************************************************************
-changed: [Exit_Router2]
+125   tags: [deploy, day1, interfaces]
+126
+127 - name: "day1 | Ensure RouterOS BGP instance exists"
+      ^ column 3
 
-TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-changed: [Exit_Router1] => (item=BGP accept ← Border_Leaf1 (10.0.253.0))
+fatal: [Exit_Router1]: FAILED! =>
+    changed: false
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.98 '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst]= 0) do={ /routing/bgp/instance add name=main as=65253 router-id=10.0.99.1; } else={ /routing/bgp/instance set $inst as=65253 router-id=10.0.99.1; } }'
+    delta: '0:00:00.638698'
+    end: '2026-05-30 21:17:17.099303'
+    failed_when_result: true
+    msg: non-zero return code
+    rc: 1
+    start: '2026-05-30 21:17:16.460605'
+    stderr: 'Warning: Permanently added ''172.16.2.98'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: bad command name instance (line 1 column 29)
+    stdout_lines: <omitted>
 
-TASK [mikrotik_base : day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer] ************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP accept ← Border_Leaf2 (10.0.253.2))
-
-TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
-changed: [Exit_Router2]
-
-TASK [mikrotik_base : day1 | Remove existing BGP connections (idempotent re-run)] *******************************************************************************************************************************
-changed: [Exit_Router1]
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router2] => (item=BGP → Border_Leaf2 (AS65022))
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-changed: [Exit_Router1] => (item=BGP → Border_Leaf1 (AS65021))
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-
-TASK [mikrotik_base : day1 | Configure BGP connection to neighbor] **********************************************************************************************************************************************
-
-PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
-skipping: no hosts matched
+TASK [mikrotik_base : day1 | Ensure RouterOS BGP instance exists] ***********************************************************************************************************************************************
+fatal: [Exit_Router2]: FAILED! =>
+    changed: false
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o BatchMode=yes admin@172.16.2.99 '{ :local inst [/routing/bgp/instance find where name="main"]; :if ([:len $inst]= 0) do={ /routing/bgp/instance add name=main as=65254 router-id=10.0.99.2; } else={ /routing/bgp/instance set $inst as=65254 router-id=10.0.99.2; } }'
+    delta: '0:00:00.636947'
+    end: '2026-05-30 21:17:17.235502'
+    failed_when_result: true
+    msg: non-zero return code
+    rc: 1
+    start: '2026-05-30 21:17:16.598555'
+    stderr: 'Warning: Permanently added ''172.16.2.99'' (RSA) to the list of known hosts.'
+    stderr_lines: <omitted>
+    stdout: bad command name instance (line 1 column 29)
+    stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Exit_Router1               : ok=12   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
-Exit_Router2               : ok=13   changed=6    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Exit_Router1               : ok=8    changed=2    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+Exit_Router2               : ok=9    changed=2    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 58
-RIB entries 37, using 8288 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        67        76        0    0    0 00:22:55            6       19 HostB12_1
-Ethernet24      4      65107        66       227        0    0    0 00:01:40            0       19 HostB12_2
-Ethernet28      4      65108        66       228        0    0    0 00:01:39            0       19 MonitorSrv
-Ethernet120     4      65000       361       373        0    0    0 05:17:42           15       19 Spine_S2
-Ethernet124     4      65000       361       373        0    0    0 05:17:26           15       19 Spine_S1
-10.0.253.1      4      65253         0         2        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        67        76        0    0    0 00:22:55            0        0 HostB12_1
-Ethernet24      4      65107        66       227        0    0    0 00:01:40            0        0 HostB12_2
-Ethernet28      4      65108        66       228        0    0    0 00:01:39            0        0 MonitorSrv
-Ethernet120     4      65000       361       373        0    0    0 05:17:42            0        0 Spine_S2
-Ethernet124     4      65000       361       373        0    0    0 05:17:26            0        0 Spine_S1
-
-Total number of neighbors 5
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 58
-RIB entries 37, using 8288 bytes of memory
-Peers 6, using 4348 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        68        77        0    0    0 00:23:08            6       19 HostB12_1
-Ethernet24      4      65107        66       227        0    0    0 00:01:53            0       19 HostB12_2
-Ethernet28      4      65108        66       228        0    0    0 00:01:52            0       19 MonitorSrv
-Ethernet120     4      65000       361       373        0    0    0 05:17:55           15       19 Spine_S2
-Ethernet124     4      65000       361       373        0    0    0 05:17:39           15       19 Spine_S1
-10.0.253.1      4      65253         0         2        0    0    0    never      Connect        0 Exit_Router1
-
-Total number of neighbors 6
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 5, using 3623 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet20      4      65106        68        77        0    0    0 00:23:08            0        0 HostB12_1
-Ethernet24      4      65107        66       227        0    0    0 00:01:53            0        0 HostB12_2
-Ethernet28      4      65108        66       228        0    0    0 00:01:52            0        0 MonitorSrv
-Ethernet120     4      65000       361       373        0    0    0 05:17:55            0        0 Spine_S2
-Ethernet124     4      65000       361       373        0    0    0 05:17:39            0        0 Spine_S1
-
-Total number of neighbors 5
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Leaf_L3 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
-BGP table version 75
-RIB entries 37, using 8288 bytes of memory
-Peers 4, using 2898 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65104        73       191        0    0    0 00:01:06            2       19 Host34_1
-Ethernet4       4      65105        73       190        0    0    0 00:01:02            2       19 Host34_2
-Ethernet120     4      65000       357       383        0    0    0 05:13:07           15       19 Spine_S2
-Ethernet124     4      65000       357       383        0    0    0 05:13:13           15       19 Spine_S1
-
-Total number of neighbors 4
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.3, local AS number 65013 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 4, using 2898 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65104        73       191        0    0    0 00:01:06            0        0 Host34_1
-Ethernet4       4      65105        73       190        0    0    0 00:01:02            0        0 Host34_2
-Ethernet120     4      65000       357       383        0    0    0 05:13:07            0        0 Spine_S2
-Ethernet124     4      65000       357       383        0    0    0 05:13:13            0        0 Spine_S1
-
-Total number of neighbors 4
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Leaf_L4 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
-BGP table version 77
-RIB entries 37, using 8288 bytes of memory
-Peers 4, using 2898 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65104        73       175        0    0    0 00:01:06            2       19 Host34_1
-Ethernet4       4      65105        73       185        0    0    0 00:01:04            2       19 Host34_2
-Ethernet120     4      65000       357       385        0    0    0 05:13:22           17       19 Spine_S2
-Ethernet124     4      65000       357       385        0    0    0 05:13:29           17       19 Spine_S1
-
-Total number of neighbors 4
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.0.1.4, local AS number 65014 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 4, using 2898 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-Ethernet0       4      65104        73       175        0    0    0 00:01:06            0        0 Host34_1
-Ethernet4       4      65105        73       185        0    0    0 00:01:04            0        0 Host34_2
-Ethernet120     4      65000       357       385        0    0    0 05:13:22            0        0 Spine_S2
-Ethernet124     4      65000       357       385        0    0    0 05:13:29            0        0 Spine_S1
-
-Total number of neighbors 4
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_1 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.43' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.11, local AS number 65104 vrf-id 0
-BGP table version 2
-RIB entries 5, using 960 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013        21        67        0    0    0 00:01:40            0        2 Leaf_L3
-enp3s0          4      65014        21        68        0    0    0 00:01:32            0        2 Leaf_L4
-
-Total number of neighbors 2
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.11, local AS number 65104 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013        21        67        0    0    0 00:01:40            0        0 Leaf_L3
-enp3s0          4      65014        21        68        0    0    0 00:01:32            0        0 Leaf_L4
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host34_2 "sudo vtysh -c 'show bgp summary'"
-Warning: Permanently added '172.16.2.44' (ED25519) to the list of known hosts.
-
-IPv4 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.12, local AS number 65105 vrf-id 0
-BGP table version 2
-RIB entries 5, using 960 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013        21        68        0    0    0 00:01:44            0        2 Leaf_L3
-enp3s0          4      65014        21        68        0    0    0 00:01:38            0        2 Leaf_L4
-
-Total number of neighbors 2
-
-IPv6 Unicast Summary (VRF default):
-BGP router identifier 10.10.255.12, local AS number 65105 vrf-id 0
-BGP table version 0
-RIB entries 0, using 0 bytes of memory
-Peers 2, using 1448 KiB of memory
-
-Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
-enp2s0          4      65013        21        68        0    0    0 00:01:44            0        0 Leaf_L3
-enp3s0          4      65014        21        68        0    0    0 00:01:38            0        0 Leaf_L4
-
-Total number of neighbors 2
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 "/routing bgp session print detail"
 Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
 Flags: E - established
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router1 "/routing bgp connection print detail"
-Warning: Permanently added '172.16.2.98' (RSA) to the list of known hosts.
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf1"
-     remote.address=10.0.253.0/32 .as=65021
-     local.address=10.0.253.1 .role=ebgp
-     connect=yes listen=yes routing-table=main router-id=10.0.99.1
-     templates="" as=65253 hold-time=3m keepalive-time=1m address-families=ip
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 "/routing bgp connection print detail"
-Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
-Flags: D - dynamic, X - disabled, I - inactive
- 0   name="to_Border_Leaf2"
-     remote.address=10.0.253.2/32 .as=65022
-     local.address=10.0.253.3 .role=ebgp
-     connect=yes listen=yes routing-table=main router-id=10.0.99.2
-     templates="" as=65254 hold-time=3m keepalive-time=1m address-families=ip
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Exit_Router2 "/routing bgp session print detail"
 Warning: Permanently added '172.16.2.99' (RSA) to the list of known hosts.
 Flags: E - established
 
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf1 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 82
+RIB entries 37, using 8288 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       111       120        0    0    0 00:42:56            6       19 HostB12_1
+Ethernet24      4      65107        87       434        0    0    0 00:00:33            0       19 HostB12_2
+Ethernet28      4      65108        87       434        0    0    0 00:00:33            0       19 MonitorSrv
+Ethernet120     4      65000       405       417        0    0    0 05:37:43           15       19 Spine_S2
+Ethernet124     4      65000       405       417        0    0    0 05:37:27           15       19 Spine_S1
+10.0.253.1      4      65253         0         2        0    0    0    never      Connect        0 Exit_Router1
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.1, local AS number 65021 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       111       120        0    0    0 00:42:56            0        0 HostB12_1
+Ethernet24      4      65107        87       434        0    0    0 00:00:33            0        0 HostB12_2
+Ethernet28      4      65108        87       434        0    0    0 00:00:33            0        0 MonitorSrv
+Ethernet120     4      65000       405       417        0    0    0 05:37:43            0        0 Spine_S2
+Ethernet124     4      65000       405       417        0    0    0 05:37:27            0        0 Spine_S1
+
+Total number of neighbors 5
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Border_Leaf2 "sudo vtysh -c 'show bgp summary'"
+Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+
+IPv4 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 74
+RIB entries 37, using 8288 bytes of memory
+Peers 6, using 4348 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       112       113        0    0    0 00:43:08           15       19 HostB12_1
+Ethernet24      4      65107       111       113        0    0    0 00:43:08            2       19 HostB12_2
+Ethernet28      4      65108       111       113        0    0    0 00:43:08            2       19 MonitorSrv
+Ethernet120     4      65000       405       409        0    0    0 05:37:57           14       19 Spine_S2
+Ethernet124     4      65000       405       409        0    0    0 05:37:30           14       19 Spine_S1
+10.0.253.3      4      65254         0         0        0    0    0    never      Connect        0 Exit_Router2
+
+Total number of neighbors 6
+
+IPv6 Unicast Summary (VRF default):
+BGP router identifier 10.0.2.2, local AS number 65022 vrf-id 0
+BGP table version 0
+RIB entries 0, using 0 bytes of memory
+Peers 5, using 3623 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Ethernet20      4      65106       112       113        0    0    0 00:43:08            0        0 HostB12_1
+Ethernet24      4      65107       111       113        0    0    0 00:43:08            0        0 HostB12_2
+Ethernet28      4      65108       111       113        0    0    0 00:43:08            0        0 MonitorSrv
+Ethernet120     4      65000       405       409        0    0    0 05:37:57            0        0 Spine_S2
+Ethernet124     4      65000       405       409        0    0    0 05:37:30            0        0 Spine_S1
+
+Total number of neighbors 5
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
