@@ -634,3 +634,10 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 
 
 "ssh Border_Leaf1 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.1'; ping -c 3 10.0.253.1"; echo '===SPLIT==='; ssh Border_Leaf2 "show ip interfaces | grep -A2 Ethernet0; sudo vtysh -c 'show bgp neighbors 10.0.253.3'; ping -c 3 10.0.253.3""
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+Sync those two files and rerun the exit-router deploy. Then check:
+
+ssh Exit_Router1 '/routing bgp connection print detail; /routing bgp session print detail'
+ssh Exit_Router2 '/routing bgp connection print detail; /routing bgp session print detail'
+ssh Border_Leaf1 "sudo vtysh -c 'show bgp neighbors 10.0.253.1'"
+ssh Border_Leaf2 "sudo vtysh -c 'show bgp neighbors 10.0.253.3'"
