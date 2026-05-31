@@ -131,6 +131,14 @@
   failed_when: false
   tags: [deploy, day1, bgp]
 
+- name: "day1 | Ensure default RouterOS BGP template has local ASN"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing bgp template set default as={{ bgp_local_asn }}'
+  register: _bgp_template_result
+  changed_when: _bgp_template_result.rc == 0
+  failed_when: _bgp_template_result.rc != 0
+  tags: [deploy, day1, bgp]
+
 - name: "day1 | Add firewall rule to accept BGP (TCP/179) from fabric peer"
   ansible.builtin.shell: |
     {{ mikrotik_ssh_cmd }} '{ :local anchor ""; :foreach i in=[/ip firewall filter find where comment~"drop-all-else" and chain=input] do={ :if ([:len $anchor] = 0) do={ :set anchor $i } }; :if ([:len $anchor] > 0) do={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }} place-before=$anchor; } else={ /ip firewall filter add chain=input action=accept protocol=tcp src-address={{ item.neighbor_ip }}/32 dst-port=179 comment=accept-bgp-{{ item.neighbor }}; } }'
@@ -152,7 +160,7 @@
 
 - name: "day1 | Configure BGP connection to neighbor"
   ansible.builtin.shell: |
-    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates="" as={{ bgp_local_asn }} disabled=no connect=yes listen=no address-families=ip hold-time=3m keepalive-time=1m'
+    {{ mikrotik_ssh_cmd }} '/routing bgp connection add name=to_{{ item.neighbor }} remote.address={{ item.neighbor_ip }} remote.as={{ item.neighbor_asn }} local.role=ebgp local.address={{ item.local_ip.split("/")[0] }} router-id={{ router_id }} routing-table=main templates=default as={{ bgp_local_asn }} disabled=no connect=yes listen=no address-families=ip hold-time=3m keepalive-time=1m'
   loop: "{{ fabric_interfaces | selectattr('neighbor_ip', 'defined') | list }}"
   loop_control:
     label: "BGP → {{ item.neighbor }} (AS{{ item.neighbor_asn }})"
