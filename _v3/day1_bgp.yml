@@ -242,14 +242,35 @@
   tags: [deploy, day1, bgp]
 
 - name: "day1 | Warn when BGP connection exists but no live RouterOS session formed"
+  ansible.builtin.shell: |
+    {{ mikrotik_ssh_cmd }} '/routing id print detail; /routing bgp template print detail; /routing bgp connection print detail; /log print where topics~"route|routing|bgp"'
+  register: _bgp_no_session_diag
+  changed_when: false
+  failed_when: false
+  when:
+    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_session_rows_deploy | default([]) | length) == 0
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Report RouterOS BGP diagnostics when no live session formed"
   ansible.builtin.debug:
-    msg: >-
+    msg: |
       {{ inventory_hostname }} has a configured RouterOS BGP connection but no concrete
-      /routing bgp session rows yet. This usually means the CHR transport path is still
-      broken rather than BGP syntax being wrong. Border leaf will remain in Connect until
-      TCP/179 completes. On this KVM lab the known durable fix is the CHR fabric NIC model
-      used at VM creation time: exit-router VMs created before the rtl8139 fabric-NIC change
-      in deploy_lab_v13.sh can keep showing header-only session output here.
+      /routing bgp session rows.
+
+      RouterOS diagnostic snapshot:
+      {{ _bgp_no_session_diag.stdout | default('(no diagnostic output)') }}
+  when:
+    - (_bgp_connections.stdout | default('')) is search('to_')
+    - (_bgp_session_rows_deploy | default([]) | length) == 0
+  tags: [deploy, day1, bgp]
+
+- name: "day1 | Fail deploy when RouterOS BGP connection exists but no live session formed"
+  ansible.builtin.fail:
+    msg: >-
+      {{ inventory_hostname }} still has no concrete /routing bgp session rows after deploy.
+      The BGP connection object exists, but RouterOS did not instantiate a live session.
+      See the preceding diagnostic snapshot for routing-id, template, connection, and log state.
   when:
     - (_bgp_connections.stdout | default('')) is search('to_')
     - (_bgp_session_rows_deploy | default([]) | length) == 0
