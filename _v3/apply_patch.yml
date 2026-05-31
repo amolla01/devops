@@ -879,7 +879,8 @@
       -c "router bgp {{ bgp_local_asn }}" \
       -c "bgp router-id {{ router_id }}" \
       -c "no bgp default ipv4-unicast" \
-      -c "no bgp ebgp-requires-policy"{% for port in _effective_bgp_neighbors %} \
+      -c "no bgp ebgp-requires-policy"{% for peer in _effective_ip_peers %} \
+      -c "no neighbor {{ peer.neighbor_ip }}"{% endfor %}{% for port in _effective_bgp_neighbors %} \
       -c "neighbor {{ port }} interface v6only" \
       -c "neighbor {{ port }} remote-as external" \
       -c "neighbor {{ port }} description {{ _effective_bgp_descs[port] | default('fabric') }}"{% if bfd_enabled | default(true) | bool %} \
