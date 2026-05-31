@@ -18,14 +18,38 @@
   ansible.builtin.set_fact:
     _server_fabric_ifaces: >-
       {{
-        ansible_interfaces
-        | reject('equalto', 'lo')
-        | reject('equalto', ansible_default_ipv4.interface | default(''))
-        | reject('match', '^docker|^br-|^veth|^virbr|^tun|^tap|^bond|^dummy')
-        | sort
+        (fabric_interfaces | default([]) | map(attribute='name') | list)
+        if (fabric_interfaces | default([]) | length > 0)
+        else
+        (
+          ansible_interfaces
+          | reject('equalto', 'lo')
+          | reject('equalto', ansible_default_ipv4.interface | default(''))
+          | reject('match', '^docker|^br-|^veth|^virbr|^tun|^tap|^bond|^dummy')
+          | sort
+          | list
+        )
+      }}
+  tags: [day1, deploy, verify, netplan, bgp]
+
+- name: "day1 | Remap fabric interfaces for KVM profiles"
+  ansible.builtin.set_fact:
+    _server_fabric_ifaces: >-
+      {{
+        _server_fabric_ifaces
+        | map('replace', physical_interface_map.fabric0, kvm_interface_map.fabric0)
+        | map('replace', physical_interface_map.fabric1, kvm_interface_map.fabric1)
+        | map('replace', physical_interface_map.mgmt, kvm_interface_map.mgmt)
         | list
       }}
-  tags: [day1, deploy, netplan, bgp]
+  when: automation_profile | default('win11_kvm') in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm']
+  tags: [day1, deploy, verify, netplan, bgp]
+
+- name: "day1 | Resolve unnumbered fabric interface details"
+  ansible.builtin.set_fact:
+    _primary_fabric_iface: "{{ (_server_fabric_ifaces | default([]) | first) | default('') }}"
+    _fabric_link_local_expected: true
+  tags: [day1, deploy, verify, netplan, bgp]
 
 - name: "day1 | Report detected fabric interfaces"
   ansible.builtin.debug:
@@ -86,11 +110,20 @@
     state: started
   tags: [day1, deploy, frr, bgp]
 
-- name: "day1 | Verify bond interface is up"
-  ansible.builtin.command: ip link show bond0
-  register: _bond_status
+- name: "day1 | Verify primary unnumbered fabric interface is up"
+  ansible.builtin.command: ip link show {{ _primary_fabric_iface }}
+  register: _primary_fabric_status
   changed_when: false
   failed_when: false
+  when: _primary_fabric_iface | length > 0
+  tags: [day1, verify, netplan]
+
+- name: "day1 | Verify IPv6 link-local is present on primary fabric interface"
+  ansible.builtin.command: ip -o -6 addr show dev {{ _primary_fabric_iface }} scope link
+  register: _primary_fabric_ll
+  changed_when: false
+  failed_when: false
+  when: _primary_fabric_iface | length > 0
   tags: [day1, verify, netplan]
 
 - name: "day1 | Verify BGP session status"
@@ -106,11 +139,13 @@
       ============================================================
       Day-1 Network Complete: {{ hostname }} (Ubuntu Server)
       ============================================================
-      Bond:         bond0 ({{ bond_ip }})
-      Interfaces:   {{ netplan.network.bonds.bond0.interfaces | join(', ') }}
+      Fabric Mode:   eBGP unnumbered (IPv6 link-local)
+      Primary IF:    {{ _primary_fabric_iface }}
+      Interfaces:   {{ (_server_fabric_ifaces | default([])) | join(', ') }}
       BGP ASN:      {{ frr_bgp.local_asn }}
       Router-ID:    {{ frr_bgp.router_id }}
       Peers:        {{ frr_bgp.neighbors | map(attribute='description') | join(', ') }}
-      Bond status:  {{ 'UP' if 'UP' in (_bond_status.stdout | default('')) else 'DOWN/PENDING' }}
+      Fabric IF:    {{ 'UP' if 'UP' in (_primary_fabric_status.stdout | default('')) else 'DOWN/PENDING' }}
+      Link-Local:   {{ 'PRESENT' if 'fe80::' in (_primary_fabric_ll.stdout | default('')) else 'MISSING' }}
       ============================================================
   tags: [day1, verify]
