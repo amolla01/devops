@@ -17,3 +17,18 @@ If SSH still can't reach 172.16.2.x from WSL2, the VMs are on a libvirt bridge t
   ssh nh1221@localhost   # escape WSL2 → native Linux
 cd /path/to/data-center/_v3
 ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Run Phase 5 alone using the verify tag:
+ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml --tags verify
+This connects to the first controller (Host12_1), copies the kubeconfig, then runs:
+
+kubectl get nodes -o wide — node status
+Readiness check (all nodes Ready, count matches expected)
+kubectl get pods -A -o wide — all system pods
+CoreDNS running assertion
+kubectl cluster-info — API server + CoreDNS endpoints
+For a quick manual check directly on the controller:
+ansible -i inventory/hosts.yml Host12_1 -m shell -a "kubectl get nodes -o wide && echo '---' && kubectl get pods -A" -e "KUBECONFIG=/etc/kubernetes/admin.conf"
+
+
