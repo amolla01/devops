@@ -289,6 +289,20 @@
         - inventory_hostname in groups['kube_controllers']
       tags: [prepare, preflight]
 
+- name: "Phase 3.5: Pre-stage /tmp/releases on all K8s nodes"
+  hosts: kube_nodes
+  gather_facts: false
+  become: true
+  tags: [deploy]
+  tasks:
+    - name: Create /tmp/releases directory with world-writable permissions
+      ansible.builtin.file:
+        path: /tmp/releases
+        state: directory
+        mode: '0777'
+        owner: "{{ ansible_user | default('ubuntu') }}"
+        group: "{{ ansible_user | default('ubuntu') }}"
+
 - name: "Phase 4: Execute KubeSpray cluster.yml"
   hosts: localhost
   connection: local
