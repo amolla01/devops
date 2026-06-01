@@ -1,724 +1,455 @@
-C:\Users\nh1221>wsl -d Ubuntu-24.04
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd data-center/
-nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ source venv/bin/activate
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd _v3
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./deploy_lab_v3.sh preflight
-[INFO] Preflight: checking SSH connectivity to R810 (nh1221@R810)
-[INFO] Preflight: R810 — key-based auth OK
-[INFO] Preflight: checking SSH connectivity to REMOTE_V13_HOST (nh1221@R810)
-[INFO] Preflight: REMOTE_V13_HOST — key-based auth OK
-[INFO] Preflight: checking deploy_lab_v13.sh on remote (/home/nh1221/deploy_lab_v13.sh)
-[INFO] Remote deploy_lab_v13.sh differs from local copy; syncing latest version...
-[INFO] Copying deploy_lab_v13.sh to nh1221@R810:/home/nh1221/deploy_lab_v13.sh
-Warning: Permanently added 'r810' (ED25519) to the list of known hosts.
-deploy_lab_v13.sh                                                                                                                                                              100%  107KB   1.3MB/s   00:00
-[INFO] Preflight completed successfully.
-[INFO] Action 'preflight' completed.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml --limit Border_Leaf1
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh R810 "virsh list --all"
+ Id   Name           State
+------------------------------
+ 62   Spine_S1       running
+ 63   Spine_S2       running
+ 64   Leaf_L1        running
+ 65   Leaf_L2        running
+ 66   Leaf_L3        running
+ 67   Leaf_L4        running
+ 68   Border_Leaf1   running
+ 69   Border_Leaf2   running
+ 72   Host12_1       running
+ 73   Host12_2       running
+ 74   Host12_3       running
+ 75   Host34_1       running
+ 76   Host34_2       running
+ 77   HostB12_1      running
+ 78   HostB12_2      running
+ 79   MonitorSrv     running
+ 81   Exit_Router2   running
+ 82   Exit_Router1   running
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml --limit servers
 
 PLAY [Audit — SONiC Switch Interface & BGP/BFD State] ***********************************************************************************************************************************************************
+skipping: no hosts matched
 
-TASK [SONiC Audit | Collect interface operational status] *******************************************************************************************************************************************************
-[ERROR]: Task failed: Failed to connect to the host via ssh: ssh: connect to host 172.16.2.31 port 22: Connection timed out
+PLAY [Audit — MikroTik Exit Router Interface & BGP State] *******************************************************************************************************************************************************
+skipping: no hosts matched
 
-Task failed.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/audit_topology_interfaces.yml:44:7
+PLAY [Audit — Server Interface & FRR BGP/BFD State] *************************************************************************************************************************************************************
 
-42
-43   tasks:
-44     - name: "SONiC Audit | Collect interface operational status"
-         ^ column 7
+TASK [Server Audit | Collect all non-loopback interface state] **************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [Host12_3]
+ok: [Host12_2]
 
-<<< caused by >>>
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host34_1]
+ok: [Host12_1]
 
-Failed to connect to the host via ssh: ssh: connect to host 172.16.2.31 port 22: Connection timed out
+TASK [Server Audit | Collect all non-loopback interface state] **************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [MonitorSrv]
 
-fatal: [Border_Leaf1]: UNREACHABLE! =>
-    changed: false
-    msg: 'Task failed: Failed to connect to the host via ssh: ssh: connect to host 172.16.2.31
-        port 22: Connection timed out'
-    unreachable: true
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host12_1]
 
-NO MORE HOSTS LEFT **********************************************************************************************************************************************************************************************
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host34_2]
+ok: [Host12_2]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host12_3]
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host12_2]
+ok: [Host34_2]
+ok: [Host12_3]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [HostB12_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [HostB12_2]
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host12_2]
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [HostB12_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [HostB12_2]
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_3]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_1  (172.16.2.40)
+        TYPE   : Ubuntu Server  |  ASN: 65101
+        LOOPBACK: 10.10.255.1/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:f8:9d:7e
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:df:fc:7c
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:88:6e:f9
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.40/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 3419sec preferred_lft 3419sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fef8:9d7e/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host34_2]
+ok: [HostB12_1]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [HostB12_2]
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_2  (172.16.2.41)
+        TYPE   : Ubuntu Server  |  ASN: 65102
+        LOOPBACK: 10.10.255.2/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:35:88:a6
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:53:19:80
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:2b:9d:47
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.41/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2523sec preferred_lft 2523sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe35:88a6/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [HostB12_1]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [HostB12_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host34_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host34_1  (172.16.2.43)
+        TYPE   : Ubuntu Server  |  ASN: 65104
+        LOOPBACK: 10.10.255.11/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:75:20:e1
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:8f:e1:be
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:dd:48:d9
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.43/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2827sec preferred_lft 2827sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe75:20e1/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_3]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_3] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_3  (172.16.2.42)
+        TYPE   : Ubuntu Server  |  ASN: 65103
+        LOOPBACK: 10.10.255.3/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:6c:e8:6f
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:f2:41:a8
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:b5:79:30
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.42/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2746sec preferred_lft 2746sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe6c:e86f/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [Host34_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [HostB12_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : HostB12_1  (172.16.2.45)
+        TYPE   : Ubuntu Server  |  ASN: 65106
+        LOOPBACK: 10.10.255.100/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:9b:ad:64
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:f9:61:95
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:8e:e9:0a
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.45/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2248sec preferred_lft 2248sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe9b:ad64/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [HostB12_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host34_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host34_2  (172.16.2.44)
+        TYPE   : Ubuntu Server  |  ASN: 65105
+        LOOPBACK: 10.10.255.12/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:eb:62:95
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:c7:d8:8d
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:1f:4c:c6
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.44/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2526sec preferred_lft 2526sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:feeb:6295/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+ok: [HostB12_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : HostB12_2  (172.16.2.46)
+        TYPE   : Ubuntu Server  |  ASN: 65107
+        LOOPBACK: 10.10.255.101/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:4a:ce:25
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:a1:1e:4f
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:40:94:f3
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.46/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2429sec preferred_lft 2429sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe4a:ce25/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : MonitorSrv  (172.16.2.47)
+        TYPE   : Ubuntu Server  |  ASN: 65108
+        LOOPBACK: 10.10.255.102/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:e9:4d:19
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:b2:f6:fe
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:ad:20:a0
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.47/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 3340sec preferred_lft 3340sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fee9:4d19/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh nh1221@R810
-nh1221@r810's password:
-Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-15-generic x86_64)
-
- * Documentation:  https://docs.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/pro
-
-Expanded Security Maintenance for Applications is not enabled.
-
-30 updates can be applied immediately.
-To see these additional updates run: apt list --upgradable
-
-Enable ESM Apps to receive additional future security updates.
-See https://ubuntu.com/esm or run: sudo pro status
-
-Last login: Mon Jun  1 09:42:27 2026 from 192.168.9.199
-nh1221@PowerEdge-R810:~$ exit
-logout
-Connection to r810 closed.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh R810
-nh1221@r810's password:
-Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-15-generic x86_64)
-
- * Documentation:  https://docs.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/pro
-
-Expanded Security Maintenance for Applications is not enabled.
-
-30 updates can be applied immediately.
-To see these additional updates run: apt list --upgradable
-
-Enable ESM Apps to receive additional future security updates.
-See https://ubuntu.com/esm or run: sudo pro status
-
-Last login: Mon Jun  1 09:58:26 2026 from 192.168.9.199
-nh1221@PowerEdge-R810:~$ exit
-logout
-Connection to r810 closed.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cat /etc/hosts
-# Copyright (c) 1993-2009 Microsoft Corp.
-#
-# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.
-#
-# This file contains the mappings of IP addresses to host names. Each
-# entry should be kept on an individual line. The IP address should
-# be placed in the first column followed by the corresponding host name.
-# The IP address and the host name should be separated by at least one
-# space.
-#
-# Additionally, comments (such as these) may be inserted on individual
-# lines or following the machine name denoted by a '#' symbol.
-#
-# For example:
-#
-#      102.54.94.97     rhino.acme.com          # source server
-#       38.25.63.10     x.acme.com              # x client host
-
-# localhost name resolution is handled within DNS itself.
-#       127.0.0.1       localhost
-#       ::1             localhost
-
-# ═══════════════════════════════════════════════════════════════════
-# DC CLOS Lab — KVM Hypervisor + VMs (via ProxyJump)
-# ═══════════════════════════════════════════════════════════════════
-
-# Hypervisor (direct reach from laptop)
-192.168.9.200       dc-hypervisor  dc-hyp  ubuntu-r620   R620
-192.168.9.198       dc-hyp-810                     ubuntu-r810   R810
-
-# ─── SONiC Switches — Spines (Celestica DX010) ───────────────────
-172.16.2.11         spine-s1       Spine_S1
-172.16.2.12         spine-s2       Spine_S2
-
-# ─── SONiC Switches — Leafs (Accton AS5712 + Arista 7050QX) ─────
-172.16.2.21         leaf-l1        Leaf_L1
-172.16.2.22         leaf-l2        Leaf_L2
-172.16.2.23         leaf-l3        Leaf_L3
-172.16.2.24         leaf-l4        Leaf_L4
-
-# ─── SONiC Switches — Border Leafs (Arista 7050QX-32S) ──────────
-172.16.2.31         border-leaf1   Border_Leaf1
-172.16.2.32         border-leaf2   Border_Leaf2
-
-# ─── Exit Routers (MikroTik CHR CRS326) ─────────────────────────
-172.16.2.98         exit-router1   Exit_Router1
-172.16.2.99         exit-router2   Exit_Router2
-
-# ─── Compute Servers (Ubuntu — K8s controllers/workers) ──────────
-172.16.2.40         host12-1       Host12_1
-172.16.2.41         host12-2       Host12_2
-172.16.2.42         host12-3       Host12_3
-172.16.2.43         host34-1       Host34_1
-172.16.2.44         host34-2       Host34_2
-172.16.2.45         hostb12-1      HostB12_1    k8s-master
-172.16.2.46         hostb12-2      HostB12_2
-172.16.2.47         monitor-srv    MonitorSrv
-
-# ─── Monitoring Server ───────────────────────────────────────────
-172.16.2.47         monitor-srv    MonitorSrv
-
-# ─── Dedicated Ceph Storage Servers ──────────────────────────────
-172.16.2.50         storage-hdd-01  Storage_Server_HDD_01
-172.16.2.51         storage-hdd-02  Storage_Server_HDD_02
-172.16.2.52         storage-ssd-01  Storage_Server_SSD_01
-172.16.2.53         storage-ssd-02  Storage_Server_SSD_02
-
-# ─── iDRAC / MaaS PXE Subnet (192.168.255.0/25) ─────────────────
-# These are OOB management IPs for real hardware (not used in KVM lab).
-# Include them if your laptop needs direct access to iDRAC web UI.
-192.168.255.11      host12-1-idrac
-192.168.255.12      host12-2-idrac
-192.168.255.13      host12-3-idrac
-192.168.255.21      host34-1-idrac
-192.168.255.22      host34-2-idrac
-192.168.255.31      hostb12-1-idrac
-192.168.255.32      hostb12-2-idrac
-192.168.255.33      monitor-srv-idrac
-192.168.255.50      storage-hdd-01-idrac
-192.168.255.51      storage-hdd-02-idrac
-192.168.255.52      storage-ssd-01-idrac
-192.168.255.53      storage-ssd-02-idrac
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Added by Docker Desktop
-192.168.9.254 host.docker.internal
-192.168.9.254 gateway.docker.internal
-# To allow the same kube context to work on the host and the container:
-127.0.0.1 kubernetes.docker.internal
-# End of section
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cat ~/.ssh/config
-cat: /home/nh1221/.ssh/config: No such file or directory
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ sudo nano /etc/wsl.conf
-[sudo] password for nh1221:
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ mkdir -p ~/.ssh
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ln -s /mnt/c/Users/nh1221/.ssh/config ~/.ssh/config
-ln: failed to create symbolic link '/home/nh1221/.ssh/config': File exists
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ chmod 700 ~/.ssh
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ls -ld ~/.ssh ~/.ssh/config
-drwx------ 2 nh1221 nh1221 4096 Jun  1 09:47 /home/nh1221/.ssh
-lrwxrwxrwx 1 nh1221 nh1221   31 Jun  1 09:47 /home/nh1221/.ssh/config -> /mnt/c/Users/nh4134/.ssh/config
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ln -sf /mnt/c/Users/nh1221/.ssh/config ~/.ssh/config
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ls -l ~/.ssh/config
-cat ~/.ssh/config
-lrwxrwxrwx 1 nh1221 nh1221 31 Jun  1 10:05 /home/nh1221/.ssh/config -> /mnt/c/Users/nh1221/.ssh/config
-Ciphers +aes128-cbc,aes256-cbc,3des-cbc
-KexAlgorithms +diffie-hellman-group1-sha1,diffie-hellman-group14-sha1
-HostkeyAlgorithms +ssh-rsa,ssh-dss
-
-ServerAliveInterval 900
-ServerAliveCountMax 3
-
-# ═══════════════════════════════════════════════════════════════════════════
-# SSH Configuration — DC CLOS KVM Lab (ProxyJump via Ubuntu Hypervisor)
-# ═══════════════════════════════════════════════════════════════════════════
-# Purpose:  Enable transparent SSH from Windows laptop to all lab VMs
-# Install:  Copy this file to C:\Users\nh4134\.ssh\config (Windows)
-#           Or symlink in WSL:  ln -sf /mnt/c/Users/nh4134/.ssh/config ~/.ssh/config
-#
-# Architecture:
-#   Laptop (192.168.9.x) → Hypervisor (192.168.9.200) → VMs (172.16.2.x)
-#   The 172.16.2.0/24 subnet is an OVS bridge internal to the hypervisor.
-#   ProxyJump tunnels SSH through the hypervisor to reach VMs transparently.
-#
-# Usage:
-#   ssh dc-hypervisor          # Direct to hypervisor
-#   ssh spine-s1               # Transparent jump to SONiC switch
-#   ssh 172.16.2.45            # Transparent jump to any VM by IP
-#   ssh hostb12-1              # Named alias for HostB12_1
-#   ssh storage-ssd-01         # Named alias for Storage_Server_SSD_01
-#
-# Key file: ~/.ssh/id_dc_lab (ED25519)
-#   Generate: ssh-keygen -t ed25519 -f ~/.ssh/id_dc_lab -C "dc-lab-ansible" -N ""
-#
-# Last updated: May 2026
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# HYPERVISOR — Direct access from laptop (no jump needed)
-# ─────────────────────────────────────────────────────────────────────────
-Host dc-hypervisor dc-hyp ubuntu-r620 R620 192.168.9.200
-    HostName 192.168.9.200
-    User nh1221
-    IdentityFile ~/.ssh/id_dc_lab
-    ForwardAgent yes
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
-
-# ─────────────────────────────────────────────────────────────────────────
-# HYPERVISOR — Direct access from laptop (no jump needed)
-# ─────────────────────────────────────────────────────────────────────────
-Host R810 ubuntu-r810  192.168.9.198
-    HostName 192.168.9.198
-    User nh1221
-    IdentityFile ~/.ssh/id_dc_lab
-    ForwardAgent yes
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
-
-# ─────────────────────────────────────────────────────────────────────────
-# SONiC SWITCHES — Spines (Celestica DX010 Seastone)
-# ─────────────────────────────────────────────────────────────────────────
-Host spine-s1 Spine_S1
-    HostName 172.16.2.11
-    User admin
-
-Host spine-s2 Spine_S2
-    HostName 172.16.2.12
-    User admin
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# SONiC SWITCHES — Leafs (Accton AS5712-54X: L1,L2 | Arista 7050QX: L3,L4)
-# ─────────────────────────────────────────────────────────────────────────
-Host leaf-l1 Leaf_L1
-    HostName 172.16.2.21
-    User admin
-
-Host leaf-l2 Leaf_L2
-    HostName 172.16.2.22
-    User admin
-
-Host leaf-l3 Leaf_L3
-    HostName 172.16.2.23
-    User admin
-
-Host leaf-l4 Leaf_L4
-    HostName 172.16.2.24
-    User admin
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# SONiC SWITCHES — Border Leafs (Arista 7050QX-32S)
-# ─────────────────────────────────────────────────────────────────────────
-Host border-leaf1 Border_Leaf1
-    HostName 172.16.2.31
-    User admin
-
-Host border-leaf2 Border_Leaf2
-    HostName 172.16.2.32
-    User admin
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# EXIT ROUTERS — MikroTik CHR CRS326
-# ─────────────────────────────────────────────────────────────────────────
-Host exit-router1 Exit_Router1
-    HostName 172.16.2.98
-    User admin
-
-Host exit-router2 Exit_Router2
-    HostName 172.16.2.99
-    User admin
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# COMPUTE SERVERS — Ubuntu (K8s Controllers + Workers + OpenStack)
-# ─────────────────────────────────────────────────────────────────────────
-Host host12-1 Host12_1
-    HostName 172.16.2.40
-    User ubuntu
-
-Host host12-2 Host12_2
-    HostName 172.16.2.41
-    User ubuntu
-
-Host host12-3 Host12_3
-    HostName 172.16.2.42
-    User ubuntu
-
-Host host34-1 Host34_1
-    HostName 172.16.2.43
-    User ubuntu
-
-Host host34-2 Host34_2
-    HostName 172.16.2.44
-    User ubuntu
-
-Host hostb12-1 HostB12_1 k8s-master
-    HostName 172.16.2.45
-    User ubuntu
-
-Host hostb12-2 HostB12_2
-    HostName 172.16.2.46
-    User ubuntu
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# MONITORING SERVER — Prometheus, Grafana, Loki, Syslog
-# ─────────────────────────────────────────────────────────────────────────
-Host monitor-srv MonitorSrv
-    HostName 172.16.2.47
-    User ubuntu
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# DEDICATED CEPH STORAGE SERVERS — HDD tier (Leaf_L3/L4 column)
-# ─────────────────────────────────────────────────────────────────────────
-Host storage-hdd-01 Storage_Server_HDD_01
-    HostName 172.16.2.50
-    User ubuntu
-
-Host storage-hdd-02 Storage_Server_HDD_02
-    HostName 172.16.2.51
-    User ubuntu
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# DEDICATED CEPH STORAGE SERVERS — SSD/NVMe tier (Border-Leaf column)
-# ─────────────────────────────────────────────────────────────────────────
-Host storage-ssd-01 Storage_Server_SSD_01
-    HostName 172.16.2.52
-    User ubuntu
-
-Host storage-ssd-02 Storage_Server_SSD_02
-    HostName 172.16.2.53
-    User ubuntu
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# WILDCARD: All 172.16.2.x VMs — ProxyJump through hypervisor
-# ─────────────────────────────────────────────────────────────────────────
-# This catches any IP not matched by a named Host block above.
-# Ensures all VM traffic routes through the hypervisor SSH tunnel.
-Host 172.16.2.*
-    ProxyJump dc-hypervisor
-    IdentityFile ~/.ssh/id_dc_lab
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
-    ConnectTimeout 10
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# WILDCARD: iDRAC / MaaS PXE subnet (192.168.255.0/25) — real hardware OOB
-# ─────────────────────────────────────────────────────────────────────────
-# Only relevant when targeting physical Dell servers (real_hardware profile).
-# iDRAC web UI: https://192.168.255.x (access via SSH tunnel or SOCKS proxy).
-Host 192.168.255.*
-    ProxyJump dc-hypervisor
-    User root
-    IdentityFile ~/.ssh/id_dc_lab
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
-    ConnectTimeout 10
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# WILDCARD: Named host patterns — inherit ProxyJump + key settings
-# ─────────────────────────────────────────────────────────────────────────
-# Matches all named aliases defined above that use hostnames (not IPs).
-# Required because named hosts need explicit ProxyJump (not inherited from IP wildcard).
-Host spine-* Spine_* leaf-* Leaf_* border-* Border_* exit-* Exit_* host* Host* monitor-* Monitor* storage-* Storage_*
-    ProxyJump dc-hypervisor
-    IdentityFile ~/.ssh/id_dc_lab
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
-    ConnectTimeout 10
-
-
-# ─────────────────────────────────────────────────────────────────────────
-# GLOBAL DEFAULTS
-# ─────────────────────────────────────────────────────────────────────────
-Host *
-    AddKeysToAgent yes
-    IdentitiesOnly yes
-    ServerAliveInterval 120
-    ServerAliveCountMax 3
-    TCPKeepAlive yes
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml --limit Border_Leaf1
-
-PLAY [Audit — SONiC Switch Interface & BGP/BFD State] ***********************************************************************************************************************************************************
-
-TASK [SONiC Audit | Collect interface operational status] *******************************************************************************************************************************************************
-[ERROR]: Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
+Host12_1                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_2                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_3                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_2                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+MonitorSrv                 : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1
+channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
 Connection closed by UNKNOWN port 65535
-
-Task failed.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/audit_topology_interfaces.yml:44:7
-
-42
-43   tasks:
-44     - name: "SONiC Audit | Collect interface operational status"
-         ^ column 7
-
-<<< caused by >>>
-
-Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Spine_S1
+channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
 Connection closed by UNKNOWN port 65535
-
-fatal: [Border_Leaf1]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-
-NO MORE HOSTS LEFT **********************************************************************************************************************************************************************************************
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml
-
-PLAY [Audit — SONiC Switch Interface & BGP/BFD State] ***********************************************************************************************************************************************************
-
-TASK [SONiC Audit | Collect interface operational status] *******************************************************************************************************************************************************
-[ERROR]: Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh admin@Spine_S1
+channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
 Connection closed by UNKNOWN port 65535
-
-Task failed.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/audit_topology_interfaces.yml:44:7
-
-42
-43   tasks:
-44     - name: "SONiC Audit | Collect interface operational status"
-         ^ column 7
-
-<<< caused by >>>
-
-Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh ubuntu@Host12_1
+channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
 Connection closed by UNKNOWN port 65535
-
-fatal: [Border_Leaf1]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Spine_S1]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Leaf_L1]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Border_Leaf2]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Spine_S2]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Leaf_L2]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Leaf_L3]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Leaf_L4]: UNREACHABLE! =>
-    changed: false
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-
-NO MORE HOSTS LEFT **********************************************************************************************************************************************************************************************
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Border_Leaf1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Border_Leaf2               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L1                    : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L2                    : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L3                    : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Leaf_L4                    : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Spine_S1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Spine_S2                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cat /etc/hosts
-# Copyright (c) 1993-2009 Microsoft Corp.
-#
-# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.
-#
-# This file contains the mappings of IP addresses to host names. Each
-# entry should be kept on an individual line. The IP address should
-# be placed in the first column followed by the corresponding host name.
-# The IP address and the host name should be separated by at least one
-# space.
-#
-# Additionally, comments (such as these) may be inserted on individual
-# lines or following the machine name denoted by a '#' symbol.
-#
-# For example:
-#
-#      102.54.94.97     rhino.acme.com          # source server
-#       38.25.63.10     x.acme.com              # x client host
-
-# localhost name resolution is handled within DNS itself.
-#       127.0.0.1       localhost
-#       ::1             localhost
-
-# ═══════════════════════════════════════════════════════════════════
-# DC CLOS Lab — KVM Hypervisor + VMs (via ProxyJump)
-# ═══════════════════════════════════════════════════════════════════
-
-# Hypervisor (direct reach from laptop)
-192.168.9.200       dc-hypervisor  dc-hyp  ubuntu-r620   R620
-192.168.9.198       dc-hyp-810                     ubuntu-r810   R810
-
-# ─── SONiC Switches — Spines (Celestica DX010) ───────────────────
-172.16.2.11         spine-s1       Spine_S1
-172.16.2.12         spine-s2       Spine_S2
-
-# ─── SONiC Switches — Leafs (Accton AS5712 + Arista 7050QX) ─────
-172.16.2.21         leaf-l1        Leaf_L1
-172.16.2.22         leaf-l2        Leaf_L2
-172.16.2.23         leaf-l3        Leaf_L3
-172.16.2.24         leaf-l4        Leaf_L4
-
-# ─── SONiC Switches — Border Leafs (Arista 7050QX-32S) ──────────
-172.16.2.31         border-leaf1   Border_Leaf1
-172.16.2.32         border-leaf2   Border_Leaf2
-
-# ─── Exit Routers (MikroTik CHR CRS326) ─────────────────────────
-172.16.2.98         exit-router1   Exit_Router1
-172.16.2.99         exit-router2   Exit_Router2
-
-# ─── Compute Servers (Ubuntu — K8s controllers/workers) ──────────
-172.16.2.40         host12-1       Host12_1
-172.16.2.41         host12-2       Host12_2
-172.16.2.42         host12-3       Host12_3
-172.16.2.43         host34-1       Host34_1
-172.16.2.44         host34-2       Host34_2
-172.16.2.45         hostb12-1      HostB12_1    k8s-master
-172.16.2.46         hostb12-2      HostB12_2
-172.16.2.47         monitor-srv    MonitorSrv
-
-# ─── Monitoring Server ───────────────────────────────────────────
-172.16.2.47         monitor-srv    MonitorSrv
-
-# ─── Dedicated Ceph Storage Servers ──────────────────────────────
-172.16.2.50         storage-hdd-01  Storage_Server_HDD_01
-172.16.2.51         storage-hdd-02  Storage_Server_HDD_02
-172.16.2.52         storage-ssd-01  Storage_Server_SSD_01
-172.16.2.53         storage-ssd-02  Storage_Server_SSD_02
-
-# ─── iDRAC / MaaS PXE Subnet (192.168.255.0/25) ─────────────────
-# These are OOB management IPs for real hardware (not used in KVM lab).
-# Include them if your laptop needs direct access to iDRAC web UI.
-192.168.255.11      host12-1-idrac
-192.168.255.12      host12-2-idrac
-192.168.255.13      host12-3-idrac
-192.168.255.21      host34-1-idrac
-192.168.255.22      host34-2-idrac
-192.168.255.31      hostb12-1-idrac
-192.168.255.32      hostb12-2-idrac
-192.168.255.33      monitor-srv-idrac
-192.168.255.50      storage-hdd-01-idrac
-192.168.255.51      storage-hdd-02-idrac
-192.168.255.52      storage-ssd-01-idrac
-192.168.255.53      storage-ssd-02-idrac
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Added by Docker Desktop
-192.168.9.254 host.docker.internal
-192.168.9.254 gateway.docker.internal
-# To allow the same kube context to work on the host and the container:
-127.0.0.1 kubernetes.docker.internal
-# End of section
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
