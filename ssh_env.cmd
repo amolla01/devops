@@ -61,3 +61,15 @@ Managed block with markers — safe to re-run, won't duplicate
 Same AUTOMATION_PROFILE that Ansible reads in group_vars/all.yml
 Overridable via env vars: R810_HOST, R620_HOST, KVM_HYPERVISOR_USER, SSH_KEY_PATH
 After running the script, remove your old Host 172.16.2.* spine-* ... block that routes through dc-hypervisor.
+
+
+Remove the old conflicting wildcard block the warning flagged — edit ~/.ssh/config and delete the old Host 172.16.2.* spine-* 
+... section that was below the managed block. Then test:
+
+ssh Host12_1
+
+The generated exec line will now be:
+
+exec "[ ${AUTOMATION_PROFILE:-ubuntu_r810_kvm} = ubuntu_r620_kvm ]"
+No escaped quotes — the shell gets a clean [ test with the unquoted variable (safe since profile values contain no spaces).
+
