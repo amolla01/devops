@@ -1,3 +1,5 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml --tags deploy
 
 PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
@@ -21,22 +23,28 @@ ok: [localhost] =>
 TASK [Clear stale SSH ControlMaster sockets] ********************************************************************************************************************************************************************
 ok: [localhost]
 
-TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
+TASK [Write ProxyCommand wrapper script for R810 hop] ***********************************************************************************************************************************************************
 changed: [localhost]
 
-TASK [Patch kubespray ansible.cfg — SSH args with ProxyJump] ****************************************************************************************************************************************************
+TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
 ok: [localhost]
 
-TASK [Patch kubespray ansible.cfg — disable pipelining for sshpass] *********************************************************************************************************************************************
+TASK [Patch kubespray ansible.cfg — SSH args via ProxyCommand script] *******************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch kubespray ansible.cfg — SSH args (no proxy)] ********************************************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Patch kubespray ansible.cfg — disable pipelining] *********************************************************************************************************************************************************
 ok: [localhost]
 
 TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
 [ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:347:7
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:391:7
 
-345       when: proxy_jump_resolved | default('') | length > 0
-346
-347     - name: Run KubeSpray cluster.yml
+389         insertafter: '^\[ssh_connection\]'
+390
+391     - name: Run KubeSpray cluster.yml
           ^ column 7
 
 fatal: [localhost]: FAILED! =>
@@ -46,32 +54,32 @@ fatal: [localhost]: FAILED! =>
         source /opt/fabric-cache/kubespray/venv/bin/activate
         cd /opt/fabric-cache/kubespray/src
         ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
-    delta: '0:00:02.363211'
-    end: '2026-06-01 14:11:36.737745'
+    delta: '0:21:33.023357'
+    end: '2026-06-01 15:31:20.286509'
     msg: non-zero return code
     rc: 2
-    start: '2026-06-01 14:11:34.374534'
+    start: '2026-06-01 15:09:47.263152'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         [WARNING]: Skipping callback plugin 'ara_default', unable to load
 
         PLAY [Check Ansible version] ***************************************************
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.009)       0:00:00.009 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.009)       0:00:00.009 ***********
 
         TASK [Check 2.15.5 <= Ansible version < 2.17.0] ********************************
         ok: [localhost] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.023)       0:00:00.032 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.022)       0:00:00.032 ***********
 
         TASK [Check that python netaddr is installed] **********************************
         ok: [localhost] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.047)       0:00:00.080 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.047)       0:00:00.079 ***********
         [WARNING]: Could not match supplied host pattern, ignoring: kube-master
         [WARNING]: Could not match supplied host pattern, ignoring: kube-node
         [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
@@ -104,13 +112,13 @@ fatal: [localhost]: FAILED! =>
         skipping: no hosts matched
 
         PLAY [Bootstrap hosts for Ansible] *********************************************
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.044)       0:00:00.125 ***********
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.056)       0:00:00.182 ***********
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.093)       0:00:00.276 ***********
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.064)       0:00:00.340 ***********
-        Monday 01 June 2026  14:11:35 -0500 (0:00:00.025)       0:00:00.365 ***********
-        Monday 01 June 2026  14:11:36 -0500 (0:00:00.067)       0:00:00.433 ***********
-        Monday 01 June 2026  14:11:36 -0500 (0:00:00.064)       0:00:00.497 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.082)       0:00:00.162 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.066)       0:00:00.228 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.027)       0:00:00.256 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.072)       0:00:00.329 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.026)       0:00:00.356 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.073)       0:00:00.430 ***********
+        Monday 01 June 2026  15:09:48 -0500 (0:00:00.074)       0:00:00.504 ***********
         [WARNING]: raw module does not support the environment keyword
         [WARNING]: raw module does not support the environment keyword
         [WARNING]: raw module does not support the environment keyword
@@ -119,39 +127,1740 @@ fatal: [localhost]: FAILED! =>
         [WARNING]: raw module does not support the environment keyword
 
         TASK [bootstrap-os : Fetch /etc/os-release] ************************************
-        fatal: [host34-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
-        fatal: [host12-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
-        fatal: [hostb12-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
-        fatal: [host12-2]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
-        fatal: [host12-3]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
-        fatal: [host34-2]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:09:51 -0500 (0:00:02.773)       0:00:03.277 ***********
+        Monday 01 June 2026  15:09:51 -0500 (0:00:00.060)       0:00:03.338 ***********
+        Monday 01 June 2026  15:09:51 -0500 (0:00:00.062)       0:00:03.400 ***********
+        Monday 01 June 2026  15:09:51 -0500 (0:00:00.056)       0:00:03.457 ***********
+        Monday 01 June 2026  15:09:51 -0500 (0:00:00.061)       0:00:03.518 ***********
+        Monday 01 June 2026  15:09:52 -0500 (0:00:00.063)       0:00:03.582 ***********
+        Monday 01 June 2026  15:09:52 -0500 (0:00:00.059)       0:00:03.641 ***********
+
+        TASK [bootstrap-os : Bootstrap Debian] *****************************************
+        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/bootstrap-debian.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  15:09:52 -0500 (0:00:00.080)       0:00:03.722 ***********
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Check if bootstrap is needed] *****************************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:09:54 -0500 (0:00:02.051)       0:00:05.774 ***********
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Check http::proxy in apt configuration files] *************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:09:56 -0500 (0:00:01.971)       0:00:07.745 ***********
+        Monday 01 June 2026  15:09:56 -0500 (0:00:00.067)       0:00:07.812 ***********
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Check https::proxy in apt configuration files] ************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:09:58 -0500 (0:00:01.976)       0:00:09.789 ***********
+        Monday 01 June 2026  15:09:58 -0500 (0:00:00.072)       0:00:09.861 ***********
+        Monday 01 June 2026  15:09:58 -0500 (0:00:00.066)       0:00:09.928 ***********
+        Monday 01 June 2026  15:09:58 -0500 (0:00:00.059)       0:00:09.988 ***********
+
+        TASK [bootstrap-os : Set the ansible_python_interpreter fact] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:09:58 -0500 (0:00:00.073)       0:00:10.061 ***********
+
+        TASK [bootstrap-os : Install dbus for the hostname module] *********************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:10:15 -0500 (0:00:16.887)       0:00:26.949 ***********
+        Monday 01 June 2026  15:10:15 -0500 (0:00:00.059)       0:00:27.008 ***********
+        Monday 01 June 2026  15:10:15 -0500 (0:00:00.061)       0:00:27.069 ***********
+
+        TASK [bootstrap-os : Create remote_tmp for it is used by another module] *******
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:10:28 -0500 (0:00:12.653)       0:00:39.723 ***********
+
+        TASK [bootstrap-os : Gather host facts to get ansible_os_family] ***************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:10:44 -0500 (0:00:16.297)       0:00:56.020 ***********
+
+        TASK [bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora)] ***
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:11:01 -0500 (0:00:17.137)       0:01:13.158 ***********
+        Monday 01 June 2026  15:11:01 -0500 (0:00:00.060)       0:01:13.218 ***********
+        Monday 01 June 2026  15:11:01 -0500 (0:00:00.061)       0:01:13.279 ***********
+        Monday 01 June 2026  15:11:01 -0500 (0:00:00.074)       0:01:13.354 ***********
+
+        TASK [bootstrap-os : Ensure bash_completion.d folder exists] *******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+
+        PLAY [Gather facts] ************************************************************
+        Monday 01 June 2026  15:11:15 -0500 (0:00:13.976)       0:01:27.331 ***********
+
+        TASK [Gather minimal facts] ****************************************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:11:30 -0500 (0:00:14.858)       0:01:42.190 ***********
+
+        TASK [Gather necessary facts (network)] ****************************************
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:11:48 -0500 (0:00:18.226)       0:02:00.416 ***********
+
+        TASK [Gather necessary facts (hardware)] ***************************************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+
+        PLAY [Prepare for etcd install] ************************************************
+        Monday 01 June 2026  15:12:05 -0500 (0:00:16.576)       0:02:16.992 ***********
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.113)       0:02:17.106 ***********
+
+        TASK [kubespray-defaults : Create fallback_ips_base] ***************************
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.048)       0:02:17.154 ***********
+
+        TASK [kubespray-defaults : Set fallback_ips] ***********************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.097)       0:02:17.252 ***********
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.031)       0:02:17.284 ***********
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.089)       0:02:17.374 ***********
+        Monday 01 June 2026  15:12:05 -0500 (0:00:00.087)       0:02:17.462 ***********
+
+        TASK [adduser : User | Create User Group] **************************************
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:12:19 -0500 (0:00:13.190)       0:02:30.652 ***********
+
+        TASK [adduser : User | Create User] ********************************************
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:12:38 -0500 (0:00:19.121)       0:02:49.773 ***********
+
+        TASK [kubernetes/preinstall : Check if /etc/fstab exists] **********************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:12:56 -0500 (0:00:18.460)       0:03:08.233 ***********
+
+        TASK [kubernetes/preinstall : Remove swapfile from /etc/fstab] *****************
+        ok: [host12-1] => (item=swap)
+        ok: [hostb12-1] => (item=swap)
+        ok: [host34-1] => (item=swap)
+        ok: [host12-3] => (item=swap)
+        ok: [host12-2] => (item=swap)
+        ok: [host12-1] => (item=none)
+        ok: [hostb12-1] => (item=none)
+        ok: [host12-3] => (item=none)
+        ok: [host34-1] => (item=none)
+        ok: [host12-2] => (item=none)
+        ok: [host34-2] => (item=swap)
+        ok: [host34-2] => (item=none)
+        Monday 01 June 2026  15:13:24 -0500 (0:00:28.072)       0:03:36.306 ***********
+
+        TASK [kubernetes/preinstall : Mask swap.target (persist swapoff)] **************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:13:38 -0500 (0:00:13.612)       0:03:49.918 ***********
+
+        TASK [kubernetes/preinstall : Disable swap] ************************************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:13:51 -0500 (0:00:12.864)       0:04:02.783 ***********
+        Monday 01 June 2026  15:13:51 -0500 (0:00:00.067)       0:04:02.850 ***********
+        Monday 01 June 2026  15:13:51 -0500 (0:00:00.067)       0:04:02.918 ***********
+        Monday 01 June 2026  15:13:51 -0500 (0:00:00.068)       0:04:02.986 ***********
+
+        TASK [kubernetes/preinstall : Check if booted with ostree] *********************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:14:03 -0500 (0:00:11.978)       0:04:14.965 ***********
+
+        TASK [kubernetes/preinstall : Set is_fedora_coreos] ****************************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:14:19 -0500 (0:00:16.253)       0:04:31.218 ***********
+
+        TASK [kubernetes/preinstall : Set is_fedora_coreos] ****************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:14:19 -0500 (0:00:00.092)       0:04:31.311 ***********
+
+        TASK [kubernetes/preinstall : Check resolvconf] ********************************
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:14:33 -0500 (0:00:13.272)       0:04:44.583 ***********
+
+        TASK [kubernetes/preinstall : Check existence of /etc/resolvconf/resolv.conf.d] ***
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:14:45 -0500 (0:00:12.876)       0:04:57.460 ***********
+
+        TASK [kubernetes/preinstall : Check status of /etc/resolv.conf] ****************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:00 -0500 (0:00:14.377)       0:05:11.838 ***********
+
+        TASK [kubernetes/preinstall : Get content of /etc/resolv.conf] *****************
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:13 -0500 (0:00:13.167)       0:05:25.005 ***********
+
+        TASK [kubernetes/preinstall : Get currently configured nameservers] ************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:13 -0500 (0:00:00.161)       0:05:25.166 ***********
+        Monday 01 June 2026  15:15:13 -0500 (0:00:00.087)       0:05:25.254 ***********
+
+        TASK [kubernetes/preinstall : NetworkManager | Check if host has NetworkManager] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:30 -0500 (0:00:16.493)       0:05:41.748 ***********
+
+        TASK [kubernetes/preinstall : Check systemd-resolved] **************************
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:42 -0500 (0:00:12.637)       0:05:54.386 ***********
+
+        TASK [kubernetes/preinstall : Set default dns if remove_default_searchdomains is false] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:42 -0500 (0:00:00.090)       0:05:54.477 ***********
+
+        TASK [kubernetes/preinstall : Set dns facts] ***********************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:43 -0500 (0:00:00.103)       0:05:54.580 ***********
+
+        TASK [kubernetes/preinstall : Check if kubelet is configured] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:55 -0500 (0:00:12.903)       0:06:07.484 ***********
+
+        TASK [kubernetes/preinstall : Check if early DNS configuration stage] **********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:56 -0500 (0:00:00.088)       0:06:07.572 ***********
+
+        TASK [kubernetes/preinstall : Target resolv.conf files] ************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:15:56 -0500 (0:00:00.089)       0:06:07.662 ***********
+        Monday 01 June 2026  15:15:56 -0500 (0:00:00.067)       0:06:07.729 ***********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhclient.conf exists] **************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:08 -0500 (0:00:12.077)       0:06:19.806 ***********
+        Monday 01 June 2026  15:16:08 -0500 (0:00:00.085)       0:06:19.892 ***********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists] *********
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:21 -0500 (0:00:12.729)       0:06:32.622 ***********
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.068)       0:06:32.690 ***********
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.070)       0:06:32.761 ***********
+
+        TASK [kubernetes/preinstall : Target dhclient hook file for Debian family] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.133)       0:06:32.895 ***********
+
+        TASK [kubernetes/preinstall : Generate search domains to resolvconf] ***********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.094)       0:06:32.990 ***********
+
+        TASK [kubernetes/preinstall : Pick coredns cluster IP or default resolver] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.147)       0:06:33.137 ***********
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.077)       0:06:33.215 ***********
+
+        TASK [kubernetes/preinstall : Generate nameservers for resolvconf, not including cluster DNS] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.109)       0:06:33.324 ***********
+
+        TASK [kubernetes/preinstall : Gather os specific variables] ********************
+        ok: [host12-1] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        ok: [host34-1] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        ok: [hostb12-1] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        ok: [host12-2] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        ok: [host12-3] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        ok: [host34-2] => (item=/opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/vars/../vars/ubuntu.yml)
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.108)       0:06:33.433 ***********
+        Monday 01 June 2026  15:16:21 -0500 (0:00:00.080)       0:06:33.513 ***********
+
+        TASK [kubernetes/preinstall : Check /usr readonly] *****************************
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:36 -0500 (0:00:14.378)       0:06:47.892 ***********
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.067)       0:06:47.959 ***********
+
+        TASK [kubernetes/preinstall : Stop if either kube_control_plane or kube_node group is empty] ***
+        ok: [host12-1] => (item=kube_control_plane) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_control_plane",
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item=kube_node) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_node",
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.044)       0:06:48.004 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd group is empty in external etcd mode] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.033)       0:06:48.038 ***********
+
+        TASK [kubernetes/preinstall : Stop if non systemd OS type] *********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.094)       0:06:48.133 ***********
+
+        TASK [kubernetes/preinstall : Stop if the os does not support] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.094)       0:06:48.227 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown network plugin] ******************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.094)       0:06:48.321 ***********
+
+        TASK [kubernetes/preinstall : Stop if unsupported version of Kubernetes] *******
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.098)       0:06:48.420 ***********
+
+        TASK [kubernetes/preinstall : Stop if known booleans are set as strings (Use JSON format on CLI: -e "{'key': true }")] ***
+        ok: [host12-1] => (item={'name': 'download_run_once', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_run_once",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'deploy_netchecker', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "deploy_netchecker",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'download_always_pull', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_always_pull",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'helm_enabled', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "helm_enabled",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'openstack_lbaas_enabled', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "openstack_lbaas_enabled",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:36 -0500 (0:00:00.065)       0:06:48.485 ***********
+
+        TASK [kubernetes/preinstall : Stop if even number of etcd hosts] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:37 -0500 (0:00:00.075)       0:06:48.561 ***********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for masters] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:37 -0500 (0:00:00.076)       0:06:48.637 ***********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for nodes] ***********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:37 -0500 (0:00:00.096)       0:06:48.734 ***********
+        Monday 01 June 2026  15:16:37 -0500 (0:00:00.084)       0:06:48.819 ***********
+
+        TASK [kubernetes/preinstall : Stop if ip var does not match local ips] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:16:37 -0500 (0:00:00.096)       0:06:48.916 ***********
+
+        TASK [kubernetes/preinstall : Ensure ping package] *****************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:16:53 -0500 (0:00:15.892)       0:07:04.809 ***********
+
+        TASK [kubernetes/preinstall : Stop if access_ip is not pingable] ***************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:17:07 -0500 (0:00:13.934)       0:07:18.743 ***********
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.068)       0:07:18.811 ***********
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.073)       0:07:18.885 ***********
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.087)       0:07:18.972 ***********
+
+        TASK [kubernetes/preinstall : Stop if bad hostname] ****************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.094)       0:07:19.067 ***********
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.072)       0:07:19.140 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_service_addresses is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.056)       0:07:19.196 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.054)       0:07:19.251 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet does not collide with kube_service_addresses] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.064)       0:07:19.316 ***********
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.016)       0:07:19.332 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown dns mode] ************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.033)       0:07:19.366 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown kube proxy mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.033)       0:07:19.399 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown cert_management] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.030)       0:07:19.429 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown resolvconf_mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.033)       0:07:19.462 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host, docker or kubeadm] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:07 -0500 (0:00:00.067)       0:07:19.530 ***********
+
+        TASK [kubernetes/preinstall : Stop if container manager is not docker, crio or containerd] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.029)       0:07:19.560 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host or kubeadm when container_manager != docker] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.077)       0:07:19.637 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.020)       0:07:19.658 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.020)       0:07:19.679 ***********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled but download_run_once is not] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.088)       0:07:19.767 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.069)       0:07:19.837 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.073)       0:07:19.910 ***********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled for Flatcar Container Linux] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.092)       0:07:20.002 ***********
+
+        TASK [kubernetes/preinstall : Ensure minimum containerd version] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.036)       0:07:20.039 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.077)       0:07:20.117 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.070)       0:07:20.188 ***********
+        Monday 01 June 2026  15:17:08 -0500 (0:00:00.074)       0:07:20.262 ***********
+
+        TASK [kubernetes/preinstall : Create kubernetes directories] *******************
+        changed: [host12-1] => (item=/etc/kubernetes)
+        changed: [host34-1] => (item=/etc/kubernetes)
+        changed: [host12-3] => (item=/etc/kubernetes)
+        changed: [host12-2] => (item=/etc/kubernetes)
+        changed: [hostb12-1] => (item=/etc/kubernetes)
+        changed: [host12-1] => (item=/etc/kubernetes/manifests)
+        changed: [host34-1] => (item=/etc/kubernetes/manifests)
+        changed: [host12-3] => (item=/etc/kubernetes/manifests)
+        changed: [host12-2] => (item=/etc/kubernetes/manifests)
+        changed: [hostb12-1] => (item=/etc/kubernetes/manifests)
+        changed: [host34-1] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [host12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [host12-3] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [hostb12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [host12-2] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [host34-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        changed: [host12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        changed: [hostb12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        changed: [host12-3] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        changed: [host12-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        changed: [host34-2] => (item=/etc/kubernetes)
+        changed: [host34-2] => (item=/etc/kubernetes/manifests)
+        changed: [host34-2] => (item=/usr/local/bin/kubernetes-scripts)
+        changed: [host34-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        Monday 01 June 2026  15:18:02 -0500 (0:00:53.814)       0:08:14.077 ***********
+
+        TASK [kubernetes/preinstall : Create other directories of root owner] **********
+        changed: [host12-1] => (item=/etc/kubernetes/ssl)
+        changed: [host34-1] => (item=/etc/kubernetes/ssl)
+        changed: [hostb12-1] => (item=/etc/kubernetes/ssl)
+        changed: [host12-2] => (item=/etc/kubernetes/ssl)
+        changed: [host12-3] => (item=/etc/kubernetes/ssl)
+        ok: [host12-1] => (item=/usr/local/bin)
+        ok: [host34-1] => (item=/usr/local/bin)
+        ok: [hostb12-1] => (item=/usr/local/bin)
+        ok: [host12-2] => (item=/usr/local/bin)
+        ok: [host12-3] => (item=/usr/local/bin)
+        changed: [host34-2] => (item=/etc/kubernetes/ssl)
+        ok: [host34-2] => (item=/usr/local/bin)
+        Monday 01 June 2026  15:18:29 -0500 (0:00:27.113)       0:08:41.190 ***********
+
+        TASK [kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:18:46 -0500 (0:00:17.054)       0:08:58.244 ***********
+
+        TASK [kubernetes/preinstall : Create kubernetes kubeadm compat cert dir (kubernetes/kubeadm issue 1498)] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        changed: [host34-2]
+        Monday 01 June 2026  15:19:05 -0500 (0:00:18.850)       0:09:17.095 ***********
+
+        TASK [kubernetes/preinstall : Create cni directories] **************************
+        changed: [host12-1] => (item=/etc/cni/net.d)
+        changed: [host34-1] => (item=/etc/cni/net.d)
+        changed: [host12-3] => (item=/etc/cni/net.d)
+        changed: [host12-2] => (item=/etc/cni/net.d)
+        changed: [hostb12-1] => (item=/etc/cni/net.d)
+        changed: [host12-2] => (item=/opt/cni/bin)
+        changed: [host34-1] => (item=/opt/cni/bin)
+        changed: [host12-1] => (item=/opt/cni/bin)
+        changed: [host12-3] => (item=/opt/cni/bin)
+        changed: [hostb12-1] => (item=/opt/cni/bin)
+        changed: [host34-2] => (item=/etc/cni/net.d)
+        changed: [host34-2] => (item=/opt/cni/bin)
+        Monday 01 June 2026  15:19:34 -0500 (0:00:28.805)       0:09:45.900 ***********
+
+        TASK [kubernetes/preinstall : Create calico cni directories] *******************
+        changed: [host12-1] => (item=/var/lib/calico)
+        changed: [host34-1] => (item=/var/lib/calico)
+        changed: [host12-3] => (item=/var/lib/calico)
+        changed: [hostb12-1] => (item=/var/lib/calico)
+        changed: [host12-2] => (item=/var/lib/calico)
+        changed: [host34-2] => (item=/var/lib/calico)
+        Monday 01 June 2026  15:19:47 -0500 (0:00:13.610)       0:09:59.510 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.106)       0:09:59.617 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.072)       0:09:59.690 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.072)       0:09:59.762 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.115)       0:09:59.878 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.119)       0:09:59.997 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.074)       0:10:00.072 ***********
+        Monday 01 June 2026  15:19:48 -0500 (0:00:00.144)       0:10:00.217 ***********
+
+        TASK [kubernetes/preinstall : Create systemd-resolved drop-in directory] *******
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:20:01 -0500 (0:00:12.867)       0:10:13.084 ***********
+
+        TASK [kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved] ***
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:20:25 -0500 (0:00:23.792)       0:10:36.877 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.071)       0:10:36.948 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.065)       0:10:37.014 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.065)       0:10:37.080 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.071)       0:10:37.151 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.074)       0:10:37.226 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.071)       0:10:37.297 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.077)       0:10:37.374 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.070)       0:10:37.445 ***********
+        Monday 01 June 2026  15:20:25 -0500 (0:00:00.069)       0:10:37.515 ***********
+        Monday 01 June 2026  15:20:26 -0500 (0:00:00.071)       0:10:37.587 ***********
+
+        TASK [kubernetes/preinstall : Update package management cache (APT)] ***********
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:20:42 -0500 (0:00:16.008)       0:10:53.596 ***********
+        Monday 01 June 2026  15:20:42 -0500 (0:00:00.072)       0:10:53.668 ***********
+        Monday 01 June 2026  15:20:42 -0500 (0:00:00.076)       0:10:53.744 ***********
+        Monday 01 June 2026  15:20:42 -0500 (0:00:00.087)       0:10:53.832 ***********
+
+        TASK [kubernetes/preinstall : Update common_required_pkgs with ipvsadm when kube_proxy_mode is ipvs] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:20:42 -0500 (0:00:00.094)       0:10:53.926 ***********
+
+        TASK [kubernetes/preinstall : Install packages requirements] *******************
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:21:20 -0500 (0:00:38.498)       0:11:32.425 ***********
+        Monday 01 June 2026  15:21:20 -0500 (0:00:00.073)       0:11:32.498 ***********
+        Monday 01 June 2026  15:21:21 -0500 (0:00:00.074)       0:11:32.572 ***********
+        Monday 01 June 2026  15:21:21 -0500 (0:00:00.081)       0:11:32.654 ***********
+        Monday 01 June 2026  15:21:21 -0500 (0:00:00.070)       0:11:32.724 ***********
+
+        TASK [kubernetes/preinstall : Clean previously used sysctl file locations] *****
+        ok: [host34-1] => (item=ipv4-ip_forward.conf)
+        ok: [host12-1] => (item=ipv4-ip_forward.conf)
+        ok: [host12-3] => (item=ipv4-ip_forward.conf)
+        ok: [hostb12-1] => (item=ipv4-ip_forward.conf)
+        ok: [host12-2] => (item=ipv4-ip_forward.conf)
+        ok: [host34-1] => (item=bridge-nf-call.conf)
+        ok: [host12-3] => (item=bridge-nf-call.conf)
+        ok: [hostb12-1] => (item=bridge-nf-call.conf)
+        ok: [host12-1] => (item=bridge-nf-call.conf)
+        ok: [host12-2] => (item=bridge-nf-call.conf)
+        ok: [host34-2] => (item=ipv4-ip_forward.conf)
+        ok: [host34-2] => (item=bridge-nf-call.conf)
+        Monday 01 June 2026  15:21:47 -0500 (0:00:26.494)       0:11:59.219 ***********
+
+        TASK [kubernetes/preinstall : Stat sysctl file configuration] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:22:02 -0500 (0:00:14.500)       0:12:13.719 ***********
+
+        TASK [kubernetes/preinstall : Change sysctl file path to link source if linked] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:22:02 -0500 (0:00:00.088)       0:12:13.808 ***********
+
+        TASK [kubernetes/preinstall : Make sure sysctl file path folder exists] ********
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:22:16 -0500 (0:00:13.922)       0:12:27.730 ***********
+
+        TASK [kubernetes/preinstall : Enable ip forwarding] ****************************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:22:28 -0500 (0:00:12.703)       0:12:40.433 ***********
+        Monday 01 June 2026  15:22:28 -0500 (0:00:00.083)       0:12:40.516 ***********
+
+        TASK [kubernetes/preinstall : Check if we need to set fs.may_detach_mounts] ****
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:22:43 -0500 (0:00:14.312)       0:12:54.829 ***********
+        Monday 01 June 2026  15:22:43 -0500 (0:00:00.090)       0:12:54.919 ***********
+
+        TASK [kubernetes/preinstall : Ensure kube-bench parameters are set] ************
+        changed: [host34-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [hostb12-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [host12-2] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [host12-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [host12-3] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [host34-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [host12-2] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [hostb12-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [host12-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [host12-3] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [host34-1] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [host12-2] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [hostb12-1] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [host12-1] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [host12-3] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [host34-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [host12-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [host12-2] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [hostb12-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [host12-3] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [host34-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [host12-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [host12-2] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [hostb12-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [host12-3] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [host34-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        changed: [host12-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        changed: [host12-2] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        changed: [hostb12-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        changed: [host12-3] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        changed: [host34-2] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        changed: [host34-2] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        changed: [host34-2] => (item={'name': 'kernel.panic', 'value': 10})
+        changed: [host34-2] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        changed: [host34-2] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        changed: [host34-2] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        Monday 01 June 2026  15:24:00 -0500 (0:01:16.845)       0:14:11.765 ***********
+
+        TASK [kubernetes/preinstall : Check dummy module] ******************************
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host34-2]
+        Monday 01 June 2026  15:24:15 -0500 (0:00:15.406)       0:14:27.171 ***********
+        Monday 01 June 2026  15:24:15 -0500 (0:00:00.072)       0:14:27.244 ***********
+
+        TASK [kubernetes/preinstall : Disable fapolicyd service] ***********************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:24:32 -0500 (0:00:16.957)       0:14:44.201 ***********
+
+        TASK [kubernetes/preinstall : Ensure NTP package] ******************************
+        changed: [hostb12-1]
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:25:22 -0500 (0:00:49.381)       0:15:33.582 ***********
+
+        TASK [kubernetes/preinstall : Disable systemd-timesyncd] ***********************
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:25:39 -0500 (0:00:17.529)       0:15:51.112 ***********
+
+        TASK [kubernetes/preinstall : Set fact NTP settings] ***************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:25:39 -0500 (0:00:00.093)       0:15:51.205 ***********
+
+        TASK [kubernetes/preinstall : Generate NTP configuration file.] ****************
+        changed: [host12-3]
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:26:18 -0500 (0:00:38.449)       0:16:29.655 ***********
+        Monday 01 June 2026  15:26:18 -0500 (0:00:00.079)       0:16:29.734 ***********
+        Monday 01 June 2026  15:26:18 -0500 (0:00:00.154)       0:16:29.888 ***********
+
+        TASK [kubernetes/preinstall : Ensure NTP service is started and enabled] *******
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:26:36 -0500 (0:00:17.868)       0:16:47.757 ***********
+        Monday 01 June 2026  15:26:36 -0500 (0:00:00.071)       0:16:47.828 ***********
+        Monday 01 June 2026  15:26:36 -0500 (0:00:00.070)       0:16:47.898 ***********
+
+        TASK [kubernetes/preinstall : Hosts | create hosts list from inventory] ********
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  15:26:36 -0500 (0:00:00.089)       0:16:47.987 ***********
+
+        TASK [kubernetes/preinstall : Hosts | populate inventory into hosts file] ******
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:26:49 -0500 (0:00:12.709)       0:17:00.697 ***********
+        Monday 01 June 2026  15:26:49 -0500 (0:00:00.097)       0:17:00.794 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Retrieve hosts file content] *************
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:27:02 -0500 (0:00:12.875)       0:17:13.670 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Extract existing entries for localhost from hosts file] ***
+        ok: [host12-1] => (item=127.0.0.1 localhost)
+        ok: [host34-1] => (item=127.0.0.1 localhost)
+        ok: [host12-1] => (item=::1 localhost ip6-localhost ip6-loopback)
+        ok: [hostb12-1] => (item=127.0.0.1 localhost)
+        ok: [host12-2] => (item=127.0.0.1 localhost)
+        ok: [host34-1] => (item=::1 localhost ip6-localhost ip6-loopback)
+        ok: [host12-3] => (item=127.0.0.1 localhost)
+        ok: [hostb12-1] => (item=::1 localhost ip6-localhost ip6-loopback)
+        ok: [host12-2] => (item=::1 localhost ip6-localhost ip6-loopback)
+        ok: [host12-3] => (item=::1 localhost ip6-localhost ip6-loopback)
+        ok: [host34-2] => (item=127.0.0.1 localhost)
+        ok: [host34-2] => (item=::1 localhost ip6-localhost ip6-loopback)
+        Monday 01 June 2026  15:27:02 -0500 (0:00:00.358)       0:17:14.029 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Update target hosts file entries dict with required entries] ***
+        ok: [host12-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [hostb12-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [hostb12-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-2] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-2] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-3] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-3] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-2] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-2] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        Monday 01 June 2026  15:27:02 -0500 (0:00:00.112)       0:17:14.141 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Update (if necessary) hosts file] ********
+        changed: [host34-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host12-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [hostb12-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host12-3] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host12-2] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host34-1] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        changed: [host12-1] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        changed: [host12-3] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        changed: [hostb12-1] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        changed: [host12-2] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        changed: [host34-2] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host34-2] => (item={'key': '::1', 'value': ['ip6-localhost', 'ip6-loopback', 'localhost6', 'localhost6.localdomain']})
+        Monday 01 June 2026  15:27:28 -0500 (0:00:25.720)       0:17:39.862 ***********
+
+        TASK [kubernetes/preinstall : Update facts] ************************************
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:27:45 -0500 (0:00:17.368)       0:17:57.231 ***********
+        Monday 01 June 2026  15:27:45 -0500 (0:00:00.106)       0:17:57.337 ***********
+        Monday 01 June 2026  15:27:45 -0500 (0:00:00.079)       0:17:57.417 ***********
+        Monday 01 June 2026  15:27:45 -0500 (0:00:00.076)       0:17:57.494 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.069)       0:17:57.564 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.080)       0:17:57.645 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.650 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.656 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.661 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.666 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.671 ***********
+        Monday 01 June 2026  15:27:46 -0500 (0:00:00.005)       0:17:57.676 ***********
+
+        RUNNING HANDLER [kubernetes/preinstall : Preinstall | Restart systemd-resolved] ***
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  15:28:05 -0500 (0:00:19.472)       0:18:17.149 ***********
+
+        RUNNING HANDLER [kubernetes/preinstall : Preinstall | restart ntp] *************
+        changed: [host34-1]
+        changed: [host12-2]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  15:28:24 -0500 (0:00:18.524)       0:18:35.674 ***********
+
+        TASK [kubernetes/preinstall : Check if we are running inside a Azure VM] *******
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:28:38 -0500 (0:00:14.209)       0:18:49.883 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.071)       0:18:49.954 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.073)       0:18:50.028 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.068)       0:18:50.097 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.071)       0:18:50.169 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.073)       0:18:50.242 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.116)       0:18:50.359 ***********
+        Monday 01 June 2026  15:28:38 -0500 (0:00:00.086)       0:18:50.445 ***********
+
+        TASK [Run calico checks] *******************************************************
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.431)       0:18:50.877 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (ipip)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.032)       0:18:50.909 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (ipip_mode)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.032)       0:18:50.942 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (calcio_ipam_autoallocateblocks)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.032)       0:18:50.974 ***********
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.022)       0:18:50.997 ***********
+
+        TASK [network_plugin/calico : Stop if supported Calico versions] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:39 -0500 (0:00:00.031)       0:18:51.028 ***********
+
+        TASK [network_plugin/calico : Check if calicoctl.sh exists] ********************
+        ok: [host12-1]
+        Monday 01 June 2026  15:28:43 -0500 (0:00:04.207)       0:18:55.235 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.021)       0:18:55.257 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.019)       0:18:55.276 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.019)       0:18:55.296 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.028)       0:18:55.324 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.019)       0:18:55.343 ***********
+
+        TASK [network_plugin/calico : Check vars defined correctly] ********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.032)       0:18:55.376 ***********
+
+        TASK [network_plugin/calico : Check calico network backend defined correctly] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.030)       0:18:55.407 ***********
+
+        TASK [network_plugin/calico : Check ipip and vxlan mode defined correctly] *****
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.031)       0:18:55.438 ***********
+
+        TASK [network_plugin/calico : Check ipip and vxlan mode if simultaneously enabled] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.030)       0:18:55.469 ***********
+        Monday 01 June 2026  15:28:43 -0500 (0:00:00.019)       0:18:55.488 ***********
+
+        TASK [network_plugin/calico : Get Calico default-pool configuration] ***********
+        ok: [host12-1]
+        Monday 01 June 2026  15:28:49 -0500 (0:00:05.415)       0:19:00.904 ***********
+        Monday 01 June 2026  15:28:49 -0500 (0:00:00.030)       0:19:00.934 ***********
+        Monday 01 June 2026  15:28:49 -0500 (0:00:00.022)       0:19:00.956 ***********
+        Monday 01 June 2026  15:28:49 -0500 (0:00:00.019)       0:19:00.976 ***********
+        Monday 01 June 2026  15:28:49 -0500 (0:00:00.018)       0:19:00.995 ***********
+        Monday 01 June 2026  15:28:49 -0500 (0:00:00.045)       0:19:01.040 ***********
+
+        TASK [container-engine/validate-container-engine : Validate-container-engine | check if fedora coreos] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:29:03 -0500 (0:00:13.732)       0:19:14.773 ***********
+
+        TASK [container-engine/validate-container-engine : Validate-container-engine | set is_ostree] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:29:03 -0500 (0:00:00.097)       0:19:14.870 ***********
+
+        TASK [container-engine/validate-container-engine : Ensure kubelet systemd unit exists] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:29:17 -0500 (0:00:14.037)       0:19:28.907 ***********
+
+        TASK [container-engine/validate-container-engine : Populate service facts] *****
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  15:29:43 -0500 (0:00:26.590)       0:19:55.498 ***********
+
+        TASK [container-engine/validate-container-engine : Check if containerd is installed] ***
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:29:57 -0500 (0:00:13.124)       0:20:08.623 ***********
+
+        TASK [container-engine/validate-container-engine : Check if docker is installed] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:30:10 -0500 (0:00:13.578)       0:20:22.201 ***********
+
+        TASK [container-engine/validate-container-engine : Check if crio is installed] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:30:22 -0500 (0:00:12.131)       0:20:34.332 ***********
+        Monday 01 June 2026  15:30:22 -0500 (0:00:00.093)       0:20:34.426 ***********
+        Monday 01 June 2026  15:30:22 -0500 (0:00:00.090)       0:20:34.516 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.097)       0:20:34.613 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.098)       0:20:34.711 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.166)       0:20:34.878 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.108)       0:20:34.986 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.106)       0:20:35.092 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.163)       0:20:35.256 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.108)       0:20:35.364 ***********
+        Monday 01 June 2026  15:30:23 -0500 (0:00:00.105)       0:20:35.470 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.169)       0:20:35.640 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.161)       0:20:35.802 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.104)       0:20:35.906 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.096)       0:20:36.002 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.097)       0:20:36.100 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.135)       0:20:36.236 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.115)       0:20:36.352 ***********
+        Monday 01 June 2026  15:30:24 -0500 (0:00:00.157)       0:20:36.509 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.107)       0:20:36.617 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.190)       0:20:36.807 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.107)       0:20:36.914 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.109)       0:20:37.024 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.106)       0:20:37.130 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.103)       0:20:37.234 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.175)       0:20:37.409 ***********
+        Monday 01 June 2026  15:30:25 -0500 (0:00:00.112)       0:20:37.522 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.095)       0:20:37.617 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.137)       0:20:37.755 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.096)       0:20:37.852 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.096)       0:20:37.948 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.126)       0:20:38.074 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.110)       0:20:38.185 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.100)       0:20:38.285 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.101)       0:20:38.386 ***********
+        Monday 01 June 2026  15:30:26 -0500 (0:00:00.101)       0:20:38.488 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.125)       0:20:38.613 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.101)       0:20:38.715 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.098)       0:20:38.813 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.157)       0:20:38.970 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.099)       0:20:39.070 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.099)       0:20:39.170 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.185)       0:20:39.355 ***********
+        Monday 01 June 2026  15:30:27 -0500 (0:00:00.134)       0:20:39.490 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.107)       0:20:39.598 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.116)       0:20:39.714 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.123)       0:20:39.838 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.114)       0:20:39.952 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.116)       0:20:40.069 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.174)       0:20:40.243 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.117)       0:20:40.360 ***********
+        Monday 01 June 2026  15:30:28 -0500 (0:00:00.156)       0:20:40.516 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.156)       0:20:40.673 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.119)       0:20:40.792 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.117)       0:20:40.910 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.121)       0:20:41.031 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.128)       0:20:41.160 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.220)       0:20:41.381 ***********
+        Monday 01 June 2026  15:30:29 -0500 (0:00:00.126)       0:20:41.507 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.123)       0:20:41.631 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.123)       0:20:41.754 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.128)       0:20:41.882 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.135)       0:20:42.017 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.124)       0:20:42.142 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.138)       0:20:42.280 ***********
+        Monday 01 June 2026  15:30:30 -0500 (0:00:00.123)       0:20:42.404 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.151)       0:20:42.555 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.295)       0:20:42.851 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.116)       0:20:42.967 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.107)       0:20:43.075 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.113)       0:20:43.188 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.118)       0:20:43.306 ***********
+        Monday 01 June 2026  15:30:31 -0500 (0:00:00.122)       0:20:43.429 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.129)       0:20:43.559 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.149)       0:20:43.708 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.110)       0:20:43.818 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.169)       0:20:43.988 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.204)       0:20:44.193 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.120)       0:20:44.313 ***********
+        Monday 01 June 2026  15:30:32 -0500 (0:00:00.158)       0:20:44.472 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.115)       0:20:44.587 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.145)       0:20:44.733 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.110)       0:20:44.843 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.109)       0:20:44.953 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.108)       0:20:45.061 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.165)       0:20:45.227 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.114)       0:20:45.341 ***********
+        Monday 01 June 2026  15:30:33 -0500 (0:00:00.148)       0:20:45.490 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.146)       0:20:45.636 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.110)       0:20:45.747 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.113)       0:20:45.861 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.112)       0:20:45.973 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.114)       0:20:46.088 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.144)       0:20:46.232 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.112)       0:20:46.345 ***********
+        Monday 01 June 2026  15:30:34 -0500 (0:00:00.162)       0:20:46.508 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.113)       0:20:46.621 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.111)       0:20:46.733 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.114)       0:20:46.848 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.120)       0:20:46.968 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.113)       0:20:47.082 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.111)       0:20:47.194 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.112)       0:20:47.306 ***********
+        Monday 01 June 2026  15:30:35 -0500 (0:00:00.114)       0:20:47.420 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.110)       0:20:47.530 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.173)       0:20:47.704 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.197)       0:20:47.902 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.120)       0:20:48.022 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.149)       0:20:48.172 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.120)       0:20:48.292 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.116)       0:20:48.409 ***********
+        Monday 01 June 2026  15:30:36 -0500 (0:00:00.115)       0:20:48.524 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.113)       0:20:48.638 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.113)       0:20:48.752 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.139)       0:20:48.891 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.109)       0:20:49.000 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.107)       0:20:49.107 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.148)       0:20:49.255 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.103)       0:20:49.359 ***********
+        Monday 01 June 2026  15:30:37 -0500 (0:00:00.108)       0:20:49.467 ***********
+        Monday 01 June 2026  15:30:38 -0500 (0:00:00.126)       0:20:49.593 ***********
+        Monday 01 June 2026  15:30:38 -0500 (0:00:00.111)       0:20:49.704 ***********
+        Monday 01 June 2026  15:30:38 -0500 (0:00:00.108)       0:20:49.813 ***********
+        Monday 01 June 2026  15:30:38 -0500 (0:00:00.142)       0:20:49.955 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | check if fedora coreos] ***
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:30:52 -0500 (0:00:13.811)       0:21:03.767 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | set is_ostree] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:30:52 -0500 (0:00:00.117)       0:21:03.884 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | gather os specific variables] ***
+        ok: [host12-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host34-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [hostb12-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host12-2] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host12-3] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host34-2] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        Monday 01 June 2026  15:30:52 -0500 (0:00:00.174)       0:21:04.059 ***********
+
+        TASK [container-engine/runc : Runc | check if fedora coreos] *******************
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:31:04 -0500 (0:00:12.238)       0:21:16.298 ***********
+
+        TASK [container-engine/runc : Runc | set is_ostree] ****************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:31:04 -0500 (0:00:00.123)       0:21:16.421 ***********
+
+        TASK [container-engine/runc : Runc | Uninstall runc package managed by package manager] ***
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  15:31:19 -0500 (0:00:14.855)       0:21:31.276 ***********
+
+        TASK [container-engine/runc : Runc | Download runc binary] *********************
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/runc/tasks/../../../download/tasks/download_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  15:31:19 -0500 (0:00:00.131)       0:21:31.408 ***********
+
+        TASK [container-engine/runc : Prep_download | Set a few facts] *****************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  15:31:20 -0500 (0:00:00.141)       0:21:31.549 ***********
+
+        TASK [container-engine/runc : Download_file | Starting download of file] *******
+        fatal: [host12-1]: FAILED! => {"msg": "The task includes an option with an undefined variable. The error was: {{ download_defaults | combine(downloads.runc) }}: {'netcheck_server': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_server_image_repo }}', 'tag': '{{ netcheck_server_image_tag }}', 'sha256': '{{ netcheck_server_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'netcheck_agent': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_agent_image_repo }}', 'tag': '{{ netcheck_agent_image_tag }}', 'sha256': '{{ netcheck_agent_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'etcd': {'container': \"{{ etcd_deployment_type != 'host' }}\", 'file': \"{{ etcd_deployment_type == 'host' }}\", 'enabled': True, 'version': '{{ etcd_version }}', 'dest': '{{ local_release_dir }}/etcd-{{ etcd_version }}-linux-{{ image_arch }}.tar.gz', 'repo': '{{ etcd_image_repo }}', 'tag': '{{ etcd_image_tag }}', 'sha256': \"{{ etcd_binary_checksum if (etcd_deployment_type == 'host') else etcd_digest_checksum | d(None) }}\", 'url': '{{ etcd_download_url }}', 'unarchive': \"{{ etcd_deployment_type == 'host' }}\", 'owner': 'root', 'mode': '0755', 'groups': ['etcd']}, 'cni': {'enabled': True, 'file': True, 'version': '{{ cni_version }}', 'dest': '{{ local_release_dir }}/cni-plugins-linux-{{ image_arch }}-{{ cni_version }}.tgz', 'sha256': '{{ cni_binary_checksum }}', 'url': '{{ cni_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubeadm': {'enabled': True, 'file': True, 'version': '{{ kubeadm_version }}', 'dest': '{{ local_release_dir }}/kubeadm-{{ kubeadm_version }}-{{ image_arch }}', 'sha256': '{{ kubeadm_binary_checksum }}', 'url': '{{ kubeadm_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubelet': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubelet-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubelet_binary_checksum }}', 'url': '{{ kubelet_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubectl': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubectl-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubectl_binary_checksum }}', 'url': '{{ kubectl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'crictl': {'file': True, 'enabled': True, 'version': '{{ crictl_version }}', 'dest': '{{ local_release_dir }}/crictl-{{ crictl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ crictl_binary_checksum }}', 'url': '{{ crictl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crio': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ crio_version }}', 'dest': '{{ local_release_dir }}/cri-o.{{ image_arch }}.{{ crio_version }}tar.gz', 'sha256': '{{ crio_archive_checksum }}', 'url': '{{ crio_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'cri_dockerd': {'file': True, 'enabled': \"{{ container_manager == 'docker' }}\", 'version': '{{ cri_dockerd_version }}', 'dest': '{{ local_release_dir }}/cri-dockerd-{{ cri_dockerd_version }}.{{ image_arch }}.tar.gz', 'sha256': '{{ cri_dockerd_archive_checksum }}', 'url': '{{ cri_dockerd_download_url }}', 'unarchive': True, 'unarchive_extra_opts': ['--strip=1'], 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crun': {'file': True, 'enabled': '{{ crun_enabled }}', 'version': '{{ crun_version }}', 'dest': '{{ local_release_dir }}/crun-{{ crun_version }}-{{ image_arch }}', 'sha256': '{{ crun_binary_checksum }}', 'url': '{{ crun_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'youki': {'file': True, 'enabled': '{{ youki_enabled }}', 'version': '{{ youki_version }}', 'dest': \"{{ local_release_dir }}/youki_{{ youki_version | regex_replace('\\\\.', '_') }}_linux.tar.gz\", 'sha256': '{{ youki_archive_checksum }}', 'url': '{{ youki_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'runc': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ runc_version }}', 'dest': '{{ local_release_dir }}/runc-{{ runc_version }}.{{ image_arch }}', 'sha256': '{{ runc_binary_checksum }}', 'url': '{{ runc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kata_containers': {'enabled': '{{ kata_containers_enabled }}', 'file': True, 'version': '{{ kata_containers_version }}', 'dest': '{{ local_release_dir }}/kata-static-{{ kata_containers_version }}-{{ image_arch }}.tar.xz', 'sha256': '{{ kata_containers_binary_checksum }}', 'url': '{{ kata_containers_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'containerd': {'enabled': \"{{ container_manager == 'containerd' }}\", 'file': True, 'version': '{{ containerd_version }}', 'dest': '{{ local_release_dir }}/containerd-{{ containerd_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ containerd_archive_checksum }}', 'url': '{{ containerd_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'gvisor_runsc': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-runsc-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_runsc_binary_checksum }}', 'url': '{{ gvisor_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'gvisor_containerd_shim': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-containerd-shim-runsc-v1-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_containerd_shim_binary_checksum }}', 'url': '{{ gvisor_containerd_shim_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'nerdctl': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ nerdctl_version }}', 'dest': '{{ local_release_dir }}/nerdctl-{{ nerdctl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ nerdctl_archive_checksum }}', 'url': '{{ nerdctl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'skopeo': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ skopeo_version }}', 'dest': '{{ local_release_dir }}/skopeo-{{ skopeo_version }}-{{ image_arch }}', 'sha256': '{{ skopeo_binary_checksum }}', 'url': '{{ skopeo_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'cilium': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_image_repo }}', 'tag': '{{ cilium_image_tag }}', 'sha256': '{{ cilium_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_operator': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_operator_image_repo }}', 'tag': '{{ cilium_operator_image_tag }}', 'sha256': '{{ cilium_operator_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_relay': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_relay_image_repo }}', 'tag': '{{ cilium_hubble_relay_image_tag }}', 'sha256': '{{ cilium_hubble_relay_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_certgen': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_certgen_image_repo }}', 'tag': '{{ cilium_hubble_certgen_image_tag }}', 'sha256': '{{ cilium_hubble_certgen_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_image_repo }}', 'tag': '{{ cilium_hubble_ui_image_tag }}', 'sha256': '{{ cilium_hubble_ui_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui_backend': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_backend_image_repo }}', 'tag': '{{ cilium_hubble_ui_backend_image_tag }}', 'sha256': '{{ cilium_hubble_ui_backend_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_envoy': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_envoy_image_repo }}', 'tag': '{{ cilium_hubble_envoy_image_tag }}', 'sha256': '{{ cilium_hubble_envoy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'ciliumcli': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'file': True, 'version': '{{ cilium_cli_version }}', 'dest': '{{ local_release_dir }}/cilium-{{ cilium_cli_version }}-{{ image_arch }}.tar.gz', 'sha256': '{{ ciliumcli_binary_checksum }}', 'url': '{{ ciliumcli_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'multus': {'enabled': '{{ kube_network_plugin_multus }}', 'container': True, 'repo': '{{ multus_image_repo }}', 'tag': '{{ multus_image_tag }}', 'sha256': '{{ multus_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_image_repo }}', 'tag': '{{ flannel_image_tag }}', 'sha256': '{{ flannel_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel_init': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_init_image_repo }}', 'tag': '{{ flannel_init_image_tag }}', 'sha256': '{{ flannel_init_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calicoctl': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'file': True, 'version': '{{ calico_ctl_version }}', 'dest': '{{ local_release_dir }}/calicoctl-{{ calico_ctl_version }}-{{ image_arch }}', 'sha256': '{{ calicoctl_binary_checksum }}', 'url': '{{ calicoctl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'calico_node': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_node_image_repo }}', 'tag': '{{ calico_node_image_tag }}', 'sha256': '{{ calico_node_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_cni': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_cni_image_repo }}', 'tag': '{{ calico_cni_image_tag }}', 'sha256': '{{ calico_cni_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_flexvol': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_flexvol_image_repo }}', 'tag': '{{ calico_flexvol_image_tag }}', 'sha256': '{{ calico_flexvol_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_policy': {'enabled': \"{{ enable_network_policy and kube_network_plugin in ['calico'] }}\", 'container': True, 'repo': '{{ calico_policy_image_repo }}', 'tag': '{{ calico_policy_image_tag }}', 'sha256': '{{ calico_policy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_typha': {'enabled': '{{ typha_enabled }}', 'container': True, 'repo': '{{ calico_typha_image_repo }}', 'tag': '{{ calico_typha_image_tag }}', 'sha256': '{{ calico_typha_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_apiserver': {'enabled': '{{ calico_apiserver_enabled }}', 'container': True, 'repo': '{{ calico_apiserver_image_repo }}', 'tag': '{{ calico_apiserver_image_tag }}', 'sha256': '{{ calico_apiserver_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_crds': {'file': True, 'enabled': \"{{ kube_network_plugin == 'calico' and calico_datastore == 'kdd' }}\", 'version': '{{ calico_version }}', 'dest': '{{ local_release_dir }}/calico-{{ calico_version }}-kdd-crds/{{ calico_version }}.tar.gz', 'sha256': '{{ calico_crds_archive_checksum }}', 'url': '{{ calico_crds_download_url }}', 'unarchive': True, 'unarchive_extra_opts': [\"{{ '--strip=6' if (calico_version is version('v3.22.3', '<')) else '--strip=3' }}\", '--wildcards', \"{{ '*/_includes/charts/calico/crds/kdd/' if (calico_version is version('v3.22.3', '<')) else '*/libcalico-go/config/crd/' }}\"], 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'weave_kube': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_kube_image_repo }}', 'tag': '{{ weave_kube_image_tag }}', 'sha256': '{{ weave_kube_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'weave_npc': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_npc_image_repo }}', 'tag': '{{ weave_npc_image_tag }}', 'sha256': '{{ weave_npc_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_ovn': {'enabled': \"{{ kube_network_plugin == 'kube-ovn' }}\", 'container': True, 'repo': '{{ kube_ovn_container_image_repo }}', 'tag': '{{ kube_ovn_container_image_tag }}', 'sha256': '{{ kube_ovn_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_router': {'enabled': \"{{ kube_network_plugin == 'kube-router' }}\", 'container': True, 'repo': '{{ kube_router_image_repo }}', 'tag': '{{ kube_router_image_tag }}', 'sha256': '{{ kube_router_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'pod_infra': {'enabled': True, 'container': True, 'repo': '{{ pod_infra_image_repo }}', 'tag': '{{ pod_infra_image_tag }}', 'sha256': '{{ pod_infra_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube-vip': {'enabled': '{{ kube_vip_enabled }}', 'container': True, 'repo': '{{ kube_vip_image_repo }}', 'tag': '{{ kube_vip_image_tag }}', 'sha256': '{{ kube_vip_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'nginx': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'nginx' }}\", 'container': True, 'repo': '{{ nginx_image_repo }}', 'tag': '{{ nginx_image_tag }}', 'sha256': '{{ nginx_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'haproxy': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'haproxy' }}\", 'container': True, 'repo': '{{ haproxy_image_repo }}', 'tag': '{{ haproxy_image_tag }}', 'sha256': '{{ haproxy_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'coredns': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ coredns_image_repo }}', 'tag': '{{ coredns_image_tag }}', 'sha256': '{{ coredns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'nodelocaldns': {'enabled': '{{ enable_nodelocaldns }}', 'container': True, 'repo': '{{ nodelocaldns_image_repo }}', 'tag': '{{ nodelocaldns_image_tag }}', 'sha256': '{{ nodelocaldns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'dnsautoscaler': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ dnsautoscaler_image_repo }}', 'tag': '{{ dnsautoscaler_image_tag }}', 'sha256': '{{ dnsautoscaler_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'helm': {'enabled': '{{ helm_enabled }}', 'file': True, 'version': '{{ helm_version }}', 'dest': '{{ local_release_dir }}/helm-{{ helm_version }}/helm-{{ helm_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ helm_archive_checksum }}', 'url': '{{ helm_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'krew': {'enabled': '{{ krew_enabled }}', 'file': True, 'version': '{{ krew_version }}', 'dest': '{{ local_release_dir }}/krew-{{ host_os }}_{{ image_arch }}.tar.gz', 'sha256': '{{ krew_archive_checksum }}', 'url': '{{ krew_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'registry': {'enabled': '{{ registry_enabled }}', 'container': True, 'repo': '{{ registry_image_repo }}', 'tag': '{{ registry_image_tag }}', 'sha256': '{{ registry_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'metrics_server': {'enabled': '{{ metrics_server_enabled }}', 'container': True, 'repo': '{{ metrics_server_image_repo }}', 'tag': '{{ metrics_server_image_tag }}', 'sha256': '{{ metrics_server_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'local_volume_provisioner': {'enabled': '{{ local_volume_provisioner_enabled }}', 'container': True, 'repo': '{{ local_volume_provisioner_image_repo }}', 'tag': '{{ local_volume_provisioner_image_tag }}', 'sha256': '{{ local_volume_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cephfs_provisioner': {'enabled': '{{ cephfs_provisioner_enabled }}', 'container': True, 'repo': '{{ cephfs_provisioner_image_repo }}', 'tag': '{{ cephfs_provisioner_image_tag }}', 'sha256': '{{ cephfs_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'rbd_provisioner': {'enabled': '{{ rbd_provisioner_enabled }}', 'container': True, 'repo': '{{ rbd_provisioner_image_repo }}', 'tag': '{{ rbd_provisioner_image_tag }}', 'sha256': '{{ rbd_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'local_path_provisioner': {'enabled': '{{ local_path_provisioner_enabled }}', 'container': True, 'repo': '{{ local_path_provisioner_image_repo }}', 'tag': '{{ local_path_provisioner_image_tag }}', 'sha256': '{{ local_path_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_nginx_controller': {'enabled': '{{ ingress_nginx_enabled }}', 'container': True, 'repo': '{{ ingress_nginx_controller_image_repo }}', 'tag': '{{ ingress_nginx_controller_image_tag }}', 'sha256': '{{ ingress_nginx_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_alb_controller': {'enabled': '{{ ingress_alb_enabled }}', 'container': True, 'repo': '{{ alb_ingress_image_repo }}', 'tag': '{{ alb_ingress_image_tag }}', 'sha256': '{{ ingress_alb_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_controller': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_controller_image_repo }}', 'tag': '{{ cert_manager_controller_image_tag }}', 'sha256': '{{ cert_manager_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_cainjector': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_cainjector_image_repo }}', 'tag': '{{ cert_manager_cainjector_image_tag }}', 'sha256': '{{ cert_manager_cainjector_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_webhook': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_webhook_image_repo }}', 'tag': '{{ cert_manager_webhook_image_tag }}', 'sha256': '{{ cert_manager_webhook_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_attacher': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_attacher_image_repo }}', 'tag': '{{ csi_attacher_image_tag }}', 'sha256': '{{ csi_attacher_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_provisioner': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_provisioner_image_repo }}', 'tag': '{{ csi_provisioner_image_tag }}', 'sha256': '{{ csi_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_snapshotter': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_snapshotter_image_repo }}', 'tag': '{{ csi_snapshotter_image_tag }}', 'sha256': '{{ csi_snapshotter_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'snapshot_controller': {'enabled': '{{ csi_snapshot_controller_enabled }}', 'container': True, 'repo': '{{ snapshot_controller_image_repo }}', 'tag': '{{ snapshot_controller_image_tag }}', 'sha256': '{{ snapshot_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_resizer': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_resizer_image_repo }}', 'tag': '{{ csi_resizer_image_tag }}', 'sha256': '{{ csi_resizer_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_node_driver_registrar': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_node_driver_registrar_image_repo }}', 'tag': '{{ csi_node_driver_registrar_image_tag }}', 'sha256': '{{ csi_node_driver_registrar_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cinder_csi_plugin': {'enabled': '{{ cinder_csi_enabled }}', 'container': True, 'repo': '{{ cinder_csi_plugin_image_repo }}', 'tag': '{{ cinder_csi_plugin_image_tag }}', 'sha256': '{{ cinder_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'aws_ebs_csi_plugin': {'enabled': '{{ aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ aws_ebs_csi_plugin_image_repo }}', 'tag': '{{ aws_ebs_csi_plugin_image_tag }}', 'sha256': '{{ aws_ebs_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'dashboard': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_image_repo }}', 'tag': '{{ dashboard_image_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'dashboard_metrics_scrapper': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_metrics_scraper_repo }}', 'tag': '{{ dashboard_metrics_scraper_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_speaker': {'enabled': '{{ metallb_speaker_enabled }}', 'container': True, 'repo': '{{ metallb_speaker_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_speaker_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_controller': {'enabled': '{{ metallb_enabled }}', 'container': True, 'repo': '{{ metallb_controller_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_controller_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'yq': {'enabled': '{{ argocd_enabled }}', 'file': True, 'version': '{{ yq_version }}', 'dest': '{{ local_release_dir }}/yq-{{ yq_version }}-{{ image_arch }}', 'sha256': '{{ yq_binary_checksum | default(None) }}', 'url': '{{ yq_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}}: {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {'netcheck_server': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_server_image_repo }}', 'tag': '{{ netcheck_server_image_tag }}', 'sha256': '{{ netcheck_server_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'netcheck_agent': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_agent_image_repo }}', 'tag': '{{ netcheck_agent_image_tag }}', 'sha256': '{{ netcheck_agent_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'etcd': {'container': \"{{ etcd_deployment_type != 'host' }}\", 'file': \"{{ etcd_deployment_type == 'host' }}\", 'enabled': True, 'version': '{{ etcd_version }}', 'dest': '{{ local_release_dir }}/etcd-{{ etcd_version }}-linux-{{ image_arch }}.tar.gz', 'repo': '{{ etcd_image_repo }}', 'tag': '{{ etcd_image_tag }}', 'sha256': \"{{ etcd_binary_checksum if (etcd_deployment_type == 'host') else etcd_digest_checksum | d(None) }}\", 'url': '{{ etcd_download_url }}', 'unarchive': \"{{ etcd_deployment_type == 'host' }}\", 'owner': 'root', 'mode': '0755', 'groups': ['etcd']}, 'cni': {'enabled': True, 'file': True, 'version': '{{ cni_version }}', 'dest': '{{ local_release_dir }}/cni-plugins-linux-{{ image_arch }}-{{ cni_version }}.tgz', 'sha256': '{{ cni_binary_checksum }}', 'url': '{{ cni_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubeadm': {'enabled': True, 'file': True, 'version': '{{ kubeadm_version }}', 'dest': '{{ local_release_dir }}/kubeadm-{{ kubeadm_version }}-{{ image_arch }}', 'sha256': '{{ kubeadm_binary_checksum }}', 'url': '{{ kubeadm_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubelet': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubelet-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubelet_binary_checksum }}', 'url': '{{ kubelet_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubectl': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubectl-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubectl_binary_checksum }}', 'url': '{{ kubectl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'crictl': {'file': True, 'enabled': True, 'version': '{{ crictl_version }}', 'dest': '{{ local_release_dir }}/crictl-{{ crictl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ crictl_binary_checksum }}', 'url': '{{ crictl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crio': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ crio_version }}', 'dest': '{{ local_release_dir }}/cri-o.{{ image_arch }}.{{ crio_version }}tar.gz', 'sha256': '{{ crio_archive_checksum }}', 'url': '{{ crio_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'cri_dockerd': {'file': True, 'enabled': \"{{ container_manager == 'docker' }}\", 'version': '{{ cri_dockerd_version }}', 'dest': '{{ local_release_dir }}/cri-dockerd-{{ cri_dockerd_version }}.{{ image_arch }}.tar.gz', 'sha256': '{{ cri_dockerd_archive_checksum }}', 'url': '{{ cri_dockerd_download_url }}', 'unarchive': True, 'unarchive_extra_opts': ['--strip=1'], 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crun': {'file': True, 'enabled': '{{ crun_enabled }}', 'version': '{{ crun_version }}', 'dest': '{{ local_release_dir }}/crun-{{ crun_version }}-{{ image_arch }}', 'sha256': '{{ crun_binary_checksum }}', 'url': '{{ crun_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'youki': {'file': True, 'enabled': '{{ youki_enabled }}', 'version': '{{ youki_version }}', 'dest': \"{{ local_release_dir }}/youki_{{ youki_version | regex_replace('\\\\.', '_') }}_linux.tar.gz\", 'sha256': '{{ youki_archive_checksum }}', 'url': '{{ youki_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'runc': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ runc_version }}', 'dest': '{{ local_release_dir }}/runc-{{ runc_version }}.{{ image_arch }}', 'sha256': '{{ runc_binary_checksum }}', 'url': '{{ runc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kata_containers': {'enabled': '{{ kata_containers_enabled }}', 'file': True, 'version': '{{ kata_containers_version }}', 'dest': '{{ local_release_dir }}/kata-static-{{ kata_containers_version }}-{{ image_arch }}.tar.xz', 'sha256': '{{ kata_containers_binary_checksum }}', 'url': '{{ kata_containers_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'containerd': {'enabled': \"{{ container_manager == 'containerd' }}\", 'file': True, 'version': '{{ containerd_version }}', 'dest': '{{ local_release_dir }}/containerd-{{ containerd_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ containerd_archive_checksum }}', 'url': '{{ containerd_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'gvisor_runsc': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-runsc-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_runsc_binary_checksum }}', 'url': '{{ gvisor_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'gvisor_containerd_shim': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-containerd-shim-runsc-v1-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_containerd_shim_binary_checksum }}', 'url': '{{ gvisor_containerd_shim_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'nerdctl': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ nerdctl_version }}', 'dest': '{{ local_release_dir }}/nerdctl-{{ nerdctl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ nerdctl_archive_checksum }}', 'url': '{{ nerdctl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'skopeo': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ skopeo_version }}', 'dest': '{{ local_release_dir }}/skopeo-{{ skopeo_version }}-{{ image_arch }}', 'sha256': '{{ skopeo_binary_checksum }}', 'url': '{{ skopeo_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'cilium': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_image_repo }}', 'tag': '{{ cilium_image_tag }}', 'sha256': '{{ cilium_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_operator': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_operator_image_repo }}', 'tag': '{{ cilium_operator_image_tag }}', 'sha256': '{{ cilium_operator_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_relay': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_relay_image_repo }}', 'tag': '{{ cilium_hubble_relay_image_tag }}', 'sha256': '{{ cilium_hubble_relay_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_certgen': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_certgen_image_repo }}', 'tag': '{{ cilium_hubble_certgen_image_tag }}', 'sha256': '{{ cilium_hubble_certgen_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_image_repo }}', 'tag': '{{ cilium_hubble_ui_image_tag }}', 'sha256': '{{ cilium_hubble_ui_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui_backend': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_backend_image_repo }}', 'tag': '{{ cilium_hubble_ui_backend_image_tag }}', 'sha256': '{{ cilium_hubble_ui_backend_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_envoy': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_envoy_image_repo }}', 'tag': '{{ cilium_hubble_envoy_image_tag }}', 'sha256': '{{ cilium_hubble_envoy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'ciliumcli': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'file': True, 'version': '{{ cilium_cli_version }}', 'dest': '{{ local_release_dir }}/cilium-{{ cilium_cli_version }}-{{ image_arch }}.tar.gz', 'sha256': '{{ ciliumcli_binary_checksum }}', 'url': '{{ ciliumcli_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'multus': {'enabled': '{{ kube_network_plugin_multus }}', 'container': True, 'repo': '{{ multus_image_repo }}', 'tag': '{{ multus_image_tag }}', 'sha256': '{{ multus_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_image_repo }}', 'tag': '{{ flannel_image_tag }}', 'sha256': '{{ flannel_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel_init': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_init_image_repo }}', 'tag': '{{ flannel_init_image_tag }}', 'sha256': '{{ flannel_init_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calicoctl': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'file': True, 'version': '{{ calico_ctl_version }}', 'dest': '{{ local_release_dir }}/calicoctl-{{ calico_ctl_version }}-{{ image_arch }}', 'sha256': '{{ calicoctl_binary_checksum }}', 'url': '{{ calicoctl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'calico_node': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_node_image_repo }}', 'tag': '{{ calico_node_image_tag }}', 'sha256': '{{ calico_node_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_cni': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_cni_image_repo }}', 'tag': '{{ calico_cni_image_tag }}', 'sha256': '{{ calico_cni_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_flexvol': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_flexvol_image_repo }}', 'tag': '{{ calico_flexvol_image_tag }}', 'sha256': '{{ calico_flexvol_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_policy': {'enabled': \"{{ enable_network_policy and kube_network_plugin in ['calico'] }}\", 'container': True, 'repo': '{{ calico_policy_image_repo }}', 'tag': '{{ calico_policy_image_tag }}', 'sha256': '{{ calico_policy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_typha': {'enabled': '{{ typha_enabled }}', 'container': True, 'repo': '{{ calico_typha_image_repo }}', 'tag': '{{ calico_typha_image_tag }}', 'sha256': '{{ calico_typha_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_apiserver': {'enabled': '{{ calico_apiserver_enabled }}', 'container': True, 'repo': '{{ calico_apiserver_image_repo }}', 'tag': '{{ calico_apiserver_image_tag }}', 'sha256': '{{ calico_apiserver_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_crds': {'file': True, 'enabled': \"{{ kube_network_plugin == 'calico' and calico_datastore == 'kdd' }}\", 'version': '{{ calico_version }}', 'dest': '{{ local_release_dir }}/calico-{{ calico_version }}-kdd-crds/{{ calico_version }}.tar.gz', 'sha256': '{{ calico_crds_archive_checksum }}', 'url': '{{ calico_crds_download_url }}', 'unarchive': True, 'unarchive_extra_opts': [\"{{ '--strip=6' if (calico_version is version('v3.22.3', '<')) else '--strip=3' }}\", '--wildcards', \"{{ '*/_includes/charts/calico/crds/kdd/' if (calico_version is version('v3.22.3', '<')) else '*/libcalico-go/config/crd/' }}\"], 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'weave_kube': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_kube_image_repo }}', 'tag': '{{ weave_kube_image_tag }}', 'sha256': '{{ weave_kube_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'weave_npc': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_npc_image_repo }}', 'tag': '{{ weave_npc_image_tag }}', 'sha256': '{{ weave_npc_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_ovn': {'enabled': \"{{ kube_network_plugin == 'kube-ovn' }}\", 'container': True, 'repo': '{{ kube_ovn_container_image_repo }}', 'tag': '{{ kube_ovn_container_image_tag }}', 'sha256': '{{ kube_ovn_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_router': {'enabled': \"{{ kube_network_plugin == 'kube-router' }}\", 'container': True, 'repo': '{{ kube_router_image_repo }}', 'tag': '{{ kube_router_image_tag }}', 'sha256': '{{ kube_router_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'pod_infra': {'enabled': True, 'container': True, 'repo': '{{ pod_infra_image_repo }}', 'tag': '{{ pod_infra_image_tag }}', 'sha256': '{{ pod_infra_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube-vip': {'enabled': '{{ kube_vip_enabled }}', 'container': True, 'repo': '{{ kube_vip_image_repo }}', 'tag': '{{ kube_vip_image_tag }}', 'sha256': '{{ kube_vip_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'nginx': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'nginx' }}\", 'container': True, 'repo': '{{ nginx_image_repo }}', 'tag': '{{ nginx_image_tag }}', 'sha256': '{{ nginx_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'haproxy': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'haproxy' }}\", 'container': True, 'repo': '{{ haproxy_image_repo }}', 'tag': '{{ haproxy_image_tag }}', 'sha256': '{{ haproxy_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'coredns': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ coredns_image_repo }}', 'tag': '{{ coredns_image_tag }}', 'sha256': '{{ coredns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'nodelocaldns': {'enabled': '{{ enable_nodelocaldns }}', 'container': True, 'repo': '{{ nodelocaldns_image_repo }}', 'tag': '{{ nodelocaldns_image_tag }}', 'sha256': '{{ nodelocaldns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'dnsautoscaler': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ dnsautoscaler_image_repo }}', 'tag': '{{ dnsautoscaler_image_tag }}', 'sha256': '{{ dnsautoscaler_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'helm': {'enabled': '{{ helm_enabled }}', 'file': True, 'version': '{{ helm_version }}', 'dest': '{{ local_release_dir }}/helm-{{ helm_version }}/helm-{{ helm_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ helm_archive_checksum }}', 'url': '{{ helm_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'krew': {'enabled': '{{ krew_enabled }}', 'file': True, 'version': '{{ krew_version }}', 'dest': '{{ local_release_dir }}/krew-{{ host_os }}_{{ image_arch }}.tar.gz', 'sha256': '{{ krew_archive_checksum }}', 'url': '{{ krew_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'registry': {'enabled': '{{ registry_enabled }}', 'container': True, 'repo': '{{ registry_image_repo }}', 'tag': '{{ registry_image_tag }}', 'sha256': '{{ registry_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'metrics_server': {'enabled': '{{ metrics_server_enabled }}', 'container': True, 'repo': '{{ metrics_server_image_repo }}', 'tag': '{{ metrics_server_image_tag }}', 'sha256': '{{ metrics_server_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'local_volume_provisioner': {'enabled': '{{ local_volume_provisioner_enabled }}', 'container': True, 'repo': '{{ local_volume_provisioner_image_repo }}', 'tag': '{{ local_volume_provisioner_image_tag }}', 'sha256': '{{ local_volume_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cephfs_provisioner': {'enabled': '{{ cephfs_provisioner_enabled }}', 'container': True, 'repo': '{{ cephfs_provisioner_image_repo }}', 'tag': '{{ cephfs_provisioner_image_tag }}', 'sha256': '{{ cephfs_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'rbd_provisioner': {'enabled': '{{ rbd_provisioner_enabled }}', 'container': True, 'repo': '{{ rbd_provisioner_image_repo }}', 'tag': '{{ rbd_provisioner_image_tag }}', 'sha256': '{{ rbd_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'local_path_provisioner': {'enabled': '{{ local_path_provisioner_enabled }}', 'container': True, 'repo': '{{ local_path_provisioner_image_repo }}', 'tag': '{{ local_path_provisioner_image_tag }}', 'sha256': '{{ local_path_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_nginx_controller': {'enabled': '{{ ingress_nginx_enabled }}', 'container': True, 'repo': '{{ ingress_nginx_controller_image_repo }}', 'tag': '{{ ingress_nginx_controller_image_tag }}', 'sha256': '{{ ingress_nginx_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_alb_controller': {'enabled': '{{ ingress_alb_enabled }}', 'container': True, 'repo': '{{ alb_ingress_image_repo }}', 'tag': '{{ alb_ingress_image_tag }}', 'sha256': '{{ ingress_alb_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_controller': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_controller_image_repo }}', 'tag': '{{ cert_manager_controller_image_tag }}', 'sha256': '{{ cert_manager_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_cainjector': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_cainjector_image_repo }}', 'tag': '{{ cert_manager_cainjector_image_tag }}', 'sha256': '{{ cert_manager_cainjector_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_webhook': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_webhook_image_repo }}', 'tag': '{{ cert_manager_webhook_image_tag }}', 'sha256': '{{ cert_manager_webhook_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_attacher': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_attacher_image_repo }}', 'tag': '{{ csi_attacher_image_tag }}', 'sha256': '{{ csi_attacher_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_provisioner': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_provisioner_image_repo }}', 'tag': '{{ csi_provisioner_image_tag }}', 'sha256': '{{ csi_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_snapshotter': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_snapshotter_image_repo }}', 'tag': '{{ csi_snapshotter_image_tag }}', 'sha256': '{{ csi_snapshotter_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'snapshot_controller': {'enabled': '{{ csi_snapshot_controller_enabled }}', 'container': True, 'repo': '{{ snapshot_controller_image_repo }}', 'tag': '{{ snapshot_controller_image_tag }}', 'sha256': '{{ snapshot_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_resizer': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_resizer_image_repo }}', 'tag': '{{ csi_resizer_image_tag }}', 'sha256': '{{ csi_resizer_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_node_driver_registrar': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_node_driver_registrar_image_repo }}', 'tag': '{{ csi_node_driver_registrar_image_tag }}', 'sha256': '{{ csi_node_driver_registrar_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cinder_csi_plugin': {'enabled': '{{ cinder_csi_enabled }}', 'container': True, 'repo': '{{ cinder_csi_plugin_image_repo }}', 'tag': '{{ cinder_csi_plugin_image_tag }}', 'sha256': '{{ cinder_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'aws_ebs_csi_plugin': {'enabled': '{{ aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ aws_ebs_csi_plugin_image_repo }}', 'tag': '{{ aws_ebs_csi_plugin_image_tag }}', 'sha256': '{{ aws_ebs_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'dashboard': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_image_repo }}', 'tag': '{{ dashboard_image_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'dashboard_metrics_scrapper': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_metrics_scraper_repo }}', 'tag': '{{ dashboard_metrics_scraper_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_speaker': {'enabled': '{{ metallb_speaker_enabled }}', 'container': True, 'repo': '{{ metallb_speaker_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_speaker_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_controller': {'enabled': '{{ metallb_enabled }}', 'container': True, 'repo': '{{ metallb_controller_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_controller_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'yq': {'enabled': '{{ argocd_enabled }}', 'file': True, 'version': '{{ yq_version }}', 'dest': '{{ local_release_dir }}/yq-{{ yq_version }}-{{ image_arch }}', 'sha256': '{{ yq_binary_checksum | default(None) }}', 'url': '{{ yq_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}}: {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {{ download_defaults | combine(downloads.runc) }}: {'netcheck_server': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_server_image_repo }}', 'tag': '{{ netcheck_server_image_tag }}', 'sha256': '{{ netcheck_server_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'netcheck_agent': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_agent_image_repo }}', 'tag': '{{ netcheck_agent_image_tag }}', 'sha256': '{{ netcheck_agent_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'etcd': {'container': \"{{ etcd_deployment_type != 'host' }}\", 'file': \"{{ etcd_deployment_type == 'host' }}\", 'enabled': True, 'version': '{{ etcd_version }}', 'dest': '{{ local_release_dir }}/etcd-{{ etcd_version }}-linux-{{ image_arch }}.tar.gz', 'repo': '{{ etcd_image_repo }}', 'tag': '{{ etcd_image_tag }}', 'sha256': \"{{ etcd_binary_checksum if (etcd_deployment_type == 'host') else etcd_digest_checksum | d(None) }}\", 'url': '{{ etcd_download_url }}', 'unarchive': \"{{ etcd_deployment_type == 'host' }}\", 'owner': 'root', 'mode': '0755', 'groups': ['etcd']}, 'cni': {'enabled': True, 'file': True, 'version': '{{ cni_version }}', 'dest': '{{ local_release_dir }}/cni-plugins-linux-{{ image_arch }}-{{ cni_version }}.tgz', 'sha256': '{{ cni_binary_checksum }}', 'url': '{{ cni_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubeadm': {'enabled': True, 'file': True, 'version': '{{ kubeadm_version }}', 'dest': '{{ local_release_dir }}/kubeadm-{{ kubeadm_version }}-{{ image_arch }}', 'sha256': '{{ kubeadm_binary_checksum }}', 'url': '{{ kubeadm_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubelet': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubelet-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubelet_binary_checksum }}', 'url': '{{ kubelet_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubectl': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubectl-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubectl_binary_checksum }}', 'url': '{{ kubectl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'crictl': {'file': True, 'enabled': True, 'version': '{{ crictl_version }}', 'dest': '{{ local_release_dir }}/crictl-{{ crictl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ crictl_binary_checksum }}', 'url': '{{ crictl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crio': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ crio_version }}', 'dest': '{{ local_release_dir }}/cri-o.{{ image_arch }}.{{ crio_version }}tar.gz', 'sha256': '{{ crio_archive_checksum }}', 'url': '{{ crio_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'cri_dockerd': {'file': True, 'enabled': \"{{ container_manager == 'docker' }}\", 'version': '{{ cri_dockerd_version }}', 'dest': '{{ local_release_dir }}/cri-dockerd-{{ cri_dockerd_version }}.{{ image_arch }}.tar.gz', 'sha256': '{{ cri_dockerd_archive_checksum }}', 'url': '{{ cri_dockerd_download_url }}', 'unarchive': True, 'unarchive_extra_opts': ['--strip=1'], 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crun': {'file': True, 'enabled': '{{ crun_enabled }}', 'version': '{{ crun_version }}', 'dest': '{{ local_release_dir }}/crun-{{ crun_version }}-{{ image_arch }}', 'sha256': '{{ crun_binary_checksum }}', 'url': '{{ crun_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'youki': {'file': True, 'enabled': '{{ youki_enabled }}', 'version': '{{ youki_version }}', 'dest': \"{{ local_release_dir }}/youki_{{ youki_version | regex_replace('\\\\.', '_') }}_linux.tar.gz\", 'sha256': '{{ youki_archive_checksum }}', 'url': '{{ youki_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'runc': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ runc_version }}', 'dest': '{{ local_release_dir }}/runc-{{ runc_version }}.{{ image_arch }}', 'sha256': '{{ runc_binary_checksum }}', 'url': '{{ runc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kata_containers': {'enabled': '{{ kata_containers_enabled }}', 'file': True, 'version': '{{ kata_containers_version }}', 'dest': '{{ local_release_dir }}/kata-static-{{ kata_containers_version }}-{{ image_arch }}.tar.xz', 'sha256': '{{ kata_containers_binary_checksum }}', 'url': '{{ kata_containers_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'containerd': {'enabled': \"{{ container_manager == 'containerd' }}\", 'file': True, 'version': '{{ containerd_version }}', 'dest': '{{ local_release_dir }}/containerd-{{ containerd_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ containerd_archive_checksum }}', 'url': '{{ containerd_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'gvisor_runsc': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-runsc-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_runsc_binary_checksum }}', 'url': '{{ gvisor_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'gvisor_containerd_shim': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-containerd-shim-runsc-v1-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_containerd_shim_binary_checksum }}', 'url': '{{ gvisor_containerd_shim_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'nerdctl': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ nerdctl_version }}', 'dest': '{{ local_release_dir }}/nerdctl-{{ nerdctl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ nerdctl_archive_checksum }}', 'url': '{{ nerdctl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'skopeo': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ skopeo_version }}', 'dest': '{{ local_release_dir }}/skopeo-{{ skopeo_version }}-{{ image_arch }}', 'sha256': '{{ skopeo_binary_checksum }}', 'url': '{{ skopeo_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'cilium': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_image_repo }}', 'tag': '{{ cilium_image_tag }}', 'sha256': '{{ cilium_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_operator': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_operator_image_repo }}', 'tag': '{{ cilium_operator_image_tag }}', 'sha256': '{{ cilium_operator_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_relay': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_relay_image_repo }}', 'tag': '{{ cilium_hubble_relay_image_tag }}', 'sha256': '{{ cilium_hubble_relay_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_certgen': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_certgen_image_repo }}', 'tag': '{{ cilium_hubble_certgen_image_tag }}', 'sha256': '{{ cilium_hubble_certgen_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_image_repo }}', 'tag': '{{ cilium_hubble_ui_image_tag }}', 'sha256': '{{ cilium_hubble_ui_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui_backend': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_backend_image_repo }}', 'tag': '{{ cilium_hubble_ui_backend_image_tag }}', 'sha256': '{{ cilium_hubble_ui_backend_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_envoy': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_envoy_image_repo }}', 'tag': '{{ cilium_hubble_envoy_image_tag }}', 'sha256': '{{ cilium_hubble_envoy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'ciliumcli': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'file': True, 'version': '{{ cilium_cli_version }}', 'dest': '{{ local_release_dir }}/cilium-{{ cilium_cli_version }}-{{ image_arch }}.tar.gz', 'sha256': '{{ ciliumcli_binary_checksum }}', 'url': '{{ ciliumcli_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'multus': {'enabled': '{{ kube_network_plugin_multus }}', 'container': True, 'repo': '{{ multus_image_repo }}', 'tag': '{{ multus_image_tag }}', 'sha256': '{{ multus_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_image_repo }}', 'tag': '{{ flannel_image_tag }}', 'sha256': '{{ flannel_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel_init': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_init_image_repo }}', 'tag': '{{ flannel_init_image_tag }}', 'sha256': '{{ flannel_init_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calicoctl': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'file': True, 'version': '{{ calico_ctl_version }}', 'dest': '{{ local_release_dir }}/calicoctl-{{ calico_ctl_version }}-{{ image_arch }}', 'sha256': '{{ calicoctl_binary_checksum }}', 'url': '{{ calicoctl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'calico_node': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_node_image_repo }}', 'tag': '{{ calico_node_image_tag }}', 'sha256': '{{ calico_node_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_cni': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_cni_image_repo }}', 'tag': '{{ calico_cni_image_tag }}', 'sha256': '{{ calico_cni_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_flexvol': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_flexvol_image_repo }}', 'tag': '{{ calico_flexvol_image_tag }}', 'sha256': '{{ calico_flexvol_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_policy': {'enabled': \"{{ enable_network_policy and kube_network_plugin in ['calico'] }}\", 'container': True, 'repo': '{{ calico_policy_image_repo }}', 'tag': '{{ calico_policy_image_tag }}', 'sha256': '{{ calico_policy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_typha': {'enabled': '{{ typha_enabled }}', 'container': True, 'repo': '{{ calico_typha_image_repo }}', 'tag': '{{ calico_typha_image_tag }}', 'sha256': '{{ calico_typha_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_apiserver': {'enabled': '{{ calico_apiserver_enabled }}', 'container': True, 'repo': '{{ calico_apiserver_image_repo }}', 'tag': '{{ calico_apiserver_image_tag }}', 'sha256': '{{ calico_apiserver_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_crds': {'file': True, 'enabled': \"{{ kube_network_plugin == 'calico' and calico_datastore == 'kdd' }}\", 'version': '{{ calico_version }}', 'dest': '{{ local_release_dir }}/calico-{{ calico_version }}-kdd-crds/{{ calico_version }}.tar.gz', 'sha256': '{{ calico_crds_archive_checksum }}', 'url': '{{ calico_crds_download_url }}', 'unarchive': True, 'unarchive_extra_opts': [\"{{ '--strip=6' if (calico_version is version('v3.22.3', '<')) else '--strip=3' }}\", '--wildcards', \"{{ '*/_includes/charts/calico/crds/kdd/' if (calico_version is version('v3.22.3', '<')) else '*/libcalico-go/config/crd/' }}\"], 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'weave_kube': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_kube_image_repo }}', 'tag': '{{ weave_kube_image_tag }}', 'sha256': '{{ weave_kube_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'weave_npc': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_npc_image_repo }}', 'tag': '{{ weave_npc_image_tag }}', 'sha256': '{{ weave_npc_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_ovn': {'enabled': \"{{ kube_network_plugin == 'kube-ovn' }}\", 'container': True, 'repo': '{{ kube_ovn_container_image_repo }}', 'tag': '{{ kube_ovn_container_image_tag }}', 'sha256': '{{ kube_ovn_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_router': {'enabled': \"{{ kube_network_plugin == 'kube-router' }}\", 'container': True, 'repo': '{{ kube_router_image_repo }}', 'tag': '{{ kube_router_image_tag }}', 'sha256': '{{ kube_router_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'pod_infra': {'enabled': True, 'container': True, 'repo': '{{ pod_infra_image_repo }}', 'tag': '{{ pod_infra_image_tag }}', 'sha256': '{{ pod_infra_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube-vip': {'enabled': '{{ kube_vip_enabled }}', 'container': True, 'repo': '{{ kube_vip_image_repo }}', 'tag': '{{ kube_vip_image_tag }}', 'sha256': '{{ kube_vip_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'nginx': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'nginx' }}\", 'container': True, 'repo': '{{ nginx_image_repo }}', 'tag': '{{ nginx_image_tag }}', 'sha256': '{{ nginx_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'haproxy': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'haproxy' }}\", 'container': True, 'repo': '{{ haproxy_image_repo }}', 'tag': '{{ haproxy_image_tag }}', 'sha256': '{{ haproxy_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'coredns': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ coredns_image_repo }}', 'tag': '{{ coredns_image_tag }}', 'sha256': '{{ coredns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'nodelocaldns': {'enabled': '{{ enable_nodelocaldns }}', 'container': True, 'repo': '{{ nodelocaldns_image_repo }}', 'tag': '{{ nodelocaldns_image_tag }}', 'sha256': '{{ nodelocaldns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'dnsautoscaler': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ dnsautoscaler_image_repo }}', 'tag': '{{ dnsautoscaler_image_tag }}', 'sha256': '{{ dnsautoscaler_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'helm': {'enabled': '{{ helm_enabled }}', 'file': True, 'version': '{{ helm_version }}', 'dest': '{{ local_release_dir }}/helm-{{ helm_version }}/helm-{{ helm_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ helm_archive_checksum }}', 'url': '{{ helm_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'krew': {'enabled': '{{ krew_enabled }}', 'file': True, 'version': '{{ krew_version }}', 'dest': '{{ local_release_dir }}/krew-{{ host_os }}_{{ image_arch }}.tar.gz', 'sha256': '{{ krew_archive_checksum }}', 'url': '{{ krew_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'registry': {'enabled': '{{ registry_enabled }}', 'container': True, 'repo': '{{ registry_image_repo }}', 'tag': '{{ registry_image_tag }}', 'sha256': '{{ registry_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'metrics_server': {'enabled': '{{ metrics_server_enabled }}', 'container': True, 'repo': '{{ metrics_server_image_repo }}', 'tag': '{{ metrics_server_image_tag }}', 'sha256': '{{ metrics_server_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'local_volume_provisioner': {'enabled': '{{ local_volume_provisioner_enabled }}', 'container': True, 'repo': '{{ local_volume_provisioner_image_repo }}', 'tag': '{{ local_volume_provisioner_image_tag }}', 'sha256': '{{ local_volume_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cephfs_provisioner': {'enabled': '{{ cephfs_provisioner_enabled }}', 'container': True, 'repo': '{{ cephfs_provisioner_image_repo }}', 'tag': '{{ cephfs_provisioner_image_tag }}', 'sha256': '{{ cephfs_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'rbd_provisioner': {'enabled': '{{ rbd_provisioner_enabled }}', 'container': True, 'repo': '{{ rbd_provisioner_image_repo }}', 'tag': '{{ rbd_provisioner_image_tag }}', 'sha256': '{{ rbd_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'local_path_provisioner': {'enabled': '{{ local_path_provisioner_enabled }}', 'container': True, 'repo': '{{ local_path_provisioner_image_repo }}', 'tag': '{{ local_path_provisioner_image_tag }}', 'sha256': '{{ local_path_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_nginx_controller': {'enabled': '{{ ingress_nginx_enabled }}', 'container': True, 'repo': '{{ ingress_nginx_controller_image_repo }}', 'tag': '{{ ingress_nginx_controller_image_tag }}', 'sha256': '{{ ingress_nginx_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_alb_controller': {'enabled': '{{ ingress_alb_enabled }}', 'container': True, 'repo': '{{ alb_ingress_image_repo }}', 'tag': '{{ alb_ingress_image_tag }}', 'sha256': '{{ ingress_alb_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_controller': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_controller_image_repo }}', 'tag': '{{ cert_manager_controller_image_tag }}', 'sha256': '{{ cert_manager_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_cainjector': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_cainjector_image_repo }}', 'tag': '{{ cert_manager_cainjector_image_tag }}', 'sha256': '{{ cert_manager_cainjector_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_webhook': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_webhook_image_repo }}', 'tag': '{{ cert_manager_webhook_image_tag }}', 'sha256': '{{ cert_manager_webhook_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_attacher': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_attacher_image_repo }}', 'tag': '{{ csi_attacher_image_tag }}', 'sha256': '{{ csi_attacher_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_provisioner': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_provisioner_image_repo }}', 'tag': '{{ csi_provisioner_image_tag }}', 'sha256': '{{ csi_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_snapshotter': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_snapshotter_image_repo }}', 'tag': '{{ csi_snapshotter_image_tag }}', 'sha256': '{{ csi_snapshotter_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'snapshot_controller': {'enabled': '{{ csi_snapshot_controller_enabled }}', 'container': True, 'repo': '{{ snapshot_controller_image_repo }}', 'tag': '{{ snapshot_controller_image_tag }}', 'sha256': '{{ snapshot_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_resizer': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_resizer_image_repo }}', 'tag': '{{ csi_resizer_image_tag }}', 'sha256': '{{ csi_resizer_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_node_driver_registrar': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_node_driver_registrar_image_repo }}', 'tag': '{{ csi_node_driver_registrar_image_tag }}', 'sha256': '{{ csi_node_driver_registrar_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cinder_csi_plugin': {'enabled': '{{ cinder_csi_enabled }}', 'container': True, 'repo': '{{ cinder_csi_plugin_image_repo }}', 'tag': '{{ cinder_csi_plugin_image_tag }}', 'sha256': '{{ cinder_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'aws_ebs_csi_plugin': {'enabled': '{{ aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ aws_ebs_csi_plugin_image_repo }}', 'tag': '{{ aws_ebs_csi_plugin_image_tag }}', 'sha256': '{{ aws_ebs_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'dashboard': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_image_repo }}', 'tag': '{{ dashboard_image_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'dashboard_metrics_scrapper': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_metrics_scraper_repo }}', 'tag': '{{ dashboard_metrics_scraper_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_speaker': {'enabled': '{{ metallb_speaker_enabled }}', 'container': True, 'repo': '{{ metallb_speaker_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_speaker_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_controller': {'enabled': '{{ metallb_enabled }}', 'container': True, 'repo': '{{ metallb_controller_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_controller_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'yq': {'enabled': '{{ argocd_enabled }}', 'file': True, 'version': '{{ yq_version }}', 'dest': '{{ local_release_dir }}/yq-{{ yq_version }}-{{ image_arch }}', 'sha256': '{{ yq_binary_checksum | default(None) }}', 'url': '{{ yq_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}}: {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {'netcheck_server': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_server_image_repo }}', 'tag': '{{ netcheck_server_image_tag }}', 'sha256': '{{ netcheck_server_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'netcheck_agent': {'enabled': '{{ deploy_netchecker }}', 'container': True, 'repo': '{{ netcheck_agent_image_repo }}', 'tag': '{{ netcheck_agent_image_tag }}', 'sha256': '{{ netcheck_agent_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'etcd': {'container': \"{{ etcd_deployment_type != 'host' }}\", 'file': \"{{ etcd_deployment_type == 'host' }}\", 'enabled': True, 'version': '{{ etcd_version }}', 'dest': '{{ local_release_dir }}/etcd-{{ etcd_version }}-linux-{{ image_arch }}.tar.gz', 'repo': '{{ etcd_image_repo }}', 'tag': '{{ etcd_image_tag }}', 'sha256': \"{{ etcd_binary_checksum if (etcd_deployment_type == 'host') else etcd_digest_checksum | d(None) }}\", 'url': '{{ etcd_download_url }}', 'unarchive': \"{{ etcd_deployment_type == 'host' }}\", 'owner': 'root', 'mode': '0755', 'groups': ['etcd']}, 'cni': {'enabled': True, 'file': True, 'version': '{{ cni_version }}', 'dest': '{{ local_release_dir }}/cni-plugins-linux-{{ image_arch }}-{{ cni_version }}.tgz', 'sha256': '{{ cni_binary_checksum }}', 'url': '{{ cni_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubeadm': {'enabled': True, 'file': True, 'version': '{{ kubeadm_version }}', 'dest': '{{ local_release_dir }}/kubeadm-{{ kubeadm_version }}-{{ image_arch }}', 'sha256': '{{ kubeadm_binary_checksum }}', 'url': '{{ kubeadm_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubelet': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubelet-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubelet_binary_checksum }}', 'url': '{{ kubelet_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kubectl': {'enabled': True, 'file': True, 'version': '{{ kube_version }}', 'dest': '{{ local_release_dir }}/kubectl-{{ kube_version }}-{{ image_arch }}', 'sha256': '{{ kubectl_binary_checksum }}', 'url': '{{ kubectl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'crictl': {'file': True, 'enabled': True, 'version': '{{ crictl_version }}', 'dest': '{{ local_release_dir }}/crictl-{{ crictl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ crictl_binary_checksum }}', 'url': '{{ crictl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crio': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ crio_version }}', 'dest': '{{ local_release_dir }}/cri-o.{{ image_arch }}.{{ crio_version }}tar.gz', 'sha256': '{{ crio_archive_checksum }}', 'url': '{{ crio_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'cri_dockerd': {'file': True, 'enabled': \"{{ container_manager == 'docker' }}\", 'version': '{{ cri_dockerd_version }}', 'dest': '{{ local_release_dir }}/cri-dockerd-{{ cri_dockerd_version }}.{{ image_arch }}.tar.gz', 'sha256': '{{ cri_dockerd_archive_checksum }}', 'url': '{{ cri_dockerd_download_url }}', 'unarchive': True, 'unarchive_extra_opts': ['--strip=1'], 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'crun': {'file': True, 'enabled': '{{ crun_enabled }}', 'version': '{{ crun_version }}', 'dest': '{{ local_release_dir }}/crun-{{ crun_version }}-{{ image_arch }}', 'sha256': '{{ crun_binary_checksum }}', 'url': '{{ crun_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'youki': {'file': True, 'enabled': '{{ youki_enabled }}', 'version': '{{ youki_version }}', 'dest': \"{{ local_release_dir }}/youki_{{ youki_version | regex_replace('\\\\.', '_') }}_linux.tar.gz\", 'sha256': '{{ youki_archive_checksum }}', 'url': '{{ youki_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'runc': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ runc_version }}', 'dest': '{{ local_release_dir }}/runc-{{ runc_version }}.{{ image_arch }}', 'sha256': '{{ runc_binary_checksum }}', 'url': '{{ runc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'kata_containers': {'enabled': '{{ kata_containers_enabled }}', 'file': True, 'version': '{{ kata_containers_version }}', 'dest': '{{ local_release_dir }}/kata-static-{{ kata_containers_version }}-{{ image_arch }}.tar.xz', 'sha256': '{{ kata_containers_binary_checksum }}', 'url': '{{ kata_containers_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'containerd': {'enabled': \"{{ container_manager == 'containerd' }}\", 'file': True, 'version': '{{ containerd_version }}', 'dest': '{{ local_release_dir }}/containerd-{{ containerd_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ containerd_archive_checksum }}', 'url': '{{ containerd_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'gvisor_runsc': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-runsc-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_runsc_binary_checksum }}', 'url': '{{ gvisor_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'gvisor_containerd_shim': {'enabled': '{{ gvisor_enabled }}', 'file': True, 'version': '{{ gvisor_version }}', 'dest': '{{ local_release_dir }}/gvisor-containerd-shim-runsc-v1-{{ gvisor_version }}-{{ ansible_architecture }}', 'sha256': '{{ gvisor_containerd_shim_binary_checksum }}', 'url': '{{ gvisor_containerd_shim_runsc_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': 755, 'groups': ['k8s_cluster']}, 'nerdctl': {'file': True, 'enabled': \"{{ container_manager == 'containerd' }}\", 'version': '{{ nerdctl_version }}', 'dest': '{{ local_release_dir }}/nerdctl-{{ nerdctl_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ nerdctl_archive_checksum }}', 'url': '{{ nerdctl_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'skopeo': {'file': True, 'enabled': \"{{ container_manager == 'crio' }}\", 'version': '{{ skopeo_version }}', 'dest': '{{ local_release_dir }}/skopeo-{{ skopeo_version }}-{{ image_arch }}', 'sha256': '{{ skopeo_binary_checksum }}', 'url': '{{ skopeo_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'cilium': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_image_repo }}', 'tag': '{{ cilium_image_tag }}', 'sha256': '{{ cilium_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_operator': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'container': True, 'repo': '{{ cilium_operator_image_repo }}', 'tag': '{{ cilium_operator_image_tag }}', 'sha256': '{{ cilium_operator_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_relay': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_relay_image_repo }}', 'tag': '{{ cilium_hubble_relay_image_tag }}', 'sha256': '{{ cilium_hubble_relay_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_certgen': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_certgen_image_repo }}', 'tag': '{{ cilium_hubble_certgen_image_tag }}', 'sha256': '{{ cilium_hubble_certgen_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_image_repo }}', 'tag': '{{ cilium_hubble_ui_image_tag }}', 'sha256': '{{ cilium_hubble_ui_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_ui_backend': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_ui_backend_image_repo }}', 'tag': '{{ cilium_hubble_ui_backend_image_tag }}', 'sha256': '{{ cilium_hubble_ui_backend_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'cilium_hubble_envoy': {'enabled': '{{ cilium_enable_hubble }}', 'container': True, 'repo': '{{ cilium_hubble_envoy_image_repo }}', 'tag': '{{ cilium_hubble_envoy_image_tag }}', 'sha256': '{{ cilium_hubble_envoy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'ciliumcli': {'enabled': \"{{ kube_network_plugin == 'cilium' or cilium_deploy_additionally | default(false) | bool }}\", 'file': True, 'version': '{{ cilium_cli_version }}', 'dest': '{{ local_release_dir }}/cilium-{{ cilium_cli_version }}-{{ image_arch }}.tar.gz', 'sha256': '{{ ciliumcli_binary_checksum }}', 'url': '{{ ciliumcli_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'multus': {'enabled': '{{ kube_network_plugin_multus }}', 'container': True, 'repo': '{{ multus_image_repo }}', 'tag': '{{ multus_image_tag }}', 'sha256': '{{ multus_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_image_repo }}', 'tag': '{{ flannel_image_tag }}', 'sha256': '{{ flannel_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'flannel_init': {'enabled': \"{{ kube_network_plugin == 'flannel' }}\", 'container': True, 'repo': '{{ flannel_init_image_repo }}', 'tag': '{{ flannel_init_image_tag }}', 'sha256': '{{ flannel_init_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calicoctl': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'file': True, 'version': '{{ calico_ctl_version }}', 'dest': '{{ local_release_dir }}/calicoctl-{{ calico_ctl_version }}-{{ image_arch }}', 'sha256': '{{ calicoctl_binary_checksum }}', 'url': '{{ calicoctl_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}, 'calico_node': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_node_image_repo }}', 'tag': '{{ calico_node_image_tag }}', 'sha256': '{{ calico_node_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_cni': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_cni_image_repo }}', 'tag': '{{ calico_cni_image_tag }}', 'sha256': '{{ calico_cni_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_flexvol': {'enabled': \"{{ kube_network_plugin == 'calico' }}\", 'container': True, 'repo': '{{ calico_flexvol_image_repo }}', 'tag': '{{ calico_flexvol_image_tag }}', 'sha256': '{{ calico_flexvol_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_policy': {'enabled': \"{{ enable_network_policy and kube_network_plugin in ['calico'] }}\", 'container': True, 'repo': '{{ calico_policy_image_repo }}', 'tag': '{{ calico_policy_image_tag }}', 'sha256': '{{ calico_policy_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_typha': {'enabled': '{{ typha_enabled }}', 'container': True, 'repo': '{{ calico_typha_image_repo }}', 'tag': '{{ calico_typha_image_tag }}', 'sha256': '{{ calico_typha_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_apiserver': {'enabled': '{{ calico_apiserver_enabled }}', 'container': True, 'repo': '{{ calico_apiserver_image_repo }}', 'tag': '{{ calico_apiserver_image_tag }}', 'sha256': '{{ calico_apiserver_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'calico_crds': {'file': True, 'enabled': \"{{ kube_network_plugin == 'calico' and calico_datastore == 'kdd' }}\", 'version': '{{ calico_version }}', 'dest': '{{ local_release_dir }}/calico-{{ calico_version }}-kdd-crds/{{ calico_version }}.tar.gz', 'sha256': '{{ calico_crds_archive_checksum }}', 'url': '{{ calico_crds_download_url }}', 'unarchive': True, 'unarchive_extra_opts': [\"{{ '--strip=6' if (calico_version is version('v3.22.3', '<')) else '--strip=3' }}\", '--wildcards', \"{{ '*/_includes/charts/calico/crds/kdd/' if (calico_version is version('v3.22.3', '<')) else '*/libcalico-go/config/crd/' }}\"], 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'weave_kube': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_kube_image_repo }}', 'tag': '{{ weave_kube_image_tag }}', 'sha256': '{{ weave_kube_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'weave_npc': {'enabled': \"{{ kube_network_plugin == 'weave' }}\", 'container': True, 'repo': '{{ weave_npc_image_repo }}', 'tag': '{{ weave_npc_image_tag }}', 'sha256': '{{ weave_npc_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_ovn': {'enabled': \"{{ kube_network_plugin == 'kube-ovn' }}\", 'container': True, 'repo': '{{ kube_ovn_container_image_repo }}', 'tag': '{{ kube_ovn_container_image_tag }}', 'sha256': '{{ kube_ovn_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube_router': {'enabled': \"{{ kube_network_plugin == 'kube-router' }}\", 'container': True, 'repo': '{{ kube_router_image_repo }}', 'tag': '{{ kube_router_image_tag }}', 'sha256': '{{ kube_router_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'pod_infra': {'enabled': True, 'container': True, 'repo': '{{ pod_infra_image_repo }}', 'tag': '{{ pod_infra_image_tag }}', 'sha256': '{{ pod_infra_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'kube-vip': {'enabled': '{{ kube_vip_enabled }}', 'container': True, 'repo': '{{ kube_vip_image_repo }}', 'tag': '{{ kube_vip_image_tag }}', 'sha256': '{{ kube_vip_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'nginx': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'nginx' }}\", 'container': True, 'repo': '{{ nginx_image_repo }}', 'tag': '{{ nginx_image_tag }}', 'sha256': '{{ nginx_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'haproxy': {'enabled': \"{{ loadbalancer_apiserver_localhost and loadbalancer_apiserver_type == 'haproxy' }}\", 'container': True, 'repo': '{{ haproxy_image_repo }}', 'tag': '{{ haproxy_image_tag }}', 'sha256': '{{ haproxy_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'coredns': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ coredns_image_repo }}', 'tag': '{{ coredns_image_tag }}', 'sha256': '{{ coredns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'nodelocaldns': {'enabled': '{{ enable_nodelocaldns }}', 'container': True, 'repo': '{{ nodelocaldns_image_repo }}', 'tag': '{{ nodelocaldns_image_tag }}', 'sha256': '{{ nodelocaldns_digest_checksum | default(None) }}', 'groups': ['k8s_cluster']}, 'dnsautoscaler': {'enabled': \"{{ dns_mode in ['coredns', 'coredns_dual'] }}\", 'container': True, 'repo': '{{ dnsautoscaler_image_repo }}', 'tag': '{{ dnsautoscaler_image_tag }}', 'sha256': '{{ dnsautoscaler_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'helm': {'enabled': '{{ helm_enabled }}', 'file': True, 'version': '{{ helm_version }}', 'dest': '{{ local_release_dir }}/helm-{{ helm_version }}/helm-{{ helm_version }}-linux-{{ image_arch }}.tar.gz', 'sha256': '{{ helm_archive_checksum }}', 'url': '{{ helm_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'krew': {'enabled': '{{ krew_enabled }}', 'file': True, 'version': '{{ krew_version }}', 'dest': '{{ local_release_dir }}/krew-{{ host_os }}_{{ image_arch }}.tar.gz', 'sha256': '{{ krew_archive_checksum }}', 'url': '{{ krew_download_url }}', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}, 'registry': {'enabled': '{{ registry_enabled }}', 'container': True, 'repo': '{{ registry_image_repo }}', 'tag': '{{ registry_image_tag }}', 'sha256': '{{ registry_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'metrics_server': {'enabled': '{{ metrics_server_enabled }}', 'container': True, 'repo': '{{ metrics_server_image_repo }}', 'tag': '{{ metrics_server_image_tag }}', 'sha256': '{{ metrics_server_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'local_volume_provisioner': {'enabled': '{{ local_volume_provisioner_enabled }}', 'container': True, 'repo': '{{ local_volume_provisioner_image_repo }}', 'tag': '{{ local_volume_provisioner_image_tag }}', 'sha256': '{{ local_volume_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cephfs_provisioner': {'enabled': '{{ cephfs_provisioner_enabled }}', 'container': True, 'repo': '{{ cephfs_provisioner_image_repo }}', 'tag': '{{ cephfs_provisioner_image_tag }}', 'sha256': '{{ cephfs_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'rbd_provisioner': {'enabled': '{{ rbd_provisioner_enabled }}', 'container': True, 'repo': '{{ rbd_provisioner_image_repo }}', 'tag': '{{ rbd_provisioner_image_tag }}', 'sha256': '{{ rbd_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'local_path_provisioner': {'enabled': '{{ local_path_provisioner_enabled }}', 'container': True, 'repo': '{{ local_path_provisioner_image_repo }}', 'tag': '{{ local_path_provisioner_image_tag }}', 'sha256': '{{ local_path_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_nginx_controller': {'enabled': '{{ ingress_nginx_enabled }}', 'container': True, 'repo': '{{ ingress_nginx_controller_image_repo }}', 'tag': '{{ ingress_nginx_controller_image_tag }}', 'sha256': '{{ ingress_nginx_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'ingress_alb_controller': {'enabled': '{{ ingress_alb_enabled }}', 'container': True, 'repo': '{{ alb_ingress_image_repo }}', 'tag': '{{ alb_ingress_image_tag }}', 'sha256': '{{ ingress_alb_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_controller': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_controller_image_repo }}', 'tag': '{{ cert_manager_controller_image_tag }}', 'sha256': '{{ cert_manager_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_cainjector': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_cainjector_image_repo }}', 'tag': '{{ cert_manager_cainjector_image_tag }}', 'sha256': '{{ cert_manager_cainjector_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cert_manager_webhook': {'enabled': '{{ cert_manager_enabled }}', 'container': True, 'repo': '{{ cert_manager_webhook_image_repo }}', 'tag': '{{ cert_manager_webhook_image_tag }}', 'sha256': '{{ cert_manager_webhook_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_attacher': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_attacher_image_repo }}', 'tag': '{{ csi_attacher_image_tag }}', 'sha256': '{{ csi_attacher_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_provisioner': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_provisioner_image_repo }}', 'tag': '{{ csi_provisioner_image_tag }}', 'sha256': '{{ csi_provisioner_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_snapshotter': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_snapshotter_image_repo }}', 'tag': '{{ csi_snapshotter_image_tag }}', 'sha256': '{{ csi_snapshotter_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'snapshot_controller': {'enabled': '{{ csi_snapshot_controller_enabled }}', 'container': True, 'repo': '{{ snapshot_controller_image_repo }}', 'tag': '{{ snapshot_controller_image_tag }}', 'sha256': '{{ snapshot_controller_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_resizer': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_resizer_image_repo }}', 'tag': '{{ csi_resizer_image_tag }}', 'sha256': '{{ csi_resizer_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'csi_node_driver_registrar': {'enabled': '{{ cinder_csi_enabled or aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ csi_node_driver_registrar_image_repo }}', 'tag': '{{ csi_node_driver_registrar_image_tag }}', 'sha256': '{{ csi_node_driver_registrar_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'cinder_csi_plugin': {'enabled': '{{ cinder_csi_enabled }}', 'container': True, 'repo': '{{ cinder_csi_plugin_image_repo }}', 'tag': '{{ cinder_csi_plugin_image_tag }}', 'sha256': '{{ cinder_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'aws_ebs_csi_plugin': {'enabled': '{{ aws_ebs_csi_enabled }}', 'container': True, 'repo': '{{ aws_ebs_csi_plugin_image_repo }}', 'tag': '{{ aws_ebs_csi_plugin_image_tag }}', 'sha256': '{{ aws_ebs_csi_plugin_digest_checksum | default(None) }}', 'groups': ['kube_node']}, 'dashboard': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_image_repo }}', 'tag': '{{ dashboard_image_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'dashboard_metrics_scrapper': {'enabled': '{{ dashboard_enabled }}', 'container': True, 'repo': '{{ dashboard_metrics_scraper_repo }}', 'tag': '{{ dashboard_metrics_scraper_tag }}', 'sha256': '{{ dashboard_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_speaker': {'enabled': '{{ metallb_speaker_enabled }}', 'container': True, 'repo': '{{ metallb_speaker_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_speaker_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'metallb_controller': {'enabled': '{{ metallb_enabled }}', 'container': True, 'repo': '{{ metallb_controller_image_repo }}', 'tag': '{{ metallb_version }}', 'sha256': '{{ metallb_controller_digest_checksum | default(None) }}', 'groups': ['kube_control_plane']}, 'yq': {'enabled': '{{ argocd_enabled }}', 'file': True, 'version': '{{ yq_version }}', 'dest': '{{ local_release_dir }}/yq-{{ yq_version }}-{{ image_arch }}', 'sha256': '{{ yq_binary_checksum | default(None) }}', 'url': '{{ yq_download_url }}', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}}: {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'. {{ etcd_supported_versions[kube_major_version] }}: 'dict object' has no attribute 'v1.29'. 'dict object' has no attribute 'v1.29'\n\nThe error appears to be in '/opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml': line 10, column 5, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n  - name: Download_file | Starting download of file\n    ^ here\n"}
 
         NO MORE HOSTS LEFT *************************************************************
 
         PLAY RECAP *********************************************************************
-        host12-1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=6    rescued=0    ignored=0
-        host12-2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
-        host12-3                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
-        host34-1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
-        host34-2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
-        hostb12-1                  : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        host12-1                   : ok=132  changed=18   unreachable=0    failed=1    skipped=228  rescued=0    ignored=0
+        host12-2                   : ok=104  changed=18   unreachable=0    failed=0    skipped=212  rescued=0    ignored=0
+        host12-3                   : ok=104  changed=18   unreachable=0    failed=0    skipped=212  rescued=0    ignored=0
+        host34-1                   : ok=108  changed=18   unreachable=0    failed=0    skipped=208  rescued=0    ignored=0
+        host34-2                   : ok=104  changed=18   unreachable=0    failed=0    skipped=212  rescued=0    ignored=0
+        hostb12-1                  : ok=108  changed=18   unreachable=0    failed=0    skipped=208  rescued=0    ignored=0
         localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-        Monday 01 June 2026  14:11:36 -0500 (0:00:00.495)       0:00:00.993 ***********
+        Monday 01 June 2026  15:31:20 -0500 (0:00:00.043)       0:21:31.593 ***********
         ===============================================================================
-        bootstrap-os : Fetch /etc/os-release ------------------------------------ 0.50s
-        kubespray-defaults : Create fallback_ips_base --------------------------- 0.09s
-        kubespray-defaults : Populates no_proxy to all hosts -------------------- 0.07s
-        kubespray-defaults : Set fallback_ips ----------------------------------- 0.06s
-        kubespray-defaults : Set `etcd_deployment_type` to "kubeadm" if `etcd_kubeadm_enabled` is true --- 0.06s
-        kubespray-defaults : Gather ansible_default_ipv4 from all hosts --------- 0.06s
-        Check that python netaddr is installed ---------------------------------- 0.05s
-        Check that jinja is not too old (install via pip) ----------------------- 0.04s
-        kubespray-defaults : Set no_proxy to all assigned cluster IPs and hostnames --- 0.03s
-        Check 2.15.5 <= Ansible version < 2.17.0 -------------------------------- 0.02s
+        kubernetes/preinstall : Ensure kube-bench parameters are set ----------- 76.85s
+        kubernetes/preinstall : Create kubernetes directories ------------------ 53.81s
+        kubernetes/preinstall : Ensure NTP package ----------------------------- 49.38s
+        kubernetes/preinstall : Install packages requirements ------------------ 38.50s
+        kubernetes/preinstall : Generate NTP configuration file. --------------- 38.45s
+        kubernetes/preinstall : Create cni directories ------------------------- 28.81s
+        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 28.07s
+        kubernetes/preinstall : Create other directories of root owner --------- 27.11s
+        container-engine/validate-container-engine : Populate service facts ---- 26.59s
+        kubernetes/preinstall : Clean previously used sysctl file locations ---- 26.49s
+        kubernetes/preinstall : Hosts | Update (if necessary) hosts file ------- 25.72s
+        kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved -- 23.79s
+        kubernetes/preinstall : Preinstall | Restart systemd-resolved ---------- 19.47s
+        adduser : User | Create User ------------------------------------------- 19.12s
+        kubernetes/preinstall : Create kubernetes kubeadm compat cert dir (kubernetes/kubeadm issue 1498) -- 18.85s
+        kubernetes/preinstall : Preinstall | restart ntp ----------------------- 18.52s
+        kubernetes/preinstall : Check if /etc/fstab exists --------------------- 18.46s
+        Gather necessary facts (network) --------------------------------------- 18.23s
+        kubernetes/preinstall : Ensure NTP service is started and enabled ------ 17.87s
+        kubernetes/preinstall : Disable systemd-timesyncd ---------------------- 17.53s
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-localhost                  : ok=5    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+localhost                  : ok=6    changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
