@@ -33,8 +33,10 @@
 #   /opt/fabric-cache/
 #   ├── binaries/          — cephadm, kubectl, helm, yq, k9s, argocd
 #   ├── images/            — cirros, ubuntu-cloud, container tarballs
-#   ├── kubespray/         — KubeSpray download_cache_dir (container images)
-#   ├── kubespray-repo/    — KubeSpray git repo clone + venv
+#   ├── kubespray/         — All KubeSpray artifacts (unified)
+#   │   ├── src/           — KubeSpray git repo clone
+#   │   ├── venv/          — Python virtual environment
+#   │   └── download-cache/ — Container images pulled during deployment
 #   ├── maas/              — MaaS snap + dependencies
 #   ├── helm-charts/       — Pre-pulled Helm chart tarballs
 #   ├── apt-packages/      — Cached .deb packages for offline install
@@ -59,14 +61,16 @@
     cache_binaries: "{{ cache_root }}/binaries"
     cache_images: "{{ cache_root }}/images"
     cache_kubespray: "{{ cache_root }}/kubespray"
-    cache_kubespray_repo: "{{ cache_root }}/kubespray-repo"
+    cache_kubespray_src: "{{ cache_kubespray }}/src"
+    cache_kubespray_venv: "{{ cache_kubespray }}/venv"
+    cache_kubespray_downloads: "{{ cache_kubespray }}/download-cache"
     cache_maas: "{{ cache_root }}/maas"
     cache_helm: "{{ cache_root }}/helm-charts"
     cache_apt: "{{ cache_root }}/apt-packages"
     cache_pip: "{{ cache_root }}/pip-packages"
 
     # ---- Pinned Versions ----
-    kubespray_version: "v2.24.1"
+    kubespray_version: "v2.25.0"
     kubectl_version: "v1.29.4"
     helm_version: "v3.14.4"
     yq_version: "v4.44.1"
@@ -165,7 +169,9 @@
         - "{{ cache_binaries }}"
         - "{{ cache_images }}"
         - "{{ cache_kubespray }}"
-        - "{{ cache_kubespray_repo }}"
+        - "{{ cache_kubespray_src }}"
+        - "{{ cache_kubespray_venv }}"
+        - "{{ cache_kubespray_downloads }}"
         - "{{ cache_maas }}"
         - "{{ cache_helm }}"
         - "{{ cache_apt }}"
@@ -312,7 +318,7 @@
     - name: "kubespray | Clone KubeSpray {{ kubespray_version }} repository"
       ansible.builtin.git:
         repo: "https://github.com/kubernetes-sigs/kubespray.git"
-        dest: "{{ cache_kubespray_repo }}/kubespray-{{ kubespray_version }}"
+        dest: "{{ cache_kubespray_src }}"
         version: "{{ kubespray_version }}"
         force: false
       register: dl_kubespray_repo
@@ -321,16 +327,16 @@
 
     - name: "kubespray | Create Python venv for KubeSpray"
       ansible.builtin.command:
-        cmd: "python3 -m venv {{ cache_kubespray_repo }}/venv"
-        creates: "{{ cache_kubespray_repo }}/venv/bin/activate"
+        cmd: "python3 -m venv {{ cache_kubespray_venv }}"
+        creates: "{{ cache_kubespray_venv }}/bin/activate"
       when: dl_kubespray_repo is defined and dl_kubespray_repo is not failed
       ignore_errors: true
       tags: [kubespray]
 
     - name: "kubespray | Install KubeSpray requirements into venv"
       ansible.builtin.pip:
-        requirements: "{{ cache_kubespray_repo }}/kubespray-{{ kubespray_version }}/requirements.txt"
-        virtualenv: "{{ cache_kubespray_repo }}/venv"
+        requirements: "{{ cache_kubespray_src }}/requirements.txt"
+        virtualenv: "{{ cache_kubespray_venv }}"
         state: present
       when: dl_kubespray_repo is defined and dl_kubespray_repo is not failed
       ignore_errors: true
@@ -340,7 +346,7 @@
       ansible.builtin.command: >
         pip download
           --dest {{ cache_pip }}/
-          -r {{ cache_kubespray_repo }}/kubespray-{{ kubespray_version }}/requirements.txt
+          -r {{ cache_kubespray_src }}/requirements.txt
       changed_when: false
       ignore_errors: true
       tags: [kubespray]
