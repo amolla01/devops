@@ -321,7 +321,14 @@
         executable: /bin/bash
       changed_when: false
 
-    - name: Patch kubespray ansible.cfg with ProxyJump SSH args
+    - name: Patch kubespray ansible.cfg — disable host key checking
+      ansible.builtin.lineinfile:
+        path: "{{ kubespray_dir }}/ansible.cfg"
+        regexp: '^host_key_checking\s*='
+        line: "host_key_checking = False"
+        insertafter: '^\[defaults\]'
+
+    - name: Patch kubespray ansible.cfg — SSH args with ProxyJump
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^ssh_args\s*='
@@ -329,7 +336,7 @@
         insertafter: '^\[ssh_connection\]'
       when: proxy_jump_resolved | default('') | length > 0
 
-    - name: Disable SSH pipelining in kubespray (conflicts with sshpass)
+    - name: Patch kubespray ansible.cfg — disable pipelining for sshpass
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^pipelining\s*='
