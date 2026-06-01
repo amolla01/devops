@@ -303,11 +303,12 @@
     first_controller: "{{ groups['kube_controllers'][0] }}"
     ansible_user_target: "{{ hostvars[first_controller]['ansible_user'] | default('ubuntu') }}"
     # Profile-aware SSH args — must include ProxyJump for KVM profiles
-    # where the deployer (WSL) cannot reach the 172.16.2.x libvirt bridge directly
+    # where the deployer (WSL) cannot reach the 172.16.2.x libvirt bridge directly.
+    # Passed as -e (extra var) so it cannot be overridden by kubespray's ansible.cfg.
     kubespray_ssh_args: >-
-      {{ "--ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
-         + (proxy_jump_ssh_arg | default('') | trim) + "'"
-         if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] else '' }}
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      -o ConnectTimeout=30 -o ConnectionAttempts=3
+      {{ proxy_jump_ssh_arg | default('') | trim }}
     # Timeout scales with profile (KVM is slower)
     kubespray_timeout: "{{ '300' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] else '180' if automation_profile == 'ubuntu_r810_kvm' else '120' }}"
   tasks:
@@ -318,7 +319,14 @@
           Profile: {{ automation_profile }}
           Timeout: {{ kubespray_timeout }}s
           SSH user: {{ ansible_user_target }}
+          SSH args: {{ kubespray_ssh_args }}
           Inventory: {{ kubespray_inventory_dir }}/hosts.yml
+
+    - name: Clear stale SSH ControlMaster sockets
+      ansible.builtin.shell: rm -f ~/.ansible/cp/* /tmp/ansible-ssh-* 2>/dev/null || true
+      args:
+        executable: /bin/bash
+      changed_when: false
 
     - name: Run KubeSpray cluster.yml
       ansible.builtin.shell: |
@@ -331,7 +339,7 @@
           -e "ansible_user={{ ansible_user_target }}" \
           -e "ansible_ssh_pass={{ target_ssh_pass | default(vault_ansible_password | default('amolla01')) }}" \
           -e "ansible_become_pass={{ target_ssh_pass | default(vault_ansible_password | default('amolla01')) }}" \
-          {{ kubespray_ssh_args }} \
+          -e 'ansible_ssh_common_args={{ kubespray_ssh_args }}' \
           --timeout={{ kubespray_timeout }} \
           2>&1 | tee /tmp/kubespray_deploy.log
       args:
