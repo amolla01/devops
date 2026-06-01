@@ -321,6 +321,24 @@
         executable: /bin/bash
       changed_when: false
 
+    - name: Verify SSH connectivity before launching kubespray
+      ansible.builtin.shell: |
+        sshpass -p '{{ target_ssh_pass | default(vault_ansible_password | default("amolla01")) }}' \
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ConnectTimeout=10 -o PasswordAuthentication=yes -o PubkeyAuthentication=yes \
+            {{ proxy_jump_ssh_arg | default('') | trim }} \
+            {{ ansible_user_target }}@{{ hostvars[first_controller]['ansible_host'] }} \
+            'echo REACHABLE' 2>&1
+      args:
+        executable: /bin/bash
+      register: _ssh_check
+      changed_when: false
+      failed_when: "'REACHABLE' not in _ssh_check.stdout"
+
+    - name: Display SSH check result
+      ansible.builtin.debug:
+        msg: "SSH pre-check: {{ _ssh_check.stdout | trim }}"
+
     - name: Run KubeSpray cluster.yml
       ansible.builtin.shell: |
         set -o pipefail
@@ -336,6 +354,11 @@
           2>&1 | tee /tmp/kubespray_deploy.log
       args:
         executable: /bin/bash
+      environment:
+        ANSIBLE_SSH_ARGS: >-
+          -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o ConnectTimeout=30 -o ConnectionAttempts=3
+          {{ proxy_jump_ssh_arg | default('') | trim }}
       register: kubespray_result
       changed_when: kubespray_result.rc == 0
 
