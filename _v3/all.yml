@@ -1,0 +1,305 @@
+---
+# =============================================================================
+# all.yml - Global variables for the entire L3 CLOS fabric (MERGED SSOT)
+# =============================================================================
+# This is the SINGLE SOURCE OF TRUTH for all global variables.
+# Previously split across reused_baseline/inventory/ and inventory/.
+# Merged 2026-05-27 to eliminate variable drift and runtime ambiguity.
+# =============================================================================
+
+# ---- Ansible connection defaults ----
+ansible_user: admin
+ansible_password: "{{ vault_ansible_password | default('amolla01') }}"
+ansible_become: yes
+ansible_become_method: sudo
+ansible_ssh_common_args: >-
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3
+  {{ proxy_jump_ssh_arg | default('') | trim }}
+
+# ---- Execution safety and controllability ----
+allow_destructive_teardown: false
+teardown_confirmation_token: ""
+
+# ---- Controller execution mode ----
+# laptop: commands run from laptop and hop into R620/R810 if needed.
+controller_execution_mode: laptop
+
+# ---- Service-tier switches (monetization catalog flags) ----
+service_catalog:
+  dedicated_hosting_enabled: true
+  shared_hosting_enabled: true
+  vm_only_service_enabled: true
+  k8_cluster_service_enabled: true
+  premium_firewall_service_enabled: true
+
+# ---- Automation profiles ----
+# Select with either:
+#   export AUTOMATION_PROFILE=<profile>
+#   ansible-playbook ... -e "automation_profile=<profile>"
+automation_profile_supported:
+  - win11_kvm
+  - ubuntu_r620_kvm
+  - ubuntu_r810_kvm
+  - real_hardware
+
+automation_profile: >-
+  {{ lookup('ansible.builtin.env', 'AUTOMATION_PROFILE') | default('ubuntu_r810_kvm', true) }}
+
+automation_profiles:
+  win11_kvm:
+    label: "QEMU/KVM on Windows 11"
+    sonic_platform_override: "x86_64-kvm_x86_64-r0"
+    breakout_supported: false
+    use_conservative_ssh_transport: true
+    enable_sshd_tuning: true
+    enable_swap_hardening: true
+    enable_backup_transport_workaround: true
+    proxy_jump: ""
+    lab_sonic_ram_mb: 2048
+    lab_server_ram_mb: 1024
+    lab_chr_ram_mb: 512
+    lab_sonic_vcpu: 2
+    lab_server_vcpu: 2
+    lab_chr_vcpu: 1
+  ubuntu_r620_kvm:
+    label: "QEMU/KVM on Ubuntu for Dell R620"
+    sonic_platform_override: "x86_64-kvm_x86_64-r0"
+    breakout_supported: false
+    use_conservative_ssh_transport: true
+    enable_sshd_tuning: true
+    enable_swap_hardening: true
+    enable_backup_transport_workaround: true
+    proxy_jump: "nh1221@R620"
+    lab_sonic_ram_mb: 4096
+    lab_server_ram_mb: 8192
+    lab_chr_ram_mb: 1024
+    lab_sonic_vcpu: 2
+    lab_server_vcpu: 4
+    lab_chr_vcpu: 1
+  ubuntu_r810_kvm:
+    label: "QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU)"
+    sonic_platform_override: "x86_64-kvm_x86_64-r0"
+    breakout_supported: false
+    use_conservative_ssh_transport: true
+    enable_sshd_tuning: true
+    enable_swap_hardening: true
+    enable_backup_transport_workaround: true
+    proxy_jump: "nh1221@R810"
+    lab_sonic_ram_mb: 8192
+    lab_server_ram_mb: 16384
+    lab_chr_ram_mb: 2048
+    lab_sonic_vcpu: 4
+    lab_server_vcpu: 8
+    lab_chr_vcpu: 2
+  real_hardware:
+    label: "Real hardware (bare-metal switches + physical servers)"
+    sonic_platform_override: null
+    breakout_supported: true
+    use_conservative_ssh_transport: false
+    enable_sshd_tuning: false
+    enable_swap_hardening: false
+    enable_backup_transport_workaround: false
+    proxy_jump: "{{ proxy_jump_host | default('') }}"
+
+# ---- Derived convenience variables ----
+automation_profile_config: "{{ automation_profiles[automation_profile] | default({}) }}"
+automation_profile_label: "{{ automation_profile_config.label | default(automation_profile) }}"
+is_kvm: "{{ automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] }}"
+breakout_supported: "{{ automation_profile_config.breakout_supported | default(true) }}"
+profile_sonic_platform: "{{ automation_profile_config.sonic_platform_override | default(platform | default('')) }}"
+
+# ---- SONiC SSH transport hardening ----
+sonic_use_conservative_ssh_transport: "{{ automation_profile_config.use_conservative_ssh_transport | default(false) }}"
+sonic_enable_sshd_tuning: "{{ automation_profile_config.enable_sshd_tuning | default(false) }}"
+sonic_enable_swap_hardening: "{{ automation_profile_config.enable_swap_hardening | default(false) }}"
+sonic_enable_backup_transport_workaround: "{{ automation_profile_config.enable_backup_transport_workaround | default(false) }}"
+
+# ---- ProxyJump / SSH Bastion ----
+# The profile dictates which hypervisor to jump through:
+#   ubuntu_r810_kvm → nh1221@R810 (192.168.9.198)
+#   ubuntu_r620_kvm → nh1221@R620 (192.168.9.200)
+#   win11_kvm       → no jump (VMs are local)
+#   real_hardware   → no jump (direct access)
+#
+# Override: export PROXY_JUMP_HOST="nh1221@192.168.9.198"
+#           ansible-playbook ... -e "proxy_jump_host=nh1221@R810"
+proxy_jump_host: "{{ lookup('ansible.builtin.env', 'PROXY_JUMP_HOST') | default('', true) | trim }}"
+proxy_jump_resolved: >-
+  {{
+    (proxy_jump_host | trim) if (proxy_jump_host | trim | length > 0)
+    else (automation_profile_config.proxy_jump | default('')) | trim
+  }}
+proxy_jump_ssh_arg: >-
+  {{ '-o ProxyJump=' + proxy_jump_resolved if proxy_jump_resolved | length > 0 else '' }}
+
+sonic_conservative_ssh_common_args: >-
+  -o ControlMaster=no -o ControlPath=none
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3
+  -o LogLevel=ERROR -o PreferredAuthentications=password
+  -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no
+  -o PasswordAuthentication=yes -o GSSAPIAuthentication=no
+  {{ proxy_jump_ssh_arg }}
+
+# ---- SONiC config paths ----
+sonic_config_db_path: /etc/sonic/config_db.json
+sonic_config_db_backup_dir: /etc/sonic/backup
+
+# ---- Network subnets ----
+management_subnet: "172.16.2.0/24"
+management_gateway: "172.16.2.1"
+idrac_pxe_subnet: "192.168.255.0/25"
+loopback_spine_pool: "10.0.0.0/24"
+loopback_leaf_pool: "10.0.1.0/24"
+loopback_border_pool: "10.0.2.0/24"
+loopback_server_pool: "10.10.255.0/24"
+
+# OOB management policy guardrails
+oob_management_subnet: "172.16.2.0/24"
+oob_management_route_token: "172.16.2."
+
+# ---- Server Management IP Map ----
+server_mgmt_ip_map:
+  Host12_1: "172.16.2.40"
+  Host12_2: "172.16.2.41"
+  Host12_3: "172.16.2.42"
+  Host34_1: "172.16.2.43"
+  Host34_2: "172.16.2.44"
+  HostB12_1: "172.16.2.45"
+  HostB12_2: "172.16.2.46"
+  MonitorSrv: "172.16.2.47"
+
+# iDRAC/PXE addresses (used by MaaS for bare-metal provisioning)
+server_idrac_pxe_map:
+  Host12_1:  { idrac_ip: "192.168.255.11", pxe_mac: "00:00:00:00:00:00" }
+  Host12_2:  { idrac_ip: "192.168.255.12", pxe_mac: "00:00:00:00:00:00" }
+  Host12_3:  { idrac_ip: "192.168.255.13", pxe_mac: "00:00:00:00:00:00" }
+  Host34_1:  { idrac_ip: "192.168.255.21", pxe_mac: "00:00:00:00:00:00" }
+  Host34_2:  { idrac_ip: "192.168.255.22", pxe_mac: "00:00:00:00:00:00" }
+  HostB12_1: { idrac_ip: "192.168.255.31", pxe_mac: "00:00:00:00:00:00" }
+  HostB12_2: { idrac_ip: "192.168.255.32", pxe_mac: "00:00:00:00:00:00" }
+  MonitorSrv: { idrac_ip: "192.168.255.33", pxe_mac: "00:00:00:00:00:00" }
+
+# ---- Server Loopback IP Table (pingable from everywhere via BGP) ----
+server_loopback_map:
+  Host12_1: "10.10.255.1"
+  Host12_2: "10.10.255.2"
+  Host12_3: "10.10.255.3"
+  Host34_1: "10.10.255.11"
+  Host34_2: "10.10.255.12"
+  HostB12_1: "10.10.255.100"
+  HostB12_2: "10.10.255.101"
+  MonitorSrv: "10.10.255.102"
+
+# ---- KVM Lab Interface Naming ----
+kvm_interface_map:
+  mgmt: "enp1s0"
+  fabric0: "enp2s0"
+  fabric1: "enp3s0"
+physical_interface_map:
+  mgmt: "eth0"
+  fabric0: "eth1"
+  fabric1: "eth2"
+
+# ---- eBGP ASN assignments ----
+spine_asn: 65000
+bgp_ecmp_max_paths: "8"
+
+leaf_asn_map:
+  Leaf_L1: 65011
+  Leaf_L2: 65012
+  Leaf_L3: 65013
+  Leaf_L4: 65014
+border_leaf_asn_map:
+  Border_Leaf1: 65021
+  Border_Leaf2: 65022
+exit_router_asn_map:
+  Exit_Router1: 65253
+  Exit_Router2: 65254
+
+# ---- Server ASN assignments (UNIQUE per server — RFC 7938) ----
+server_asn_map:
+  Host12_1: 65101
+  Host12_2: 65102
+  Host12_3: 65103
+  Host34_1: 65104
+  Host34_2: 65105
+  HostB12_1: 65106
+  HostB12_2: 65107
+  MonitorSrv: 65108
+
+# ---- BGP Address Families ----
+bgp_address_families:
+  - "ipv4 unicast"
+  - "l2vpn evpn"
+
+# ---- BGP timers (lab-tuned for fast convergence) ----
+# Lab uses aggressive timers; real_hardware should override with 180/60.
+bgp_unnumbered: true
+bgp_holdtime: "9"
+bgp_keepalive: "3"
+
+# ---- BFD parameters ----
+# Canonical names consumed by config_db_fabric.json.j2 and FRR vtysh templates.
+# Detection time = bfd_rx_interval × bfd_multiplier = 300ms × 3 = 900ms
+bfd_enabled: true
+bfd_tx_interval: "300"
+bfd_rx_interval: "300"
+bfd_multiplier: "3"
+# Legacy aliases (kept for backward-compat; new code uses the names above)
+bfd_desired_tx: "{{ bfd_tx_interval }}"
+bfd_required_rx: "{{ bfd_rx_interval }}"
+bfd_detect_multiplier: "{{ bfd_multiplier }}"
+
+# ---- EVPN Fabric-Wide Settings ----
+evpn_fabric:
+  advertise_all_vni: true
+  arp_nd_suppress: true
+  dup_addr_detection:
+    max_moves: 5
+    time_window: 180
+  bum_handling: "head-end-replication"
+
+# ---- NTP / DNS ----
+ntp_servers:
+  - "0.pool.ntp.org"
+  - "1.pool.ntp.org"
+dns_servers:
+  - "8.8.8.8"
+  - "8.8.4.4"
+
+# ---- Centralized Syslog ----
+syslog_servers:
+  - "10.10.255.102"
+
+# ---- SNMP ----
+snmp_community_ro: "public"
+
+# ---- SONiC version ----
+sonic_version: "202405"
+sonic_minimum_version: "202"
+
+# ---- Proxy settings (KVM lab only) ----
+server_http_proxy: >-
+  {{ 'http://cso.proxy.att.com:8080' if automation_profile == 'win11_kvm'
+     else lookup('env', 'HTTP_PROXY') | default(omit, true) }}
+server_https_proxy: >-
+  {{ 'http://cso.proxy.att.com:8080' if automation_profile == 'win11_kvm'
+     else lookup('env', 'HTTPS_PROXY') | default(omit, true) }}
+
+# ---- Server hardware minimum specs (real hardware validation) ----
+server_min_cpu_cores: 4
+server_min_ram_mb: 8192
+server_min_root_disk_gb: 20
+
+# ---- MaaS ----
+maas_region_controller: "HostB12_1"
+maas_pxe_subnet: "192.168.255.0/25"
+
+# ---- Vault-managed secrets ----
+sonic_admin_password: "{{ vault_ansible_password | default('amolla01') }}"
+sonic_factory_password: "YourPaSsWoRd"
+
+# ---- Localized reusable playbook root ----
+v1_playbook_root: "playbooks/reused"
