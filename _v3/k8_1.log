@@ -1,206 +1,10 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml
-
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml --tags deploy
 
 PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
 
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Check if preflight cache already has KubeSpray] ***********************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Display automation profile] *******************************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg: |-
-        Automation Profile: ubuntu_r810_kvm
-        KubeSpray dir: /opt/fabric-cache/kubespray/src (already cached)
-        Controllers: Host12_1, Host34_1, HostB12_1
-        Workers: Host12_2, Host12_3, Host34_2
-        All kube_nodes: Host12_1, Host34_1, HostB12_1, Host12_2, Host12_3, Host34_2
-
-TASK [Install system packages for KubeSpray] ********************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Clone KubeSpray repository (skipped if preflight cache available)] ****************************************************************************************************************************************
-skipping: [localhost]
-
-TASK [Create Python virtual environment] ************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Install KubeSpray requirements in venv] *******************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Ensure KubeSpray download cache directory exists] *********************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Install Helm binary on deployer] **************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Display KubeSpray readiness] ******************************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg: |-
-        KubeSpray v2.24.1 ready at: /opt/fabric-cache/kubespray/src
-        Virtual env: /opt/fabric-cache/kubespray/venv
-        Helm: /usr/local/bin/helm
-        Helm v3.21.0 is already latest
-        v3.21.0+ge0878d4
-        Profile: ubuntu_r810_kvm
-        Source: preflight cache
-
 PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
 
-TASK [Validate kube_nodes group is populated] *******************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
-    msg: All assertions passed
-
-TASK [Create KubeSpray inventory directory] *********************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Create KubeSpray inventory directory (k8s-cluster)] *******************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Generate KubeSpray k8s-cluster.yml vars] ******************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Generate KubeSpray addons.yml] ****************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Display generated inventory summary] **********************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg: |-
-        KubeSpray inventory generated at: /opt/fabric-cache/kubespray/src/inventory/dc-lab
-        Profile: ubuntu_r810_kvm
-        Controllers (kube_control_plane + etcd): Host12_1, Host34_1, HostB12_1
-        Workers (kube_node): Host12_2, Host12_3, Host34_2
-
 PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [HostB12_1]
-ok: [Host34_1]
-ok: [Host34_2]
-
-TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
-changed: [Host12_1]
-changed: [Host34_1]
-changed: [Host12_2]
-changed: [Host12_3]
-changed: [HostB12_1]
-changed: [Host34_2]
-
-TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
-ok: [Host34_1] => (item=br_netfilter)
-ok: [Host12_1] => (item=br_netfilter)
-ok: [Host12_2] => (item=br_netfilter)
-ok: [Host12_3] => (item=br_netfilter)
-ok: [HostB12_1] => (item=br_netfilter)
-ok: [Host12_1] => (item=overlay)
-ok: [Host34_1] => (item=overlay)
-ok: [Host12_3] => (item=overlay)
-ok: [Host12_2] => (item=overlay)
-ok: [HostB12_1] => (item=overlay)
-ok: [Host12_1] => (item=ip_vs)
-ok: [Host34_1] => (item=ip_vs)
-ok: [Host12_3] => (item=ip_vs)
-ok: [Host12_2] => (item=ip_vs)
-ok: [HostB12_1] => (item=ip_vs)
-ok: [Host12_1] => (item=ip_vs_rr)
-ok: [Host34_1] => (item=ip_vs_rr)
-ok: [Host12_2] => (item=ip_vs_rr)
-ok: [Host12_3] => (item=ip_vs_rr)
-ok: [HostB12_1] => (item=ip_vs_rr)
-ok: [Host12_1] => (item=ip_vs_wrr)
-ok: [Host34_1] => (item=ip_vs_wrr)
-ok: [Host12_2] => (item=ip_vs_wrr)
-ok: [Host12_3] => (item=ip_vs_wrr)
-ok: [HostB12_1] => (item=ip_vs_wrr)
-ok: [Host34_1] => (item=ip_vs_sh)
-ok: [Host12_1] => (item=ip_vs_sh)
-ok: [Host12_3] => (item=ip_vs_sh)
-ok: [Host12_2] => (item=ip_vs_sh)
-ok: [HostB12_1] => (item=ip_vs_sh)
-ok: [Host34_2] => (item=br_netfilter)
-ok: [Host34_2] => (item=overlay)
-ok: [Host34_2] => (item=ip_vs)
-ok: [Host34_2] => (item=ip_vs_rr)
-ok: [Host34_2] => (item=ip_vs_wrr)
-ok: [Host34_2] => (item=ip_vs_sh)
-
-TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host34_1]
-ok: [Host12_3]
-ok: [HostB12_1]
-ok: [Host34_2]
-
-TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host34_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-
-TASK [Install prerequisite packages] ****************************************************************************************************************************************************************************
-ok: [Host34_1]
-ok: [Host12_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [HostB12_1]
-ok: [Host34_2]
-
-TASK [Set hostname to kube_node_name] ***************************************************************************************************************************************************************************
-ok: [HostB12_1]
-ok: [Host12_1]
-ok: [Host34_1]
-ok: [Host12_2]
-ok: [Host12_3]
-ok: [Host34_2]
-
-TASK [preflight_hw | Check disk write latency for etcd (real hardware)] *****************************************************************************************************************************************
-skipping: [Host12_1]
-skipping: [Host34_1]
-skipping: [HostB12_1]
-skipping: [Host12_2]
-skipping: [Host12_3]
-skipping: [Host34_2]
-
-TASK [preflight_hw | Report disk IOPS result] *******************************************************************************************************************************************************************
-skipping: [Host12_1]
-skipping: [Host34_1]
-skipping: [HostB12_1]
-skipping: [Host12_2]
-skipping: [Host12_3]
-skipping: [Host34_2]
 
 PLAY [Phase 4: Execute KubeSpray cluster.yml] *******************************************************************************************************************************************************************
 
@@ -217,38 +21,137 @@ ok: [localhost] =>
 TASK [Clear stale SSH ControlMaster sockets] ********************************************************************************************************************************************************************
 ok: [localhost]
 
-TASK [Verify SSH connectivity before launching kubespray] *******************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:324:7
+TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
+changed: [localhost]
 
-322       changed_when: false
-323
-324     - name: Verify SSH connectivity before launching kubespray
+TASK [Patch kubespray ansible.cfg — SSH args with ProxyJump] ****************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch kubespray ansible.cfg — disable pipelining for sshpass] *********************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:347:7
+
+345       when: proxy_jump_resolved | default('') | length > 0
+346
+347     - name: Run KubeSpray cluster.yml
           ^ column 7
 
 fatal: [localhost]: FAILED! =>
     changed: false
     cmd: |-
-        sshpass -p 'amolla01' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null    -o ConnectTimeout=10 -o PasswordAuthentication=yes -o PubkeyAuthentication=yes    -o ProxyJump=nh1221@R810    ubuntu@172.16.2.40    'echo REACHABLE' 2>&1
-    delta: '0:00:00.118148'
-    end: '2026-06-01 13:37:55.882485'
-    failed_when_result: true
+        set -o pipefail
+        source /opt/fabric-cache/kubespray/venv/bin/activate
+        cd /opt/fabric-cache/kubespray/src
+        ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
+    delta: '0:00:02.363211'
+    end: '2026-06-01 14:11:36.737745'
     msg: non-zero return code
-    rc: 6
-    start: '2026-06-01 13:37:55.764337'
+    rc: 2
+    start: '2026-06-01 14:11:34.374534'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: ''
+    stdout: |-
+        [WARNING]: Skipping callback plugin 'ara_default', unable to load
+
+        PLAY [Check Ansible version] ***************************************************
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.009)       0:00:00.009 ***********
+
+        TASK [Check 2.15.5 <= Ansible version < 2.17.0] ********************************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.023)       0:00:00.032 ***********
+
+        TASK [Check that python netaddr is installed] **********************************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.047)       0:00:00.080 ***********
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-master
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-node
+        [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
+        [WARNING]: Could not match supplied host pattern, ignoring: calico-rr
+        [WARNING]: Could not match supplied host pattern, ignoring: no-floating
+        [WARNING]: Could not match supplied host pattern, ignoring: bastion
+
+        TASK [Check that jinja is not too old (install via pip)] ***********************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+
+        PLAY [Add kube-master nodes to kube_control_plane] *****************************
+        skipping: no hosts matched
+
+        PLAY [Add kube-node nodes to kube_node] ****************************************
+        skipping: no hosts matched
+
+        PLAY [Add k8s-cluster nodes to k8s_cluster] ************************************
+        skipping: no hosts matched
+
+        PLAY [Add calico-rr nodes to calico_rr] ****************************************
+        skipping: no hosts matched
+
+        PLAY [Add no-floating nodes to no_floating] ************************************
+        skipping: no hosts matched
+
+        PLAY [Install bastion ssh config] **********************************************
+        skipping: no hosts matched
+
+        PLAY [Bootstrap hosts for Ansible] *********************************************
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.044)       0:00:00.125 ***********
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.056)       0:00:00.182 ***********
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.093)       0:00:00.276 ***********
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.064)       0:00:00.340 ***********
+        Monday 01 June 2026  14:11:35 -0500 (0:00:00.025)       0:00:00.365 ***********
+        Monday 01 June 2026  14:11:36 -0500 (0:00:00.067)       0:00:00.433 ***********
+        Monday 01 June 2026  14:11:36 -0500 (0:00:00.064)       0:00:00.497 ***********
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Fetch /etc/os-release] ************************************
+        fatal: [host34-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        fatal: [host12-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        fatal: [hostb12-1]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        fatal: [host12-2]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        fatal: [host12-3]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+        fatal: [host34-2]: FAILED! => {"changed": false, "msg": "non-zero return code", "rc": 6, "stderr": "Host key verification failed.\r\n", "stderr_lines": ["Host key verification failed."], "stdout": "", "stdout_lines": []}
+
+        NO MORE HOSTS LEFT *************************************************************
+
+        PLAY RECAP *********************************************************************
+        host12-1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=6    rescued=0    ignored=0
+        host12-2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        host12-3                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        host34-1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        host34-2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        hostb12-1                  : ok=0    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+        localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+        Monday 01 June 2026  14:11:36 -0500 (0:00:00.495)       0:00:00.993 ***********
+        ===============================================================================
+        bootstrap-os : Fetch /etc/os-release ------------------------------------ 0.50s
+        kubespray-defaults : Create fallback_ips_base --------------------------- 0.09s
+        kubespray-defaults : Populates no_proxy to all hosts -------------------- 0.07s
+        kubespray-defaults : Set fallback_ips ----------------------------------- 0.06s
+        kubespray-defaults : Set `etcd_deployment_type` to "kubeadm" if `etcd_kubeadm_enabled` is true --- 0.06s
+        kubespray-defaults : Gather ansible_default_ipv4 from all hosts --------- 0.06s
+        Check that python netaddr is installed ---------------------------------- 0.05s
+        Check that jinja is not too old (install via pip) ----------------------- 0.04s
+        kubespray-defaults : Set no_proxy to all assigned cluster IPs and hostnames --- 0.03s
+        Check 2.15.5 <= Ansible version < 2.17.0 -------------------------------- 0.02s
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-Host12_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-Host12_3                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-Host34_1                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-Host34_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-HostB12_1                  : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-localhost                  : ok=19   changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+localhost                  : ok=5    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
