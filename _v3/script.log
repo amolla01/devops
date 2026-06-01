@@ -1,8 +1,7 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cd /mnt/c/Users/nh1221/data-center/scripts
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ chmod +x setup_ssh_config.sh
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ ./setup_ssh_config.sh
 [INFO]  Setting up dynamic ProxyJump in /home/nh1221/.ssh/config
-[INFO]  Backup: /home/nh1221/.ssh/config.bak.20260601_103928
+[INFO]  Backup: /home/nh1221/.ssh/config.bak.20260601_104804
+[WARN]  Removing previous managed block...
 [ OK ]  SSH config updated.
 
 [INFO]  Profile-based routing:
@@ -14,10 +13,585 @@
 
 [WARN]  Found existing Host wildcard lines outside the managed block.
 [WARN]  These may conflict. Review and remove any duplicate entries below the managed block.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ export AUTOMATION_PROFILE=ubuntu_r810_kvm
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ ssh Spine_S1
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
+Debian GNU/Linux 12 \n \l
+
+admin@172.16.2.11's password:
+Permission denied, please try again.
+admin@172.16.2.11's password:
+Received disconnect from UNKNOWN port 65535:2: Too many authentication failures
+Disconnected from UNKNOWN port 65535
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ ssh Host12_1
-/bin/bash: line 2: [: missing `]'
-Missing Match criteria for ${AUTOMATION_PROFILE:-ubuntu_r810_kvm}\\ = 'ubuntu_r620_kvm' ]
-/home/nh1221/.ssh/config line 20: Bad Match condition
-/home/nh1221/.ssh/config: terminating, 1 bad configuration options
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+ubuntu@172.16.2.40's password:
+Permission denied, please try again.
+ubuntu@172.16.2.40's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Mon Jun  1 15:49:14 UTC 2026
+
+  System load:  0.0                Processes:               205
+  Usage of /:   10.5% of 18.33GB   Users logged in:         1
+  Memory usage: 1%                 IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+13 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+ubuntu@ubuntu:~$ exit
+logout
+Connection to 172.16.2.40 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml --limit servers
+[ERROR]: the playbook: playbooks/reused/audit_topology_interfaces.yml could not be found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/scripts$ cd ../_v3
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/audit_topology_interfaces.yml -i inventory/hosts.yml --limit servers
+
+PLAY [Audit — SONiC Switch Interface & BGP/BFD State] ***********************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY [Audit — MikroTik Exit Router Interface & BGP State] *******************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY [Audit — Server Interface & FRR BGP/BFD State] *************************************************************************************************************************************************************
+
+TASK [Server Audit | Collect all non-loopback interface state] **************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_2]
+ok: [Host34_1]
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_2]
+
+TASK [Server Audit | Collect all non-loopback interface state] **************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect IPv4 addresses on fabric interfaces] ***********************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect IPv6 link-local addresses (fabric unnumbered)] *************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [HostB12_1]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [HostB12_2]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_1  (172.16.2.40)
+        TYPE   : Ubuntu Server  |  ASN: 65101
+        LOOPBACK: 10.10.255.1/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:f8:9d:7e
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:df:fc:7c
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:88:6e:f9
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.40/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 3095sec preferred_lft 3095sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fef8:9d7e/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect BGP summary (FRR)] *****************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_2]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_2  (172.16.2.41)
+        TYPE   : Ubuntu Server  |  ASN: 65102
+        LOOPBACK: 10.10.255.2/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:35:88:a6
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:53:19:80
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:2b:9d:47
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.41/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2208sec preferred_lft 2208sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe35:88a6/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect BFD peer sessions (FRR)] ***********************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host34_1]
+
+TASK [Server Audit | Collect FRR running config] ****************************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host34_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host34_1  (172.16.2.43)
+        TYPE   : Ubuntu Server  |  ASN: 65104
+        LOOPBACK: 10.10.255.11/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:75:20:e1
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:8f:e1:be
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:dd:48:d9
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.43/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2507sec preferred_lft 2507sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe75:20e1/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [Host12_3] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host12_3  (172.16.2.42)
+        TYPE   : Ubuntu Server  |  ASN: 65103
+        LOOPBACK: 10.10.255.3/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:6c:e8:6f
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:f2:41:a8
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:b5:79:30
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.42/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2428sec preferred_lft 2428sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe6c:e86f/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+ok: [Host34_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : Host34_2  (172.16.2.44)
+        TYPE   : Ubuntu Server  |  ASN: 65105
+        LOOPBACK: 10.10.255.12/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:eb:62:95
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:c7:d8:8d
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:1f:4c:c6
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.44/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2300sec preferred_lft 2300sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:feeb:6295/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [HostB12_1]
+ok: [HostB12_2]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [HostB12_1] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : HostB12_1  (172.16.2.45)
+        TYPE   : Ubuntu Server  |  ASN: 65106
+        LOOPBACK: 10.10.255.100/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:9b:ad:64
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:f9:61:95
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:8e:e9:0a
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.45/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2000sec preferred_lft 2000sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe9b:ad64/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+ok: [HostB12_2] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : HostB12_2  (172.16.2.46)
+        TYPE   : Ubuntu Server  |  ASN: 65107
+        LOOPBACK: 10.10.255.101/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:4a:ce:25
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:a1:1e:4f
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:40:94:f3
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.46/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 2151sec preferred_lft 2151sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fe4a:ce25/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+TASK [Server Audit | Collect loopback prefix advertisements] ****************************************************************************************************************************************************
+ok: [MonitorSrv]
+
+TASK [Server Audit | Display results for Host12_1] **************************************************************************************************************************************************************
+ok: [MonitorSrv] =>
+    msg: |-
+        ════════════════════════════════════════════════════════════════════
+        DEVICE : MonitorSrv  (172.16.2.47)
+        TYPE   : Ubuntu Server  |  ASN: 65108
+        LOOPBACK: 10.10.255.102/32
+        ════════════════════════════════════════════════════════════════════
+
+        ── LINK STATE ─────────────────────────────────────────────────────
+        enp1s0           state=UP     mtu=1500   mac=52:54:00:e9:4d:19
+        enp2s0           state=DOWN   mtu=1500   mac=52:54:00:b2:f6:fe
+        enp3s0           state=DOWN   mtu=1500   mac=52:54:00:ad:20:a0
+
+        ── IPv4 ADDRESSES ─────────────────────────────────────────────────
+        1: lo    inet 127.0.0.1/8 scope host lo\       valid_lft forever preferred_lft forever
+        2: enp1s0    inet 172.16.2.47/24 metric 100 brd 172.16.2.255 scope global dynamic enp1s0\       valid_lft 3016sec preferred_lft 3016sec
+
+        ── IPv6 LINK-LOCAL (fabric unnumbered BGP) ────────────────────────
+        2: enp1s0    inet6 fe80::5054:ff:fee9:4d19/64 scope link \       valid_lft forever preferred_lft forever
+
+        ── LOOPBACK ───────────────────────────────────────────────────────
+        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+            link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+            inet 127.0.0.1/8 scope host lo
+               valid_lft forever preferred_lft forever
+            inet6 ::1/128 scope host noprefixroute
+               valid_lft forever preferred_lft forever
+
+        ── BGP SUMMARY (FRR) ──────────────────────────────────────────────
+
+
+        ── BFD PEERS (FRR bfdd) ───────────────────────────────────────────
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_2                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_3                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_2                  : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+MonitorSrv                 : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_day1.yml -i inventory/hosts.yml --limit servers --tags identity
+
+PLAY [Day-1 Fabric Wiring — SONiC Switches] *********************************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY [Day-1 BGP Wiring — MikroTik Exit Routers] *****************************************************************************************************************************************************************
+skipping: no hosts matched
+
+PLAY [Day-1 Network Wiring — Ubuntu Servers] ********************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_3]
+ok: [Host12_2]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [HostB12_1]
+ok: [MonitorSrv]
+ok: [HostB12_2]
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_2                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_3                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_2                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+MonitorSrv                 : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible -i inventory/hosts.yml servers -m command -a "hostname"
+Host12_1 | CHANGED | rc=0 >>
+ubuntu
+Host34_1 | CHANGED | rc=0 >>
+ubuntu
+Host12_3 | CHANGED | rc=0 >>
+ubuntu
+Host34_2 | CHANGED | rc=0 >>
+ubuntu
+Host12_2 | CHANGED | rc=0 >>
+ubuntu
+HostB12_1 | CHANGED | rc=0 >>
+ubuntu
+MonitorSrv | CHANGED | rc=0 >>
+MonitorSrv
+HostB12_2 | CHANGED | rc=0 >>
+ubuntu
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+ubuntu@172.16.2.40's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Mon Jun  1 15:53:58 UTC 2026
+
+  System load:  0.02               Processes:               209
+  Usage of /:   10.5% of 18.33GB   Users logged in:         1
+  Memory usage: 2%                 IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+13 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Last login: Mon Jun  1 15:49:14 2026 from 172.16.2.1
+ubuntu@ubuntu:~$ exit
+logout
+Connection to 172.16.2.40 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh Host12_1
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Warning: Permanently added '172.16.2.40' (ED25519) to the list of known hosts.
+ubuntu@172.16.2.40's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Mon Jun  1 15:55:06 UTC 2026
+
+  System load:  0.0                Processes:               209
+  Usage of /:   10.5% of 18.33GB   Users logged in:         1
+  Memory usage: 1%                 IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+13 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Last login: Mon Jun  1 15:54:32 2026 from 172.16.2.1
+ubuntu@ubuntu:~$
