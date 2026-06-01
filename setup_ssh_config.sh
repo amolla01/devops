@@ -78,7 +78,7 @@ Host R620 dc-hypervisor
 
 # ─── Lab VMs: dynamic ProxyJump via AUTOMATION_PROFILE ─────────────────────────
 # If AUTOMATION_PROFILE=ubuntu_r620_kvm → jump through R620
-Match host ${VM_PATTERNS} exec "[ \"\${AUTOMATION_PROFILE:-ubuntu_r810_kvm}\" = 'ubuntu_r620_kvm' ]"
+Match host ${VM_PATTERNS} exec "[ \${AUTOMATION_PROFILE:-ubuntu_r810_kvm} = ubuntu_r620_kvm ]"
     ProxyJump R620
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
