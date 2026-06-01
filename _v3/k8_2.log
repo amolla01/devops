@@ -1,3 +1,4 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd _v3
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml --tags verify
 
 PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
@@ -11,25 +12,26 @@ PLAY [Phase 4: Execute KubeSpray cluster.yml] **********************************
 PLAY [Phase 5: Verify Kubernetes Cluster] ***********************************************************************************************************************************************************************
 
 TASK [Create .kube directory] ***********************************************************************************************************************************************************************************
-[ERROR]: Task failed: Data could not be sent to remote host "172.16.2.40". Make sure this host can be reached over ssh: channel 0: open failed: connect failed: No route to host
-stdio forwarding failed
-Connection closed by UNKNOWN port 65535
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:347:7
+ok: [Host12_1]
 
-345     kube_user: "{{ ansible_user | default('ubuntu') }}"
-346   tasks:
-347     - name: Create .kube directory
+TASK [Check admin.conf exists] **********************************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Fail early if kubeconfig missing] *************************************************************************************************************************************************************************
+[ERROR]: Task failed: Action failed: /etc/kubernetes/admin.conf not found on Host12_1. KubeSpray likely failed during Phase 4 — check /tmp/kubespray_deploy.log on the deployer.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:377:7
+
+375       register: _admin_conf
+376
+377     - name: Fail early if kubeconfig missing
           ^ column 7
 
-fatal: [Host12_1]: UNREACHABLE! =>
+fatal: [Host12_1]: FAILED! =>
     changed: false
-    msg: |-
-        Task failed: Data could not be sent to remote host "172.16.2.40". Make sure this host can be reached over ssh: channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
+    msg: /etc/kubernetes/admin.conf not found on Host12_1. KubeSpray likely failed during
+        Phase 4 — check /tmp/kubespray_deploy.log on the deployer.
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12_1                   : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
