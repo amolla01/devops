@@ -12,7 +12,7 @@ TASK [Display automation profile] **********************************************
 ok: [localhost] =>
     msg: |-
         Automation Profile: ubuntu_r810_kvm
-        KubeSpray dir: /opt/fabric-cache/kubespray/src (already cached)
+        KubeSpray dir: /opt/fabric-cache/kubespray/src (will clone from GitHub)
         Controllers: Host12_1, Host34_1, HostB12_1
         Workers: Host12_2, Host12_3, Host34_2
         All kube_nodes: Host12_1, Host34_1, HostB12_1, Host12_2, Host12_3, Host34_2
@@ -21,13 +21,13 @@ TASK [Install system packages for KubeSpray] ***********************************
 ok: [localhost]
 
 TASK [Clone KubeSpray repository (skipped if preflight cache available)] ****************************************************************************************************************************************
-skipping: [localhost]
+changed: [localhost]
 
 TASK [Create Python virtual environment] ************************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Install KubeSpray requirements in venv] *******************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Ensure KubeSpray download cache directory exists] *********************************************************************************************************************************************************
 ok: [localhost]
@@ -38,13 +38,13 @@ ok: [localhost]
 TASK [Display KubeSpray readiness] ******************************************************************************************************************************************************************************
 ok: [localhost] =>
     msg: |-
-        KubeSpray v2.24.1 ready at: /opt/fabric-cache/kubespray/src
+        KubeSpray v2.25.0 ready at: /opt/fabric-cache/kubespray/src
         Virtual env: /opt/fabric-cache/kubespray/venv
         Helm: /usr/local/bin/helm
         Helm v3.21.0 is already latest
         v3.21.0+ge0878d4
         Profile: ubuntu_r810_kvm
-        Source: preflight cache
+        Source: cloned from GitHub
 
 PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
 
@@ -54,22 +54,22 @@ ok: [localhost] =>
     msg: All assertions passed
 
 TASK [Create KubeSpray inventory directory] *********************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Create KubeSpray inventory directory (k8s-cluster)] *******************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Generate KubeSpray k8s-cluster.yml vars] ******************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Generate KubeSpray addons.yml] ****************************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Display generated inventory summary] **********************************************************************************************************************************************************************
 ok: [localhost] =>
@@ -84,49 +84,49 @@ PLAY [Phase 3: Prepare All Kubernetes Nodes] ***********************************
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
 ok: [Host12_1]
 ok: [Host34_1]
-ok: [Host12_2]
 ok: [HostB12_1]
+ok: [Host12_2]
 ok: [Host12_3]
 ok: [Host34_2]
 
 TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
-changed: [Host12_1]
 changed: [Host34_1]
-changed: [HostB12_1]
+changed: [Host12_1]
 changed: [Host12_2]
+changed: [HostB12_1]
 changed: [Host12_3]
 changed: [Host34_2]
 
 TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
-ok: [Host12_1] => (item=br_netfilter)
 ok: [Host34_1] => (item=br_netfilter)
 ok: [Host12_3] => (item=br_netfilter)
 ok: [HostB12_1] => (item=br_netfilter)
 ok: [Host12_2] => (item=br_netfilter)
-ok: [Host12_1] => (item=overlay)
+ok: [Host12_1] => (item=br_netfilter)
 ok: [Host34_1] => (item=overlay)
 ok: [Host12_3] => (item=overlay)
-ok: [HostB12_1] => (item=overlay)
 ok: [Host12_2] => (item=overlay)
-ok: [Host12_1] => (item=ip_vs)
+ok: [HostB12_1] => (item=overlay)
+ok: [Host12_1] => (item=overlay)
 ok: [Host34_1] => (item=ip_vs)
 ok: [Host12_3] => (item=ip_vs)
 ok: [HostB12_1] => (item=ip_vs)
 ok: [Host12_2] => (item=ip_vs)
-ok: [Host12_1] => (item=ip_vs_rr)
+ok: [Host12_1] => (item=ip_vs)
 ok: [Host34_1] => (item=ip_vs_rr)
 ok: [Host12_3] => (item=ip_vs_rr)
 ok: [HostB12_1] => (item=ip_vs_rr)
 ok: [Host12_2] => (item=ip_vs_rr)
-ok: [Host12_1] => (item=ip_vs_wrr)
+ok: [Host12_1] => (item=ip_vs_rr)
 ok: [Host34_1] => (item=ip_vs_wrr)
 ok: [Host12_3] => (item=ip_vs_wrr)
 ok: [HostB12_1] => (item=ip_vs_wrr)
 ok: [Host12_2] => (item=ip_vs_wrr)
-ok: [Host12_1] => (item=ip_vs_sh)
+ok: [Host12_1] => (item=ip_vs_wrr)
 ok: [Host34_1] => (item=ip_vs_sh)
 ok: [Host12_3] => (item=ip_vs_sh)
 ok: [HostB12_1] => (item=ip_vs_sh)
+ok: [Host12_1] => (item=ip_vs_sh)
 ok: [Host12_2] => (item=ip_vs_sh)
 ok: [Host34_2] => (item=br_netfilter)
 ok: [Host34_2] => (item=overlay)
@@ -138,51 +138,51 @@ ok: [Host34_2] => (item=ip_vs_sh)
 TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
 ok: [Host12_1]
 ok: [Host34_1]
-ok: [HostB12_1]
-ok: [Host12_2]
 ok: [Host12_3]
+ok: [Host12_2]
+ok: [HostB12_1]
 ok: [Host34_2]
 
 TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
 ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
+ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
+ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 
 TASK [Install prerequisite packages] ****************************************************************************************************************************************************************************
-ok: [HostB12_1]
-ok: [Host12_1]
-ok: [Host12_2]
 ok: [Host34_1]
+ok: [Host12_1]
+ok: [HostB12_1]
 ok: [Host12_3]
+ok: [Host12_2]
 ok: [Host34_2]
 
 TASK [Set hostname to kube_node_name] ***************************************************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host34_1]
-ok: [Host12_3]
 ok: [HostB12_1]
+ok: [Host12_1]
+ok: [Host12_3]
 ok: [Host12_2]
+ok: [Host34_1]
 ok: [Host34_2]
 
 TASK [preflight_hw | Check disk write latency for etcd (real hardware)] *****************************************************************************************************************************************
@@ -217,10 +217,10 @@ TASK [Clear stale SSH ControlMaster sockets] ***********************************
 ok: [localhost]
 
 TASK [Write ProxyCommand wrapper script for R810 hop] ***********************************************************************************************************************************************************
-changed: [localhost]
+ok: [localhost]
 
 TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Patch kubespray ansible.cfg — SSH args via ProxyCommand script] *******************************************************************************************************************************************
 changed: [localhost]
@@ -229,15 +229,15 @@ TASK [Patch kubespray ansible.cfg — SSH args (no proxy)] *********************
 skipping: [localhost]
 
 TASK [Patch kubespray ansible.cfg — disable pipelining] *********************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
 [ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:385:7
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:391:7
 
-383         insertafter: '^\[ssh_connection\]'
-384
-385     - name: Run KubeSpray cluster.yml
+389         insertafter: '^\[ssh_connection\]'
+390
+391     - name: Run KubeSpray cluster.yml
           ^ column 7
 
 fatal: [localhost]: FAILED! =>
@@ -247,32 +247,35 @@ fatal: [localhost]: FAILED! =>
         source /opt/fabric-cache/kubespray/venv/bin/activate
         cd /opt/fabric-cache/kubespray/src
         ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
-    delta: '0:05:33.104438'
-    end: '2026-06-01 15:01:10.033055'
+    delta: '0:50:17.447683'
+    end: '2026-06-01 17:12:43.515317'
     msg: non-zero return code
     rc: 2
-    start: '2026-06-01 14:55:36.928617'
+    start: '2026-06-01 16:22:26.067634'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
+        [WARNING]: While constructing a mapping from /opt/fabric-
+        cache/kubespray/src/roles/bootstrap-os/tasks/main.yml, line 29, column 7, found
+        a duplicate dict key (paths). Using last defined value only.
         [WARNING]: Skipping callback plugin 'ara_default', unable to load
 
         PLAY [Check Ansible version] ***************************************************
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.016)       0:00:00.016 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.015)       0:00:00.016 ***********
 
-        TASK [Check 2.15.5 <= Ansible version < 2.17.0] ********************************
-        ok: [localhost] => {
+        TASK [Check 2.16.4 <= Ansible version < 2.17.0] ********************************
+        ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.026)       0:00:00.042 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.027)       0:00:00.043 ***********
 
         TASK [Check that python netaddr is installed] **********************************
-        ok: [localhost] => {
+        ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.077)       0:00:00.120 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.052)       0:00:00.095 ***********
         [WARNING]: Could not match supplied host pattern, ignoring: kube-master
         [WARNING]: Could not match supplied host pattern, ignoring: kube-node
         [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
@@ -281,7 +284,7 @@ fatal: [localhost]: FAILED! =>
         [WARNING]: Could not match supplied host pattern, ignoring: bastion
 
         TASK [Check that jinja is not too old (install via pip)] ***********************
-        ok: [localhost] => {
+        ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
@@ -305,135 +308,59 @@ fatal: [localhost]: FAILED! =>
         skipping: no hosts matched
 
         PLAY [Bootstrap hosts for Ansible] *********************************************
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.042)       0:00:00.163 ***********
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.126)       0:00:00.289 ***********
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.027)       0:00:00.317 ***********
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.063)       0:00:00.380 ***********
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.026)       0:00:00.407 ***********
-        Monday 01 June 2026  14:55:38 -0500 (0:00:00.067)       0:00:00.474 ***********
-        Monday 01 June 2026  14:55:39 -0500 (0:00:00.067)       0:00:00.542 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.056)       0:00:00.152 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.089)       0:00:00.241 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.028)       0:00:00.270 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.093)       0:00:00.364 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.027)       0:00:00.391 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.094)       0:00:00.485 ***********
+        Monday 01 June 2026  16:22:27 -0500 (0:00:00.150)       0:00:00.635 ***********
         [WARNING]: raw module does not support the environment keyword
 
         TASK [bootstrap-os : Fetch /etc/os-release] ************************************
         ok: [host12-1]
         ok: [hostb12-1]
+        ok: [host12-2]
         ok: [host34-1]
         ok: [host12-3]
-        ok: [host12-2]
         ok: [host34-2]
-        Monday 01 June 2026  14:55:41 -0500 (0:00:02.213)       0:00:02.756 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.063)       0:00:02.819 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.058)       0:00:02.878 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.055)       0:00:02.933 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.051)       0:00:02.985 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.054)       0:00:03.040 ***********
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.052)       0:00:03.092 ***********
+        Monday 01 June 2026  16:22:30 -0500 (0:00:02.275)       0:00:02.911 ***********
+        Monday 01 June 2026  16:22:30 -0500 (0:00:00.122)       0:00:03.034 ***********
 
-        TASK [bootstrap-os : Bootstrap Debian] *****************************************
-        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/bootstrap-debian.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
-        Monday 01 June 2026  14:55:41 -0500 (0:00:00.076)       0:00:03.168 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
+        TASK [bootstrap-os : Include tasks] ********************************************
+        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2 => (item=/opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml)
+        Monday 01 June 2026  16:22:30 -0500 (0:00:00.253)       0:00:03.287 ***********
 
         TASK [bootstrap-os : Check if bootstrap is needed] *****************************
         ok: [host12-1]
-        ok: [host12-3]
-        ok: [hostb12-1]
         ok: [host34-1]
+        ok: [host12-3]
         ok: [host12-2]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Monday 01 June 2026  14:55:43 -0500 (0:00:01.831)       0:00:05.000 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
+        Monday 01 June 2026  16:22:32 -0500 (0:00:01.936)       0:00:05.223 ***********
 
         TASK [bootstrap-os : Check http::proxy in apt configuration files] *************
         ok: [host12-1]
         ok: [host34-1]
         ok: [host12-3]
-        ok: [host12-2]
         ok: [hostb12-1]
+        ok: [host12-2]
         ok: [host34-2]
-        Monday 01 June 2026  14:55:44 -0500 (0:00:00.976)       0:00:05.977 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-
-        TASK [bootstrap-os : Add http_proxy to /etc/apt/apt.conf if http_proxy is defined] ***
-        changed: [host12-1]
-        changed: [host12-3]
-        changed: [hostb12-1]
-        changed: [host34-1]
-        changed: [host12-2]
-        changed: [host34-2]
-        Monday 01 June 2026  14:55:46 -0500 (0:00:01.964)       0:00:07.941 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
+        Monday 01 June 2026  16:22:34 -0500 (0:00:01.904)       0:00:07.128 ***********
+        Monday 01 June 2026  16:22:34 -0500 (0:00:00.133)       0:00:07.261 ***********
 
         TASK [bootstrap-os : Check https::proxy in apt configuration files] ************
-        ok: [host12-3]
         ok: [hostb12-1]
-        ok: [host12-1]
+        ok: [host12-3]
         ok: [host12-2]
-        ok: [host34-1]
-        ok: [host34-2]
-        Monday 01 June 2026  14:55:48 -0500 (0:00:02.071)       0:00:10.013 ***********
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-        [WARNING]: raw module does not support the environment keyword
-
-        TASK [bootstrap-os : Add https_proxy to /etc/apt/apt.conf if https_proxy is defined] ***
-        changed: [host12-1]
-        changed: [host12-3]
-        changed: [hostb12-1]
-        changed: [host12-2]
-        changed: [host34-1]
-        changed: [host34-2]
-        Monday 01 June 2026  14:55:51 -0500 (0:00:02.713)       0:00:12.727 ***********
-        Monday 01 June 2026  14:55:51 -0500 (0:00:00.056)       0:00:12.783 ***********
-        Monday 01 June 2026  14:55:51 -0500 (0:00:00.052)       0:00:12.836 ***********
-
-        TASK [bootstrap-os : Set the ansible_python_interpreter fact] ******************
         ok: [host12-1]
         ok: [host34-1]
-        ok: [hostb12-1]
-        ok: [host12-2]
-        ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  14:55:51 -0500 (0:00:00.074)       0:00:12.911 ***********
-
-        TASK [bootstrap-os : Install dbus for the hostname module] *********************
-        ok: [host12-1]
-        ok: [host12-3]
-        ok: [host34-1]
-        ok: [hostb12-1]
-        ok: [host12-2]
-        ok: [host34-2]
-        Monday 01 June 2026  14:56:07 -0500 (0:00:16.487)       0:00:29.399 ***********
-        Monday 01 June 2026  14:56:07 -0500 (0:00:00.055)       0:00:29.454 ***********
-        Monday 01 June 2026  14:56:08 -0500 (0:00:00.057)       0:00:29.511 ***********
+        Monday 01 June 2026  16:22:36 -0500 (0:00:02.051)       0:00:09.313 ***********
+        Monday 01 June 2026  16:22:36 -0500 (0:00:00.090)       0:00:09.403 ***********
+        Monday 01 June 2026  16:22:36 -0500 (0:00:00.080)       0:00:09.484 ***********
+        Monday 01 June 2026  16:22:36 -0500 (0:00:00.182)       0:00:09.666 ***********
 
         TASK [bootstrap-os : Create remote_tmp for it is used by another module] *******
         ok: [host12-1]
@@ -442,73 +369,71 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host34-1]
         ok: [host34-2]
-        Monday 01 June 2026  14:56:20 -0500 (0:00:12.005)       0:00:41.517 ***********
+        Monday 01 June 2026  16:22:52 -0500 (0:00:15.317)       0:00:24.984 ***********
 
-        TASK [bootstrap-os : Gather host facts to get ansible_os_family] ***************
+        TASK [bootstrap-os : Gather facts] *********************************************
         ok: [host34-1]
-        ok: [host12-3]
-        ok: [host12-1]
         ok: [host12-2]
+        ok: [host12-3]
         ok: [hostb12-1]
+        ok: [host12-1]
         ok: [host34-2]
-        Monday 01 June 2026  14:56:34 -0500 (0:00:14.231)       0:00:55.748 ***********
+        Monday 01 June 2026  16:23:07 -0500 (0:00:15.047)       0:00:40.032 ***********
 
         TASK [bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora)] ***
         ok: [host34-1]
+        ok: [hostb12-1]
         ok: [host12-3]
         ok: [host12-1]
-        ok: [hostb12-1]
         ok: [host12-2]
         ok: [host34-2]
-        Monday 01 June 2026  14:56:48 -0500 (0:00:13.839)       0:01:09.588 ***********
-        Monday 01 June 2026  14:56:48 -0500 (0:00:00.062)       0:01:09.651 ***********
-        Monday 01 June 2026  14:56:48 -0500 (0:00:00.065)       0:01:09.717 ***********
-        Monday 01 June 2026  14:56:48 -0500 (0:00:00.070)       0:01:09.787 ***********
+        Monday 01 June 2026  16:23:22 -0500 (0:00:15.015)       0:00:55.048 ***********
+        Monday 01 June 2026  16:23:22 -0500 (0:00:00.157)       0:00:55.205 ***********
 
         TASK [bootstrap-os : Ensure bash_completion.d folder exists] *******************
         ok: [host34-1]
-        ok: [host12-3]
         ok: [host12-1]
-        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
         ok: [host34-2]
 
         PLAY [Gather facts] ************************************************************
-        Monday 01 June 2026  14:57:01 -0500 (0:00:13.418)       0:01:23.205 ***********
+        Monday 01 June 2026  16:23:34 -0500 (0:00:11.864)       0:01:07.070 ***********
 
         TASK [Gather minimal facts] ****************************************************
         ok: [host12-1]
         ok: [host34-1]
-        ok: [host12-3]
-        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  14:57:15 -0500 (0:00:13.614)       0:01:36.820 ***********
+        Monday 01 June 2026  16:23:48 -0500 (0:00:14.257)       0:01:21.327 ***********
 
         TASK [Gather necessary facts (network)] ****************************************
         ok: [host12-1]
-        ok: [host34-1]
         ok: [host12-3]
         ok: [host12-2]
         ok: [hostb12-1]
+        ok: [host34-1]
         ok: [host34-2]
-        Monday 01 June 2026  14:57:28 -0500 (0:00:13.641)       0:01:50.462 ***********
+        Monday 01 June 2026  16:24:03 -0500 (0:00:14.485)       0:01:35.813 ***********
 
         TASK [Gather necessary facts (hardware)] ***************************************
         ok: [host34-1]
         ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host12-3]
         ok: [host12-2]
-        ok: [hostb12-1]
         ok: [host34-2]
 
         PLAY [Prepare for etcd install] ************************************************
-        Monday 01 June 2026  14:57:44 -0500 (0:00:15.412)       0:02:05.874 ***********
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.101)       0:02:05.976 ***********
+        Monday 01 June 2026  16:24:18 -0500 (0:00:15.476)       0:01:51.289 ***********
+        Monday 01 June 2026  16:24:18 -0500 (0:00:00.193)       0:01:51.483 ***********
 
         TASK [kubespray-defaults : Create fallback_ips_base] ***************************
         ok: [host12-1 -> localhost]
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.047)       0:02:06.023 ***********
+        Monday 01 June 2026  16:24:18 -0500 (0:00:00.070)       0:01:51.553 ***********
 
         TASK [kubespray-defaults : Set fallback_ips] ***********************************
         ok: [host12-1]
@@ -517,100 +442,71 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.092)       0:02:06.115 ***********
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.032)       0:02:06.148 ***********
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.088)       0:02:06.237 ***********
-        Monday 01 June 2026  14:57:44 -0500 (0:00:00.086)       0:02:06.323 ***********
+        Monday 01 June 2026  16:24:18 -0500 (0:00:00.132)       0:01:51.686 ***********
+        Monday 01 June 2026  16:24:19 -0500 (0:00:00.035)       0:01:51.721 ***********
+        Monday 01 June 2026  16:24:19 -0500 (0:00:00.153)       0:01:51.875 ***********
+        Monday 01 June 2026  16:24:19 -0500 (0:00:00.127)       0:01:52.002 ***********
 
         TASK [adduser : User | Create User Group] **************************************
-        changed: [host12-2]
-        changed: [host34-1]
-        changed: [hostb12-1]
-        changed: [host12-3]
-        changed: [host12-1]
-        changed: [host34-2]
-        Monday 01 June 2026  14:57:58 -0500 (0:00:13.504)       0:02:19.828 ***********
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:24:31 -0500 (0:00:11.895)       0:02:03.898 ***********
 
         TASK [adduser : User | Create User] ********************************************
-        changed: [host12-3]
-        changed: [host34-1]
-        changed: [host12-1]
-        changed: [host12-2]
-        changed: [hostb12-1]
-        changed: [host34-2]
-        Monday 01 June 2026  14:58:13 -0500 (0:00:15.028)       0:02:34.857 ***********
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:24:44 -0500 (0:00:12.955)       0:02:16.853 ***********
 
         TASK [kubernetes/preinstall : Check if /etc/fstab exists] **********************
-        ok: [hostb12-1]
+        ok: [host12-1]
         ok: [host12-3]
         ok: [host34-1]
-        ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host12-2]
         ok: [host34-2]
-        Monday 01 June 2026  14:58:27 -0500 (0:00:14.311)       0:02:49.168 ***********
+        Monday 01 June 2026  16:24:56 -0500 (0:00:12.775)       0:02:29.629 ***********
 
         TASK [kubernetes/preinstall : Remove swapfile from /etc/fstab] *****************
-        ok: [host34-1] => (item=swap)
         ok: [host12-1] => (item=swap)
         ok: [host12-3] => (item=swap)
-        ok: [host12-2] => (item=swap)
         ok: [hostb12-1] => (item=swap)
-        ok: [host34-1] => (item=none)
+        ok: [host12-2] => (item=swap)
+        ok: [host34-1] => (item=swap)
         ok: [host12-1] => (item=none)
+        ok: [host34-1] => (item=none)
         ok: [host12-3] => (item=none)
-        ok: [host12-2] => (item=none)
         ok: [hostb12-1] => (item=none)
+        ok: [host12-2] => (item=none)
         ok: [host34-2] => (item=swap)
         ok: [host34-2] => (item=none)
-        Monday 01 June 2026  14:58:52 -0500 (0:00:24.792)       0:03:13.960 ***********
+        Monday 01 June 2026  16:25:22 -0500 (0:00:25.139)       0:02:54.769 ***********
 
         TASK [kubernetes/preinstall : Mask swap.target (persist swapoff)] **************
-        changed: [host12-1]
-        changed: [host34-1]
-        changed: [hostb12-1]
-        changed: [host12-3]
-        changed: [host12-2]
-        changed: [host34-2]
-        Monday 01 June 2026  14:59:07 -0500 (0:00:15.264)       0:03:29.225 ***********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:25:35 -0500 (0:00:13.196)       0:03:07.965 ***********
 
         TASK [kubernetes/preinstall : Disable swap] ************************************
-        changed: [host12-3]
-        changed: [hostb12-1]
-        changed: [host12-2]
-        changed: [host34-1]
         changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
         changed: [host34-2]
-        Monday 01 June 2026  14:59:20 -0500 (0:00:12.519)       0:03:41.745 ***********
-        Monday 01 June 2026  14:59:20 -0500 (0:00:00.065)       0:03:41.810 ***********
-        Monday 01 June 2026  14:59:20 -0500 (0:00:00.065)       0:03:41.876 ***********
-        Monday 01 June 2026  14:59:20 -0500 (0:00:00.064)       0:03:41.941 ***********
-
-        TASK [kubernetes/preinstall : Check if booted with ostree] *********************
-        ok: [host34-1]
-        ok: [host12-1]
-        ok: [host12-2]
-        ok: [hostb12-1]
-        ok: [host12-3]
-        ok: [host34-2]
-        Monday 01 June 2026  14:59:32 -0500 (0:00:11.825)       0:03:53.766 ***********
-
-        TASK [kubernetes/preinstall : Set is_fedora_coreos] ****************************
-        ok: [host12-1]
-        ok: [host34-1]
-        ok: [host12-3]
-        ok: [hostb12-1]
-        ok: [host12-2]
-        ok: [host34-2]
-        Monday 01 June 2026  14:59:45 -0500 (0:00:12.980)       0:04:06.747 ***********
-
-        TASK [kubernetes/preinstall : Set is_fedora_coreos] ****************************
-        ok: [host12-1]
-        ok: [host34-1]
-        ok: [hostb12-1]
-        ok: [host12-2]
-        ok: [host12-3]
-        ok: [host34-2]
-        Monday 01 June 2026  14:59:45 -0500 (0:00:00.086)       0:04:06.833 ***********
+        Monday 01 June 2026  16:25:47 -0500 (0:00:12.586)       0:03:20.552 ***********
+        Monday 01 June 2026  16:25:47 -0500 (0:00:00.096)       0:03:20.649 ***********
 
         TASK [kubernetes/preinstall : Check resolvconf] ********************************
         ok: [host12-1]
@@ -619,34 +515,34 @@ fatal: [localhost]: FAILED! =>
         ok: [hostb12-1]
         ok: [host12-2]
         ok: [host34-2]
-        Monday 01 June 2026  14:59:57 -0500 (0:00:12.427)       0:04:19.261 ***********
+        Monday 01 June 2026  16:25:59 -0500 (0:00:12.006)       0:03:32.656 ***********
 
         TASK [kubernetes/preinstall : Check existence of /etc/resolvconf/resolv.conf.d] ***
-        ok: [host34-1]
         ok: [host12-1]
         ok: [host12-3]
-        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
         ok: [host34-2]
-        Monday 01 June 2026  15:00:11 -0500 (0:00:13.863)       0:04:33.125 ***********
+        Monday 01 June 2026  16:26:11 -0500 (0:00:11.880)       0:03:44.536 ***********
 
         TASK [kubernetes/preinstall : Check status of /etc/resolv.conf] ****************
-        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
         ok: [host12-3]
         ok: [host12-2]
-        ok: [host12-1]
-        ok: [host34-1]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Monday 01 June 2026  15:00:24 -0500 (0:00:12.879)       0:04:46.004 ***********
+        Monday 01 June 2026  16:26:23 -0500 (0:00:11.937)       0:03:56.474 ***********
 
         TASK [kubernetes/preinstall : Get content of /etc/resolv.conf] *****************
-        ok: [host12-3]
-        ok: [host12-1]
         ok: [host34-1]
+        ok: [host12-1]
         ok: [hostb12-1]
         ok: [host12-2]
+        ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  15:00:36 -0500 (0:00:11.939)       0:04:57.944 ***********
+        Monday 01 June 2026  16:26:36 -0500 (0:00:12.341)       0:04:08.815 ***********
 
         TASK [kubernetes/preinstall : Get currently configured nameservers] ************
         ok: [host12-1]
@@ -655,26 +551,26 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  15:00:36 -0500 (0:00:00.143)       0:04:58.087 ***********
-        Monday 01 June 2026  15:00:36 -0500 (0:00:00.079)       0:04:58.167 ***********
+        Monday 01 June 2026  16:26:36 -0500 (0:00:00.162)       0:04:08.978 ***********
+        Monday 01 June 2026  16:26:36 -0500 (0:00:00.119)       0:04:09.097 ***********
 
         TASK [kubernetes/preinstall : NetworkManager | Check if host has NetworkManager] ***
-        ok: [host12-1]
         ok: [host34-1]
         ok: [host12-3]
-        ok: [host12-2]
         ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
         ok: [host34-2]
-        Monday 01 June 2026  15:00:50 -0500 (0:00:13.533)       0:05:11.700 ***********
+        Monday 01 June 2026  16:26:49 -0500 (0:00:12.785)       0:04:21.883 ***********
 
         TASK [kubernetes/preinstall : Check systemd-resolved] **************************
-        ok: [host12-1]
         ok: [host34-1]
-        ok: [host12-3]
         ok: [host12-2]
+        ok: [host12-3]
         ok: [hostb12-1]
+        ok: [host12-1]
         ok: [host34-2]
-        Monday 01 June 2026  15:01:01 -0500 (0:00:11.473)       0:05:23.173 ***********
+        Monday 01 June 2026  16:27:01 -0500 (0:00:12.201)       0:04:34.084 ***********
 
         TASK [kubernetes/preinstall : Set default dns if remove_default_searchdomains is false] ***
         ok: [host12-1]
@@ -683,7 +579,7 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  15:01:01 -0500 (0:00:00.087)       0:05:23.261 ***********
+        Monday 01 June 2026  16:27:01 -0500 (0:00:00.124)       0:04:34.209 ***********
 
         TASK [kubernetes/preinstall : Set dns facts] ***********************************
         ok: [host12-1]
@@ -692,49 +588,2319 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Monday 01 June 2026  15:01:01 -0500 (0:00:00.099)       0:05:23.360 ***********
+        Monday 01 June 2026  16:27:01 -0500 (0:00:00.127)       0:04:34.336 ***********
 
         TASK [kubernetes/preinstall : Check if kubelet is configured] ******************
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:13 -0500 (0:00:12.325)       0:04:46.662 ***********
+
+        TASK [kubernetes/preinstall : Check if early DNS configuration stage] **********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:14 -0500 (0:00:00.170)       0:04:46.832 ***********
+
+        TASK [kubernetes/preinstall : Target resolv.conf files] ************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:14 -0500 (0:00:00.110)       0:04:46.942 ***********
+        Monday 01 June 2026  16:27:14 -0500 (0:00:00.087)       0:04:47.030 ***********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhclient.conf exists] **************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:26 -0500 (0:00:12.042)       0:04:59.072 ***********
+        Monday 01 June 2026  16:27:26 -0500 (0:00:00.130)       0:04:59.202 ***********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists] *********
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:38 -0500 (0:00:11.544)       0:05:10.747 ***********
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.086)       0:05:10.833 ***********
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.085)       0:05:10.918 ***********
+
+        TASK [kubernetes/preinstall : Target dhclient hook file for Debian family] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.150)       0:05:11.069 ***********
+
+        TASK [kubernetes/preinstall : Generate search domains to resolvconf] ***********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.111)       0:05:11.180 ***********
+
+        TASK [kubernetes/preinstall : Pick coredns cluster IP or default resolver] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.148)       0:05:11.329 ***********
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.083)       0:05:11.412 ***********
+
+        TASK [kubernetes/preinstall : Generate nameservers for resolvconf, not including cluster DNS] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.118)       0:05:11.530 ***********
+        Monday 01 June 2026  16:27:38 -0500 (0:00:00.129)       0:05:11.659 ***********
+
+        TASK [kubernetes/preinstall : Check /usr readonly] *****************************
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:27:51 -0500 (0:00:12.638)       0:05:24.298 ***********
+        Monday 01 June 2026  16:27:51 -0500 (0:00:00.084)       0:05:24.382 ***********
+
+        TASK [kubernetes/preinstall : Stop if either kube_control_plane or kube_node group is empty] ***
+        ok: [host12-1] => (item=kube_control_plane) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_control_plane",
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item=kube_node) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_node",
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:51 -0500 (0:00:00.043)       0:05:24.425 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd group is empty in external etcd mode] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:51 -0500 (0:00:00.033)       0:05:24.459 ***********
+
+        TASK [kubernetes/preinstall : Stop if non systemd OS type] *********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:51 -0500 (0:00:00.120)       0:05:24.580 ***********
+
+        TASK [kubernetes/preinstall : Stop if the os does not support] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.170)       0:05:24.750 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown network plugin] ******************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.123)       0:05:24.873 ***********
+
+        TASK [kubernetes/preinstall : Stop if unsupported version of Kubernetes] *******
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.121)       0:05:24.994 ***********
+
+        TASK [kubernetes/preinstall : Stop if known booleans are set as strings (Use JSON format on CLI: -e "{'key': true }")] ***
+        ok: [host12-1] => (item={'name': 'download_run_once', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_run_once",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'deploy_netchecker', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "deploy_netchecker",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'download_always_pull', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_always_pull",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'helm_enabled', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "helm_enabled",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'openstack_lbaas_enabled', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "openstack_lbaas_enabled",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.064)       0:05:25.058 ***********
+
+        TASK [kubernetes/preinstall : Stop if even number of etcd hosts] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.113)       0:05:25.172 ***********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for masters] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.146)       0:05:25.318 ***********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for nodes] ***********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:27:52 -0500 (0:00:00.119)       0:05:25.438 ***********
+
+        TASK [kubernetes/preinstall : Stop if cgroups are not enabled on nodes] ********
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:28:05 -0500 (0:00:12.664)       0:05:38.103 ***********
+        Monday 01 June 2026  16:28:05 -0500 (0:00:00.112)       0:05:38.215 ***********
+
+        TASK [kubernetes/preinstall : Stop if ip var does not match local ips] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:05 -0500 (0:00:00.168)       0:05:38.384 ***********
+
+        TASK [kubernetes/preinstall : Ensure ping package] *****************************
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:28:21 -0500 (0:00:15.663)       0:05:54.047 ***********
+
+        TASK [kubernetes/preinstall : Stop if access_ip is not pingable] ***************
         ok: [host34-1]
         ok: [host12-1]
         ok: [host12-3]
         ok: [hostb12-1]
         ok: [host12-2]
-        fatal: [host34-2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host r810 port 22: Network is unreachable\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+        ok: [host34-2]
+        Monday 01 June 2026  16:28:33 -0500 (0:00:12.252)       0:06:06.299 ***********
+        Monday 01 June 2026  16:28:33 -0500 (0:00:00.092)       0:06:06.392 ***********
+        Monday 01 June 2026  16:28:33 -0500 (0:00:00.101)       0:06:06.493 ***********
+        Monday 01 June 2026  16:28:33 -0500 (0:00:00.159)       0:06:06.652 ***********
+
+        TASK [kubernetes/preinstall : Stop if bad hostname] ****************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.119)       0:06:06.772 ***********
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.098)       0:06:06.871 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_service_addresses is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.058)       0:06:06.930 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.058)       0:06:06.988 ***********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet does not collide with kube_service_addresses] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.062)       0:06:07.050 ***********
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.019)       0:06:07.070 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown dns mode] ************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.037)       0:06:07.107 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown kube proxy mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.036)       0:06:07.144 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown cert_management] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.033)       0:06:07.178 ***********
+
+        TASK [kubernetes/preinstall : Stop if unknown resolvconf_mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.035)       0:06:07.214 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host, docker or kubeadm] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.162)       0:06:07.376 ***********
+
+        TASK [kubernetes/preinstall : Stop if container manager is not docker, crio or containerd] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.033)       0:06:07.410 ***********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host or kubeadm when container_manager != docker] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.104)       0:06:07.514 ***********
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.023)       0:06:07.537 ***********
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.023)       0:06:07.561 ***********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled but download_run_once is not] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:34 -0500 (0:00:00.114)       0:06:07.676 ***********
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.087)       0:06:07.764 ***********
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.136)       0:06:07.900 ***********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled for Flatcar Container Linux] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.118)       0:06:08.019 ***********
+
+        TASK [kubernetes/preinstall : Ensure minimum containerd version] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.038)       0:06:08.057 ***********
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.097)       0:06:08.154 ***********
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.087)       0:06:08.242 ***********
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.156)       0:06:08.399 ***********
+
+        TASK [kubernetes/preinstall : Verify that the packages list structure is valid] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:28:35 -0500 (0:00:00.183)       0:06:08.583 ***********
+
+        TASK [kubernetes/preinstall : Verify that the packages list is sorted] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:28:36 -0500 (0:00:00.144)       0:06:08.727 ***********
+
+        TASK [kubernetes/preinstall : Create kubernetes directories] *******************
+        ok: [host12-1] => (item=/etc/kubernetes)
+        ok: [host12-3] => (item=/etc/kubernetes)
+        ok: [host12-2] => (item=/etc/kubernetes)
+        ok: [hostb12-1] => (item=/etc/kubernetes)
+        ok: [host34-1] => (item=/etc/kubernetes)
+        ok: [host12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-3] => (item=/etc/kubernetes/manifests)
+        ok: [host34-1] => (item=/etc/kubernetes/manifests)
+        ok: [hostb12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-2] => (item=/etc/kubernetes/manifests)
+        ok: [host12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host34-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-3] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [hostb12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-2] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host34-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-3] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [hostb12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host34-2] => (item=/etc/kubernetes)
+        ok: [host34-2] => (item=/etc/kubernetes/manifests)
+        ok: [host34-2] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host34-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        Monday 01 June 2026  16:29:25 -0500 (0:00:49.117)       0:06:57.845 ***********
+
+        TASK [kubernetes/preinstall : Create other directories of root owner] **********
+        ok: [host12-1] => (item=/etc/kubernetes/ssl)
+        ok: [host34-1] => (item=/etc/kubernetes/ssl)
+        ok: [host12-3] => (item=/etc/kubernetes/ssl)
+        ok: [hostb12-1] => (item=/etc/kubernetes/ssl)
+        ok: [host12-2] => (item=/etc/kubernetes/ssl)
+        ok: [host12-1] => (item=/usr/local/bin)
+        ok: [host34-1] => (item=/usr/local/bin)
+        ok: [host12-3] => (item=/usr/local/bin)
+        ok: [host12-2] => (item=/usr/local/bin)
+        ok: [hostb12-1] => (item=/usr/local/bin)
+        ok: [host34-2] => (item=/etc/kubernetes/ssl)
+        ok: [host34-2] => (item=/usr/local/bin)
+        Monday 01 June 2026  16:29:50 -0500 (0:00:25.737)       0:07:23.583 ***********
+
+        TASK [kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:30:02 -0500 (0:00:11.470)       0:07:35.053 ***********
+        Monday 01 June 2026  16:30:02 -0500 (0:00:00.116)       0:07:35.170 ***********
+
+        TASK [kubernetes/preinstall : Create cni directories] **************************
+        ok: [host12-1] => (item=/etc/cni/net.d)
+        ok: [host34-1] => (item=/etc/cni/net.d)
+        ok: [hostb12-1] => (item=/etc/cni/net.d)
+        ok: [host12-2] => (item=/etc/cni/net.d)
+        ok: [host12-3] => (item=/etc/cni/net.d)
+        ok: [host12-1] => (item=/opt/cni/bin)
+        ok: [host34-1] => (item=/opt/cni/bin)
+        ok: [host12-3] => (item=/opt/cni/bin)
+        ok: [hostb12-1] => (item=/opt/cni/bin)
+        ok: [host12-2] => (item=/opt/cni/bin)
+        ok: [host34-2] => (item=/etc/cni/net.d)
+        ok: [host34-2] => (item=/opt/cni/bin)
+        Monday 01 June 2026  16:30:28 -0500 (0:00:25.693)       0:08:00.863 ***********
+
+        TASK [kubernetes/preinstall : Create calico cni directories] *******************
+        ok: [host12-1] => (item=/var/lib/calico)
+        ok: [host12-3] => (item=/var/lib/calico)
+        ok: [host12-2] => (item=/var/lib/calico)
+        ok: [host34-1] => (item=/var/lib/calico)
+        ok: [hostb12-1] => (item=/var/lib/calico)
+        ok: [host34-2] => (item=/var/lib/calico)
+        Monday 01 June 2026  16:30:40 -0500 (0:00:12.430)       0:08:13.293 ***********
+        Monday 01 June 2026  16:30:40 -0500 (0:00:00.190)       0:08:13.484 ***********
+        Monday 01 June 2026  16:30:40 -0500 (0:00:00.088)       0:08:13.573 ***********
+        Monday 01 June 2026  16:30:40 -0500 (0:00:00.089)       0:08:13.663 ***********
+        Monday 01 June 2026  16:30:41 -0500 (0:00:00.134)       0:08:13.797 ***********
+        Monday 01 June 2026  16:30:41 -0500 (0:00:00.231)       0:08:14.029 ***********
+        Monday 01 June 2026  16:30:41 -0500 (0:00:00.093)       0:08:14.123 ***********
+        Monday 01 June 2026  16:30:41 -0500 (0:00:00.092)       0:08:14.215 ***********
+
+        TASK [kubernetes/preinstall : Create systemd-resolved drop-in directory] *******
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:30:54 -0500 (0:00:12.489)       0:08:26.705 ***********
+
+        TASK [kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved] ***
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:31:12 -0500 (0:00:18.978)       0:08:45.683 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.093)       0:08:45.777 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.092)       0:08:45.870 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.085)       0:08:45.955 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.088)       0:08:46.044 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.138)       0:08:46.182 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.091)       0:08:46.274 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.094)       0:08:46.368 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.091)       0:08:46.459 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.134)       0:08:46.594 ***********
+        Monday 01 June 2026  16:31:13 -0500 (0:00:00.087)       0:08:46.682 ***********
+
+        TASK [kubernetes/preinstall : Update package management cache (APT)] ***********
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:31:29 -0500 (0:00:16.004)       0:09:02.686 ***********
+        Monday 01 June 2026  16:31:30 -0500 (0:00:00.086)       0:09:02.772 ***********
+        Monday 01 June 2026  16:31:30 -0500 (0:00:00.136)       0:09:02.909 ***********
+
+        TASK [kubernetes/preinstall : Install packages requirements] *******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:31:46 -0500 (0:00:15.825)       0:09:18.735 ***********
+        Monday 01 June 2026  16:31:46 -0500 (0:00:00.086)       0:09:18.822 ***********
+        Monday 01 June 2026  16:31:46 -0500 (0:00:00.085)       0:09:18.908 ***********
+        Monday 01 June 2026  16:31:46 -0500 (0:00:00.089)       0:09:18.997 ***********
+
+        TASK [kubernetes/preinstall : Clean previously used sysctl file locations] *****
+        ok: [host12-1] => (item=ipv4-ip_forward.conf)
+        ok: [host34-1] => (item=ipv4-ip_forward.conf)
+        ok: [hostb12-1] => (item=ipv4-ip_forward.conf)
+        ok: [host12-3] => (item=ipv4-ip_forward.conf)
+        ok: [host12-2] => (item=ipv4-ip_forward.conf)
+        ok: [host12-1] => (item=bridge-nf-call.conf)
+        ok: [host34-1] => (item=bridge-nf-call.conf)
+        ok: [hostb12-1] => (item=bridge-nf-call.conf)
+        ok: [host12-3] => (item=bridge-nf-call.conf)
+        ok: [host12-2] => (item=bridge-nf-call.conf)
+        ok: [host34-2] => (item=ipv4-ip_forward.conf)
+        ok: [host34-2] => (item=bridge-nf-call.conf)
+        Monday 01 June 2026  16:32:10 -0500 (0:00:24.577)       0:09:43.575 ***********
+
+        TASK [kubernetes/preinstall : Stat sysctl file configuration] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:32:23 -0500 (0:00:12.370)       0:09:55.946 ***********
+
+        TASK [kubernetes/preinstall : Change sysctl file path to link source if linked] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:32:23 -0500 (0:00:00.132)       0:09:56.078 ***********
+
+        TASK [kubernetes/preinstall : Make sure sysctl file path folder exists] ********
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:32:35 -0500 (0:00:12.331)       0:10:08.410 ***********
+
+        TASK [kubernetes/preinstall : Enable ip forwarding] ****************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:32:48 -0500 (0:00:13.161)       0:10:21.572 ***********
+        Monday 01 June 2026  16:32:49 -0500 (0:00:00.115)       0:10:21.687 ***********
+
+        TASK [kubernetes/preinstall : Check if we need to set fs.may_detach_mounts] ****
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:33:01 -0500 (0:00:12.138)       0:10:33.826 ***********
+        Monday 01 June 2026  16:33:01 -0500 (0:00:00.112)       0:10:33.938 ***********
+
+        TASK [kubernetes/preinstall : Ensure kubelet expected parameters are set] ******
+        ok: [host12-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [host34-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [host12-3] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [hostb12-1] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [host12-2] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [host34-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [host12-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [host12-3] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [hostb12-1] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [host12-2] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [host34-1] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [host12-1] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [host12-3] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [hostb12-1] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [host12-2] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [host34-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [host12-3] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [host12-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [hostb12-1] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [host12-2] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [host12-3] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [host34-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [host12-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [hostb12-1] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [host12-2] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [host12-3] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        ok: [host34-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        ok: [host12-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        ok: [hostb12-1] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        ok: [host12-2] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        ok: [host34-2] => (item={'name': 'kernel.keys.root_maxbytes', 'value': 25000000})
+        ok: [host34-2] => (item={'name': 'kernel.keys.root_maxkeys', 'value': 1000000})
+        ok: [host34-2] => (item={'name': 'kernel.panic', 'value': 10})
+        ok: [host34-2] => (item={'name': 'kernel.panic_on_oops', 'value': 1})
+        ok: [host34-2] => (item={'name': 'vm.overcommit_memory', 'value': 1})
+        ok: [host34-2] => (item={'name': 'vm.panic_on_oom', 'value': 0})
+        Monday 01 June 2026  16:34:15 -0500 (0:01:14.632)       0:11:48.571 ***********
+
+        TASK [kubernetes/preinstall : Check dummy module] ******************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:34:28 -0500 (0:00:12.619)       0:12:01.190 ***********
+        Monday 01 June 2026  16:34:28 -0500 (0:00:00.087)       0:12:01.277 ***********
+
+        TASK [kubernetes/preinstall : Disable fapolicyd service] ***********************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:34:43 -0500 (0:00:14.592)       0:12:15.870 ***********
+
+        TASK [kubernetes/preinstall : Ensure NTP package] ******************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:34:59 -0500 (0:00:16.424)       0:12:32.294 ***********
+
+        TASK [kubernetes/preinstall : Disable systemd-timesyncd] ***********************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:35:12 -0500 (0:00:13.315)       0:12:45.610 ***********
+
+        TASK [kubernetes/preinstall : Set fact NTP settings] ***************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:35:13 -0500 (0:00:00.122)       0:12:45.733 ***********
+
+        TASK [kubernetes/preinstall : Generate NTP configuration file.] ****************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:35:36 -0500 (0:00:23.085)       0:13:08.818 ***********
+        Monday 01 June 2026  16:35:36 -0500 (0:00:00.103)       0:13:08.922 ***********
+        Monday 01 June 2026  16:35:36 -0500 (0:00:00.137)       0:13:09.060 ***********
+
+        TASK [kubernetes/preinstall : Ensure NTP service is started and enabled] *******
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:35:50 -0500 (0:00:13.700)       0:13:22.761 ***********
+        Monday 01 June 2026  16:35:50 -0500 (0:00:00.104)       0:13:22.865 ***********
+        Monday 01 June 2026  16:35:50 -0500 (0:00:00.089)       0:13:22.955 ***********
+
+        TASK [kubernetes/preinstall : Hosts | create hosts list from inventory] ********
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  16:35:50 -0500 (0:00:00.260)       0:13:23.215 ***********
+
+        TASK [kubernetes/preinstall : Hosts | populate inventory into hosts file] ******
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:36:03 -0500 (0:00:13.283)       0:13:36.499 ***********
+        Monday 01 June 2026  16:36:03 -0500 (0:00:00.102)       0:13:36.601 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Retrieve hosts file content] *************
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:36:16 -0500 (0:00:12.279)       0:13:48.881 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Extract existing entries for localhost from hosts file] ***
+        ok: [host12-1] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [host34-1] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [host12-1] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        ok: [hostb12-1] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [host34-1] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        ok: [host12-2] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [hostb12-1] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        ok: [host12-2] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        ok: [host12-3] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [host12-3] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        ok: [host34-2] => (item=127.0.0.1 localhost localhost.localdomain)
+        ok: [host34-2] => (item=::1 ip6-localhost ip6-loopback localhost6 localhost6.localdomain)
+        Monday 01 June 2026  16:36:15 -0500 (-1:59:59.764)       0:13:48.646 **********
+
+        TASK [kubernetes/preinstall : Hosts | Update target hosts file entries dict with required entries] ***
+        ok: [host12-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [hostb12-1] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [hostb12-1] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-2] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-2] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-3] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host12-3] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-2] => (item={'key': '127.0.0.1', 'value': {'expected': ['localhost', 'localhost.localdomain']}})
+        ok: [host34-2] => (item={'key': '::1', 'value': {'expected': ['localhost6', 'localhost6.localdomain'], 'unexpected': ['localhost', 'localhost.localdomain']}})
+        Monday 01 June 2026  16:36:16 -0500 (0:00:00.132)       0:13:48.778 ***********
+
+        TASK [kubernetes/preinstall : Hosts | Update (if necessary) hosts file] ********
+        ok: [host12-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        ok: [host34-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        ok: [host12-3] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        ok: [hostb12-1] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        ok: [host12-2] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host34-1] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        changed: [host12-2] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        changed: [host12-1] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        changed: [host12-3] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        changed: [hostb12-1] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        ok: [host34-2] => (item={'key': '127.0.0.1', 'value': ['localhost', 'localhost.localdomain']})
+        changed: [host34-2] => (item={'key': '::1', 'value': ['localhost6', 'ip6-localhost', 'localhost6.localdomain', 'ip6-loopback']})
+        Monday 01 June 2026  16:36:41 -0500 (0:00:25.003)       0:14:13.781 ***********
+
+        TASK [kubernetes/preinstall : Update facts] ************************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:36:55 -0500 (0:00:14.413)       0:14:28.195 ***********
+        Monday 01 June 2026  16:36:55 -0500 (0:00:00.104)       0:14:28.300 ***********
+        Monday 01 June 2026  16:36:55 -0500 (0:00:00.100)       0:14:28.400 ***********
+        Monday 01 June 2026  16:36:55 -0500 (0:00:00.156)       0:14:28.557 ***********
+        Monday 01 June 2026  16:36:55 -0500 (0:00:00.095)       0:14:28.653 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.090)       0:14:28.744 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.006)       0:14:28.750 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.005)       0:14:28.756 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.006)       0:14:28.762 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.005)       0:14:28.768 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.005)       0:14:28.773 ***********
+        Monday 01 June 2026  16:36:56 -0500 (0:00:00.006)       0:14:28.780 ***********
+
+        RUNNING HANDLER [kubernetes/preinstall : Preinstall | restart ntp] *************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:37:10 -0500 (0:00:14.604)       0:14:43.384 ***********
+
+        TASK [kubernetes/preinstall : Check if we are running inside a Azure VM] *******
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:37:22 -0500 (0:00:12.038)       0:14:55.422 ***********
+        Monday 01 June 2026  16:37:22 -0500 (0:00:00.091)       0:14:55.514 ***********
+        Monday 01 June 2026  16:37:22 -0500 (0:00:00.089)       0:14:55.603 ***********
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.169)       0:14:55.773 ***********
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.103)       0:14:55.877 ***********
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.102)       0:14:55.979 ***********
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.096)       0:14:56.076 ***********
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.090)       0:14:56.167 ***********
+
+        TASK [Run calico checks] *******************************************************
+        Monday 01 June 2026  16:37:23 -0500 (0:00:00.482)       0:14:56.649 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (ipip)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:24 -0500 (0:00:00.155)       0:14:56.805 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (ipip_mode)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:24 -0500 (0:00:00.043)       0:14:56.848 ***********
+
+        TASK [network_plugin/calico : Stop if legacy encapsulation variables are detected (calcio_ipam_autoallocateblocks)] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:24 -0500 (0:00:00.044)       0:14:56.893 ***********
+        Monday 01 June 2026  16:37:24 -0500 (0:00:00.031)       0:14:56.925 ***********
+
+        TASK [network_plugin/calico : Stop if supported Calico versions] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:24 -0500 (0:00:00.043)       0:14:56.968 ***********
+
+        TASK [network_plugin/calico : Check if calicoctl.sh exists] ********************
+        ok: [host12-1]
+        Monday 01 June 2026  16:37:30 -0500 (0:00:05.874)       0:15:02.843 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.030)       0:15:02.874 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.027)       0:15:02.901 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.027)       0:15:02.928 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.038)       0:15:02.967 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.027)       0:15:02.994 ***********
+
+        TASK [network_plugin/calico : Check vars defined correctly] ********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.046)       0:15:03.041 ***********
+
+        TASK [network_plugin/calico : Check calico network backend defined correctly] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.040)       0:15:03.081 ***********
+
+        TASK [network_plugin/calico : Check ipip and vxlan mode defined correctly] *****
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.043)       0:15:03.125 ***********
+
+        TASK [network_plugin/calico : Check ipip and vxlan mode if simultaneously enabled] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.040)       0:15:03.165 ***********
+        Monday 01 June 2026  16:37:30 -0500 (0:00:00.027)       0:15:03.193 ***********
+
+        TASK [network_plugin/calico : Get Calico default-pool configuration] ***********
+        ok: [host12-1]
+        Monday 01 June 2026  16:37:36 -0500 (0:00:05.991)       0:15:09.185 ***********
+        Monday 01 June 2026  16:37:36 -0500 (0:00:00.026)       0:15:09.212 ***********
+        Monday 01 June 2026  16:37:36 -0500 (0:00:00.031)       0:15:09.244 ***********
+        Monday 01 June 2026  16:37:36 -0500 (0:00:00.027)       0:15:09.271 ***********
+        Monday 01 June 2026  16:37:36 -0500 (0:00:00.029)       0:15:09.300 ***********
+        Monday 01 June 2026  16:37:36 -0500 (0:00:00.144)       0:15:09.445 ***********
+
+        TASK [container-engine/validate-container-engine : Validate-container-engine | check if fedora coreos] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:37:49 -0500 (0:00:12.600)       0:15:22.045 ***********
+
+        TASK [container-engine/validate-container-engine : Validate-container-engine | set is_ostree] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:37:49 -0500 (0:00:00.118)       0:15:22.164 ***********
+
+        TASK [container-engine/validate-container-engine : Ensure kubelet systemd unit exists] ***
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:38:01 -0500 (0:00:12.305)       0:15:34.470 ***********
+
+        TASK [container-engine/validate-container-engine : Populate service facts] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:38:25 -0500 (0:00:23.453)       0:15:57.923 ***********
+
+        TASK [container-engine/validate-container-engine : Check if containerd is installed] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:38:37 -0500 (0:00:11.970)       0:16:09.893 ***********
+
+        TASK [container-engine/validate-container-engine : Check if docker is installed] ***
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:38:50 -0500 (0:00:13.479)       0:16:23.373 ***********
+
+        TASK [container-engine/validate-container-engine : Check if crio is installed] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:02 -0500 (0:00:12.150)       0:16:35.524 ***********
+        Monday 01 June 2026  16:39:02 -0500 (0:00:00.100)       0:16:35.624 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.093)       0:16:35.717 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.090)       0:16:35.807 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.087)       0:16:35.894 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.267)       0:16:36.161 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.087)       0:16:36.248 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.088)       0:16:36.337 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.085)       0:16:36.422 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.083)       0:16:36.506 ***********
+        Monday 01 June 2026  16:39:03 -0500 (0:00:00.089)       0:16:36.596 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.117)       0:16:36.714 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.114)       0:16:36.829 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.092)       0:16:36.921 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.092)       0:16:37.014 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.089)       0:16:37.103 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.156)       0:16:37.259 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.092)       0:16:37.352 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.097)       0:16:37.449 ***********
+        Monday 01 June 2026  16:39:04 -0500 (0:00:00.094)       0:16:37.543 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.152)       0:16:37.695 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.092)       0:16:37.788 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.097)       0:16:37.885 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.092)       0:16:37.978 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.090)       0:16:38.069 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.145)       0:16:38.215 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.107)       0:16:38.322 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.084)       0:16:38.406 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.134)       0:16:38.541 ***********
+        Monday 01 June 2026  16:39:05 -0500 (0:00:00.085)       0:16:38.626 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.089)       0:16:38.715 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.108)       0:16:38.824 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.089)       0:16:38.914 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.092)       0:16:39.006 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.095)       0:16:39.101 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.092)       0:16:39.194 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.118)       0:16:39.312 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.093)       0:16:39.406 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.091)       0:16:39.498 ***********
+        Monday 01 June 2026  16:39:06 -0500 (0:00:00.096)       0:16:39.594 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.135)       0:16:39.730 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.091)       0:16:39.821 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.161)       0:16:39.983 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.113)       0:16:40.096 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.095)       0:16:40.192 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.087)       0:16:40.279 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.092)       0:16:40.372 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.090)       0:16:40.462 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.089)       0:16:40.552 ***********
+        Monday 01 June 2026  16:39:07 -0500 (0:00:00.097)       0:16:40.650 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.093)       0:16:40.743 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.170)       0:16:40.914 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.119)       0:16:41.034 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.094)       0:16:41.128 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.096)       0:16:41.225 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.091)       0:16:41.317 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.093)       0:16:41.410 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.118)       0:16:41.528 ***********
+        Monday 01 June 2026  16:39:08 -0500 (0:00:00.095)       0:16:41.623 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.093)       0:16:41.717 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.094)       0:16:41.812 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.100)       0:16:41.912 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.140)       0:16:42.053 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.096)       0:16:42.149 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.092)       0:16:42.242 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.105)       0:16:42.347 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.109)       0:16:42.457 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.094)       0:16:42.552 ***********
+        Monday 01 June 2026  16:39:09 -0500 (0:00:00.116)       0:16:42.668 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.144)       0:16:42.812 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.087)       0:16:42.899 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.089)       0:16:42.989 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.084)       0:16:43.074 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.141)       0:16:43.215 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.096)       0:16:43.311 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.099)       0:16:43.411 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.111)       0:16:43.523 ***********
+        Monday 01 June 2026  16:39:10 -0500 (0:00:00.087)       0:16:43.610 ***********
+        Monday 01 June 2026  16:39:11 -0500 (0:00:00.090)       0:16:43.700 ***********
+        Monday 01 June 2026  16:39:12 -0500 (0:00:01.581)       0:16:45.282 ***********
+        Monday 01 June 2026  16:39:12 -0500 (0:00:00.097)       0:16:45.379 ***********
+        Monday 01 June 2026  16:39:12 -0500 (0:00:00.134)       0:16:45.514 ***********
+        Monday 01 June 2026  16:39:12 -0500 (0:00:00.103)       0:16:45.617 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.180)       0:16:45.797 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.102)       0:16:45.899 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.111)       0:16:46.011 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.113)       0:16:46.125 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.101)       0:16:46.226 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.101)       0:16:46.327 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.135)       0:16:46.463 ***********
+        Monday 01 June 2026  16:39:13 -0500 (0:00:00.161)       0:16:46.625 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.120)       0:16:46.745 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.118)       0:16:46.863 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.109)       0:16:46.973 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.116)       0:16:47.090 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.213)       0:16:47.303 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.120)       0:16:47.424 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.105)       0:16:47.529 ***********
+        Monday 01 June 2026  16:39:14 -0500 (0:00:00.104)       0:16:47.633 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.102)       0:16:47.736 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.104)       0:16:47.841 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.105)       0:16:47.947 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.108)       0:16:48.055 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.111)       0:16:48.167 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.119)       0:16:48.286 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.111)       0:16:48.397 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.114)       0:16:48.512 ***********
+        Monday 01 June 2026  16:39:15 -0500 (0:00:00.158)       0:16:48.671 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.129)       0:16:48.800 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.101)       0:16:48.902 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.106)       0:16:49.008 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.109)       0:16:49.118 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.105)       0:16:49.224 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.111)       0:16:49.335 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.121)       0:16:49.457 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.107)       0:16:49.564 ***********
+        Monday 01 June 2026  16:39:16 -0500 (0:00:00.111)       0:16:49.675 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.113)       0:16:49.789 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.144)       0:16:49.933 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.122)       0:16:50.056 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.111)       0:16:50.168 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.142)       0:16:50.310 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.100)       0:16:50.410 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.108)       0:16:50.519 ***********
+        Monday 01 June 2026  16:39:17 -0500 (0:00:00.137)       0:16:50.656 ***********
+        Monday 01 June 2026  16:39:18 -0500 (0:00:00.111)       0:16:50.767 ***********
+        Monday 01 June 2026  16:39:18 -0500 (0:00:00.114)       0:16:50.882 ***********
+        Monday 01 June 2026  16:39:18 -0500 (0:00:00.132)       0:16:51.015 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | check if fedora coreos] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:30 -0500 (0:00:12.451)       0:17:03.466 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | set is_ostree] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:30 -0500 (0:00:00.116)       0:17:03.583 ***********
+
+        TASK [container-engine/containerd-common : Containerd-common | gather os specific variables] ***
+        ok: [host12-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host34-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [hostb12-1] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host12-2] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host12-3] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        ok: [host34-2] => (item=/opt/fabric-cache/kubespray/src/roles/container-engine/containerd/vars/../vars/ubuntu.yml)
+        Monday 01 June 2026  16:39:31 -0500 (0:00:00.152)       0:17:03.735 ***********
+
+        TASK [container-engine/runc : Runc | check if fedora coreos] *******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:43 -0500 (0:00:12.226)       0:17:15.962 ***********
+
+        TASK [container-engine/runc : Runc | set is_ostree] ****************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:43 -0500 (0:00:00.183)       0:17:16.145 ***********
+
+        TASK [container-engine/runc : Runc | Uninstall runc package managed by package manager] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:57 -0500 (0:00:14.486)       0:17:30.632 ***********
+
+        TASK [container-engine/runc : Runc | Download runc binary] *********************
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/runc/tasks/../../../download/tasks/download_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:39:58 -0500 (0:00:00.121)       0:17:30.753 ***********
+
+        TASK [container-engine/runc : Prep_download | Set a few facts] *****************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:58 -0500 (0:00:00.088)       0:17:30.841 ***********
+
+        TASK [container-engine/runc : Download_file | Show url of file to dowload] *****
+        ok: [host12-1] => {
+            "msg": "https://github.com/opencontainers/runc/releases/download/v1.1.12/runc.amd64"
+        }
+        Monday 01 June 2026  16:39:58 -0500 (0:00:00.486)       0:17:31.328 ***********
+
+        TASK [container-engine/runc : Download_file | Set pathname of cached file] *****
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:39:59 -0500 (0:00:01.189)       0:17:32.517 ***********
+
+        TASK [container-engine/runc : Download_file | Create dest directory on node] ***
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host34-2]
+        Monday 01 June 2026  16:40:14 -0500 (0:00:15.005)       0:17:47.522 ***********
+
+        TASK [container-engine/runc : Download_file | Create local cache directory] ****
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  16:40:15 -0500 (0:00:00.409)       0:17:47.932 ***********
+        Monday 01 June 2026  16:40:15 -0500 (0:00:00.026)       0:17:47.959 ***********
+
+        TASK [container-engine/runc : Download_file | Download item] *******************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  16:40:27 -0500 (0:00:12.320)       0:18:00.280 ***********
+        Monday 01 June 2026  16:40:27 -0500 (0:00:00.088)       0:18:00.369 ***********
+
+        TASK [container-engine/runc : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [host12-1]
+        changed: [host12-2]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:40:53 -0500 (0:00:25.934)       0:18:26.303 ***********
+
+        TASK [container-engine/runc : Download_file | Set mode and owner] **************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:41:08 -0500 (0:00:14.535)       0:18:40.839 ***********
+
+        TASK [container-engine/runc : Download_file | Extract file archives] ***********
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:41:08 -0500 (0:00:00.125)       0:18:40.965 ***********
+        Monday 01 June 2026  16:41:09 -0500 (0:00:00.729)       0:18:41.694 ***********
+
+        TASK [container-engine/runc : Copy runc binary from download dir] **************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:41:22 -0500 (0:00:13.892)       0:18:55.587 ***********
+
+        TASK [container-engine/runc : Runc | Remove orphaned binary] *******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:41:34 -0500 (0:00:11.519)       0:19:07.106 ***********
+
+        TASK [container-engine/crictl : Install crictl] ********************************
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/crictl/tasks/crictl.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:41:34 -0500 (0:00:00.116)       0:19:07.223 ***********
+
+        TASK [container-engine/crictl : Crictl | Download crictl] **********************
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/crictl/tasks/../../../download/tasks/download_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:41:34 -0500 (0:00:00.129)       0:19:07.352 ***********
+
+        TASK [container-engine/crictl : Prep_download | Set a few facts] ***************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:41:35 -0500 (0:00:00.677)       0:19:08.030 ***********
+
+        TASK [container-engine/crictl : Download_file | Show url of file to dowload] ***
+        ok: [host12-1] => {
+            "msg": "https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.29.0/crictl-v1.29.0-linux-amd64.tar.gz"
+        }
+        Monday 01 June 2026  16:41:35 -0500 (0:00:00.477)       0:19:08.507 ***********
+
+        TASK [container-engine/crictl : Download_file | Set pathname of cached file] ***
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:41:37 -0500 (0:00:01.195)       0:19:09.703 ***********
+
+        TASK [container-engine/crictl : Download_file | Create dest directory on node] ***
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:41:52 -0500 (0:00:15.548)       0:19:25.251 ***********
+
+        TASK [container-engine/crictl : Download_file | Create local cache directory] ***
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  16:41:52 -0500 (0:00:00.396)       0:19:25.648 ***********
+        Monday 01 June 2026  16:41:52 -0500 (0:00:00.029)       0:19:25.677 ***********
+
+        TASK [container-engine/crictl : Download_file | Download item] *****************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  16:42:16 -0500 (0:00:23.132)       0:19:48.809 ***********
+        Monday 01 June 2026  16:42:16 -0500 (0:00:00.103)       0:19:48.913 ***********
+
+        TASK [container-engine/crictl : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [host12-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:44:41 -0500 (0:02:24.789)       0:22:13.702 ***********
+
+        TASK [container-engine/crictl : Download_file | Set mode and owner] ************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:44:55 -0500 (0:00:14.883)       0:22:28.585 ***********
+
+        TASK [container-engine/crictl : Download_file | Extract file archives] *********
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:44:56 -0500 (0:00:00.136)       0:22:28.722 ***********
+
+        TASK [container-engine/crictl : Extract_file | Unpacking archive] **************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host12-3]
+        changed: [host34-2]
+        Monday 01 June 2026  16:45:23 -0500 (0:00:27.712)       0:22:56.435 ***********
+
+        TASK [container-engine/crictl : Install crictl config] *************************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        changed: [host34-2]
+        Monday 01 June 2026  16:45:45 -0500 (0:00:22.141)       0:23:18.576 ***********
+
+        TASK [container-engine/crictl : Copy crictl binary from download dir] **********
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:46:00 -0500 (0:00:14.266)       0:23:32.843 ***********
+
+        TASK [container-engine/nerdctl : Nerdctl | Download nerdctl] *******************
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/nerdctl/tasks/../../../download/tasks/download_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:46:00 -0500 (0:00:00.117)       0:23:32.961 ***********
+
+        TASK [container-engine/nerdctl : Prep_download | Set a few facts] **************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:46:00 -0500 (0:00:00.648)       0:23:33.610 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Show url of file to dowload] ***
+        ok: [host12-1] => {
+            "msg": "https://github.com/containerd/nerdctl/releases/download/v1.7.4/nerdctl-1.7.4-linux-amd64.tar.gz"
+        }
+        Monday 01 June 2026  16:46:01 -0500 (0:00:00.489)       0:23:34.100 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Set pathname of cached file] ***
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:46:02 -0500 (0:00:01.169)       0:23:35.269 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Create dest directory on node] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:46:16 -0500 (0:00:14.094)       0:23:49.364 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Create local cache directory] ***
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  16:46:17 -0500 (0:00:00.384)       0:23:49.749 ***********
+        Monday 01 June 2026  16:46:17 -0500 (0:00:00.026)       0:23:49.775 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Download item] ****************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  16:46:27 -0500 (0:00:10.855)       0:24:00.630 ***********
+        Monday 01 June 2026  16:46:28 -0500 (0:00:00.145)       0:24:00.776 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [hostb12-1]
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:47:29 -0500 (0:01:01.589)       0:25:02.365 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Set mode and owner] ***********
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:47:44 -0500 (0:00:14.695)       0:25:17.061 ***********
+
+        TASK [container-engine/nerdctl : Download_file | Extract file archives] ********
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:47:44 -0500 (0:00:00.130)       0:25:17.191 ***********
+
+        TASK [container-engine/nerdctl : Extract_file | Unpacking archive] *************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:48:09 -0500 (0:00:24.583)       0:25:41.775 ***********
+
+        TASK [container-engine/nerdctl : Nerdctl | Copy nerdctl binary from download dir] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:48:22 -0500 (0:00:13.416)       0:25:55.191 ***********
+
+        TASK [container-engine/nerdctl : Nerdctl | Create configuration dir] ***********
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:48:34 -0500 (0:00:12.236)       0:26:07.428 ***********
+
+        TASK [container-engine/nerdctl : Nerdctl | Install nerdctl configuration] ******
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:48:57 -0500 (0:00:23.006)       0:26:30.434 ***********
+        Monday 01 June 2026  16:48:57 -0500 (0:00:00.115)       0:26:30.550 ***********
+
+        TASK [container-engine/containerd : Containerd | Remove any package manager controlled containerd package] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:49:12 -0500 (0:00:14.205)       0:26:44.755 ***********
+        Monday 01 June 2026  16:49:12 -0500 (0:00:00.084)       0:26:44.840 ***********
+
+        TASK [container-engine/containerd : Containerd | Remove containerd repository] ***
+        ok: [host12-1] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        ok: [host12-2] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        ok: [host12-3] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        ok: [hostb12-1] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        ok: [host34-1] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        ok: [host34-2] => (item=deb https://download.docker.com/linux/ubuntu noble stable
+        )
+        Monday 01 June 2026  16:49:25 -0500 (0:00:13.744)       0:26:58.584 ***********
+
+        TASK [container-engine/containerd : Containerd | Download containerd] **********
+        included: /opt/fabric-cache/kubespray/src/roles/container-engine/containerd/tasks/../../../download/tasks/download_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:49:26 -0500 (0:00:00.181)       0:26:58.766 ***********
+
+        TASK [container-engine/containerd : Prep_download | Set a few facts] ***********
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:49:26 -0500 (0:00:00.709)       0:26:59.475 ***********
+
+        TASK [container-engine/containerd : Download_file | Show url of file to dowload] ***
+        ok: [host12-1] => {
+            "msg": "https://github.com/containerd/containerd/releases/download/v1.7.16/containerd-1.7.16-linux-amd64.tar.gz"
+        }
+        Monday 01 June 2026  16:49:27 -0500 (0:00:00.471)       0:26:59.947 ***********
+
+        TASK [container-engine/containerd : Download_file | Set pathname of cached file] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:49:28 -0500 (0:00:01.255)       0:27:01.202 ***********
+
+        TASK [container-engine/containerd : Download_file | Create dest directory on node] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  16:49:43 -0500 (0:00:14.778)       0:27:15.981 ***********
+
+        TASK [container-engine/containerd : Download_file | Create local cache directory] ***
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  16:49:43 -0500 (0:00:00.410)       0:27:16.391 ***********
+        Monday 01 June 2026  16:49:43 -0500 (0:00:00.026)       0:27:16.418 ***********
+
+        TASK [container-engine/containerd : Download_file | Download item] *************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  16:50:25 -0500 (0:00:42.042)       0:27:58.461 ***********
+        Monday 01 June 2026  16:50:25 -0500 (0:00:00.094)       0:27:58.555 ***********
+
+        TASK [container-engine/containerd : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:54:56 -0500 (0:04:31.021)       0:32:29.577 ***********
+
+        TASK [container-engine/containerd : Download_file | Set mode and owner] ********
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host12-3]
+        changed: [host34-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:55:12 -0500 (0:00:16.098)       0:32:45.676 ***********
+
+        TASK [container-engine/containerd : Download_file | Extract file archives] *****
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2
+        Monday 01 June 2026  16:55:13 -0500 (0:00:00.136)       0:32:45.812 ***********
+        Monday 01 June 2026  16:55:13 -0500 (0:00:00.634)       0:32:46.446 ***********
+
+        TASK [container-engine/containerd : Containerd | Unpack containerd archive] ****
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  16:55:43 -0500 (0:00:29.407)       0:33:15.854 ***********
+
+        TASK [container-engine/containerd : Containerd | Remove orphaned binary] *******
+        ok: [host12-1] => (item=containerd)
+        ok: [host34-1] => (item=containerd)
+        ok: [host12-3] => (item=containerd)
+        ok: [host12-2] => (item=containerd)
+        ok: [hostb12-1] => (item=containerd)
+        ok: [host12-1] => (item=containerd-shim)
+        ok: [host34-1] => (item=containerd-shim)
+        ok: [host12-3] => (item=containerd-shim)
+        ok: [host12-2] => (item=containerd-shim)
+        ok: [hostb12-1] => (item=containerd-shim)
+        ok: [host12-1] => (item=containerd-shim-runc-v1)
+        ok: [host12-3] => (item=containerd-shim-runc-v1)
+        ok: [host34-1] => (item=containerd-shim-runc-v1)
+        ok: [host12-2] => (item=containerd-shim-runc-v1)
+        ok: [hostb12-1] => (item=containerd-shim-runc-v1)
+        ok: [host12-1] => (item=containerd-shim-runc-v2)
+        ok: [host12-3] => (item=containerd-shim-runc-v2)
+        ok: [host34-1] => (item=containerd-shim-runc-v2)
+        ok: [host12-2] => (item=containerd-shim-runc-v2)
+        ok: [hostb12-1] => (item=containerd-shim-runc-v2)
+        ok: [host12-1] => (item=ctr)
+        ok: [host12-3] => (item=ctr)
+        ok: [host34-1] => (item=ctr)
+        ok: [host12-2] => (item=ctr)
+        ok: [hostb12-1] => (item=ctr)
+        ok: [host34-2] => (item=containerd)
+        ok: [host34-2] => (item=containerd-shim)
+        ok: [host34-2] => (item=containerd-shim-runc-v1)
+        ok: [host34-2] => (item=containerd-shim-runc-v2)
+        ok: [host34-2] => (item=ctr)
+        Monday 01 June 2026  16:56:45 -0500 (0:01:01.955)       0:34:17.809 ***********
+
+        TASK [container-engine/containerd : Containerd | Generate systemd service for containerd] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:57:07 -0500 (0:00:21.893)       0:34:39.703 ***********
+
+        TASK [container-engine/containerd : Containerd | Ensure containerd directories exist] ***
+        changed: [host12-1] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [host34-1] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [host12-3] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [host12-2] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [hostb12-1] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [host12-1] => (item=/etc/containerd)
+        changed: [host34-1] => (item=/etc/containerd)
+        changed: [host12-2] => (item=/etc/containerd)
+        changed: [host12-3] => (item=/etc/containerd)
+        changed: [hostb12-1] => (item=/etc/containerd)
+        changed: [host12-1] => (item=/var/lib/containerd)
+        changed: [host34-1] => (item=/var/lib/containerd)
+        changed: [host12-3] => (item=/var/lib/containerd)
+        changed: [host12-2] => (item=/var/lib/containerd)
+        changed: [hostb12-1] => (item=/var/lib/containerd)
+        changed: [host12-1] => (item=/run/containerd)
+        changed: [host34-1] => (item=/run/containerd)
+        changed: [host12-3] => (item=/run/containerd)
+        changed: [hostb12-1] => (item=/run/containerd)
+        changed: [host12-2] => (item=/run/containerd)
+        changed: [host34-2] => (item=/etc/systemd/system/containerd.service.d)
+        changed: [host34-2] => (item=/etc/containerd)
+        changed: [host34-2] => (item=/var/lib/containerd)
+        changed: [host34-2] => (item=/run/containerd)
+        Monday 01 June 2026  16:57:56 -0500 (0:00:49.495)       0:35:29.199 ***********
+
+        TASK [container-engine/containerd : Containerd | Write containerd proxy drop-in] ***
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:58:18 -0500 (0:00:22.275)       0:35:51.474 ***********
+
+        TASK [container-engine/containerd : Containerd | Generate default base_runtime_spec] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Monday 01 June 2026  16:58:31 -0500 (0:00:12.684)       0:36:04.158 ***********
+
+        TASK [container-engine/containerd : Containerd | Store generated default base_runtime_spec] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  16:58:31 -0500 (0:00:00.123)       0:36:04.282 ***********
+
+        TASK [container-engine/containerd : Containerd | Write base_runtime_specs] *****
+        changed: [host34-1] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        changed: [host12-1] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        changed: [host12-3] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        changed: [hostb12-1] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        changed: [host12-2] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        changed: [host34-2] => (item={'key': 'cri-base.json', 'value': {'ociVersion': '1.1.0', 'process': {'user': {'uid': 0, 'gid': 0}, 'cwd': '/', 'capabilities': {'bounding': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'effective': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE'], 'permitted': ['CAP_CHOWN', 'CAP_DAC_OVERRIDE', 'CAP_FSETID', 'CAP_FOWNER', 'CAP_MKNOD', 'CAP_NET_RAW', 'CAP_SETGID', 'CAP_SETUID', 'CAP_SETFCAP', 'CAP_SETPCAP', 'CAP_NET_BIND_SERVICE', 'CAP_SYS_CHROOT', 'CAP_KILL', 'CAP_AUDIT_WRITE']}, 'rlimits': [{'type': 'RLIMIT_NOFILE', 'hard': 65535, 'soft': 65535}], 'noNewPrivileges': True}, 'root': {'path': 'rootfs'}, 'mounts': [{'destination': '/proc', 'type': 'proc', 'source': 'proc', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/dev', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}, {'destination': '/dev/pts', 'type': 'devpts', 'source': 'devpts', 'options': ['nosuid', 'noexec', 'newinstance', 'ptmxmode=0666', 'mode=0620', 'gid=5']}, {'destination': '/dev/shm', 'type': 'tmpfs', 'source': 'shm', 'options': ['nosuid', 'noexec', 'nodev', 'mode=1777', 'size=65536k']}, {'destination': '/dev/mqueue', 'type': 'mqueue', 'source': 'mqueue', 'options': ['nosuid', 'noexec', 'nodev']}, {'destination': '/sys', 'type': 'sysfs', 'source': 'sysfs', 'options': ['nosuid', 'noexec', 'nodev', 'ro']}, {'destination': '/run', 'type': 'tmpfs', 'source': 'tmpfs', 'options': ['nosuid', 'strictatime', 'mode=755', 'size=65536k']}], 'linux': {'resources': {'devices': [{'allow': False, 'access': 'rwm'}]}, 'cgroupsPath': '/default', 'namespaces': [{'type': 'pid'}, {'type': 'ipc'}, {'type': 'uts'}, {'type': 'mount'}, {'type': 'network'}], 'maskedPaths': ['/proc/acpi', '/proc/asound', '/proc/kcore', '/proc/keys', '/proc/latency_stats', '/proc/timer_list', '/proc/timer_stats', '/proc/sched_debug', '/sys/firmware', '/sys/devices/virtual/powercap', '/proc/scsi'], 'readonlyPaths': ['/proc/bus', '/proc/fs', '/proc/irq', '/proc/sys', '/proc/sysrq-trigger']}}})
+        Monday 01 June 2026  16:58:54 -0500 (0:00:23.356)       0:36:27.638 ***********
+
+        TASK [container-engine/containerd : Containerd | Copy containerd config file] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  16:59:17 -0500 (0:00:22.133)       0:36:49.772 ***********
+
+        TASK [container-engine/containerd : Containerd | Create registry directories] ***
+        changed: [host12-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host34-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host12-3] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host12-2] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [hostb12-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host34-2] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        Monday 01 June 2026  16:59:29 -0500 (0:00:12.356)       0:37:02.128 ***********
+
+        TASK [container-engine/containerd : Containerd | Write hosts.toml file] ********
+        changed: [host12-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host34-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host12-3] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host12-2] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [hostb12-1] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        changed: [host34-2] => (item={'prefix': 'docker.io', 'mirrors': [{'host': 'https://registry-1.docker.io', 'capabilities': ['pull', 'resolve'], 'skip_verify': False}]})
+        Monday 01 June 2026  16:59:53 -0500 (0:00:24.081)       0:37:26.210 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.011)       0:37:26.221 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.010)       0:37:26.231 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.011)       0:37:26.243 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.010)       0:37:26.254 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.010)       0:37:26.264 ***********
+        Monday 01 June 2026  16:59:53 -0500 (0:00:00.010)       0:37:26.275 ***********
+
+        RUNNING HANDLER [container-engine/containerd : Containerd | restart containerd] ***
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host34-2]
+        Monday 01 June 2026  17:00:12 -0500 (0:00:18.535)       0:37:44.810 ***********
+
+        RUNNING HANDLER [container-engine/containerd : Containerd | wait for containerd] ***
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  17:00:24 -0500 (0:00:11.940)       0:37:56.750 ***********
+        Monday 01 June 2026  17:00:24 -0500 (0:00:00.152)       0:37:56.903 ***********
+        Monday 01 June 2026  17:00:24 -0500 (0:00:00.089)       0:37:56.993 ***********
+        Monday 01 June 2026  17:00:24 -0500 (0:00:00.093)       0:37:57.086 ***********
+        Monday 01 June 2026  17:00:24 -0500 (0:00:00.091)       0:37:57.178 ***********
+
+        TASK [container-engine/containerd : Containerd | Ensure containerd is started and enabled] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  17:00:39 -0500 (0:00:15.059)       0:38:12.238 ***********
+        Monday 01 June 2026  17:00:39 -0500 (0:00:00.087)       0:38:12.325 ***********
+        Monday 01 June 2026  17:00:39 -0500 (0:00:00.088)       0:38:12.414 ***********
+        Monday 01 June 2026  17:00:39 -0500 (0:00:00.149)       0:38:12.563 ***********
+        Monday 01 June 2026  17:00:39 -0500 (0:00:00.107)       0:38:12.670 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.090)       0:38:12.761 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.134)       0:38:12.895 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.084)       0:38:12.980 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.088)       0:38:13.069 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.114)       0:38:13.184 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.087)       0:38:13.272 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.090)       0:38:13.362 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.127)       0:38:13.490 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.083)       0:38:13.573 ***********
+        Monday 01 June 2026  17:00:40 -0500 (0:00:00.088)       0:38:13.661 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.090)       0:38:13.751 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.091)       0:38:13.843 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.086)       0:38:13.930 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.084)       0:38:14.014 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.150)       0:38:14.164 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.085)       0:38:14.249 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.100)       0:38:14.350 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.087)       0:38:14.437 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.090)       0:38:14.527 ***********
+        Monday 01 June 2026  17:00:41 -0500 (0:00:00.109)       0:38:14.636 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.087)       0:38:14.724 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.112)       0:38:14.837 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.087)       0:38:14.925 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.010)       0:38:14.935 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.010)       0:38:14.946 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.009)       0:38:14.956 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.010)       0:38:14.966 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.010)       0:38:14.977 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.009)       0:38:14.986 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.076)       0:38:15.063 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.132)       0:38:15.195 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.085)       0:38:15.281 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.089)       0:38:15.371 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.088)       0:38:15.460 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.085)       0:38:15.545 ***********
+        Monday 01 June 2026  17:00:42 -0500 (0:00:00.086)       0:38:15.632 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.088)       0:38:15.720 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.085)       0:38:15.806 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.012)       0:38:15.818 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:15.828 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.010)       0:38:15.839 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:15.848 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:15.858 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:15.867 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.120)       0:38:15.988 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.092)       0:38:16.080 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.088)       0:38:16.169 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.103)       0:38:16.273 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.060)       0:38:16.333 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.010)       0:38:16.344 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.010)       0:38:16.355 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:16.364 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.009)       0:38:16.373 ***********
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.059)       0:38:16.433 ***********
+
+        TASK [download : Prep_download | Set a few facts] ******************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  17:00:43 -0500 (0:00:00.114)       0:38:16.548 ***********
+
+        TASK [download : Prep_download | On localhost, check if passwordless root is possible] ***
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  17:00:44 -0500 (0:00:00.172)       0:38:16.720 ***********
+
+        TASK [download : Prep_download | On localhost, check if user has access to the container runtime without using sudo] ***
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  17:00:44 -0500 (0:00:00.165)       0:38:16.885 ***********
+
+        TASK [download : Prep_download | Parse the outputs of the previous commands] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  17:00:44 -0500 (0:00:00.113)       0:38:16.999 ***********
+
+        TASK [download : Prep_download | Check that local user is in group or can become root] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  17:00:44 -0500 (0:00:00.118)       0:38:17.118 ***********
+
+        TASK [download : Prep_download | Register docker images info] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Monday 01 June 2026  17:00:57 -0500 (0:00:13.240)       0:38:30.358 ***********
+
+        TASK [download : Prep_download | Create staging directory on remote node] ******
+        changed: [host12-1]
+        changed: [host12-3]
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host34-1]
+        changed: [host34-2]
+        Monday 01 June 2026  17:01:09 -0500 (0:00:12.031)       0:38:42.389 ***********
+
+        TASK [download : Prep_download | Create local cache for files and images on control node] ***
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  17:01:09 -0500 (0:00:00.173)       0:38:42.563 ***********
+
+        TASK [download : Download | Get kubeadm binary and list of required images] ****
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/prep_kubeadm_images.yml for host12-1, host34-1, hostb12-1
+        Monday 01 June 2026  17:01:09 -0500 (0:00:00.117)       0:38:42.680 ***********
+        Monday 01 June 2026  17:01:10 -0500 (0:00:00.352)       0:38:43.032 ***********
+
+        TASK [download : Prep_kubeadm_images | Download kubeadm binary] ****************
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host34-1
+        Monday 01 June 2026  17:01:10 -0500 (0:00:00.361)       0:38:43.394 ***********
+
+        TASK [download : Prep_download | Set a few facts] ******************************
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-1]
+        Monday 01 June 2026  17:01:11 -0500 (0:00:00.339)       0:38:43.734 ***********
+
+        TASK [download : Download_file | Show url of file to dowload] ******************
+        ok: [host12-1] => {
+            "msg": "https://dl.k8s.io/release/v1.29.4/bin/linux/amd64/kubeadm"
+        }
+        Monday 01 June 2026  17:01:11 -0500 (0:00:00.471)       0:38:44.205 ***********
+
+        TASK [download : Download_file | Set pathname of cached file] ******************
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        Monday 01 June 2026  17:01:12 -0500 (0:00:00.644)       0:38:44.850 ***********
+
+        TASK [download : Download_file | Create dest directory on node] ****************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        Monday 01 June 2026  17:01:19 -0500 (0:00:06.939)       0:38:51.789 ***********
+
+        TASK [download : Download_file | Create local cache directory] *****************
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  17:01:19 -0500 (0:00:00.460)       0:38:52.250 ***********
+        Monday 01 June 2026  17:01:19 -0500 (0:00:00.023)       0:38:52.273 ***********
+
+        TASK [download : Download_file | Download item] ********************************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  17:02:02 -0500 (0:00:42.418)       0:39:34.692 ***********
+        Monday 01 June 2026  17:02:02 -0500 (0:00:00.107)       0:39:34.799 ***********
+
+        TASK [download : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host34-1]
+        Monday 01 June 2026  17:02:40 -0500 (0:00:38.735)       0:40:13.535 ***********
+
+        TASK [download : Download_file | Set mode and owner] ***************************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        Monday 01 June 2026  17:02:47 -0500 (0:00:06.934)       0:40:20.469 ***********
+
+        TASK [download : Download_file | Extract file archives] ************************
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1
+        Monday 01 June 2026  17:02:47 -0500 (0:00:00.074)       0:40:20.544 ***********
+        Monday 01 June 2026  17:02:48 -0500 (0:00:00.329)       0:40:20.874 ***********
+
+        TASK [download : Prep_kubeadm_images | Create kubeadm config] ******************
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        Monday 01 June 2026  17:02:58 -0500 (0:00:10.665)       0:40:31.539 ***********
+
+        TASK [download : Prep_kubeadm_images | Copy kubeadm binary from download dir to system path] ***
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [hostb12-1]
+        Monday 01 June 2026  17:03:06 -0500 (0:00:07.370)       0:40:38.909 ***********
+
+        TASK [download : Prep_kubeadm_images | Set kubeadm binary permissions] *********
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        Monday 01 June 2026  17:03:12 -0500 (0:00:06.251)       0:40:45.160 ***********
+
+        TASK [download : Prep_kubeadm_images | Generate list of required images] *******
+        ok: [host12-1]
+        Monday 01 June 2026  17:03:18 -0500 (0:00:06.151)       0:40:51.312 ***********
+
+        TASK [download : Prep_kubeadm_images | Parse list of images] *******************
+        ok: [host12-1] => (item=registry.k8s.io/kube-apiserver:v1.29.4)
+        ok: [host12-1] => (item=registry.k8s.io/kube-controller-manager:v1.29.4)
+        ok: [host12-1] => (item=registry.k8s.io/kube-scheduler:v1.29.4)
+        ok: [host12-1] => (item=registry.k8s.io/kube-proxy:v1.29.4)
+        Monday 01 June 2026  17:03:18 -0500 (0:00:00.069)       0:40:51.381 ***********
+
+        TASK [download : Prep_kubeadm_images | Convert list of images to dict for later use] ***
+        ok: [host12-1]
+        Monday 01 June 2026  17:03:18 -0500 (0:00:00.033)       0:40:51.415 ***********
+
+        TASK [download : Download | Download files / images] ***************************
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'etcd', 'value': {'container': False, 'file': True, 'enabled': True, 'version': 'v3.5.12', 'dest': '/tmp/releases/etcd-v3.5.12-linux-amd64.tar.gz', 'repo': 'quay.io/coreos/etcd', 'tag': 'v3.5.12', 'sha256': 'f2ff0cb43ce119f55a85012255609b61c64263baea83aa7c8e6846c0938adca5', 'url': 'https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['etcd']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'cni', 'value': {'enabled': True, 'file': True, 'version': 'v1.3.0', 'dest': '/tmp/releases/cni-plugins-linux-amd64-v1.3.0.tgz', 'sha256': '754a71ed60a4bd08726c3af705a7d55ee3df03122b12e389fdba4bea35d7dd7e', 'url': 'https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'kubeadm', 'value': {'enabled': True, 'file': True, 'version': 'v1.29.4', 'dest': '/tmp/releases/kubeadm-v1.29.4-amd64', 'sha256': 'ea20ab064f716ab7f69a36d72df340257b31c9721ea86e1cf9d70b35999ddeea', 'url': 'https://dl.k8s.io/release/v1.29.4/bin/linux/amd64/kubeadm', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'kubelet', 'value': {'enabled': True, 'file': True, 'version': 'v1.29.4', 'dest': '/tmp/releases/kubelet-v1.29.4-amd64', 'sha256': '58571f0ed62543a9bbac541e52c15d8385083113a463e23aec1341d0b5043939', 'url': 'https://dl.k8s.io/release/v1.29.4/bin/linux/amd64/kubelet', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'kubectl', 'value': {'enabled': True, 'file': True, 'version': 'v1.29.4', 'dest': '/tmp/releases/kubectl-v1.29.4-amd64', 'sha256': '10e343861c3cb0010161e703307ba907add2aeeeaffc6444779ad915f9889c88', 'url': 'https://dl.k8s.io/release/v1.29.4/bin/linux/amd64/kubectl', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'crictl', 'value': {'file': True, 'enabled': True, 'version': 'v1.29.0', 'dest': '/tmp/releases/crictl-v1.29.0-linux-amd64.tar.gz', 'sha256': 'd16a1ffb3938f5a19d5c8f45d363bd091ef89c0bc4d44ad16b933eede32fdcbb', 'url': 'https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.29.0/crictl-v1.29.0-linux-amd64.tar.gz', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'runc', 'value': {'file': True, 'enabled': True, 'version': 'v1.1.12', 'dest': '/tmp/releases/runc-v1.1.12.amd64', 'sha256': 'aadeef400b8f05645768c1476d1023f7875b78f52c7ff1967a6dbce236b8cbd8', 'url': 'https://github.com/opencontainers/runc/releases/download/v1.1.12/runc.amd64', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'containerd', 'value': {'enabled': True, 'file': True, 'version': '1.7.16', 'dest': '/tmp/releases/containerd-1.7.16-linux-amd64.tar.gz', 'sha256': '4f4f2c3c7d14fd59a404961a3a3341303c2fdeeba0e78808c209f606e828f99c', 'url': 'https://github.com/containerd/containerd/releases/download/v1.7.16/containerd-1.7.16-linux-amd64.tar.gz', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'nerdctl', 'value': {'file': True, 'enabled': True, 'version': '1.7.4', 'dest': '/tmp/releases/nerdctl-1.7.4-linux-amd64.tar.gz', 'sha256': '71aee9d987b7fad0ff2ade50b038ad7e2356324edc02c54045960a3521b3e6a7', 'url': 'https://github.com/containerd/nerdctl/releases/download/v1.7.4/nerdctl-1.7.4-linux-amd64.tar.gz', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'calicoctl', 'value': {'enabled': True, 'file': True, 'version': 'v3.27.3', 'dest': '/tmp/releases/calicoctl-v3.27.3-amd64', 'sha256': 'e22b8bb41684f8ffb5143b50bf3b2ab76985604d774d397cfb6fb11d8a19f326', 'url': 'https://github.com/projectcalico/calico/releases/download/v3.27.3/calicoctl-linux-amd64', 'unarchive': False, 'owner': 'root', 'mode': '0755', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'calico_node', 'value': {'enabled': True, 'container': True, 'repo': 'quay.io/calico/node', 'tag': 'v3.27.3', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'calico_cni', 'value': {'enabled': True, 'container': True, 'repo': 'quay.io/calico/cni', 'tag': 'v3.27.3', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'calico_flexvol', 'value': {'enabled': True, 'container': True, 'repo': 'quay.io/calico/pod2daemon-flexvol', 'tag': 'v3.27.3', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'calico_policy', 'value': {'enabled': True, 'container': True, 'repo': 'quay.io/calico/kube-controllers', 'tag': 'v3.27.3', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'calico_crds', 'value': {'file': True, 'enabled': True, 'version': 'v3.27.3', 'dest': '/tmp/releases/calico-v3.27.3-kdd-crds/v3.27.3.tar.gz', 'sha256': 'd11a32919bff389f642af5df8180ad3cec586030decd35adb2a7d4a8aa3b298e', 'url': 'https://github.com/projectcalico/calico/archive/v3.27.3.tar.gz', 'unarchive': True, 'unarchive_extra_opts': ['--strip=3', '--wildcards', '*/libcalico-go/config/crd/'], 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'pod_infra', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/pause', 'tag': '3.9', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'nginx', 'value': {'enabled': True, 'container': True, 'repo': 'docker.io/library/nginx', 'tag': '1.25.2-alpine', 'sha256': '', 'groups': ['kube_node']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'coredns', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/coredns/coredns', 'tag': 'v1.11.1', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'nodelocaldns', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/dns/k8s-dns-node-cache', 'tag': '1.22.28', 'sha256': '', 'groups': ['k8s_cluster']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'dnsautoscaler', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/cpa/cluster-proportional-autoscaler', 'tag': 'v1.8.8', 'sha256': '', 'groups': ['kube_control_plane']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_file.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'helm', 'value': {'enabled': True, 'file': True, 'version': 'v3.14.2', 'dest': '/tmp/releases/helm-v3.14.2/helm-v3.14.2-linux-amd64.tar.gz', 'sha256': '0885a501d586c1e949e9b113bf3fb3290b0bbf74db9444a1d8c2723a143006a5', 'url': 'https://get.helm.sh/helm-v3.14.2-linux-amd64.tar.gz', 'unarchive': True, 'owner': 'root', 'mode': '0755', 'groups': ['kube_control_plane']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host34-1 => (item={'key': 'metrics_server', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/metrics-server/metrics-server', 'tag': 'v0.7.0', 'sha256': '', 'groups': ['kube_control_plane']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'local_path_provisioner', 'value': {'enabled': True, 'container': True, 'repo': 'docker.io/rancher/local-path-provisioner', 'tag': 'v0.0.24', 'sha256': '', 'groups': ['kube_node']}})
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/download_container.yml for host12-1, hostb12-1, host12-2, host34-1, host12-3, host34-2 => (item={'key': 'ingress_nginx_controller', 'value': {'enabled': True, 'container': True, 'repo': 'registry.k8s.io/ingress-nginx/controller', 'tag': 'v1.10.1', 'sha256': '', 'groups': ['kube_node']}})
+        Monday 01 June 2026  17:03:21 -0500 (0:00:03.263)       0:40:54.678 ***********
+
+        TASK [download : Prep_download | Set a few facts] ******************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        Monday 01 June 2026  17:03:22 -0500 (0:00:00.053)       0:40:54.732 ***********
+
+        TASK [download : Download_file | Show url of file to dowload] ******************
+        ok: [host12-1] => {
+            "msg": "https://github.com/etcd-io/etcd/releases/download/v3.5.12/etcd-v3.5.12-linux-amd64.tar.gz"
+        }
+        Monday 01 June 2026  17:03:22 -0500 (0:00:00.026)       0:40:54.758 ***********
+
+        TASK [download : Download_file | Set pathname of cached file] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        Monday 01 June 2026  17:03:22 -0500 (0:00:00.053)       0:40:54.812 ***********
+
+        TASK [download : Download_file | Create dest directory on node] ****************
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        Monday 01 June 2026  17:03:28 -0500 (0:00:06.572)       0:41:01.385 ***********
+
+        TASK [download : Download_file | Create local cache directory] *****************
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  17:03:28 -0500 (0:00:00.160)       0:41:01.545 ***********
+        Monday 01 June 2026  17:03:28 -0500 (0:00:00.022)       0:41:01.568 ***********
+
+        TASK [download : Download_file | Download item] ********************************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  17:03:47 -0500 (0:00:19.003)       0:41:20.572 ***********
+        Monday 01 June 2026  17:03:47 -0500 (0:00:00.045)       0:41:20.617 ***********
+
+        TASK [download : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [hostb12-1]
+        changed: [host12-1]
+        changed: [host34-1]
+        Monday 01 June 2026  17:04:43 -0500 (0:00:55.732)       0:42:16.349 ***********
+
+        TASK [download : Download_file | Set mode and owner] ***************************
+        changed: [host12-1]
+        changed: [hostb12-1]
+        changed: [host34-1]
+        Monday 01 June 2026  17:04:51 -0500 (0:00:07.761)       0:42:24.111 ***********
+
+        TASK [download : Download_file | Extract file archives] ************************
+        included: /opt/fabric-cache/kubespray/src/roles/download/tasks/extract_file.yml for host12-1, host34-1, hostb12-1
+        Monday 01 June 2026  17:04:51 -0500 (0:00:00.070)       0:42:24.182 ***********
+
+        TASK [download : Extract_file | Unpacking archive] *****************************
+        changed: [host12-1]
+        changed: [host34-1]
+        changed: [hostb12-1]
+        Monday 01 June 2026  17:05:02 -0500 (0:00:11.425)       0:42:35.607 ***********
+
+        TASK [download : Prep_download | Set a few facts] ******************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  17:05:03 -0500 (0:00:00.102)       0:42:35.710 ***********
+
+        TASK [download : Download_file | Show url of file to dowload] ******************
+        ok: [host12-1] => {
+            "msg": "https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz"
+        }
+        Monday 01 June 2026  17:05:03 -0500 (0:00:00.026)       0:42:35.737 ***********
+
+        TASK [download : Download_file | Set pathname of cached file] ******************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Monday 01 June 2026  17:05:03 -0500 (0:00:00.108)       0:42:35.845 ***********
+
+        TASK [download : Download_file | Create dest directory on node] ****************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [host34-2]
+        Monday 01 June 2026  17:05:16 -0500 (0:00:13.571)       0:42:49.417 ***********
+
+        TASK [download : Download_file | Create local cache directory] *****************
+        ok: [host12-1 -> localhost]
+        Monday 01 June 2026  17:05:16 -0500 (0:00:00.165)       0:42:49.582 ***********
+        Monday 01 June 2026  17:05:16 -0500 (0:00:00.023)       0:42:49.605 ***********
+
+        TASK [download : Download_file | Download item] ********************************
+        changed: [host12-1 -> localhost]
+        Monday 01 June 2026  17:05:54 -0500 (0:00:37.580)       0:43:27.186 ***********
+        Monday 01 June 2026  17:05:54 -0500 (0:00:00.089)       0:43:27.276 ***********
+
+        TASK [download : Download_file | Copy file from cache to nodes, if it is available] ***
+        changed: [host34-1]
+        changed: [host12-1]
+        FAILED - RETRYING: [host34-2]: Download_file | Copy file from cache to nodes, if it is available (4 retries left).
+        changed: [hostb12-1]
+        changed: [host12-2]
+        changed: [host12-3]
+        FAILED - RETRYING: [host34-2]: Download_file | Copy file from cache to nodes, if it is available (3 retries left).
+        FAILED - RETRYING: [host34-2]: Download_file | Copy file from cache to nodes, if it is available (2 retries left).
+        FAILED - RETRYING: [host34-2]: Download_file | Copy file from cache to nodes, if it is available (1 retries left).
+        fatal: [host34-2]: FAILED! => {"attempts": 4, "changed": false, "cmd": "sshpass -d4 /usr/bin/rsync --delay-updates -F --compress --archive --rsh='/usr/bin/ssh -S none -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 -o \"ProxyCommand=/tmp/kube-proxy-jump.sh %h %p\" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --out-format='<<CHANGED>>%i %n%L' /opt/fabric-cache/kubespray/download-cache/cni-plugins-linux-amd64-v1.3.0.tgz ubuntu@172.16.2.44:/tmp/releases/cni-plugins-linux-amd64-v1.3.0.tgz", "msg": "Warning: Permanently added 'r810' (ED25519) to the list of known hosts.\r\nWarning: Permanently added '172.16.2.44' (ED25519) to the list of known hosts.\r\nrsync: [receiver] mkstemp \"/tmp/releases/.cni-plugins-linux-amd64-v1.3.0.tgz.Ypd8qQ\" failed: Permission denied (13)\nrsync error: some files/attrs were not transferred (see previous errors) (code 23) at main.c(1347) [sender=3.2.7]\n", "rc": 23}
 
         NO MORE HOSTS LEFT *************************************************************
 
         PLAY RECAP *********************************************************************
-        host12-1                   : ok=37   changed=6    unreachable=0    failed=0    skipped=27   rescued=0    ignored=0
-        host12-2                   : ok=36   changed=6    unreachable=0    failed=0    skipped=22   rescued=0    ignored=0
-        host12-3                   : ok=36   changed=6    unreachable=0    failed=0    skipped=22   rescued=0    ignored=0
-        host34-1                   : ok=36   changed=6    unreachable=0    failed=0    skipped=22   rescued=0    ignored=0
-        host34-2                   : ok=35   changed=6    unreachable=1    failed=0    skipped=22   rescued=0    ignored=0
-        hostb12-1                  : ok=36   changed=6    unreachable=0    failed=0    skipped=22   rescued=0    ignored=0
-        localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+        host12-1                   : ok=259  changed=49   unreachable=0    failed=0    skipped=284  rescued=0    ignored=0
+        host12-2                   : ok=177  changed=34   unreachable=0    failed=0    skipped=258  rescued=0    ignored=0
+        host12-3                   : ok=177  changed=34   unreachable=0    failed=0    skipped=258  rescued=0    ignored=0
+        host34-1                   : ok=205  changed=41   unreachable=0    failed=0    skipped=257  rescued=0    ignored=0
+        host34-2                   : ok=176  changed=33   unreachable=0    failed=1    skipped=258  rescued=0    ignored=0
+        hostb12-1                  : ok=205  changed=41   unreachable=0    failed=0    skipped=257  rescued=0    ignored=0
 
-        Monday 01 June 2026  15:01:09 -0500 (0:00:07.959)       0:05:31.320 ***********
+        Monday 01 June 2026  17:12:43 -0500 (0:06:48.579)       0:50:15.855 ***********
         ===============================================================================
-        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 24.79s
-        bootstrap-os : Install dbus for the hostname module -------------------- 16.49s
-        Gather necessary facts (hardware) -------------------------------------- 15.41s
-        kubernetes/preinstall : Mask swap.target (persist swapoff) ------------- 15.26s
-        adduser : User | Create User ------------------------------------------- 15.03s
-        kubernetes/preinstall : Check if /etc/fstab exists --------------------- 14.31s
-        bootstrap-os : Gather host facts to get ansible_os_family -------------- 14.23s
-        kubernetes/preinstall : Check existence of /etc/resolvconf/resolv.conf.d -- 13.86s
-        bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora) -- 13.84s
-        Gather necessary facts (network) --------------------------------------- 13.64s
-        Gather minimal facts --------------------------------------------------- 13.61s
-        kubernetes/preinstall : NetworkManager | Check if host has NetworkManager -- 13.53s
-        adduser : User | Create User Group ------------------------------------- 13.50s
-        bootstrap-os : Ensure bash_completion.d folder exists ------------------ 13.42s
-        kubernetes/preinstall : Set is_fedora_coreos --------------------------- 12.98s
-        kubernetes/preinstall : Check status of /etc/resolv.conf --------------- 12.88s
-        kubernetes/preinstall : Disable swap ----------------------------------- 12.52s
-        kubernetes/preinstall : Check resolvconf ------------------------------- 12.43s
-        bootstrap-os : Create remote_tmp for it is used by another module ------ 12.01s
-        kubernetes/preinstall : Get content of /etc/resolv.conf ---------------- 11.94s
+        download : Download_file | Copy file from cache to nodes, if it is available - 408.58s
+        container-engine/containerd : Download_file | Copy file from cache to nodes, if it is available - 271.02s
+        container-engine/crictl : Download_file | Copy file from cache to nodes, if it is available - 144.79s
+        kubernetes/preinstall : Ensure kubelet expected parameters are set ----- 74.63s
+        container-engine/containerd : Containerd | Remove orphaned binary ------ 61.96s
+        container-engine/nerdctl : Download_file | Copy file from cache to nodes, if it is available -- 61.59s
+        download : Download_file | Copy file from cache to nodes, if it is available -- 55.73s
+        container-engine/containerd : Containerd | Ensure containerd directories exist -- 49.50s
+        kubernetes/preinstall : Create kubernetes directories ------------------ 49.12s
+        download : Download_file | Download item ------------------------------- 42.42s
+        container-engine/containerd : Download_file | Download item ------------ 42.04s
+        download : Download_file | Copy file from cache to nodes, if it is available -- 38.74s
+        download : Download_file | Download item ------------------------------- 37.58s
+        container-engine/containerd : Containerd | Unpack containerd archive --- 29.41s
+        container-engine/crictl : Extract_file | Unpacking archive ------------- 27.71s
+        container-engine/runc : Download_file | Copy file from cache to nodes, if it is available -- 25.93s
+        kubernetes/preinstall : Create other directories of root owner --------- 25.74s
+        kubernetes/preinstall : Create cni directories ------------------------- 25.69s
+        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 25.14s
+        kubernetes/preinstall : Hosts | Update (if necessary) hosts file ------- 25.00s
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
@@ -744,6 +2910,6 @@ Host12_3                   : ok=7    changed=1    unreachable=0    failed=0    s
 Host34_1                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
 Host34_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
 HostB12_1                  : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-localhost                  : ok=23   changed=2    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+localhost                  : ok=24   changed=12   unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
