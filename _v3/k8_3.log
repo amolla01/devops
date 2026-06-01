@@ -1,254 +1,4 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center$ cd _v3
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml --tags verify
-
-PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
-
-PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
-
-PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
-
-PLAY [Phase 4: Execute KubeSpray cluster.yml] *******************************************************************************************************************************************************************
-
-PLAY [Phase 5: Verify Kubernetes Cluster] ***********************************************************************************************************************************************************************
-
-TASK [Create .kube directory] ***********************************************************************************************************************************************************************************
-ok: [Host12_1]
-
-TASK [Check admin.conf exists] **********************************************************************************************************************************************************************************
-ok: [Host12_1]
-
-TASK [Fail early if kubeconfig missing] *************************************************************************************************************************************************************************
-[ERROR]: Task failed: Action failed: /etc/kubernetes/admin.conf not found on Host12_1. KubeSpray likely failed during Phase 4 — check /tmp/kubespray_deploy.log on the deployer.
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:377:7
-
-375       register: _admin_conf
-376
-377     - name: Fail early if kubeconfig missing
-          ^ column 7
-
-fatal: [Host12_1]: FAILED! =>
-    changed: false
-    msg: /etc/kubernetes/admin.conf not found on Host12_1. KubeSpray likely failed during
-        Phase 4 — check /tmp/kubespray_deploy.log on the deployer.
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml --tags deloy
-^CTraceback (most recent call last):
-  File "/mnt/c/Users/nh1221/data-center/venv/bin/ansible-playbook", line 5, in <module>
-    from ansible.cli.playbook import main
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/cli/__init__.py", line 109, in <module>
-    from ansible.inventory.manager import InventoryManager
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/inventory/manager.py", line 35, in <module>
-    from ansible.inventory.data import InventoryData
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/inventory/data.py", line 26, in <module>
-    from ansible.inventory.group import Group
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/inventory/group.py", line 29, in <module>
-    from ansible.utils.vars import combine_vars, validate_variable_name
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/utils/vars.py", line 36, in <module>
-    from ansible.parsing.dataloader import DataLoader
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/parsing/dataloader.py", line 18, in <module>
-    from ansible.module_utils.basic import is_executable
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/module_utils/basic.py", line 136, in <module>
-    from ansible.module_utils.common.process import get_bin_path
-  File "/mnt/c/Users/nh1221/data-center/venv/lib/python3.12/site-packages/ansible/module_utils/common/process.py", line 8, in <module>
-    from ansible.module_utils.common.file import is_executable
-  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
-  File "<frozen importlib._bootstrap_external>", line 1081, in get_code
-  File "<frozen importlib._bootstrap_external>", line 1204, in path_stats
-  File "<frozen importlib._bootstrap_external>", line 147, in _path_stat
-KeyboardInterrupt
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml --tags deploy
-
-PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
-
-PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
-
-PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
-
-PLAY [Phase 4: Execute KubeSpray cluster.yml] *******************************************************************************************************************************************************************
-
-TASK [Display deployment plan] **********************************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg: |-
-        Deploying Kubernetes cluster via KubeSpray
-        Profile: ubuntu_r810_kvm
-        Timeout: 180s
-        SSH user: ubuntu
-        Inventory: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
-
-TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:321:7
-
-319           Inventory: {{ kubespray_inventory_dir }}/hosts.yml
-320
-321     - name: Run KubeSpray cluster.yml
-          ^ column 7
-
-fatal: [localhost]: FAILED! =>
-    changed: false
-    cmd: |-
-        set -o pipefail
-        source /opt/fabric-cache/kubespray/venv/bin/activate
-        cd /opt/fabric-cache/kubespray/src
-        ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  -e ansible_ssh_common_args=\"-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
-    delta: '0:00:00.346932'
-    end: '2026-06-01 12:25:17.614186'
-    msg: non-zero return code
-    rc: 2
-    start: '2026-06-01 12:25:17.267254'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        usage: ansible-playbook [-h] [--version] [-v] [--private-key PRIVATE_KEY_FILE]
-                                [-u REMOTE_USER] [-c CONNECTION] [-T TIMEOUT]
-                                [--ssh-common-args SSH_COMMON_ARGS]
-                                [--sftp-extra-args SFTP_EXTRA_ARGS]
-                                [--scp-extra-args SCP_EXTRA_ARGS]
-                                [--ssh-extra-args SSH_EXTRA_ARGS]
-                                [-k | --connection-password-file CONNECTION_PASSWORD_FILE]
-                                [--force-handlers] [--flush-cache] [-b]
-                                [--become-method BECOME_METHOD]
-                                [--become-user BECOME_USER]
-                                [-K | --become-password-file BECOME_PASSWORD_FILE]
-                                [-t TAGS] [--skip-tags SKIP_TAGS] [-C] [-D]
-                                [-i INVENTORY] [--list-hosts] [-l SUBSET]
-                                [-e EXTRA_VARS] [--vault-id VAULT_IDS]
-                                [--ask-vault-password | --vault-password-file VAULT_PASSWORD_FILES]
-                                [-f FORKS] [-M MODULE_PATH] [--syntax-check]
-                                [--list-tasks] [--list-tags] [--step]
-                                [--start-at-task START_AT_TASK]
-                                playbook [playbook ...]
-        ansible-playbook: error: unrecognized arguments: StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-
-        usage: ansible-playbook [-h] [--version] [-v] [--private-key PRIVATE_KEY_FILE]
-                                [-u REMOTE_USER] [-c CONNECTION] [-T TIMEOUT]
-                                [--ssh-common-args SSH_COMMON_ARGS]
-                                [--sftp-extra-args SFTP_EXTRA_ARGS]
-                                [--scp-extra-args SCP_EXTRA_ARGS]
-                                [--ssh-extra-args SSH_EXTRA_ARGS]
-                                [-k | --connection-password-file CONNECTION_PASSWORD_FILE]
-                                [--force-handlers] [--flush-cache] [-b]
-                                [--become-method BECOME_METHOD]
-                                [--become-user BECOME_USER]
-                                [-K | --become-password-file BECOME_PASSWORD_FILE]
-                                [-t TAGS] [--skip-tags SKIP_TAGS] [-C] [-D]
-                                [-i INVENTORY] [--list-hosts] [-l SUBSET]
-                                [-e EXTRA_VARS] [--vault-id VAULT_IDS]
-                                [--ask-vault-password | --vault-password-file VAULT_PASSWORD_FILES]
-                                [-f FORKS] [-M MODULE_PATH] [--syntax-check]
-                                [--list-tasks] [--list-tags] [--step]
-                                [--start-at-task START_AT_TASK]
-                                playbook [playbook ...]
-
-        Runs Ansible playbooks, executing the defined tasks on the targeted hosts.
-
-        positional arguments:
-          playbook              Playbook(s)
-
-        options:
-          --ask-vault-password, --ask-vault-pass
-                                ask for vault password
-          --become-password-file BECOME_PASSWORD_FILE, --become-pass-file BECOME_PASSWORD_FILE
-                                Become password file
-          --connection-password-file CONNECTION_PASSWORD_FILE, --conn-pass-file CONNECTION_PASSWORD_FILE
-                                Connection password file
-          --flush-cache         clear the fact cache for every host in inventory
-          --force-handlers      run handlers even if a task fails
-          --list-hosts          outputs a list of matching hosts; does not execute
-                                anything else
-          --list-tags           list all available tags
-          --list-tasks          list all tasks that would be executed
-          --skip-tags SKIP_TAGS
-                                only run plays and tasks whose tags do not match these
-                                values
-          --start-at-task START_AT_TASK
-                                start the playbook at the task matching this name
-          --step                one-step-at-a-time: confirm each task before running
-          --syntax-check        perform a syntax check on the playbook, but do not
-                                execute it
-          --vault-id VAULT_IDS  the vault identity to use
-          --vault-password-file VAULT_PASSWORD_FILES, --vault-pass-file VAULT_PASSWORD_FILES
-                                vault password file
-          --version             show program's version number, config file location,
-                                configured module search path, module location,
-                                executable location and exit
-          -C, --check           don't make any changes; instead, try to predict some
-                                of the changes that may occur
-          -D, --diff            when changing (small) files and templates, show the
-                                differences in those files; works great with --check
-          -K, --ask-become-pass
-                                ask for privilege escalation password
-          -M MODULE_PATH, --module-path MODULE_PATH
-                                prepend colon-separated path(s) to module library
-                                (default={{ ANSIBLE_HOME ~
-                                "/plugins/modules:/usr/share/ansible/plugins/modules"
-                                }})
-          -e EXTRA_VARS, --extra-vars EXTRA_VARS
-                                set additional variables as key=value or YAML/JSON, if
-                                filename prepend with @
-          -f FORKS, --forks FORKS
-                                specify number of parallel processes to use
-                                (default=5)
-          -h, --help            show this help message and exit
-          -i INVENTORY, --inventory INVENTORY, --inventory-file INVENTORY
-                                specify inventory host path or comma separated host
-                                list. --inventory-file is deprecated
-          -k, --ask-pass        ask for connection password
-          -l SUBSET, --limit SUBSET
-                                further limit selected hosts to an additional pattern
-          -t TAGS, --tags TAGS  only run plays and tasks tagged with these values
-          -v, --verbose         Causes Ansible to print more debug messages. Adding
-                                multiple -v will increase the verbosity, the builtin
-                                plugins currently evaluate up to -vvvvvv. A reasonable
-                                level to start is -vvv, connection debugging might
-                                require -vvvv.
-
-        Connection Options:
-          control as whom and how to connect to hosts
-
-          --private-key PRIVATE_KEY_FILE, --key-file PRIVATE_KEY_FILE
-                                use this file to authenticate the connection
-          --scp-extra-args SCP_EXTRA_ARGS
-                                specify extra arguments to pass to scp only (e.g. -l)
-          --sftp-extra-args SFTP_EXTRA_ARGS
-                                specify extra arguments to pass to sftp only (e.g. -f,
-                                -l)
-          --ssh-common-args SSH_COMMON_ARGS
-                                specify common arguments to pass to sftp/scp/ssh (e.g.
-                                ProxyCommand)
-          --ssh-extra-args SSH_EXTRA_ARGS
-                                specify extra arguments to pass to ssh only (e.g. -R)
-          -T TIMEOUT, --timeout TIMEOUT
-                                override the connection timeout in seconds
-                                (default=10)
-          -c CONNECTION, --connection CONNECTION
-                                connection type to use (default=smart)
-          -u REMOTE_USER, --user REMOTE_USER
-                                connect as this user (default=None)
-
-        Privilege Escalation Options:
-          control how and which user you become as on target hosts
-
-          --become-method BECOME_METHOD
-                                privilege escalation method to use (default=sudo), use
-                                `ansible-doc -t become -l` to list valid choices.
-          --become-user BECOME_USER
-                                run operations as this user (default=root)
-          -b, --become          run operations with become (does not imply password
-                                prompting)
-    stdout_lines: <omitted>
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-localhost                  : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_kubespray.yml -i inventory/hosts.yml
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml
 
 PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
 
@@ -310,7 +60,7 @@ TASK [Create KubeSpray inventory directory (k8s-cluster)] **********************
 ok: [localhost]
 
 TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
-ok: [localhost]
+changed: [localhost]
 
 TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
 ok: [localhost]
@@ -333,51 +83,51 @@ PLAY [Phase 3: Prepare All Kubernetes Nodes] ***********************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
 ok: [Host12_1]
-ok: [Host34_1]
 ok: [Host12_2]
+ok: [Host34_1]
 ok: [Host12_3]
 ok: [HostB12_1]
 ok: [Host34_2]
 
 TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
-changed: [Host34_1]
-changed: [Host12_2]
 changed: [Host12_1]
+changed: [Host34_1]
 changed: [HostB12_1]
 changed: [Host12_3]
+changed: [Host12_2]
 changed: [Host34_2]
 
 TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
 ok: [Host34_1] => (item=br_netfilter)
-ok: [Host12_3] => (item=br_netfilter)
 ok: [Host12_1] => (item=br_netfilter)
-ok: [HostB12_1] => (item=br_netfilter)
 ok: [Host12_2] => (item=br_netfilter)
+ok: [HostB12_1] => (item=br_netfilter)
+ok: [Host12_3] => (item=br_netfilter)
 ok: [Host34_1] => (item=overlay)
-ok: [Host12_3] => (item=overlay)
-ok: [Host12_2] => (item=overlay)
 ok: [Host12_1] => (item=overlay)
+ok: [Host12_2] => (item=overlay)
 ok: [HostB12_1] => (item=overlay)
+ok: [Host12_3] => (item=overlay)
 ok: [Host34_1] => (item=ip_vs)
-ok: [Host12_3] => (item=ip_vs)
-ok: [Host12_2] => (item=ip_vs)
 ok: [Host12_1] => (item=ip_vs)
+ok: [Host12_2] => (item=ip_vs)
 ok: [HostB12_1] => (item=ip_vs)
+ok: [Host12_3] => (item=ip_vs)
 ok: [Host34_1] => (item=ip_vs_rr)
-ok: [Host12_3] => (item=ip_vs_rr)
+ok: [Host12_1] => (item=ip_vs_rr)
 ok: [Host12_2] => (item=ip_vs_rr)
 ok: [HostB12_1] => (item=ip_vs_rr)
-ok: [Host12_1] => (item=ip_vs_rr)
+ok: [Host12_3] => (item=ip_vs_rr)
 ok: [Host34_1] => (item=ip_vs_wrr)
-ok: [Host12_3] => (item=ip_vs_wrr)
+ok: [Host12_1] => (item=ip_vs_wrr)
 ok: [Host12_2] => (item=ip_vs_wrr)
 ok: [HostB12_1] => (item=ip_vs_wrr)
-ok: [Host12_1] => (item=ip_vs_wrr)
+ok: [Host12_3] => (item=ip_vs_wrr)
 ok: [Host34_1] => (item=ip_vs_sh)
-ok: [Host12_3] => (item=ip_vs_sh)
-ok: [Host12_2] => (item=ip_vs_sh)
 ok: [Host12_1] => (item=ip_vs_sh)
+ok: [Host12_2] => (item=ip_vs_sh)
 ok: [HostB12_1] => (item=ip_vs_sh)
+ok: [Host12_3] => (item=ip_vs_sh)
 ok: [Host34_2] => (item=br_netfilter)
 ok: [Host34_2] => (item=overlay)
 ok: [Host34_2] => (item=ip_vs)
@@ -388,64 +138,64 @@ ok: [Host34_2] => (item=ip_vs_sh)
 TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
 ok: [Host12_1]
 ok: [Host34_1]
-ok: [Host12_3]
-ok: [Host12_2]
 ok: [HostB12_1]
+ok: [Host12_2]
+ok: [Host12_3]
 ok: [Host34_2]
 
 TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
 ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
-ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
+ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
+ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'})
 ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'})
 
 TASK [Install prerequisite packages] ****************************************************************************************************************************************************************************
-ok: [Host12_2]
+ok: [Host12_1]
 ok: [Host34_1]
+ok: [Host12_2]
 ok: [HostB12_1]
 ok: [Host12_3]
-ok: [Host12_1]
 ok: [Host34_2]
 
 TASK [Set hostname to kube_node_name] ***************************************************************************************************************************************************************************
 ok: [Host12_1]
-ok: [Host12_2]
 ok: [Host34_1]
-ok: [Host12_3]
+ok: [Host12_2]
 ok: [HostB12_1]
+ok: [Host12_3]
 ok: [Host34_2]
 
 TASK [preflight_hw | Check disk write latency for etcd (real hardware)] *****************************************************************************************************************************************
-skipping: [Host34_1]
 skipping: [Host12_1]
+skipping: [Host34_1]
 skipping: [HostB12_1]
 skipping: [Host12_2]
 skipping: [Host12_3]
 skipping: [Host34_2]
 
 TASK [preflight_hw | Report disk IOPS result] *******************************************************************************************************************************************************************
-skipping: [Host34_1]
 skipping: [Host12_1]
+skipping: [Host34_1]
 skipping: [HostB12_1]
 skipping: [Host12_2]
 skipping: [Host12_3]
@@ -460,15 +210,19 @@ ok: [localhost] =>
         Profile: ubuntu_r810_kvm
         Timeout: 180s
         SSH user: ubuntu
+        ProxyJump: nh1221@R810
         Inventory: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
+
+TASK [Clear stale SSH ControlMaster sockets] ********************************************************************************************************************************************************************
+ok: [localhost]
 
 TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
 [ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:321:7
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:324:7
 
-319           Inventory: {{ kubespray_inventory_dir }}/hosts.yml
-320
-321     - name: Run KubeSpray cluster.yml
+322       changed_when: false
+323
+324     - name: Run KubeSpray cluster.yml
           ^ column 7
 
 fatal: [localhost]: FAILED! =>
@@ -477,152 +231,110 @@ fatal: [localhost]: FAILED! =>
         set -o pipefail
         source /opt/fabric-cache/kubespray/venv/bin/activate
         cd /opt/fabric-cache/kubespray/src
-        ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  -e ansible_ssh_common_args=\"-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
-    delta: '0:00:00.194010'
-    end: '2026-06-01 12:29:10.306532'
+        ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
+    delta: '0:04:23.846095'
+    end: '2026-06-01 13:19:14.984669'
     msg: non-zero return code
     rc: 2
-    start: '2026-06-01 12:29:10.112522'
+    start: '2026-06-01 13:14:51.138574'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
-        usage: ansible-playbook [-h] [--version] [-v] [--private-key PRIVATE_KEY_FILE]
-                                [-u REMOTE_USER] [-c CONNECTION] [-T TIMEOUT]
-                                [--ssh-common-args SSH_COMMON_ARGS]
-                                [--sftp-extra-args SFTP_EXTRA_ARGS]
-                                [--scp-extra-args SCP_EXTRA_ARGS]
-                                [--ssh-extra-args SSH_EXTRA_ARGS]
-                                [-k | --connection-password-file CONNECTION_PASSWORD_FILE]
-                                [--force-handlers] [--flush-cache] [-b]
-                                [--become-method BECOME_METHOD]
-                                [--become-user BECOME_USER]
-                                [-K | --become-password-file BECOME_PASSWORD_FILE]
-                                [-t TAGS] [--skip-tags SKIP_TAGS] [-C] [-D]
-                                [-i INVENTORY] [--list-hosts] [-l SUBSET]
-                                [-e EXTRA_VARS] [--vault-id VAULT_IDS]
-                                [--ask-vault-password | --vault-password-file VAULT_PASSWORD_FILES]
-                                [-f FORKS] [-M MODULE_PATH] [--syntax-check]
-                                [--list-tasks] [--list-tags] [--step]
-                                [--start-at-task START_AT_TASK]
-                                playbook [playbook ...]
-        ansible-playbook: error: unrecognized arguments: StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+        [WARNING]: Skipping callback plugin 'ara_default', unable to load
 
-        usage: ansible-playbook [-h] [--version] [-v] [--private-key PRIVATE_KEY_FILE]
-                                [-u REMOTE_USER] [-c CONNECTION] [-T TIMEOUT]
-                                [--ssh-common-args SSH_COMMON_ARGS]
-                                [--sftp-extra-args SFTP_EXTRA_ARGS]
-                                [--scp-extra-args SCP_EXTRA_ARGS]
-                                [--ssh-extra-args SSH_EXTRA_ARGS]
-                                [-k | --connection-password-file CONNECTION_PASSWORD_FILE]
-                                [--force-handlers] [--flush-cache] [-b]
-                                [--become-method BECOME_METHOD]
-                                [--become-user BECOME_USER]
-                                [-K | --become-password-file BECOME_PASSWORD_FILE]
-                                [-t TAGS] [--skip-tags SKIP_TAGS] [-C] [-D]
-                                [-i INVENTORY] [--list-hosts] [-l SUBSET]
-                                [-e EXTRA_VARS] [--vault-id VAULT_IDS]
-                                [--ask-vault-password | --vault-password-file VAULT_PASSWORD_FILES]
-                                [-f FORKS] [-M MODULE_PATH] [--syntax-check]
-                                [--list-tasks] [--list-tags] [--step]
-                                [--start-at-task START_AT_TASK]
-                                playbook [playbook ...]
+        PLAY [Check Ansible version] ***************************************************
+        Monday 01 June 2026  13:14:52 -0500 (0:00:00.016)       0:00:00.016 ***********
 
-        Runs Ansible playbooks, executing the defined tasks on the targeted hosts.
+        TASK [Check 2.15.5 <= Ansible version < 2.17.0] ********************************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  13:14:52 -0500 (0:00:00.028)       0:00:00.045 ***********
 
-        positional arguments:
-          playbook              Playbook(s)
+        TASK [Check that python netaddr is installed] **********************************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Monday 01 June 2026  13:14:52 -0500 (0:00:00.087)       0:00:00.132 ***********
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-master
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-node
+        [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
+        [WARNING]: Could not match supplied host pattern, ignoring: calico-rr
+        [WARNING]: Could not match supplied host pattern, ignoring: no-floating
+        [WARNING]: Could not match supplied host pattern, ignoring: bastion
 
-        options:
-          --ask-vault-password, --ask-vault-pass
-                                ask for vault password
-          --become-password-file BECOME_PASSWORD_FILE, --become-pass-file BECOME_PASSWORD_FILE
-                                Become password file
-          --connection-password-file CONNECTION_PASSWORD_FILE, --conn-pass-file CONNECTION_PASSWORD_FILE
-                                Connection password file
-          --flush-cache         clear the fact cache for every host in inventory
-          --force-handlers      run handlers even if a task fails
-          --list-hosts          outputs a list of matching hosts; does not execute
-                                anything else
-          --list-tags           list all available tags
-          --list-tasks          list all tasks that would be executed
-          --skip-tags SKIP_TAGS
-                                only run plays and tasks whose tags do not match these
-                                values
-          --start-at-task START_AT_TASK
-                                start the playbook at the task matching this name
-          --step                one-step-at-a-time: confirm each task before running
-          --syntax-check        perform a syntax check on the playbook, but do not
-                                execute it
-          --vault-id VAULT_IDS  the vault identity to use
-          --vault-password-file VAULT_PASSWORD_FILES, --vault-pass-file VAULT_PASSWORD_FILES
-                                vault password file
-          --version             show program's version number, config file location,
-                                configured module search path, module location,
-                                executable location and exit
-          -C, --check           don't make any changes; instead, try to predict some
-                                of the changes that may occur
-          -D, --diff            when changing (small) files and templates, show the
-                                differences in those files; works great with --check
-          -K, --ask-become-pass
-                                ask for privilege escalation password
-          -M MODULE_PATH, --module-path MODULE_PATH
-                                prepend colon-separated path(s) to module library
-                                (default={{ ANSIBLE_HOME ~
-                                "/plugins/modules:/usr/share/ansible/plugins/modules"
-                                }})
-          -e EXTRA_VARS, --extra-vars EXTRA_VARS
-                                set additional variables as key=value or YAML/JSON, if
-                                filename prepend with @
-          -f FORKS, --forks FORKS
-                                specify number of parallel processes to use
-                                (default=5)
-          -h, --help            show this help message and exit
-          -i INVENTORY, --inventory INVENTORY, --inventory-file INVENTORY
-                                specify inventory host path or comma separated host
-                                list. --inventory-file is deprecated
-          -k, --ask-pass        ask for connection password
-          -l SUBSET, --limit SUBSET
-                                further limit selected hosts to an additional pattern
-          -t TAGS, --tags TAGS  only run plays and tasks tagged with these values
-          -v, --verbose         Causes Ansible to print more debug messages. Adding
-                                multiple -v will increase the verbosity, the builtin
-                                plugins currently evaluate up to -vvvvvv. A reasonable
-                                level to start is -vvv, connection debugging might
-                                require -vvvv.
+        TASK [Check that jinja is not too old (install via pip)] ***********************
+        ok: [localhost] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
 
-        Connection Options:
-          control as whom and how to connect to hosts
+        PLAY [Add kube-master nodes to kube_control_plane] *****************************
+        skipping: no hosts matched
 
-          --private-key PRIVATE_KEY_FILE, --key-file PRIVATE_KEY_FILE
-                                use this file to authenticate the connection
-          --scp-extra-args SCP_EXTRA_ARGS
-                                specify extra arguments to pass to scp only (e.g. -l)
-          --sftp-extra-args SFTP_EXTRA_ARGS
-                                specify extra arguments to pass to sftp only (e.g. -f,
-                                -l)
-          --ssh-common-args SSH_COMMON_ARGS
-                                specify common arguments to pass to sftp/scp/ssh (e.g.
-                                ProxyCommand)
-          --ssh-extra-args SSH_EXTRA_ARGS
-                                specify extra arguments to pass to ssh only (e.g. -R)
-          -T TIMEOUT, --timeout TIMEOUT
-                                override the connection timeout in seconds
-                                (default=10)
-          -c CONNECTION, --connection CONNECTION
-                                connection type to use (default=smart)
-          -u REMOTE_USER, --user REMOTE_USER
-                                connect as this user (default=None)
+        PLAY [Add kube-node nodes to kube_node] ****************************************
+        skipping: no hosts matched
 
-        Privilege Escalation Options:
-          control how and which user you become as on target hosts
+        PLAY [Add k8s-cluster nodes to k8s_cluster] ************************************
+        skipping: no hosts matched
 
-          --become-method BECOME_METHOD
-                                privilege escalation method to use (default=sudo), use
-                                `ansible-doc -t become -l` to list valid choices.
-          --become-user BECOME_USER
-                                run operations as this user (default=root)
-          -b, --become          run operations with become (does not imply password
-                                prompting)
+        PLAY [Add calico-rr nodes to calico_rr] ****************************************
+        skipping: no hosts matched
+
+        PLAY [Add no-floating nodes to no_floating] ************************************
+        skipping: no hosts matched
+
+        PLAY [Install bastion ssh config] **********************************************
+        skipping: no hosts matched
+
+        PLAY [Bootstrap hosts for Ansible] *********************************************
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.048)       0:00:00.181 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.131)       0:00:00.313 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.027)       0:00:00.340 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.070)       0:00:00.411 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.026)       0:00:00.437 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.073)       0:00:00.511 ***********
+        Monday 01 June 2026  13:14:53 -0500 (0:00:00.074)       0:00:00.586 ***********
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Fetch /etc/os-release] ************************************
+        fatal: [host12-1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.40 port 22: Connection timed out", "unreachable": true}
+        fatal: [host12-2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.41 port 22: Connection timed out", "unreachable": true}
+        fatal: [host34-1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.43 port 22: Connection timed out", "unreachable": true}
+        fatal: [hostb12-1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.45 port 22: Connection timed out", "unreachable": true}
+        fatal: [host12-3]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.42 port 22: Connection timed out", "unreachable": true}
+        fatal: [host34-2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.44 port 22: Connection timed out", "unreachable": true}
+
+        NO MORE HOSTS LEFT *************************************************************
+
+        PLAY RECAP *********************************************************************
+        host12-1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=6    rescued=0    ignored=0
+        host12-2                   : ok=0    changed=0    unreachable=1    failed=0    skipped=3    rescued=0    ignored=0
+        host12-3                   : ok=0    changed=0    unreachable=1    failed=0    skipped=3    rescued=0    ignored=0
+        host34-1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=3    rescued=0    ignored=0
+        host34-2                   : ok=0    changed=0    unreachable=1    failed=0    skipped=3    rescued=0    ignored=0
+        hostb12-1                  : ok=0    changed=0    unreachable=1    failed=0    skipped=3    rescued=0    ignored=0
+        localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+        Monday 01 June 2026  13:19:14 -0500 (0:04:21.344)       0:04:21.930 ***********
+        ===============================================================================
+        bootstrap-os : Fetch /etc/os-release ---------------------------------- 261.34s
+        kubespray-defaults : Gather ansible_default_ipv4 from all hosts --------- 0.13s
+        Check that python netaddr is installed ---------------------------------- 0.09s
+        kubespray-defaults : Set `etcd_deployment_type` to "kubeadm" if `etcd_kubeadm_enabled` is true --- 0.07s
+        kubespray-defaults : Populates no_proxy to all hosts -------------------- 0.07s
+        kubespray-defaults : Set fallback_ips ----------------------------------- 0.07s
+        Check that jinja is not too old (install via pip) ----------------------- 0.05s
+        Check 2.15.5 <= Ansible version < 2.17.0 -------------------------------- 0.03s
+        kubespray-defaults : Create fallback_ips_base --------------------------- 0.03s
+        kubespray-defaults : Set no_proxy to all assigned cluster IPs and hostnames --- 0.03s
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
@@ -632,6 +344,6 @@ Host12_3                   : ok=7    changed=1    unreachable=0    failed=0    s
 Host34_1                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
 Host34_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
 HostB12_1                  : ok=7    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
-localhost                  : ok=18   changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+localhost                  : ok=19   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
