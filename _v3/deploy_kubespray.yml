@@ -325,7 +325,15 @@
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^ssh_args\s*='
-        line: "ssh_args = -C -o ControlMaster=auto -o ControlPersist=30m -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 {{ proxy_jump_ssh_arg | default('') | trim }}"
+        line: "ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 {{ proxy_jump_ssh_arg | default('') | trim }}"
+        insertafter: '^\[ssh_connection\]'
+      when: proxy_jump_resolved | default('') | length > 0
+
+    - name: Disable SSH pipelining in kubespray (conflicts with sshpass)
+      ansible.builtin.lineinfile:
+        path: "{{ kubespray_dir }}/ansible.cfg"
+        regexp: '^pipelining\s*='
+        line: "pipelining = False"
         insertafter: '^\[ssh_connection\]'
       when: proxy_jump_resolved | default('') | length > 0
 
