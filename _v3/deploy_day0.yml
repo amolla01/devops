@@ -1,0 +1,290 @@
+---
+# =============================================================================
+# deploy_day0.yml  —  Unified Day-0 Base Provisioning (ALL device types)
+# =============================================================================
+# This playbook handles day-0 provisioning for:
+#   - SONiC switches (spines, leaves, border leaves)
+#   - MikroTik CHR exit routers (RouterOS — NOT SONiC)
+#   - Ubuntu bare-metal servers
+#
+# Each device type is handled by a SEPARATE PLAY with its own role so that
+# SONiC-specific tasks (sonic-cfggen, config_db, Redis, swap) never run on
+# MikroTik or Ubuntu hosts.
+#
+# SCOPING — use --limit to target any combination:
+#
+#   ansible-playbook playbooks/deploy_day0.yml -i inventory/hosts.yml
+#   ansible-playbook playbooks/deploy_day0.yml --limit sonic_switches
+#   ansible-playbook playbooks/deploy_day0.yml --limit "Spine_S1,Leaf_L1"
+#   ansible-playbook playbooks/deploy_day0.yml --limit exit_routers
+#   ansible-playbook playbooks/deploy_day0.yml --limit Exit_Router1
+#   ansible-playbook playbooks/deploy_day0.yml --limit servers
+#   ansible-playbook playbooks/deploy_day0.yml --limit "Spine_S1,Exit_Router1,Host12_1"
+#
+# TAG-BASED PARTIAL RUNS:
+#   --tags render,validate   Render JSON + validate syntax only (no push, no reload)
+#   --tags push,reload       Re-push + reload a previously rendered config
+#   --tags verify            Post-deployment checks only
+#   --tags preflight         Pre-flight connectivity checks only
+#
+# CHRONOLOGICAL ORDER (full fabric bring-up):
+#   1. deploy_day0.yml --limit spines
+#   2. deploy_day0.yml --limit leaves
+#   3. deploy_day0.yml --limit border_leaves
+#   4. deploy_day0.yml --limit exit_routers
+#   5. deploy_day0.yml --limit servers
+#   6. deploy_day1.yml   (fabric wiring: BGP for all device types)
+# =============================================================================
+
+###############################################################################
+# PLAY 1: SONiC Switches (Spines, Leaves, Border Leaves)
+###############################################################################
+# Parallelism: Day-0 config is per-switch (no inter-switch dependencies).
+# serial controls batch size: default=4 processes 4 switches simultaneously.
+# Override: -e "sonic_day0_serial=1" for serial execution (debug)
+#           -e "sonic_day0_serial='100%'" for full parallel (all 10 at once)
+# strategy: free — faster hosts proceed without waiting for slower ones.
+###############################################################################
+- name: "Day-0 Base Provisioning — SONiC Switches"
+  hosts: "sonic_switches"
+  become: yes
+  gather_facts: false
+  serial: "{{ sonic_day0_serial | default(4) }}"
+  strategy: "{{ sonic_day0_strategy | default('free') }}"
+
+  pre_tasks:
+
+    - name: "Phase 0 | Assert automation profile is supported"
+      ansible.builtin.assert:
+        that:
+          - automation_profile in automation_profile_supported
+        fail_msg: >-
+          Unsupported automation_profile '{{ automation_profile }}'.
+          Supported values: {{ automation_profile_supported | join(', ') }}
+        success_msg: >-
+          automation_profile={{ automation_profile }}
+          ({{ automation_profile_label }})
+      run_once: true
+      delegate_to: localhost
+      tags: [always, day0]
+
+    # ---- Real Hardware: Inventory Consistency Validations ----
+    - name: "Phase 0 | Assert ansible_host is reachable subnet (real hardware)"
+      ansible.builtin.assert:
+        that:
+          - ansible_host is defined
+          - ansible_host | length > 0
+        fail_msg: >-
+          {{ inventory_hostname }}: ansible_host is undefined or empty.
+          Real hardware requires explicit IP addresses in inventory.
+        success_msg: "ansible_host={{ ansible_host }} — defined"
+      when: automation_profile == 'real_hardware'
+      tags: [preflight, day0]
+
+    - name: "Phase 0 | Assert iDRAC PXE map is populated (real hardware)"
+      ansible.builtin.assert:
+        that:
+          - server_idrac_pxe_map is defined
+          - server_idrac_pxe_map | length > 0
+        fail_msg: >-
+          server_idrac_pxe_map is empty or undefined in group_vars/all.yml.
+          Real hardware requires iDRAC/PXE IP entries for bare-metal provisioning.
+        success_msg: "server_idrac_pxe_map has {{ server_idrac_pxe_map | length }} entries"
+      when: automation_profile == 'real_hardware'
+      run_once: true
+      delegate_to: localhost
+      tags: [preflight, day0]
+
+    # ---- Phase 0a: Pre-flight -----------------------------------------------
+    - name: "Phase 0 | Pre-flight connectivity and platform verification"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: preflight.yml
+      tags: [preflight, day0]
+
+    - name: "Phase 0 | Apply system hardening (UseDNS, /etc/hosts)"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: system_hardening.yml
+      tags: [hardening, day0]
+
+    - name: "Phase 0 | Backup existing config_db.json"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: backup_config.yml
+      tags: [backup, day0]
+
+  roles:
+
+    # ---- Phase 1: Render day-0 config_db.json -------------------------------
+    - role: sonic_day0
+      tags: [render, validate, day0]
+
+  post_tasks:
+
+    # ---- Phase 2: Push config -----------------------------------------------
+    - name: "Phase 2 | Push rendered config to {{ inventory_hostname }}"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: push_config.yml
+      tags: [push, deploy, day0]
+
+    # ---- Phase 3: Reload and wait for services ------------------------------
+    - name: "Phase 3 | Reload config on {{ inventory_hostname }}"
+      ansible.builtin.include_role:
+        name: sonic_base
+        tasks_from: reload_config.yml
+      tags: [reload, deploy, day0]
+
+    # ---- Phase 4: Verification ----------------------------------------------
+    - name: "Phase 4 | Verify hostname is set correctly"
+      ansible.builtin.shell: |
+        sonic-cfggen -d -v 'DEVICE_METADATA["localhost"]["hostname"]'
+      register: _actual_hostname
+      changed_when: false
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Assert hostname matches inventory"
+      ansible.builtin.assert:
+        that:
+          - _actual_hostname.stdout == hostname
+        fail_msg: >-
+          Hostname mismatch on {{ inventory_hostname }}:
+          expected '{{ hostname }}', got '{{ _actual_hostname.stdout }}'.
+          Check host_vars/{{ inventory_hostname }}.yml → hostname field.
+        success_msg: "Hostname verified: {{ _actual_hostname.stdout }}"
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Verify management gateway is reachable"
+      ansible.builtin.command: "ping -c 2 -W 3 {{ mgmt_gateway }}"
+      register: _mgmt_ping
+      changed_when: false
+      failed_when: false
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Report management connectivity"
+      ansible.builtin.debug:
+        msg: >-
+          Management gateway {{ mgmt_gateway }}:
+          {{ 'REACHABLE' if _mgmt_ping.rc == 0
+             else 'UNREACHABLE (expected on isolated fabric VMs before OVS bridge is wired)' }}
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Verify all ports are admin-down"
+      ansible.builtin.shell: >
+        show interfaces status | grep -v "^Interface" | grep -v "^-" |
+        awk '{print $NF}' | sort -u
+      register: _port_states
+      changed_when: false
+      failed_when: false
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Report port admin states"
+      ansible.builtin.debug:
+        msg: "Port admin states found: {{ _port_states.stdout_lines | default(['none']) }}"
+      tags: [verify, day0]
+
+    - name: "Phase 4 | Deployment summary"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+          Day-0 Deployment Complete: {{ hostname }} (SONiC)
+          ============================================================
+          Automation profile: {{ automation_profile }} ({{ automation_profile_label }})
+          Role:         {{ device_role }}
+          Platform:     {{ sonic_platform | default(platform) }}
+          HWSKU:        {{ hwsku }}
+          Management:   {{ mgmt_ip }}
+          Loopback:     {{ loopback_ip }}
+          BGP ASN:      {{ bgp_local_asn }}
+          Fabric/Uplink ports (admin-down): {{ (fabric_interfaces | default([]) + uplink_interfaces | default([])) | length }}
+          Downlink ports    (admin-down): {{ downlink_interfaces | default([]) | length }}
+          Total ports   (admin-down): {{ all_ports | default([]) | length }}
+          ============================================================
+          NEXT STEP: run deploy_day1.yml to wire BGP
+          ============================================================
+      tags: [verify, day0]
+
+###############################################################################
+# PLAY 2: MikroTik CHR Exit Routers (RouterOS — NOT SONiC)
+###############################################################################
+# Only 2 hosts — run both in parallel.
+###############################################################################
+- name: "Day-0 Base Provisioning — MikroTik Exit Routers"
+  hosts: "exit_routers"
+  gather_facts: false
+  serial: "{{ mikrotik_day0_serial | default('100%') }}"
+  strategy: free
+
+  pre_tasks:
+
+    - name: "Phase 0 | Assert automation profile is supported"
+      ansible.builtin.assert:
+        that:
+          - automation_profile in automation_profile_supported
+        fail_msg: >-
+          Unsupported automation_profile '{{ automation_profile }}'.
+          Supported values: {{ automation_profile_supported | join(', ') }}
+        success_msg: >-
+          automation_profile={{ automation_profile }}
+          ({{ automation_profile_label }})
+      run_once: true
+      delegate_to: localhost
+      tags: [always, day0]
+
+    - name: "Phase 0 | Pre-flight connectivity (MikroTik)"
+      ansible.builtin.include_role:
+        name: mikrotik_base
+        tasks_from: preflight.yml
+      tags: [preflight, day0]
+
+  post_tasks:
+
+    - name: "Phase 1 | Day-0 provisioning (MikroTik)"
+      ansible.builtin.include_role:
+        name: mikrotik_base
+        tasks_from: day0_provision.yml
+      tags: [deploy, day0]
+
+###############################################################################
+# PLAY 3: Ubuntu Bare-Metal Servers
+###############################################################################
+# 7 servers — all independent day-0 provisioning, fully parallel.
+# Override: -e "server_day0_serial=2" to limit concurrency.
+###############################################################################
+- name: "Day-0 Base Provisioning — Ubuntu Servers"
+  hosts: "servers"
+  become: yes
+  gather_facts: false
+  serial: "{{ server_day0_serial | default('100%') }}"
+  strategy: free
+
+  pre_tasks:
+
+    - name: "Phase 0 | Assert automation profile is supported"
+      ansible.builtin.assert:
+        that:
+          - automation_profile in automation_profile_supported
+        fail_msg: >-
+          Unsupported automation_profile '{{ automation_profile }}'.
+          Supported values: {{ automation_profile_supported | join(', ') }}
+        success_msg: >-
+          automation_profile={{ automation_profile }}
+          ({{ automation_profile_label }})
+      run_once: true
+      delegate_to: localhost
+      tags: [always, day0]
+
+    - name: "Phase 0 | Pre-flight connectivity (Ubuntu server)"
+      ansible.builtin.include_role:
+        name: server_base
+        tasks_from: preflight.yml
+      tags: [preflight, day0]
+
+  post_tasks:
+
+    - name: "Phase 1 | Day-0 provisioning (Ubuntu server)"
+      ansible.builtin.include_role:
+        name: server_base
+        tasks_from: day0_provision.yml
+      tags: [deploy, day0, identity]
