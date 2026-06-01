@@ -302,9 +302,11 @@
     venv_dir: "/opt/fabric-cache/kubespray/venv"
     first_controller: "{{ groups['kube_controllers'][0] }}"
     ansible_user_target: "{{ hostvars[first_controller]['ansible_user'] | default('ubuntu') }}"
-    # Profile-aware SSH args
+    # Profile-aware SSH args — must include ProxyJump for KVM profiles
+    # where the deployer (WSL) cannot reach the 172.16.2.x libvirt bridge directly
     kubespray_ssh_args: >-
-      {{ "--ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
+      {{ "--ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "
+         + (proxy_jump_ssh_arg | default('') | trim) + "'"
          if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] else '' }}
     # Timeout scales with profile (KVM is slower)
     kubespray_timeout: "{{ '300' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] else '180' if automation_profile == 'ubuntu_r810_kvm' else '120' }}"
