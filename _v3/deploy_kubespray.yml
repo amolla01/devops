@@ -321,6 +321,38 @@
         executable: /bin/bash
       changed_when: false
 
+    # --- ProxyCommand approach ---------------------------------------------------
+    # sshpass can only satisfy ONE password prompt. With ProxyJump the SSH client
+    # chains two connections (R810 → target) internally, so a single sshpass
+    # subprocess cannot handle both.  The fix: use a ProxyCommand wrapper script
+    # that runs its OWN sshpass for R810, completely independent from Ansible's
+    # sshpass for the target.  Two separate processes → two separate prompts → no
+    # conflict.  host_key_checking / StrictHostKeyChecking=no are applied to
+    # every hop.
+    - name: Write ProxyCommand wrapper script for R810 hop
+      ansible.builtin.copy:
+        dest: /tmp/kube-proxy-jump.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Hop through {{ proxy_jump_resolved }} to reach the target.
+          # This script is called by SSH as a ProxyCommand, so stdin/stdout carry
+          # the tunnel data.  sshpass here is dedicated to R810 only.
+          # Retry up to 3 times with a short backoff to handle R810 MaxStartups
+          # exhaustion when many nodes connect simultaneously.
+          for attempt in 1 2 3; do
+            sshpass -p '{{ target_ssh_pass | default(vault_ansible_password | default("amolla01")) }}' \
+              ssh \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                -o ConnectTimeout=15 \
+                -W "$1:$2" \
+                {{ proxy_jump_resolved }} && exit 0
+            sleep $((attempt * 2))
+          done
+          exit 1
+      when: proxy_jump_resolved | default('') | length > 0
+
     - name: Patch kubespray ansible.cfg — disable host key checking
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
@@ -328,21 +360,33 @@
         line: "host_key_checking = False"
         insertafter: '^\[defaults\]'
 
-    - name: Patch kubespray ansible.cfg — SSH args with ProxyJump
+    - name: Patch kubespray ansible.cfg — SSH args via ProxyCommand script
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^ssh_args\s*='
-        line: "ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=30 -o ServerAliveInterval=30 {{ proxy_jump_ssh_arg | default('') | trim }}"
+        line: >-
+          ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o ConnectTimeout=30 -o ServerAliveInterval=30
+          -o "ProxyCommand=/tmp/kube-proxy-jump.sh %h %p"
         insertafter: '^\[ssh_connection\]'
       when: proxy_jump_resolved | default('') | length > 0
 
-    - name: Patch kubespray ansible.cfg — disable pipelining for sshpass
+    - name: Patch kubespray ansible.cfg — SSH args (no proxy)
+      ansible.builtin.lineinfile:
+        path: "{{ kubespray_dir }}/ansible.cfg"
+        regexp: '^ssh_args\s*='
+        line: >-
+          ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+          -o ConnectTimeout=30 -o ServerAliveInterval=30
+        insertafter: '^\[ssh_connection\]'
+      when: proxy_jump_resolved | default('') | length == 0
+
+    - name: Patch kubespray ansible.cfg — disable pipelining
       ansible.builtin.lineinfile:
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^pipelining\s*='
         line: "pipelining = False"
         insertafter: '^\[ssh_connection\]'
-      when: proxy_jump_resolved | default('') | length > 0
 
     - name: Run KubeSpray cluster.yml
       ansible.builtin.shell: |
