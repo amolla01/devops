@@ -1,0 +1,26 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+[ERROR]: Error loading tasks: failed at splitting arguments, either an unbalanced jinja2 block or quotes: for DEV in {{ (ceph_osd_devices | default(ceph_osd_devices_default)) | join(' ') }}; do
+  # Skip if device doesn't exist
+  [ -b "$DEV" ] || continue
+  # Skip if device has mounted partitions
+  if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+    echo "SKIP (mounted): $DEV"
+    continue
+  fi
+  # Wipe filesystem signatures
+  wipefs -af "$DEV" 2>/dev/null || true
+  # Zero first 100MB (clear partition tables, LVM headers)
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  # Remove device-mapper entries
+  dmsetup remove_all 2>/dev/null || true
+  echo "WIPED: $DEV"
+done
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:86:7
+
+84         update_cache: false
+85
+86     - name: Wipe OSD devices (only if empty/unformatted)
+         ^ column 7
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
