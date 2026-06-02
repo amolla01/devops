@@ -1,0 +1,180 @@
+---
+# =============================================================================
+# roles/ceph/templates/rook-ceph-cluster-values.yml.j2 — Rook CephCluster CR
+# =============================================================================
+# Helm values for rook-ceph-cluster chart (deploys CephCluster CR + toolbox).
+# Optimized for KVM lab: reduced resources, single-network, 2 MON / all OSDs.
+# =============================================================================
+
+operatorNamespace: {{ rook_ceph_namespace }}
+
+toolbox:
+  enabled: true
+  resources:
+    limits:
+      memory: "256Mi"
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+
+monitoring:
+  enabled: true
+  createPrometheusRules: false
+
+cephClusterSpec:
+  cephVersion:
+    image: {{ ceph_container_image }}
+    allowUnsupported: false
+
+  dataDirHostPath: /var/lib/rook
+
+  mon:
+    count: {{ ceph_mon_count | default(2) }}
+    allowMultiplePerNode: {{ ceph_mon_allow_multiple_per_node | default(true) }}
+
+  mgr:
+    count: 1
+    allowMultiplePerNode: true
+    modules:
+{% for mod in ceph_mgr_modules_enabled | default(['dashboard', 'prometheus', 'balancer', 'crash']) %}
+      - name: {{ mod }}
+        enabled: true
+{% endfor %}
+
+  dashboard:
+    enabled: {{ ceph_dashboard_enabled | default(true) | lower }}
+    port: {{ ceph_dashboard_port | default(8443) }}
+    ssl: true
+
+  network:
+    provider: ""
+    connections:
+      encryption:
+        enabled: false
+      compression:
+        enabled: false
+
+  crashCollector:
+    disable: false
+
+  cleanupPolicy:
+    confirmation: ""
+    sanitizeDisks:
+      method: quick
+      dataSource: zero
+      iteration: 1
+    allowUninstallWithVolumes: false
+
+  resources:
+    mon:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+    mgr:
+      limits:
+        memory: "1Gi"
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+    osd:
+      limits:
+        memory: "2Gi"
+      requests:
+        cpu: "200m"
+        memory: "512Mi"
+    prepareosd:
+      limits:
+        memory: "512Mi"
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+    mgr-sidecar:
+      limits:
+        memory: "256Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+    crashcollector:
+      limits:
+        memory: "128Mi"
+      requests:
+        cpu: "10m"
+        memory: "32Mi"
+
+  storage:
+    useAllNodes: false
+    useAllDevices: false
+    nodes:
+{% for host in groups['ceph_osd'] %}
+      - name: "{{ hostvars[host]['kube_node_name'] | default(host | lower) }}"
+        devices:
+{% for dev in hostvars[host]['ceph_osd_devices'] | default(ceph_osd_devices_default | default(['/dev/vdb', '/dev/vdc'])) %}
+          - name: "{{ dev }}"
+{% endfor %}
+{% endfor %}
+
+  placement:
+    all:
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+
+  priorityClassNames:
+    mon: system-node-critical
+    osd: system-node-critical
+    mgr: system-cluster-critical
+
+cephBlockPools:
+  - name: kube-rbd
+    spec:
+      failureDomain: host
+      replicated:
+        size: {{ ceph_osd_pool_default_size | default(2) }}
+    storageClass:
+      enabled: true
+      name: ceph-rbd
+      isDefault: true
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      volumeBindingMode: "Immediate"
+      parameters:
+        imageFormat: "2"
+        imageFeatures: layering
+
+cephFileSystems:
+{% if ceph_mds_enabled | default(true) %}
+  - name: {{ ceph_cluster_name | default('dc-lab-ceph') }}-fs
+    spec:
+      metadataPool:
+        replicated:
+          size: {{ ceph_osd_pool_default_size | default(2) }}
+      dataPools:
+        - failureDomain: host
+          replicated:
+            size: {{ ceph_osd_pool_default_size | default(2) }}
+          name: data0
+      metadataServer:
+        activeCount: 1
+        activeStandby: true
+        resources:
+          limits:
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+    storageClass:
+      enabled: true
+      isDefault: false
+      name: ceph-filesystem
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+      volumeBindingMode: "Immediate"
+      pool: data0
+{% else %}
+  []
+{% endif %}
+
+cephObjectStores: []
