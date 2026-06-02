@@ -1,0 +1,57 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+[ERROR]: Error loading tasks: failed at splitting arguments, either an unbalanced jinja2 block or quotes: DEV="{{ item }}"
+# Skip if device doesn't exist
+[ -b "$DEV" ] || { echo "SKIP (not found): $DEV"; exit 0; }
+# Skip if device has mounted partitions
+if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+  echo "SKIP (mounted): $DEV"
+  exit 0
+fi
+# Wipe filesystem signatures
+wipefs -af "$DEV" 2>/dev/null || true
+# Zero first 100MB (clear partition tables, LVM headers)
+dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+# Remove device-mapper entries for this device
+dmsetup remove_all 2>/dev/null || true
+echo "WIPED: $DEV"
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:90:7
+
+88         _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
+89
+90     - name: Wipe OSD devices (only if empty/unformatted)
+         ^ column 7
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+  
+  
+  nh1221@PowerEdge-R810:~$ lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop0    7:0    0  19.6M  1 loop /snap/desktop-security-center/150
+loop1    7:1    0     4K  1 loop /snap/bare/5
+loop2    7:2    0  16.5M  1 loop /snap/firmware-updater/226
+loop4    7:4    0  91.7M  1 loop /snap/gtk-common-themes/1535
+loop5    7:5    0  66.8M  1 loop /snap/core24/1587
+loop6    7:6    0 606.1M  1 loop /snap/gnome-46-2404/153
+loop7    7:7    0   395M  1 loop /snap/mesa-2404/1165
+loop8    7:8    0  18.8M  1 loop /snap/prompting-client/204
+loop9    7:9    0  15.7M  1 loop /snap/snap-store/1367
+loop10   7:10   0  49.3M  1 loop /snap/snapd/26865
+loop11   7:11   0   580K  1 loop /snap/snapd-desktop-integration/361
+loop12   7:12   0 227.6M  1 loop /snap/thunderbird/1057
+loop13   7:13   0  66.8M  1 loop /snap/core24/1643
+loop14   7:14   0    20M  1 loop /snap/desktop-security-center/151
+loop15   7:15   0  18.8M  1 loop /snap/prompting-client/222
+loop16   7:16   0 247.6M  1 loop /snap/firefox/8364
+loop17   7:17   0 227.7M  1 loop /snap/thunderbird/1117
+loop18   7:18   0 248.5M  1 loop /snap/firefox/8387
+sda      8:0    0 465.3G  0 disk
+├─sda1   8:1    0     1G  0 part /boot/efi
+└─sda2   8:2    0 464.2G  0 part /
+sdb      8:16   0 837.8G  0 disk
+sdc      8:32   0   931G  0 disk
+sdd      8:48   0   931G  0 disk
+sde      8:64   0   931G  0 disk
+sdf      8:80   0   1.1T  0 disk
+sr0     11:0    1  1024M  0 rom
+nh1221@PowerEdge-R810:~$
