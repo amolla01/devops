@@ -303,6 +303,14 @@
         owner: "{{ ansible_user | default('ubuntu') }}"
         group: "{{ ansible_user | default('ubuntu') }}"
 
+    - name: Create /tmp/releases/images subdirectory
+      ansible.builtin.file:
+        path: /tmp/releases/images
+        state: directory
+        mode: '0777'
+        owner: "{{ ansible_user | default('ubuntu') }}"
+        group: "{{ ansible_user | default('ubuntu') }}"
+
 - name: "Phase 4: Execute KubeSpray cluster.yml"
   hosts: localhost
   connection: local
@@ -317,7 +325,7 @@
     first_controller: "{{ groups['kube_controllers'][0] }}"
     ansible_user_target: "{{ hostvars[first_controller]['ansible_user'] | default('ubuntu') }}"
     # Timeout scales with profile (KVM is slower)
-    kubespray_timeout: "{{ '300' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] else '180' if automation_profile == 'ubuntu_r810_kvm' else '120' }}"
+    kubespray_timeout: "{{ '300' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] else '180' }}"
   tasks:
     - name: Display deployment plan
       ansible.builtin.debug:
@@ -380,7 +388,8 @@
         regexp: '^ssh_args\s*='
         line: >-
           ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-          -o ConnectTimeout=30 -o ServerAliveInterval=30
+          -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=10
+          -o TCPKeepAlive=yes
           -o "ProxyCommand=/tmp/kube-proxy-jump.sh %h %p"
         insertafter: '^\[ssh_connection\]'
       when: proxy_jump_resolved | default('') | length > 0
@@ -391,7 +400,8 @@
         regexp: '^ssh_args\s*='
         line: >-
           ssh_args = -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-          -o ConnectTimeout=30 -o ServerAliveInterval=30
+          -o ConnectTimeout=60 -o ServerAliveInterval=15 -o ServerAliveCountMax=10
+          -o TCPKeepAlive=yes
         insertafter: '^\[ssh_connection\]'
       when: proxy_jump_resolved | default('') | length == 0
 
@@ -400,6 +410,13 @@
         path: "{{ kubespray_dir }}/ansible.cfg"
         regexp: '^pipelining\s*='
         line: "pipelining = False"
+        insertafter: '^\[ssh_connection\]'
+
+    - name: Patch kubespray ansible.cfg — SSH retries
+      ansible.builtin.lineinfile:
+        path: "{{ kubespray_dir }}/ansible.cfg"
+        regexp: '^retries\s*='
+        line: "retries = 5"
         insertafter: '^\[ssh_connection\]'
 
     - name: Run KubeSpray cluster.yml

@@ -16,17 +16,19 @@ container_manager: {{ container_runtime | default('containerd') }}
 containerd_use_systemd_cgroup: true
 
 ## Download settings — retry on failure
-download_retries: 4
-download_timeout: {{ '600' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] else '300' }}
+download_retries: 6
+download_timeout: {{ '600' if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm'] else '600' }}
 
-## Download acceleration — download once on first control plane node, push to all
-## download_localhost=false ensures downloads happen on the first kube node
-## (which has containerd/ctr), not on the deployer (which may lack ctr).
-download_run_once: true
+## Download strategy — each node pulls images independently from registries.
+## download_run_once=false avoids unreliable inter-node SCP/rsync of large
+## container image tars through ProxyJump SSH chains. Each node has direct
+## internet access and a local containerd, so independent pulls are faster
+## and more reliable than centralized download-then-distribute.
+download_run_once: false
 download_localhost: false
-download_cache_dir: /opt/fabric-cache/kubespray/download-cache
+download_cache_dir: /tmp/releases
 download_force_cache: false
-download_keep_remote_cache: false
+download_keep_remote_cache: true
 
 ## Cluster name
 cluster_name: dc-lab-cluster
@@ -64,4 +66,5 @@ no_proxy: "127.0.0.1,localhost,10.233.0.0/18,10.233.64.0/18,192.168.255.0/25,172
 ## Ansible SSH settings per profile
 {% if automation_profile in ['win11_kvm', 'ubuntu_r620_kvm', 'ubuntu_r810_kvm'] %}
 ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+ansible_ssh_retries: 5
 {% endif %}
