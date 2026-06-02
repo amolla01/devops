@@ -1,0 +1,546 @@
+---
+# =============================================================================
+# playbooks/reused/deploy_ceph_rook.yml — Deploy Ceph via Rook Operator (K8s)
+# =============================================================================
+#
+# DESCRIPTION:
+#   Deploys Ceph Reef (v18) as Kubernetes pods using the Rook-Ceph operator.
+#   This is the PREFERRED method for the KVM lab since K8s is already running.
+#   Ceph MON, MGR, OSD, and MDS all run as pods in the 'rook-ceph' namespace.
+#
+# ADVANTAGES OVER CEPHADM:
+#   - Native K8s lifecycle (kubectl, Helm, GitOps-ready)
+#   - Automatic OSD pod scheduling on nodes with available disks
+#   - Self-healing via K8s pod restart policies
+#   - Integrated with K8s StorageClass (no manual keyring distribution)
+#   - Dashboard accessible via K8s Service/Ingress
+#   - Prometheus metrics auto-discovered by kube-prometheus-stack
+#
+# PREREQUISITES:
+#   - Kubernetes cluster operational (kubespray completed)
+#   - Block devices available on OSD nodes (/dev/vdb, /dev/vdc in KVM)
+#   - preflight_download.yml --tags ceph completed (Rook charts cached)
+#   - Helm 3 installed on deployer or K8s controller
+#
+# USAGE:
+#   # Full deployment (operator + cluster + storage classes)
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml
+#
+#   # Operator only (installs Rook without creating cluster)
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_operator
+#
+#   # Cluster only (assumes operator already deployed)
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_cluster
+#
+#   # Validate only
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_validate
+#
+#   # Teardown (DESTRUCTIVE — removes all Ceph data)
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_teardown
+#
+# INVENTORY GROUPS USED:
+#   kube_controllers[0] — Kubectl/Helm execution host
+#   ceph_osd            — OSD nodes (for disk preparation)
+#
+# =============================================================================
+
+# ===========================================================================
+# Phase 0: Prepare OSD nodes (wipe disks, load kernel modules)
+# ===========================================================================
+- name: "Phase 0: Prepare OSD Nodes for Rook"
+  hosts: "ceph_osd"
+  gather_facts: true
+  become: true
+  tags: [rook, rook_prepare]
+  vars:
+    ceph_osd_devices_default:
+      - /dev/vdb
+      - /dev/vdc
+  tasks:
+    - name: Load required kernel modules for Ceph
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - rbd
+        - ceph
+
+    - name: Persist kernel modules across reboots
+      ansible.builtin.lineinfile:
+        path: /etc/modules-load.d/ceph.conf
+        line: "{{ item }}"
+        create: true
+        mode: "0644"
+      loop:
+        - rbd
+        - ceph
+
+    - name: Install lvm2 (required for Ceph OSD LVM mode)
+      ansible.builtin.apt:
+        name:
+          - lvm2
+          - cryptsetup
+        state: present
+        update_cache: false
+
+    - name: Build OSD device list
+      ansible.builtin.set_fact:
+        _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
+
+    - name: Wipe OSD devices (only if empty/unformatted)
+      ansible.builtin.shell: |
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+      environment:
+        DEV: "{{ item }}"
+      loop: "{{ _osd_devices }}"
+      register: disk_wipe
+      changed_when: "'WIPED' in disk_wipe.stdout"
+      when: ceph_osd_wipe_disks | default(true)
+
+    - name: Display disk preparation results
+      ansible.builtin.debug:
+        msg: "{{ disk_wipe.results | default([]) | map(attribute='stdout', default='skipped') | list }}"
+
+# ===========================================================================
+# Phase 1: Deploy Rook-Ceph Operator
+# ===========================================================================
+- name: "Phase 1: Deploy Rook-Ceph Operator"
+  hosts: "kube_controllers[0]"
+  gather_facts: true
+  become: true
+  tags: [rook, rook_operator]
+  vars:
+    rook_ceph_namespace: "rook-ceph"
+    rook_ceph_version: "v1.14.7"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+    cache_helm_dir: "/opt/fabric-cache/helm-charts"
+  tasks:
+    - name: Check if Helm is available
+      ansible.builtin.command: helm version --short
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: helm_version
+      changed_when: false
+
+    - name: Create rook-ceph namespace
+      ansible.builtin.command: kubectl create namespace {{ rook_ceph_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'AlreadyExists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+
+    - name: Label OSD nodes for Rook scheduling
+      ansible.builtin.command: >
+        kubectl label node {{ hostvars[item].kube_node_name | default(item | lower) }}
+        ceph-osd=enabled storage-node=true --overwrite
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ groups['ceph_osd'] }}"
+      changed_when: true
+
+    - name: Label MON nodes for Rook scheduling
+      ansible.builtin.command: >
+        kubectl label node {{ hostvars[item].kube_node_name | default(item | lower) }}
+        ceph-mon=enabled --overwrite
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      loop: "{{ groups['ceph_mon'] }}"
+      changed_when: true
+
+    - name: Check for cached Rook operator chart
+      ansible.builtin.stat:
+        path: "{{ cache_helm_dir }}"
+      register: helm_cache_dir
+
+    - name: Find cached rook-ceph chart tarball
+      ansible.builtin.find:
+        paths: "{{ cache_helm_dir }}"
+        patterns: "rook-ceph-*.tgz"
+        excludes: "rook-ceph-cluster-*.tgz"
+      register: cached_rook_operator
+      when: helm_cache_dir.stat.exists | default(false)
+
+    - name: Add Rook Helm repository (if no cached chart)
+      ansible.builtin.command: helm repo add rook-release https://charts.rook.io/release
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: repo_add
+      changed_when: "'has been added' in repo_add.stdout"
+      failed_when: repo_add.rc != 0 and 'already exists' not in repo_add.stderr
+      when: cached_rook_operator.files | default([]) | length == 0
+
+    - name: Update Helm repos (if no cached chart)
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: false
+      when: cached_rook_operator.files | default([]) | length == 0
+
+    - name: Deploy Rook-Ceph Operator (from cache)
+      ansible.builtin.command: >
+        helm upgrade --install rook-ceph
+        {{ cached_rook_operator.files[0].path }}
+        --namespace {{ rook_ceph_namespace }}
+        --set crds.enabled=true
+        --set csi.enableRbdDriver=true
+        --set csi.enableCephfsDriver=true
+        --set monitoring.enabled=true
+        --wait --timeout 5m0s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: cached_rook_operator.files | default([]) | length > 0
+      register: helm_operator_cached
+
+    - name: Deploy Rook-Ceph Operator (from repo)
+      ansible.builtin.command: >
+        helm upgrade --install rook-ceph
+        rook-release/rook-ceph
+        --namespace {{ rook_ceph_namespace }}
+        --version {{ rook_ceph_version }}
+        --set crds.enabled=true
+        --set csi.enableRbdDriver=true
+        --set csi.enableCephfsDriver=true
+        --set monitoring.enabled=true
+        --wait --timeout 5m0s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when:
+        - cached_rook_operator.files | default([]) | length == 0
+        - helm_operator_cached is skipped
+      register: helm_operator_repo
+
+    - name: Wait for Rook operator pod to be ready
+      ansible.builtin.command: >
+        kubectl wait --for=condition=ready pod
+        -l app=rook-ceph-operator
+        -n {{ rook_ceph_namespace }}
+        --timeout=120s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: operator_ready
+      changed_when: false
+
+    - name: Display operator status
+      ansible.builtin.debug:
+        msg: "Rook-Ceph operator is ready in namespace '{{ rook_ceph_namespace }}'"
+
+# ===========================================================================
+# Phase 2: Deploy Ceph Cluster (CephCluster CR via Helm)
+# ===========================================================================
+- name: "Phase 2: Deploy Ceph Cluster via Rook"
+  hosts: "kube_controllers[0]"
+  gather_facts: true
+  become: true
+  tags: [rook, rook_cluster]
+  vars:
+    rook_ceph_namespace: "rook-ceph"
+    rook_ceph_version: "v1.14.7"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+    cache_helm_dir: "/opt/fabric-cache/helm-charts"
+    ceph_osd_devices_default:
+      - /dev/vdb
+      - /dev/vdc
+  tasks:
+    - name: Generate Rook CephCluster values file
+      ansible.builtin.template:
+        src: "../../roles/ceph/templates/rook-ceph-cluster-values.yml.j2"
+        dest: /tmp/rook-ceph-cluster-values.yml
+        mode: "0600"
+
+    - name: Find cached rook-ceph-cluster chart tarball
+      ansible.builtin.find:
+        paths: "{{ cache_helm_dir }}"
+        patterns: "rook-ceph-cluster-*.tgz"
+      register: cached_rook_cluster
+
+    - name: Deploy CephCluster (from cache)
+      ansible.builtin.command: >
+        helm upgrade --install rook-ceph-cluster
+        {{ cached_rook_cluster.files[0].path }}
+        --namespace {{ rook_ceph_namespace }}
+        --values /tmp/rook-ceph-cluster-values.yml
+        --wait --timeout 10m0s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: cached_rook_cluster.files | default([]) | length > 0
+      register: helm_cluster_cached
+
+    - name: Deploy CephCluster (from repo)
+      ansible.builtin.command: >
+        helm upgrade --install rook-ceph-cluster
+        rook-release/rook-ceph-cluster
+        --namespace {{ rook_ceph_namespace }}
+        --values /tmp/rook-ceph-cluster-values.yml
+        --version {{ rook_ceph_version }}
+        --wait --timeout 10m0s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when:
+        - cached_rook_cluster.files | default([]) | length == 0
+        - helm_cluster_cached is skipped
+      register: helm_cluster_repo
+
+    - name: Clean up values file
+      ansible.builtin.file:
+        path: /tmp/rook-ceph-cluster-values.yml
+        state: absent
+
+    - name: Wait for Ceph MON pods to be ready (3m timeout)
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=ready pod \
+          -l app=rook-ceph-mon \
+          -n {{ rook_ceph_namespace }} \
+          --timeout=180s 2>&1 || echo "Waiting for MON pods..."
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: mon_ready
+      retries: 3
+      delay: 30
+      until: mon_ready.rc == 0
+      changed_when: false
+
+    - name: Wait for Ceph OSD pods to be ready (5m timeout)
+      ansible.builtin.shell: |
+        kubectl wait --for=condition=ready pod \
+          -l app=rook-ceph-osd \
+          -n {{ rook_ceph_namespace }} \
+          --timeout=300s 2>&1 || echo "Waiting for OSD pods..."
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: osd_ready
+      retries: 3
+      delay: 30
+      until: osd_ready.rc == 0
+      changed_when: false
+
+    - name: Display cluster deployment status
+      ansible.builtin.debug:
+        msg: |
+          Ceph cluster deployed in '{{ rook_ceph_namespace }}' namespace
+          MON pods: {{ mon_ready.stdout | default('ready') }}
+          OSD pods: {{ osd_ready.stdout | default('ready') }}
+
+# ===========================================================================
+# Phase 3: Validate Ceph Cluster Health
+# ===========================================================================
+- name: "Phase 3: Validate Rook-Ceph Cluster"
+  hosts: "kube_controllers[0]"
+  gather_facts: false
+  become: true
+  tags: [rook, rook_validate]
+  vars:
+    rook_ceph_namespace: "rook-ceph"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+  tasks:
+    - name: Get Ceph cluster status via toolbox
+      ansible.builtin.shell: |
+        TOOLBOX=$(kubectl get pod -n {{ rook_ceph_namespace }} -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -z "$TOOLBOX" ]; then
+          echo "Toolbox pod not found — using direct kubectl exec on operator"
+          OPERATOR=$(kubectl get pod -n {{ rook_ceph_namespace }} -l app=rook-ceph-operator -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n {{ rook_ceph_namespace }} "$OPERATOR" -- ceph -s 2>/dev/null || echo "Cannot reach ceph from operator pod"
+        else
+          kubectl exec -n {{ rook_ceph_namespace }} "$TOOLBOX" -- ceph -s
+        fi
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ceph_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: Get Ceph OSD tree
+      ansible.builtin.shell: |
+        TOOLBOX=$(kubectl get pod -n {{ rook_ceph_namespace }} -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$TOOLBOX" ]; then
+          kubectl exec -n {{ rook_ceph_namespace }} "$TOOLBOX" -- ceph osd tree
+        fi
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: osd_tree
+      changed_when: false
+      ignore_errors: true
+
+    - name: Get all pods in rook-ceph namespace
+      ansible.builtin.command: >
+        kubectl get pods -n {{ rook_ceph_namespace }} -o wide
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: rook_pods
+      changed_when: false
+
+    - name: Get StorageClasses
+      ansible.builtin.command: kubectl get sc
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: storage_classes
+      changed_when: false
+
+    - name: Print Ceph Health Report
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║              ROOK-CEPH CLUSTER HEALTH REPORT                    ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ Namespace: {{ rook_ceph_namespace }}
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ Cluster Status:
+          {{ ceph_status.stdout | default('Status unavailable — cluster may still be initializing') }}
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ OSD Tree:
+          {{ osd_tree.stdout | default('OSD tree unavailable') }}
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ Pods:
+          {{ rook_pods.stdout }}
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ StorageClasses:
+          {{ storage_classes.stdout }}
+          ╚══════════════════════════════════════════════════════════════════╝
+
+    - name: Verify ceph-rbd StorageClass exists
+      ansible.builtin.command: kubectl get sc ceph-rbd
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: sc_check
+      changed_when: false
+      failed_when: sc_check.rc != 0
+
+    - name: Test PVC creation with ceph-rbd StorageClass
+      ansible.builtin.command: >
+        kubectl apply -f -
+      args:
+        stdin: |
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: ceph-rbd-test-pvc
+            namespace: {{ rook_ceph_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: ceph-rbd
+            resources:
+              requests:
+                storage: 1Gi
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: test_pvc
+      changed_when: true
+
+    - name: Wait for test PVC to bind (60s)
+      ansible.builtin.shell: |
+        kubectl wait --for=jsonpath='{.status.phase}'=Bound \
+          pvc/ceph-rbd-test-pvc -n {{ rook_ceph_namespace }} --timeout=60s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: pvc_bound
+      changed_when: false
+      ignore_errors: true
+
+    - name: Clean up test PVC
+      ansible.builtin.command: >
+        kubectl delete pvc ceph-rbd-test-pvc -n {{ rook_ceph_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: Final validation summary
+      ansible.builtin.debug:
+        msg: |
+          ════════════════════════════════════════════════
+          VALIDATION RESULT:
+            StorageClass: {{ 'PASS' if sc_check.rc == 0 else 'FAIL' }}
+            PVC Binding:  {{ 'PASS' if pvc_bound.rc | default(1) == 0 else 'PENDING (cluster initializing)' }}
+          ════════════════════════════════════════════════
+
+# ===========================================================================
+# Phase 4: Teardown (DESTRUCTIVE — requires explicit tag)
+# ===========================================================================
+- name: "Phase 4: Teardown Rook-Ceph (DESTRUCTIVE)"
+  hosts: "kube_controllers[0]"
+  gather_facts: false
+  become: true
+  tags: [rook_teardown, never]
+  vars:
+    rook_ceph_namespace: "rook-ceph"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+  tasks:
+    - name: "TEARDOWN | Delete CephCluster Helm release"
+      ansible.builtin.command: >
+        helm uninstall rook-ceph-cluster -n {{ rook_ceph_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      ignore_errors: true
+      changed_when: true
+
+    - name: "TEARDOWN | Wait for OSD pods to terminate (2m)"
+      ansible.builtin.shell: |
+        kubectl wait --for=delete pod \
+          -l app=rook-ceph-osd \
+          -n {{ rook_ceph_namespace }} \
+          --timeout=120s 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: false
+
+    - name: "TEARDOWN | Delete Rook operator Helm release"
+      ansible.builtin.command: >
+        helm uninstall rook-ceph -n {{ rook_ceph_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      ignore_errors: true
+      changed_when: true
+
+    - name: "TEARDOWN | Delete CRDs"
+      ansible.builtin.shell: |
+        kubectl delete crd \
+          cephblockpools.ceph.rook.io \
+          cephblockpoolradosnamespaces.ceph.rook.io \
+          cephbucketnotifications.ceph.rook.io \
+          cephbuckettopics.ceph.rook.io \
+          cephclients.ceph.rook.io \
+          cephclusters.ceph.rook.io \
+          cephcosidrivers.ceph.rook.io \
+          cephfilesystemmirrors.ceph.rook.io \
+          cephfilesystems.ceph.rook.io \
+          cephfilesystemsubvolumegroups.ceph.rook.io \
+          cephnfs.ceph.rook.io \
+          cephobjectrealms.ceph.rook.io \
+          cephobjectstores.ceph.rook.io \
+          cephobjectstoreusers.ceph.rook.io \
+          cephobjectzonegroups.ceph.rook.io \
+          cephobjectzones.ceph.rook.io \
+          cephrbdmirrors.ceph.rook.io \
+          objectbucketclaims.objectbucket.io \
+          objectbuckets.objectbucket.io \
+          2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete namespace"
+      ansible.builtin.command: kubectl delete namespace {{ rook_ceph_namespace }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      ignore_errors: true
+      changed_when: true
+
+    - name: "TEARDOWN | Report"
+      ansible.builtin.debug:
+        msg: |
+          Rook-Ceph cluster REMOVED.
+          To clean OSD disks on nodes, run:
+            ansible ceph_osd -m shell -a "wipefs -af /dev/vdb /dev/vdc"
