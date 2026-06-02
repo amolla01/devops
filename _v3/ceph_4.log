@@ -1,0 +1,1226 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+[ERROR]: Error loading tasks: failed at splitting arguments, either an unbalanced jinja2 block or quotes: # Skip if device doesn't exist
+[ -b "$DEV" ] || { echo "SKIP (not found): $DEV"; exit 0; }
+# Skip if device has mounted partitions
+if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+  echo "SKIP (mounted): $DEV"
+  exit 0
+fi
+# Wipe filesystem signatures
+wipefs -af "$DEV" 2>/dev/null || true
+# Zero first 100MB (clear partition tables, LVM headers)
+dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+# Remove device-mapper entries for this device
+dmsetup remove_all 2>/dev/null || true
+echo "WIPED: $DEV"
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:90:7
+
+88         _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
+89
+90     - name: Wipe OSD devices (only if empty/unformatted)
+         ^ column 7
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host12_2]
+ok: [Host34_1]
+ok: [Host34_2]
+ok: [Host12_3]
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+channel 0: open failed: connect failed: No route to host
+stdio forwarding failed
+Connection closed by UNKNOWN port 65535
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+channel 0: open failed: connect failed: No route to host
+stdio forwarding failed
+Connection closed by UNKNOWN port 65535
+
+fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
+    changed: false
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+ok: [HostB12_1]
+fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
+    changed: false
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
+    changed: false
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+fatal: [Storage_Server_SSD_02]: UNREACHABLE! =>
+    changed: false
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+
+TASK [Load required kernel modules for Ceph] ********************************************************************************************************************************************************************
+changed: [Host34_1] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [Host12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [Host12_2] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [Host34_2] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [Host12_3] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [Host34_1] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+changed: [Host12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+changed: [Host34_2] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+changed: [Host12_2] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+changed: [Host12_3] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+changed: [HostB12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: true
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+changed: [HostB12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: true
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+
+TASK [Persist kernel modules across reboots] ********************************************************************************************************************************************************************
+changed: [Host34_1] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [Host12_3] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [Host12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [Host34_2] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [Host12_2] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [Host34_1] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+changed: [Host12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+changed: [Host12_3] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+changed: [Host34_2] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+changed: [Host12_2] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+changed: [HostB12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: rbd
+    msg: line added
+changed: [HostB12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: true
+    item: ceph
+    msg: line added
+
+TASK [Install lvm2 (required for Ceph OSD LVM mode)] ************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    cache_update_time: 1780400183
+    cache_updated: false
+    changed: false
+ok: [Host34_2] =>
+    cache_update_time: 1780414694
+    cache_updated: false
+    changed: false
+ok: [Host12_3] =>
+    cache_update_time: 1780403218
+    cache_updated: false
+    changed: false
+ok: [Host34_1] =>
+    cache_update_time: 1780396118
+    cache_updated: false
+    changed: false
+ok: [Host12_2] =>
+    cache_update_time: 1780386347
+    cache_updated: false
+    changed: false
+ok: [HostB12_1] =>
+    cache_update_time: 1780412409
+    cache_updated: false
+    changed: false
+
+TASK [Build OSD device list] ************************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+        - /dev/vdc
+    changed: false
+ok: [Host12_2] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+        - /dev/vdc
+    changed: false
+ok: [Host12_3] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+        - /dev/vdc
+    changed: false
+ok: [Host34_1] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+        - /dev/vdc
+    changed: false
+ok: [Host34_2] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+        - /dev/vdc
+    changed: false
+ok: [HostB12_1] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
+    changed: false
+
+TASK [Wipe OSD devices (only if empty/unformatted)] *************************************************************************************************************************************************************
+ok: [Host34_1] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007517'
+    end: '2026-06-02 21:02:28.149616'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:28.142099'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+ok: [Host12_2] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.006967'
+    end: '2026-06-02 21:02:28.911437'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:28.904470'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+ok: [Host12_1] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007984'
+    end: '2026-06-02 21:02:29.013448'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:29.005464'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+ok: [Host12_3] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.008922'
+    end: '2026-06-02 21:02:29.100980'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:29.092058'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+ok: [Host34_2] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007124'
+    end: '2026-06-02 21:02:29.199668'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:29.192544'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+ok: [Host34_1] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.008704'
+    end: '2026-06-02 21:02:30.480627'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:30.471923'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host12_2] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007078'
+    end: '2026-06-02 21:02:31.150638'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:31.143560'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host12_1] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.006344'
+    end: '2026-06-02 21:02:31.393636'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:31.387292'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host34_2] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.006880'
+    end: '2026-06-02 21:02:31.986448'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:31.979568'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host12_3] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007275'
+    end: '2026-06-02 21:02:32.026537'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:32.019262'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [HostB12_1] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007207'
+    end: '2026-06-02 21:02:33.752288'
+    item: /dev/vdb
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:33.745081'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdb'
+    stdout_lines: <omitted>
+
+TASK [Display disk preparation results] *************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+    - 'SKIP (not found): /dev/vdc'
+ok: [Host12_2] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+    - 'SKIP (not found): /dev/vdc'
+ok: [Host12_3] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+    - 'SKIP (not found): /dev/vdc'
+ok: [Host34_1] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+    - 'SKIP (not found): /dev/vdc'
+ok: [Host34_2] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+    - 'SKIP (not found): /dev/vdc'
+ok: [HostB12_1] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
+
+PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Check if Helm is available] *******************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - helm
+    - version
+    - --short
+    delta: '0:00:00.125757'
+    end: '2026-06-02 21:02:42.558828'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:42.433071'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: v3.14.2+gc309b6f
+    stdout_lines: <omitted>
+
+TASK [Create rook-ceph namespace] *******************************************************************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd:
+    - kubectl
+    - create
+    - namespace
+    - rook-ceph
+    delta: '0:00:00.500047'
+    end: '2026-06-02 21:02:45.426787'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:44.926740'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: namespace/rook-ceph created
+    stdout_lines: <omitted>
+
+TASK [Label OSD nodes for Rook scheduling] **********************************************************************************************************************************************************************
+changed: [Host12_1] => (item=Host12_1) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - host12-1
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.391820'
+    end: '2026-06-02 21:02:48.326505'
+    item: Host12_1
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:47.934685'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/host12-1 labeled
+    stdout_lines: <omitted>
+changed: [Host12_1] => (item=Host12_2) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - host12-2
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.200075'
+    end: '2026-06-02 21:02:50.470542'
+    item: Host12_2
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:50.270467'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/host12-2 labeled
+    stdout_lines: <omitted>
+changed: [Host12_1] => (item=Host12_3) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - host12-3
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.168483'
+    end: '2026-06-02 21:02:52.938395'
+    item: Host12_3
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:52.769912'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/host12-3 labeled
+    stdout_lines: <omitted>
+changed: [Host12_1] => (item=Host34_1) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - host34-1
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.166075'
+    end: '2026-06-02 21:02:54.963842'
+    item: Host34_1
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:54.797767'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/host34-1 labeled
+    stdout_lines: <omitted>
+changed: [Host12_1] => (item=Host34_2) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - host34-2
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.203283'
+    end: '2026-06-02 21:02:57.231231'
+    item: Host34_2
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:57.027948'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/host34-2 labeled
+    stdout_lines: <omitted>
+changed: [Host12_1] => (item=HostB12_1) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - hostb12-1
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.195297'
+    end: '2026-06-02 21:02:59.403851'
+    item: HostB12_1
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:02:59.208554'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: node/hostb12-1 labeled
+    stdout_lines: <omitted>
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:144:7
+
+142       changed_when: ns_create.rc == 0
+143
+144     - name: Label OSD nodes for Rook scheduling
+          ^ column 7
+
+failed: [Host12_1] (item=Storage_Server_HDD_01) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - storage_server_hdd_01
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.147556'
+    end: '2026-06-02 21:03:01.570292'
+    item: Storage_Server_HDD_01
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:03:01.422736'
+    stderr: 'Error from server (NotFound): nodes "storage_server_hdd_01" not found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+failed: [Host12_1] (item=Storage_Server_HDD_02) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - storage_server_hdd_02
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.228386'
+    end: '2026-06-02 21:03:03.719405'
+    item: Storage_Server_HDD_02
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:03:03.491019'
+    stderr: 'Error from server (NotFound): nodes "storage_server_hdd_02" not found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+failed: [Host12_1] (item=Storage_Server_SSD_01) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - storage_server_ssd_01
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.132198'
+    end: '2026-06-02 21:03:05.834742'
+    item: Storage_Server_SSD_01
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:03:05.702544'
+    stderr: 'Error from server (NotFound): nodes "storage_server_ssd_01" not found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+failed: [Host12_1] (item=Storage_Server_SSD_02) =>
+    ansible_loop_var: item
+    changed: true
+    cmd:
+    - kubectl
+    - label
+    - node
+    - storage_server_ssd_02
+    - ceph-osd=enabled
+    - storage-node=true
+    - --overwrite
+    delta: '0:00:00.146449'
+    end: '2026-06-02 21:03:07.749889'
+    item: Storage_Server_SSD_02
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:03:07.603440'
+    stderr: 'Error from server (NotFound): nodes "storage_server_ssd_02" not found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=10   changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host12_2                   : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_3                   : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Storage_Server_HDD_01      : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Storage_Server_HDD_02      : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Storage_Server_SSD_01      : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Storage_Server_SSD_02      : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_validate -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
+
+PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
+
+PLAY [Phase 2: Deploy Ceph Cluster via Rook] ********************************************************************************************************************************************************************
+
+PLAY [Phase 3: Validate Rook-Ceph Cluster] **********************************************************************************************************************************************************************
+
+TASK [Get Ceph cluster status via toolbox] **********************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -z "$TOOLBOX" ]; then
+          echo "Toolbox pod not found — using direct kubectl exec on operator"
+          OPERATOR=$(kubectl get pod -n rook-ceph -l app=rook-ceph-operator -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n rook-ceph "$OPERATOR" -- ceph -s 2>/dev/null || echo "Cannot reach ceph from operator pod"
+        else
+          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph -s
+        fi
+    delta: '0:00:00.406744'
+    end: '2026-06-02 21:05:07.489729'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:05:07.082985'
+    stderr: |-
+        error: error executing jsonpath "{.items[0].metadata.name}": Error executing template: array index out of bounds: index 0, length 0. Printing more information for debugging the template:
+                template was:
+                        {.items[0].metadata.name}
+                object given to jsonpath engine was:
+                        map[string]interface {}{"apiVersion":"v1", "items":[]interface {}{}, "kind":"List", "metadata":map[string]interface {}{"resourceVersion":""}}
+    stderr_lines: <omitted>
+    stdout: |-
+        Toolbox pod not found — using direct kubectl exec on operator
+        Cannot reach ceph from operator pod
+    stdout_lines: <omitted>
+
+TASK [Get Ceph OSD tree] ****************************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$TOOLBOX" ]; then
+          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph osd tree
+        fi
+    delta: '0:00:00.137461'
+    end: '2026-06-02 21:05:10.335524'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:05:10.198063'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Get all pods in rook-ceph namespace] **********************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - pods
+    - -n
+    - rook-ceph
+    - -o
+    - wide
+    delta: '0:00:00.360874'
+    end: '2026-06-02 21:05:12.992335'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:05:12.631461'
+    stderr: No resources found in rook-ceph namespace.
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Get StorageClasses] ***************************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - sc
+    delta: '0:00:00.138301'
+    end: '2026-06-02 21:05:15.665395'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:05:15.527094'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  18h
+    stdout_lines: <omitted>
+
+TASK [Print Ceph Health Report] *********************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: |-
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║              ROOK-CEPH CLUSTER HEALTH REPORT                    ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Namespace: rook-ceph
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Cluster Status:
+        Toolbox pod not found — using direct kubectl exec on operator
+        Cannot reach ceph from operator pod
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ OSD Tree:
+
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Pods:
+
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ StorageClasses:
+        NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  18h
+        ╚══════════════════════════════════════════════════════════════════╝
+
+TASK [Verify ceph-rbd StorageClass exists] **********************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:411:7
+
+409           ╚══════════════════════════════════════════════════════════════════╝
+410
+411     - name: Verify ceph-rbd StorageClass exists
+          ^ column 7
+
+fatal: [Host12_1]: FAILED! =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - sc
+    - ceph-rbd
+    delta: '0:00:00.129165'
+    end: '2026-06-02 21:05:18.479464'
+    failed_when_result: true
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:05:18.350299'
+    stderr: 'Error from server (NotFound): storageclasses.storage.k8s.io "ceph-rbd" not
+        found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=5    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_validate -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
+
+PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
+
+PLAY [Phase 2: Deploy Ceph Cluster via Rook] ********************************************************************************************************************************************************************
+
+PLAY [Phase 3: Validate Rook-Ceph Cluster] **********************************************************************************************************************************************************************
+
+TASK [Get Ceph cluster status via toolbox] **********************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -z "$TOOLBOX" ]; then
+          echo "Toolbox pod not found — using direct kubectl exec on operator"
+          OPERATOR=$(kubectl get pod -n rook-ceph -l app=rook-ceph-operator -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n rook-ceph "$OPERATOR" -- ceph -s 2>/dev/null || echo "Cannot reach ceph from operator pod"
+        else
+          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph -s
+        fi
+    delta: '0:00:00.390267'
+    end: '2026-06-02 21:07:34.380496'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:07:33.990229'
+    stderr: |-
+        error: error executing jsonpath "{.items[0].metadata.name}": Error executing template: array index out of bounds: index 0, length 0. Printing more information for debugging the template:
+                template was:
+                        {.items[0].metadata.name}
+                object given to jsonpath engine was:
+                        map[string]interface {}{"apiVersion":"v1", "items":[]interface {}{}, "kind":"List", "metadata":map[string]interface {}{"resourceVersion":""}}
+    stderr_lines: <omitted>
+    stdout: |-
+        Toolbox pod not found — using direct kubectl exec on operator
+        Cannot reach ceph from operator pod
+    stdout_lines: <omitted>
+
+TASK [Get Ceph OSD tree] ****************************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$TOOLBOX" ]; then
+          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph osd tree
+        fi
+    delta: '0:00:00.138988'
+    end: '2026-06-02 21:07:36.895572'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:07:36.756584'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Get all pods in rook-ceph namespace] **********************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - pods
+    - -n
+    - rook-ceph
+    - -o
+    - wide
+    delta: '0:00:00.135698'
+    end: '2026-06-02 21:07:39.244523'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:07:39.108825'
+    stderr: No resources found in rook-ceph namespace.
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Get StorageClasses] ***************************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - sc
+    delta: '0:00:00.141247'
+    end: '2026-06-02 21:07:41.675592'
+    msg: ''
+    rc: 0
+    start: '2026-06-02 21:07:41.534345'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  18h
+    stdout_lines: <omitted>
+
+TASK [Print Ceph Health Report] *********************************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    msg: |-
+        ╔══════════════════════════════════════════════════════════════════╗
+        ║              ROOK-CEPH CLUSTER HEALTH REPORT                    ║
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Namespace: rook-ceph
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Cluster Status:
+        Toolbox pod not found — using direct kubectl exec on operator
+        Cannot reach ceph from operator pod
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ OSD Tree:
+
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ Pods:
+
+        ╠══════════════════════════════════════════════════════════════════╣
+        ║ StorageClasses:
+        NAME         PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        local-path   rancher.io/local-path   Delete          WaitForFirstConsumer   false                  18h
+        ╚══════════════════════════════════════════════════════════════════╝
+
+TASK [Verify ceph-rbd StorageClass exists] **********************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:411:7
+
+409           ╚══════════════════════════════════════════════════════════════════╝
+410
+411     - name: Verify ceph-rbd StorageClass exists
+          ^ column 7
+
+fatal: [Host12_1]: FAILED! =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - sc
+    - ceph-rbd
+    delta: '0:00:00.151149'
+    end: '2026-06-02 21:07:44.482565'
+    failed_when_result: true
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-02 21:07:44.331416'
+    stderr: 'Error from server (NotFound): storageclasses.storage.k8s.io "ceph-rbd" not
+        found'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=5    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase A: Create Ceph infra-storage pool] ******************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [Check if infra-storage pool already exists] ***************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: Error executing command: [Errno 2] No such file or directory: b'ceph'
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_infra_pool.yml:37:7
+
+35     ceph_infra_client_name: "client.infra-storage"
+36   tasks:
+37     - name: Check if infra-storage pool already exists
+         ^ column 7
+
+fatal: [Host12_1]: FAILED! =>
+    changed: false
+    cmd: ceph osd pool ls
+    msg: Error executing command.
+    rc: 2
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
