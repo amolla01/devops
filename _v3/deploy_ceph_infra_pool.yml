@@ -1,0 +1,296 @@
+---
+# =============================================================================
+# playbooks/deploy_ceph_infra_pool.yml — Create Ceph 'infra-storage' Pool
+# =============================================================================
+#
+# DESCRIPTION:
+#   Creates a dedicated Ceph RBD pool 'infra-storage' for infrastructure and
+#   SDLC services running in the 'sheba-cloud-infra' K8s namespace.
+#   Also creates the associated keyring and Kubernetes secret for RBD CSI access.
+#
+# PREREQUISITES:
+#   - Ceph cluster operational (deploy_ceph.yml completed)
+#   - Kubernetes cluster operational (deploy_kubespray.yml completed)
+#   - kubectl configured with cluster-admin credentials
+#
+# USAGE:
+#   ansible-playbook playbooks/deploy_ceph_infra_pool.yml -i inventory/hosts.yml
+#   ansible-playbook playbooks/deploy_ceph_infra_pool.yml -i inventory/hosts.yml --tags validate
+#
+# =============================================================================
+
+- name: "Phase A: Create Ceph infra-storage pool"
+  hosts: "ceph_controllers[0]"
+  gather_facts: true
+  become: true
+  tags: [ceph_infra_pool, create_pool]
+  vars:
+    ceph_infra_pool_name: "infra-storage"
+    ceph_infra_pool_pg_num: 64
+    ceph_infra_pool_pgp_num: 64
+    ceph_infra_pool_size: 3
+    ceph_infra_pool_min_size: 2
+    ceph_infra_pool_application: "rbd"
+    ceph_infra_pool_crush_rule: "replicated_rule"
+    ceph_infra_client_name: "client.infra-storage"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+    rook_ceph_namespace: "rook-ceph"
+  tasks:
+    - name: Get Rook-Ceph toolbox pod name
+      ansible.builtin.shell: |
+        kubectl get pod -n {{ rook_ceph_namespace }} -l app=rook-ceph-tools \
+          -o jsonpath='{.items[0].metadata.name}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: _ceph_toolbox_pod
+      changed_when: false
+      failed_when: _ceph_toolbox_pod.rc != 0 or _ceph_toolbox_pod.stdout == ''
+
+    - name: Check if infra-storage pool already exists
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph osd pool ls
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: existing_pools
+      changed_when: false
+
+    - name: Create infra-storage pool
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph osd pool create {{ ceph_infra_pool_name }}
+        {{ ceph_infra_pool_pg_num }} {{ ceph_infra_pool_pgp_num }}
+        replicated {{ ceph_infra_pool_crush_rule }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: ceph_infra_pool_name not in existing_pools.stdout_lines
+      register: pool_created
+      changed_when: true
+
+    - name: Set pool replication size
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph osd pool set {{ ceph_infra_pool_name }} size {{ ceph_infra_pool_size }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: pool_created is changed
+      changed_when: true
+
+    - name: Set pool minimum replication size
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph osd pool set {{ ceph_infra_pool_name }} min_size {{ ceph_infra_pool_min_size }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: pool_created is changed
+      changed_when: true
+
+    - name: Enable RBD application on pool
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph osd pool application enable {{ ceph_infra_pool_name }} {{ ceph_infra_pool_application }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: pool_created is changed
+      changed_when: true
+
+    - name: Initialize RBD pool
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- rbd pool init {{ ceph_infra_pool_name }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      when: pool_created is changed
+      changed_when: true
+
+    - name: Check if auth keyring exists
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph auth get {{ ceph_infra_client_name }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: existing_keyring
+      failed_when: false
+      changed_when: false
+
+    - name: Create dedicated keyring for infra-storage
+      ansible.builtin.shell: |
+        kubectl exec -n {{ rook_ceph_namespace }} "{{ _ceph_toolbox_pod.stdout }}" -- \
+          bash -c 'ceph auth get-or-create {{ ceph_infra_client_name }} \
+            mon "profile rbd" \
+            osd "profile rbd pool={{ ceph_infra_pool_name }}" \
+            mgr "profile rbd pool={{ ceph_infra_pool_name }}"'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: infra_keyring
+      when: existing_keyring.rc != 0
+      changed_when: true
+
+    - name: Retrieve keyring (if already exists)
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph auth get-key {{ ceph_infra_client_name }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: infra_key
+      changed_when: false
+
+    - name: Get Ceph cluster FSID
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph fsid
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ceph_fsid
+      changed_when: false
+
+    - name: Get Ceph MON endpoints
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
+        -- ceph mon dump -f json
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: ceph_mon_dump
+      changed_when: false
+
+    - name: Store pool metadata for K8s phase
+      ansible.builtin.set_fact:
+        ceph_infra_key: "{{ infra_key.stdout }}"
+        ceph_cluster_id: "{{ ceph_fsid.stdout }}"
+        ceph_mon_hosts: "{{ (ceph_mon_dump.stdout | from_json).mons | map(attribute='addr') | map('regex_replace', '/.*', '') | list }}"
+        cacheable: true
+
+    - name: Display pool creation summary
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║ Ceph infra-storage Pool Ready                               ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║ Pool:       {{ ceph_infra_pool_name }}
+          ║ PG Count:   {{ ceph_infra_pool_pg_num }}
+          ║ Size:       {{ ceph_infra_pool_size }} (min {{ ceph_infra_pool_min_size }})
+          ║ Client:     {{ ceph_infra_client_name }}
+          ║ Cluster ID: {{ ceph_cluster_id }}
+          ╚══════════════════════════════════════════════════════════════╝
+
+- name: "Phase B: Create K8s StorageClass + Secret for infra-storage"
+  hosts: "k8_controllers[0]"
+  gather_facts: false
+  become: true
+  tags: [ceph_infra_pool, k8s_storage]
+  vars:
+    infra_namespace: "sheba-cloud-infra"
+    ceph_infra_pool_name: "infra-storage"
+    ceph_infra_client_name: "client.infra-storage"
+    storageclass_name: "ceph-infra-rbd"
+    ceph_rbd_provisioner: "rbd.csi.ceph.com"
+  tasks:
+    - name: Ensure sheba-cloud-infra namespace exists
+      ansible.builtin.command: kubectl create namespace {{ infra_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'AlreadyExists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+
+    - name: Check if Ceph CSI secret exists
+      ansible.builtin.command: >
+        kubectl get secret ceph-infra-rbd-secret -n {{ infra_namespace }}
+      register: secret_check
+      failed_when: false
+      changed_when: false
+
+    - name: Create Ceph CSI user secret in namespace
+      ansible.builtin.shell: |
+        cat <<'EOF' | kubectl apply -f -
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ceph-infra-rbd-secret
+          namespace: {{ infra_namespace }}
+        type: Opaque
+        stringData:
+          userID: infra-storage
+          userKey: "{{ hostvars[groups['ceph_controllers'][0]]['ceph_infra_key'] }}"
+        EOF
+      when: secret_check.rc != 0
+      changed_when: true
+
+    - name: Create Ceph CSI admin secret (for provisioner)
+      ansible.builtin.shell: |
+        cat <<'EOF' | kubectl apply -f -
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ceph-infra-rbd-admin-secret
+          namespace: {{ infra_namespace }}
+        type: Opaque
+        stringData:
+          adminID: infra-storage
+          adminKey: "{{ hostvars[groups['ceph_controllers'][0]]['ceph_infra_key'] }}"
+        EOF
+      changed_when: true
+
+    - name: Create StorageClass for infra-storage pool
+      ansible.builtin.shell: |
+        cat <<'EOF' | kubectl apply -f -
+        apiVersion: storage.k8s.io/v1
+        kind: StorageClass
+        metadata:
+          name: {{ storageclass_name }}
+          annotations:
+            storageclass.kubernetes.io/is-default-class: "false"
+        provisioner: {{ ceph_rbd_provisioner }}
+        parameters:
+          clusterID: "{{ hostvars[groups['ceph_controllers'][0]]['ceph_cluster_id'] }}"
+          pool: {{ ceph_infra_pool_name }}
+          imageFormat: "2"
+          imageFeatures: layering
+          csi.storage.k8s.io/provisioner-secret-name: ceph-infra-rbd-admin-secret
+          csi.storage.k8s.io/provisioner-secret-namespace: {{ infra_namespace }}
+          csi.storage.k8s.io/node-stage-secret-name: ceph-infra-rbd-secret
+          csi.storage.k8s.io/node-stage-secret-namespace: {{ infra_namespace }}
+          csi.storage.k8s.io/controller-expand-secret-name: ceph-infra-rbd-admin-secret
+          csi.storage.k8s.io/controller-expand-secret-namespace: {{ infra_namespace }}
+        reclaimPolicy: Retain
+        allowVolumeExpansion: true
+        mountOptions:
+          - discard
+        EOF
+      changed_when: true
+
+    - name: Verify StorageClass
+      ansible.builtin.command: kubectl get sc {{ storageclass_name }}
+      register: sc_verify
+      changed_when: false
+
+    - name: Display StorageClass status
+      ansible.builtin.debug:
+        msg: "StorageClass '{{ storageclass_name }}' ready — backed by Ceph pool '{{ ceph_infra_pool_name }}'"
+
+- name: "Phase C: Validate infra-storage pool health"
+  hosts: "ceph_controllers[0]"
+  gather_facts: false
+  become: true
+  tags: [ceph_infra_pool, validate]
+  vars:
+    ceph_infra_pool_name: "infra-storage"
+  tasks:
+    - name: Check pool statistics
+      ansible.builtin.command: ceph osd pool stats {{ ceph_infra_pool_name }}
+      register: pool_stats
+      changed_when: false
+
+    - name: Check pool autoscaler status
+      ansible.builtin.command: ceph osd pool autoscale-status
+      register: autoscale
+      changed_when: false
+
+    - name: Final health check
+      ansible.builtin.command: ceph health
+      register: health
+      changed_when: false
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: |
+          Pool Stats: {{ pool_stats.stdout }}
+          Health: {{ health.stdout }}
