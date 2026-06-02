@@ -18,3 +18,10 @@ ansible -i inventory/hosts.yml kube_nodes -m shell \
 
 # 3. Re-run the playbook (now uses download_run_once=true + piped transfer)
 ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml
+
+
+The new run will:
+
+Download images once on host12-1 (proven to work)
+Distribute via piped transfer (dd over ssh) instead of rsync — no more silent failures through ProxyJump
+Show a "tail -f /tmp/kubespray_deploy.log" hint so you can monitor progress in another terminal
