@@ -1,3 +1,15 @@
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA--Tutorial--AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+https://datavirke.dk/posts/bare-metal-kubernetes-part-6-persistent-storage-with-rook-ceph/
+https://deniz-turkmen.medium.com/kubernetes-native-storage-installing-and-configuring-ceph-with-rook-7358c1ad1be5
+https://kube-dojo.github.io/platform/toolkits/infrastructure-networking/storage/module-16.1-rook-ceph/
+https://oneuptime.com/blog/post/2025-12-03-ceph-rook-standard-bare-metal-storage-pools/view
+https://sigridjin.medium.com/kubernetes-the-kubespray-way-89111e0e1636
+https://github.com/OneUptime/blog/blob/master/posts/2025-12-03-ceph-rook-standard-bare-metal-storage-pools/README.md
+https://medium.com/@anisinanaj/storage-on-kubernetes-efa0a5b4f858
+https://medium.com/@jrkessl/kubernetes-service-accounts-what-they-are-and-how-to-implement-9b3701c667d0
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 The logs show Host12_1's Kubernetes API server has crashed/become unresponsive.
 CephCluster Helm deploy times out after ~7.5 min with etcdserver: request timed out
 
