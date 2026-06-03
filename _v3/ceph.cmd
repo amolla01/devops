@@ -122,3 +122,67 @@ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml \
 export AUTOMATION_PROFILE=real_hardware
 ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml \
   -e "@cd/vars/ceph-values-real-hardware.yml" -v
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+
+The playbook is designed to be re-runnable (idempotent) — here's what happens for each phase:
+
+Phase	If Already Deployed	Mechanism
+Phase 0 (rook_prepare)	Kernel modules re-loaded (no-op), disk wipe skipped if mounted	lsblk mount check before wipe
+Phase 1 (rook_operator)	helm upgrade --install — upgrades or no-ops if chart unchanged	Helm's native idempotency
+Phase 2 (rook_cluster)	helm upgrade --install — reconciles CephCluster CR	Rook operator reconciles desired state
+Phase 3 (rook_dashboard)	kubectl patch re-applies same NodePort — no-op if already set	Patch is declarative
+Phase 4 (rook_validate)	Read-only checks, creates+deletes test PVC	No state changes
+Safe re-run strategies:
+
+
+# Re-run everything (safe — each step is idempotent)ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v# Skip what's working, run only failed phaseansible-playbook playbooks/reused/deploy_ceph_rook.yml \  -i inventory/hosts.yml --tags rook_cluster -v# Skip already-prepared nodes, just do cluster+dashboardansible-playbook playbooks/reused/deploy_ceph_rook.yml \  -i inventory/hosts.yml --tags rook_cluster,rook_dashboard,rook_validate -v
+
+
+# Re-run everything (safe — each step is idempotent)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+
+# Skip what's working, run only failed phase
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_cluster -v
+
+# Skip already-prepared nodes, just do cluster+dashboard
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_cluster,rook_dashboard,rook_validate -v
+
+
+The playbook is designed to be re-runnable (idempotent) — here's what happens for each phase:
+
+Phase	If Already Deployed	Mechanism
+Phase 0 (rook_prepare)	Kernel modules re-loaded (no-op), disk wipe skipped if mounted	lsblk mount check before wipe
+Phase 1 (rook_operator)	helm upgrade --install — upgrades or no-ops if chart unchanged	Helm's native idempotency
+Phase 2 (rook_cluster)	helm upgrade --install — reconciles CephCluster CR	Rook operator reconciles desired state
+Phase 3 (rook_dashboard)	kubectl patch re-applies same NodePort — no-op if already set	Patch is declarative
+Phase 4 (rook_validate)	Read-only checks, creates+deletes test PVC	No state changes
+Safe re-run strategies:
+
+One exception: Phase 0 disk wipe (ceph_osd_wipe_disks: true) will re-wipe disks that are not mounted. If OSDs failed mid-creation (disk wiped but OSD pod didn't start), re-running is safe — Rook will re-claim the empty disk. If you want to skip disk prep entirely on re-run:
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -e "ceph_osd_wipe_disks=false" -v
+
+Bottom line: Just re-run the full playbook or the specific failing tag. Already-deployed components won't be disrupted.
+
+You're right — yes, deploy_ceph_infra_pool.yml must run after deploy_ceph_rook.yml. The full correct sequence is:
+
+# 1. Deploy Rook-Ceph cluster (operator + cluster + dashboard)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+
+# 2. Create infra-storage pool + keyring + K8s secret
+ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
+
+What deploy_ceph_infra_pool.yml adds on top:
+
+Component	Purpose
+infra-storage pool	Dedicated RBD pool for SDLC/infra services
+client.infra-storage keyring	Scoped auth (only access to that pool)
+K8s Secret in sheba-cloud-infra	CSI driver uses it to mount RBD volumes
+Why it's separate: The core cluster (deploy_ceph_rook.yml) already creates the kube-rbd pool/StorageClass for general workloads. The infra pool is an additional tenant-isolated pool specifically for infrastructure services in the sheba-cloud-infra namespace — it has its own replication settings (size=2, min_size=1) tuned for the lab.
+
+Dependency: deploy_ceph_infra_pool.yml requires the Rook toolbox pod to be running (created by Phase 2 of deploy_ceph_rook.yml), so it will fail if run before the cluster is healthy.
+
