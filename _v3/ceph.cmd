@@ -186,3 +186,65 @@ Why it's separate: The core cluster (deploy_ceph_rook.yml) already creates the k
 
 Dependency: deploy_ceph_infra_pool.yml requires the Rook toolbox pod to be running (created by Phase 2 of deploy_ceph_rook.yml), so it will fail if run before the cluster is healthy.
 
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+rbd pool init is nearly instantaneous — if it's stuck for an hour, the issue is upstream. Most likely causes:
+
+Diagnosis (run from your ControlNode)
+
+# 1. Check if kubectl exec itself is hanging (the toolbox pod may be dead/unresponsive)
+kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o wide
+
+# 2. Check Ceph cluster health (from a DIFFERENT terminal)
+TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}')
+kubectl exec -n rook-ceph $TOOLBOX -- ceph -s --connect-timeout 5
+
+# 3. Check PG state for the new pool
+kubectl exec -n rook-ceph $TOOLBOX -- ceph pg ls-by-pool infra-storage
+
+# 4. Check if OSDs are actually up
+kubectl exec -n rook-ceph $TOOLBOX -- ceph osd tree
+
+Most Likely Root Cause
+Pool PGs are stuck in creating or incomplete state — this happens when:
+
+Condition	Why rbd pool init hangs
+Not enough OSDs up to satisfy size=2	PGs can't map to 2 OSDs → stuck in creating
+OSDs are full (>95%)	Ceph refuses writes → rbd pool init blocks
+MON quorum lost	All ceph commands hang
+Toolbox pod OOMKilled/CrashLoop	kubectl exec hangs waiting for response
+Immediate Fix
+Kill the stuck Ansible run (Ctrl+C), then diagnose:
+
+
+
+# Quick check — does ceph respond at all?
+kubectl exec -n rook-ceph $TOOLBOX -- ceph health --connect-timeout 10
+
+# If timeout → MON/MGR issue. Check pods:
+kubectl get pods -n rook-ceph | grep -E 'mon|mgr|osd'
+
+# If responds but HEALTH_WARN/ERR → check why:
+kubectl exec -n rook-ceph $TOOLBOX -- ceph health detail
+
+If PGs are stuck creating:
+
+# Check: the pool needs 2 OSDs minimum (size=2)
+kubectl exec -n rook-ceph $TOOLBOX -- ceph osd pool get infra-storage size
+kubectl exec -n rook-ceph $TOOLBOX -- ceph osd stat
+
+# If only 0-1 OSDs are up, that's the problem
+# Temporarily allow degraded writes:
+kubectl exec -n rook-ceph $TOOLBOX -- ceph osd pool set infra-storage min_size 1
+
+If toolbox pod is dead:
+
+# Restart it
+kubectl delete pod -n rook-ceph -l app=rook-ceph-tools
+# Wait for respawn, then re-run the playbook
+
+After Fixing — Re-run Safely
+
+# The playbook is idempotent — just re-run it
+ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
+
+TL;DR: Run ceph -s first. If it hangs too → MON/MGR is down. If it responds → check ceph health detail for PG issues indicating insufficient OSDs.
