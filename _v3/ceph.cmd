@@ -248,3 +248,79 @@ After Fixing — Re-run Safely
 ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
 
 TL;DR: Run ceph -s first. If it hangs too → MON/MGR is down. If it responds → check ceph health detail for PG issues indicating insufficient OSDs.
+
+
+
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+Current State: Rook operator deployed, CephCluster CR deployed, 0 OSDs (no virtual disks on VMs), dashboard not yet exposed.
+Step 1 — Create & Attach Virtual Disks (on R810 hypervisor)
+# SSH to R810 host (the KVM hypervisor)
+# For each VM, create 2 qcow2 images and attach:
+
+for VM in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 HostB12_1; do
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-01.qcow2 100G
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-02.qcow2 100G
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-01.qcow2 vdb \
+    --driver qemu --subdriver qcow2 --persistent
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-02.qcow2 vdc \
+    --driver qemu --subdriver qcow2 --persistent
+done
+Step 2 — Wait for Rook Auto-Discovery (~2-5 min)
+Rook (useAllDevices: true) automatically detects new block devices and creates OSD pods. No playbook re-run needed.
+# From Host12_1 (or any controller):
+watch kubectl get pods -n rook-ceph -l app=rook-ceph-osd
+# Wait until 12 OSD pods appear (6 nodes × 2 disks)
+
+Step 3 — Verify Cluster Health
+
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph -s
+# Expect: HEALTH_OK, 12 osds: 12 up, 12 in
+
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph -s
+# Expect: HEALTH_OK, 12 osds: 12 up, 12 in
+
+Step 4 — Run Dashboard Phase
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_dashboard \
+  -e "@cd/vars/ceph-values-r810-kvm.yml" -v
+
+Output will print: URL (https://172.16.2.40:31443), username (admin), password.
+
+Step 5 — Run Infra Pool Creation
+
+ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml \
+  -i inventory/hosts.yml -v
+
+Creates infra-storage pool (size=2, PG=32), RBD init, keyring, K8s secret.
+
+Step 6 — Validate End-to-End
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_validate \
+  -e "@cd/vars/ceph-values-r810-kvm.yml" -v
+
+Or manually:
+
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph osd tree
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph df
+kubectl get sc  # Verify StorageClass exists
+
+Step 7 — Test PVC Binding
+
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-rbd
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+kubectl get pvc test-rbd   # Should show Bound
+kubectl delete pvc test-rbd
+
+Key point: Step 1 is the only manual action on the R810 hypervisor. Everything after that is either automatic (Rook discovery) or a single Ansible command. The playbooks now handle the "0 OSDs" case gracefully if you run them before disks are attached — they'll skip instead of hanging.
