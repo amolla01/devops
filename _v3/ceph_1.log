@@ -5,10 +5,10 @@ PLAY [Phase 0: Prepare OSD Nodes for Rook] *************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
 ok: [Host12_1]
-ok: [Host34_2]
-ok: [Host12_2]
-ok: [Host12_3]
 ok: [Host34_1]
+ok: [Host12_3]
+ok: [Host12_2]
+ok: [Host34_2]
 [ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
 channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
@@ -32,7 +32,6 @@ fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
         Connection closed by UNKNOWN port 65535
     unreachable: true
 ...ignoring
-ok: [HostB12_1]
 fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
     changed: false
     msg: |-
@@ -42,6 +41,7 @@ fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
         Connection closed by UNKNOWN port 65535
     unreachable: true
 ...ignoring
+ok: [HostB12_1]
 fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
     changed: false
     msg: |-
@@ -62,14 +62,14 @@ fatal: [Storage_Server_SSD_02]: UNREACHABLE! =>
 ...ignoring
 
 TASK [Load required kernel modules for Ceph] ********************************************************************************************************************************************************************
-ok: [Host12_1] => (item=rbd) =>
+ok: [Host34_1] => (item=rbd) =>
     ansible_loop_var: item
     changed: false
     item: rbd
     name: rbd
     params: ''
     state: present
-ok: [Host34_1] => (item=rbd) =>
+ok: [Host34_2] => (item=rbd) =>
     ansible_loop_var: item
     changed: false
     item: rbd
@@ -90,28 +90,21 @@ ok: [Host12_2] => (item=rbd) =>
     name: rbd
     params: ''
     state: present
-ok: [Host34_2] => (item=rbd) =>
+ok: [Host12_1] => (item=rbd) =>
     ansible_loop_var: item
     changed: false
     item: rbd
     name: rbd
     params: ''
     state: present
+ok: [Host34_2] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: false
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
 ok: [Host34_1] => (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    name: ceph
-    params: ''
-    state: present
-ok: [Host12_1] => (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    name: ceph
-    params: ''
-    state: present
-ok: [Host12_2] => (item=ceph) =>
     ansible_loop_var: item
     changed: false
     item: ceph
@@ -125,7 +118,14 @@ ok: [Host12_3] => (item=ceph) =>
     name: ceph
     params: ''
     state: present
-ok: [Host34_2] => (item=ceph) =>
+ok: [Host12_2] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: false
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ceph) =>
     ansible_loop_var: item
     changed: false
     item: ceph
@@ -169,6 +169,13 @@ failed: [Storage_Server_HDD_01] (item=rbd) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
+ok: [HostB12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: false
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
 failed: [Storage_Server_HDD_02] (item=rbd) =>
     ansible_loop_var: item
     changed: false
@@ -199,13 +206,6 @@ failed: [Storage_Server_SSD_02] (item=rbd) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-ok: [HostB12_1] => (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    name: ceph
-    params: ''
-    state: present
 failed: [Storage_Server_HDD_01] (item=ceph) =>
     ansible_loop_var: item
     changed: false
@@ -242,6 +242,16 @@ fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
         unreachable: true
     unreachable: true
 ...ignoring
+failed: [Storage_Server_SSD_01] (item=ceph) =>
+    ansible_loop_var: item
+    changed: false
+    item: ceph
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
 failed: [Storage_Server_HDD_02] (item=ceph) =>
     ansible_loop_var: item
     changed: false
@@ -252,6 +262,32 @@ failed: [Storage_Server_HDD_02] (item=ceph) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
+fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
+    changed: false
+    msg: All items completed
+    results:
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: rbd
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: ceph
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    unreachable: true
+...ignoring
 fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
     changed: false
     msg: All items completed
@@ -314,57 +350,9 @@ fatal: [Storage_Server_SSD_02]: UNREACHABLE! =>
         unreachable: true
     unreachable: true
 ...ignoring
-failed: [Storage_Server_SSD_01] (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-        channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
-    changed: false
-    msg: All items completed
-    results:
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: rbd
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: ceph
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    unreachable: true
-...ignoring
 
 TASK [Persist kernel modules across reboots] ********************************************************************************************************************************************************************
 ok: [Host12_1] => (item=rbd) =>
-    ansible_loop_var: item
-    backup: ''
-    changed: false
-    item: rbd
-    msg: ''
-ok: [Host34_2] => (item=rbd) =>
-    ansible_loop_var: item
-    backup: ''
-    changed: false
-    item: rbd
-    msg: ''
-ok: [Host12_2] => (item=rbd) =>
     ansible_loop_var: item
     backup: ''
     changed: false
@@ -376,25 +364,31 @@ ok: [Host34_1] => (item=rbd) =>
     changed: false
     item: rbd
     msg: ''
+ok: [Host12_2] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: false
+    item: rbd
+    msg: ''
 ok: [Host12_3] => (item=rbd) =>
     ansible_loop_var: item
     backup: ''
     changed: false
     item: rbd
     msg: ''
-ok: [Host34_2] => (item=ceph) =>
+ok: [Host34_2] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: false
+    item: rbd
+    msg: ''
+ok: [Host12_1] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
     changed: false
     item: ceph
     msg: ''
 ok: [Host34_1] => (item=ceph) =>
-    ansible_loop_var: item
-    backup: ''
-    changed: false
-    item: ceph
-    msg: ''
-ok: [Host12_1] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
     changed: false
@@ -407,6 +401,12 @@ ok: [Host12_2] => (item=ceph) =>
     item: ceph
     msg: ''
 ok: [Host12_3] => (item=ceph) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: false
+    item: ceph
+    msg: ''
+ok: [Host34_2] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
     changed: false
@@ -438,6 +438,16 @@ channel 0: open failed: connect failed: No route to host
 stdio forwarding failed
 Connection closed by UNKNOWN port 65535
 
+failed: [Storage_Server_HDD_02] (item=rbd) =>
+    ansible_loop_var: item
+    changed: false
+    item: rbd
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
 failed: [Storage_Server_HDD_01] (item=rbd) =>
     ansible_loop_var: item
     changed: false
@@ -448,17 +458,13 @@ failed: [Storage_Server_HDD_01] (item=rbd) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_01] (item=rbd) =>
+ok: [HostB12_1] => (item=ceph) =>
     ansible_loop_var: item
+    backup: ''
     changed: false
-    item: rbd
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-        channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-failed: [Storage_Server_HDD_02] (item=rbd) =>
+    item: ceph
+    msg: ''
+failed: [Storage_Server_SSD_01] (item=rbd) =>
     ansible_loop_var: item
     changed: false
     item: rbd
@@ -478,12 +484,16 @@ failed: [Storage_Server_SSD_02] (item=rbd) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-ok: [HostB12_1] => (item=ceph) =>
+failed: [Storage_Server_HDD_02] (item=ceph) =>
     ansible_loop_var: item
-    backup: ''
     changed: false
     item: ceph
-    msg: ''
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
 failed: [Storage_Server_HDD_01] (item=ceph) =>
     ansible_loop_var: item
     changed: false
@@ -494,7 +504,7 @@ failed: [Storage_Server_HDD_01] (item=ceph) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
+fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
     changed: false
     msg: All items completed
     results:
@@ -520,17 +530,7 @@ fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
         unreachable: true
     unreachable: true
 ...ignoring
-failed: [Storage_Server_HDD_02] (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-        channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
-fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
+fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
     changed: false
     msg: All items completed
     results:
@@ -631,27 +631,23 @@ fatal: [Storage_Server_SSD_02]: UNREACHABLE! =>
 
 TASK [Install lvm2 (required for Ceph OSD LVM mode)] ************************************************************************************************************************************************************
 ok: [Host12_1] =>
-    cache_update_time: 1780400183
+    cache_update_time: 1780446549
     cache_updated: false
     changed: false
 ok: [Host12_2] =>
-    cache_update_time: 1780386347
-    cache_updated: false
-    changed: false
-ok: [Host34_2] =>
-    cache_update_time: 1780414694
+    cache_update_time: 1780452175
     cache_updated: false
     changed: false
 ok: [Host34_1] =>
-    cache_update_time: 1780396118
+    cache_update_time: 1780446679
+    cache_updated: false
+    changed: false
+ok: [Host34_2] =>
+    cache_update_time: 1780447662
     cache_updated: false
     changed: false
 ok: [Host12_3] =>
-    cache_update_time: 1780403218
-    cache_updated: false
-    changed: false
-ok: [HostB12_1] =>
-    cache_update_time: 1780412409
+    cache_update_time: 1780454732
     cache_updated: false
     changed: false
 [ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
@@ -692,6 +688,10 @@ fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
         Connection closed by UNKNOWN port 65535
     unreachable: true
 ...ignoring
+ok: [HostB12_1] =>
+    cache_update_time: 1780448677
+    cache_updated: false
+    changed: false
 fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
     changed: false
     msg: |-
@@ -742,11 +742,6 @@ ok: [Host34_2] =>
         - /dev/vdb
         - /dev/vdc
     changed: false
-ok: [HostB12_1] =>
-    ansible_facts:
-        _osd_devices:
-        - /dev/vdb
-    changed: false
 ok: [Storage_Server_HDD_01] =>
     ansible_facts:
         _osd_devices:
@@ -754,6 +749,11 @@ ok: [Storage_Server_HDD_01] =>
         - /dev/sdb
         - /dev/sdc
         - /dev/sdd
+    changed: false
+ok: [HostB12_1] =>
+    ansible_facts:
+        _osd_devices:
+        - /dev/vdb
     changed: false
 ok: [Storage_Server_HDD_02] =>
     ansible_facts:
@@ -797,38 +797,12 @@ ok: [Host12_1] => (item=/dev/vdb) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.009066'
-    end: '2026-06-02 21:30:13.394907'
+    delta: '0:00:00.006538'
+    end: '2026-06-03 23:20:56.090018'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:13.385841'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
-    stdout_lines: <omitted>
-ok: [Host34_2] => (item=/dev/vdb) =>
-    ansible_loop_var: item
-    changed: false
-    cmd: |-
-        if [ ! -b "$DEV" ]; then
-          echo "SKIP (not found): $DEV"
-          exit 0
-        fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-          echo "SKIP (mounted): $DEV"
-          exit 0
-        fi
-        wipefs -af "$DEV" 2>/dev/null || true
-        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
-        echo "WIPED: $DEV"
-    delta: '0:00:00.006466'
-    end: '2026-06-02 21:30:14.360340'
-    item: /dev/vdb
-    msg: ''
-    rc: 0
-    start: '2026-06-02 21:30:14.353874'
+    start: '2026-06-03 23:20:56.083480'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdb'
@@ -849,38 +823,12 @@ ok: [Host12_2] => (item=/dev/vdb) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007566'
-    end: '2026-06-02 21:30:14.368021'
+    delta: '0:00:00.007491'
+    end: '2026-06-03 23:20:56.573159'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:14.360455'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
-    stdout_lines: <omitted>
-ok: [Host34_1] => (item=/dev/vdb) =>
-    ansible_loop_var: item
-    changed: false
-    cmd: |-
-        if [ ! -b "$DEV" ]; then
-          echo "SKIP (not found): $DEV"
-          exit 0
-        fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-          echo "SKIP (mounted): $DEV"
-          exit 0
-        fi
-        wipefs -af "$DEV" 2>/dev/null || true
-        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
-        echo "WIPED: $DEV"
-    delta: '0:00:00.007808'
-    end: '2026-06-02 21:30:14.708569'
-    item: /dev/vdb
-    msg: ''
-    rc: 0
-    start: '2026-06-02 21:30:14.700761'
+    start: '2026-06-03 23:20:56.565668'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdb'
@@ -901,17 +849,17 @@ ok: [Host12_3] => (item=/dev/vdb) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007292'
-    end: '2026-06-02 21:30:14.869949'
+    delta: '0:00:00.007585'
+    end: '2026-06-03 23:20:56.727029'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:14.862657'
+    start: '2026-06-03 23:20:56.719444'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdb'
     stdout_lines: <omitted>
-ok: [Host12_1] => (item=/dev/vdc) =>
+ok: [Host34_1] => (item=/dev/vdb) =>
     ansible_loop_var: item
     changed: false
     cmd: |-
@@ -927,17 +875,17 @@ ok: [Host12_1] => (item=/dev/vdc) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007531'
-    end: '2026-06-02 21:30:16.641078'
-    item: /dev/vdc
+    delta: '0:00:00.008556'
+    end: '2026-06-03 23:20:57.682561'
+    item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:16.633547'
+    start: '2026-06-03 23:20:57.674005'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
+    stdout: 'SKIP (not found): /dev/vdb'
     stdout_lines: <omitted>
-ok: [Host34_2] => (item=/dev/vdc) =>
+ok: [Host34_2] => (item=/dev/vdb) =>
     ansible_loop_var: item
     changed: false
     cmd: |-
@@ -953,15 +901,15 @@ ok: [Host34_2] => (item=/dev/vdc) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007277'
-    end: '2026-06-02 21:30:17.283326'
-    item: /dev/vdc
+    delta: '0:00:00.008411'
+    end: '2026-06-03 23:20:57.787838'
+    item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:17.276049'
+    start: '2026-06-03 23:20:57.779427'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
+    stdout: 'SKIP (not found): /dev/vdb'
     stdout_lines: <omitted>
 ok: [Host12_2] => (item=/dev/vdc) =>
     ansible_loop_var: item
@@ -979,17 +927,17 @@ ok: [Host12_2] => (item=/dev/vdc) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.006837'
-    end: '2026-06-02 21:30:17.388497'
+    delta: '0:00:00.007152'
+    end: '2026-06-03 23:20:59.931820'
     item: /dev/vdc
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:17.381660'
+    start: '2026-06-03 23:20:59.924668'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdc'
     stdout_lines: <omitted>
-ok: [Host34_1] => (item=/dev/vdc) =>
+ok: [Host12_1] => (item=/dev/vdc) =>
     ansible_loop_var: item
     changed: false
     cmd: |-
@@ -1005,12 +953,12 @@ ok: [Host34_1] => (item=/dev/vdc) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007017'
-    end: '2026-06-02 21:30:17.617792'
+    delta: '0:00:00.007401'
+    end: '2026-06-03 23:21:00.356439'
     item: /dev/vdc
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:17.610775'
+    start: '2026-06-03 23:21:00.349038'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdc'
@@ -1031,12 +979,64 @@ ok: [Host12_3] => (item=/dev/vdc) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007032'
-    end: '2026-06-02 21:30:17.947486'
+    delta: '0:00:00.007790'
+    end: '2026-06-03 23:21:00.574235'
     item: /dev/vdc
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:17.940454'
+    start: '2026-06-03 23:21:00.566445'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host34_1] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.008994'
+    end: '2026-06-03 23:21:00.866687'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:21:00.857693'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'SKIP (not found): /dev/vdc'
+    stdout_lines: <omitted>
+ok: [Host34_2] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: false
+    cmd: |-
+        if [ ! -b "$DEV" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        dmsetup remove_all 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:00.007070'
+    end: '2026-06-03 23:21:00.905440'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:21:00.898370'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdc'
@@ -1057,12 +1057,12 @@ ok: [HostB12_1] => (item=/dev/vdb) =>
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007046'
-    end: '2026-06-02 21:30:21.833425'
+    delta: '0:00:00.008051'
+    end: '2026-06-03 23:21:03.905191'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:21.826379'
+    start: '2026-06-03 23:21:03.897140'
     stderr: ''
     stderr_lines: <omitted>
     stdout: 'SKIP (not found): /dev/vdb'
@@ -1107,7 +1107,7 @@ failed: [Storage_Server_HDD_02] (item=/dev/sda) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_01] (item=/dev/nvme0n1) =>
+failed: [Storage_Server_SSD_02] (item=/dev/nvme0n1) =>
     ansible_loop_var: item
     changed: false
     item: /dev/nvme0n1
@@ -1117,7 +1117,7 @@ failed: [Storage_Server_SSD_01] (item=/dev/nvme0n1) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_02] (item=/dev/nvme0n1) =>
+failed: [Storage_Server_SSD_01] (item=/dev/nvme0n1) =>
     ansible_loop_var: item
     changed: false
     item: /dev/nvme0n1
@@ -1147,7 +1147,7 @@ failed: [Storage_Server_HDD_02] (item=/dev/sdb) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_01] (item=/dev/nvme1n1) =>
+failed: [Storage_Server_SSD_02] (item=/dev/nvme1n1) =>
     ansible_loop_var: item
     changed: false
     item: /dev/nvme1n1
@@ -1157,7 +1157,7 @@ failed: [Storage_Server_SSD_01] (item=/dev/nvme1n1) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_02] (item=/dev/nvme1n1) =>
+failed: [Storage_Server_SSD_01] (item=/dev/nvme1n1) =>
     ansible_loop_var: item
     changed: false
     item: /dev/nvme1n1
@@ -1177,16 +1177,6 @@ failed: [Storage_Server_HDD_01] (item=/dev/sdc) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-failed: [Storage_Server_SSD_01] (item=/dev/nvme2n1) =>
-    ansible_loop_var: item
-    changed: false
-    item: /dev/nvme2n1
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-        channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
 failed: [Storage_Server_HDD_02] (item=/dev/sdc) =>
     ansible_loop_var: item
     changed: false
@@ -1198,6 +1188,16 @@ failed: [Storage_Server_HDD_02] (item=/dev/sdc) =>
         Connection closed by UNKNOWN port 65535
     unreachable: true
 failed: [Storage_Server_SSD_02] (item=/dev/nvme2n1) =>
+    ansible_loop_var: item
+    changed: false
+    item: /dev/nvme2n1
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+failed: [Storage_Server_SSD_01] (item=/dev/nvme2n1) =>
     ansible_loop_var: item
     changed: false
     item: /dev/nvme2n1
@@ -1263,16 +1263,6 @@ fatal: [Storage_Server_HDD_01]: UNREACHABLE! =>
         unreachable: true
     unreachable: true
 ...ignoring
-failed: [Storage_Server_SSD_01] (item=/dev/nvme3n1) =>
-    ansible_loop_var: item
-    changed: false
-    item: /dev/nvme3n1
-    msg: |-
-        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-        channel 0: open failed: connect failed: No route to host
-        stdio forwarding failed
-        Connection closed by UNKNOWN port 65535
-    unreachable: true
 failed: [Storage_Server_HDD_02] (item=/dev/sdd) =>
     ansible_loop_var: item
     changed: false
@@ -1283,52 +1273,6 @@ failed: [Storage_Server_HDD_02] (item=/dev/sdd) =>
         stdio forwarding failed
         Connection closed by UNKNOWN port 65535
     unreachable: true
-fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
-    changed: false
-    msg: All items completed
-    results:
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: /dev/nvme0n1
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: /dev/nvme1n1
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: /dev/nvme2n1
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    -   ansible_loop_var: item
-        changed: false
-        exception: (traceback unavailable)
-        item: /dev/nvme3n1
-        msg: |-
-            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
-            channel 0: open failed: connect failed: No route to host
-            stdio forwarding failed
-            Connection closed by UNKNOWN port 65535
-        unreachable: true
-    unreachable: true
-...ignoring
 fatal: [Storage_Server_HDD_02]: UNREACHABLE! =>
     changed: false
     msg: All items completed
@@ -1431,6 +1375,62 @@ fatal: [Storage_Server_SSD_02]: UNREACHABLE! =>
         unreachable: true
     unreachable: true
 ...ignoring
+failed: [Storage_Server_SSD_01] (item=/dev/nvme3n1) =>
+    ansible_loop_var: item
+    changed: false
+    item: /dev/nvme3n1
+    msg: |-
+        Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+        channel 0: open failed: connect failed: No route to host
+        stdio forwarding failed
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+fatal: [Storage_Server_SSD_01]: UNREACHABLE! =>
+    changed: false
+    msg: All items completed
+    results:
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: /dev/nvme0n1
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: /dev/nvme1n1
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: /dev/nvme2n1
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item: /dev/nvme3n1
+        msg: |-
+            Task failed: Failed to connect to the host via ssh: Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+            channel 0: open failed: connect failed: No route to host
+            stdio forwarding failed
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    unreachable: true
+...ignoring
 
 TASK [Display disk preparation results] *************************************************************************************************************************************************************************
 ok: [Host12_2] =>
@@ -1453,15 +1453,15 @@ ok: [Host34_2] =>
     msg:
     - 'SKIP (not found): /dev/vdb'
     - 'SKIP (not found): /dev/vdc'
+ok: [HostB12_1] =>
+    msg:
+    - 'SKIP (not found): /dev/vdb'
 ok: [Storage_Server_HDD_01] =>
     msg:
     - skipped
     - skipped
     - skipped
     - skipped
-ok: [HostB12_1] =>
-    msg:
-    - 'SKIP (not found): /dev/vdb'
 ok: [Storage_Server_HDD_02] =>
     msg:
     - skipped
@@ -1493,11 +1493,11 @@ ok: [Host12_1] =>
     - helm
     - version
     - --short
-    delta: '0:00:00.095696'
-    end: '2026-06-02 21:30:43.487171'
+    delta: '0:00:00.110817'
+    end: '2026-06-03 23:21:23.574512'
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:43.391475'
+    start: '2026-06-03 23:21:23.463695'
     stderr: ''
     stderr_lines: <omitted>
     stdout: v3.14.2+gc309b6f
@@ -1511,13 +1511,13 @@ ok: [Host12_1] =>
     - create
     - namespace
     - rook-ceph
-    delta: '0:00:00.162764'
-    end: '2026-06-02 21:30:46.008927'
+    delta: '0:00:00.168035'
+    end: '2026-06-03 23:21:26.247511'
     failed_when_result: false
     failed_when_suppressed_exception: (traceback unavailable)
     msg: non-zero return code
     rc: 1
-    start: '2026-06-02 21:30:45.846163'
+    start: '2026-06-03 23:21:26.079476'
     stderr: 'Error from server (AlreadyExists): namespaces "rook-ceph" already exists'
     stderr_lines: <omitted>
     stdout: ''
@@ -1535,12 +1535,12 @@ changed: [Host12_1] => (item=Host12_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.165024'
-    end: '2026-06-02 21:30:48.461574'
+    delta: '0:00:00.189444'
+    end: '2026-06-03 23:21:29.569245'
     item: Host12_1
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:48.296550'
+    start: '2026-06-03 23:21:29.379801'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-1 not labeled
@@ -1556,12 +1556,12 @@ changed: [Host12_1] => (item=Host12_2) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.156356'
-    end: '2026-06-02 21:30:50.546403'
+    delta: '0:00:00.169373'
+    end: '2026-06-03 23:21:31.659817'
     item: Host12_2
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:50.390047'
+    start: '2026-06-03 23:21:31.490444'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-2 not labeled
@@ -1577,12 +1577,12 @@ changed: [Host12_1] => (item=Host12_3) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.146590'
-    end: '2026-06-02 21:30:52.675855'
+    delta: '0:00:00.175096'
+    end: '2026-06-03 23:21:33.827277'
     item: Host12_3
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:52.529265'
+    start: '2026-06-03 23:21:33.652181'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-3 not labeled
@@ -1598,12 +1598,12 @@ changed: [Host12_1] => (item=Host34_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.151216'
-    end: '2026-06-02 21:30:54.529207'
+    delta: '0:00:00.163490'
+    end: '2026-06-03 23:21:35.834928'
     item: Host34_1
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:54.377991'
+    start: '2026-06-03 23:21:35.671438'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host34-1 not labeled
@@ -1619,12 +1619,12 @@ changed: [Host12_1] => (item=Host34_2) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.164675'
-    end: '2026-06-02 21:30:56.423449'
+    delta: '0:00:00.156822'
+    end: '2026-06-03 23:21:37.899336'
     item: Host34_2
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:56.258774'
+    start: '2026-06-03 23:21:37.742514'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host34-2 not labeled
@@ -1640,12 +1640,12 @@ changed: [Host12_1] => (item=HostB12_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.149074'
-    end: '2026-06-02 21:30:58.352461'
+    delta: '0:00:00.174388'
+    end: '2026-06-03 23:21:40.099567'
     item: HostB12_1
     msg: ''
     rc: 0
-    start: '2026-06-02 21:30:58.203387'
+    start: '2026-06-03 23:21:39.925179'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/hostb12-1 not labeled
@@ -1669,12 +1669,12 @@ failed: [Host12_1] (item=Storage_Server_HDD_01) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.143217'
-    end: '2026-06-02 21:31:00.703737'
+    delta: '0:00:00.157267'
+    end: '2026-06-03 23:21:42.289335'
     item: Storage_Server_HDD_01
     msg: non-zero return code
     rc: 1
-    start: '2026-06-02 21:31:00.560520'
+    start: '2026-06-03 23:21:42.132068'
     stderr: 'Error from server (NotFound): nodes "storage_server_hdd_01" not found'
     stderr_lines: <omitted>
     stdout: ''
@@ -1690,12 +1690,12 @@ failed: [Host12_1] (item=Storage_Server_HDD_02) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.239522'
-    end: '2026-06-02 21:31:02.832460'
+    delta: '0:00:00.160493'
+    end: '2026-06-03 23:21:44.366216'
     item: Storage_Server_HDD_02
     msg: non-zero return code
     rc: 1
-    start: '2026-06-02 21:31:02.592938'
+    start: '2026-06-03 23:21:44.205723'
     stderr: 'Error from server (NotFound): nodes "storage_server_hdd_02" not found'
     stderr_lines: <omitted>
     stdout: ''
@@ -1711,12 +1711,12 @@ failed: [Host12_1] (item=Storage_Server_SSD_01) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.149377'
-    end: '2026-06-02 21:31:04.787379'
+    delta: '0:00:00.317675'
+    end: '2026-06-03 23:21:46.773145'
     item: Storage_Server_SSD_01
     msg: non-zero return code
     rc: 1
-    start: '2026-06-02 21:31:04.638002'
+    start: '2026-06-03 23:21:46.455470'
     stderr: 'Error from server (NotFound): nodes "storage_server_ssd_01" not found'
     stderr_lines: <omitted>
     stdout: ''
@@ -1732,12 +1732,12 @@ failed: [Host12_1] (item=Storage_Server_SSD_02) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.138412'
-    end: '2026-06-02 21:31:06.656238'
+    delta: '0:00:00.149144'
+    end: '2026-06-03 23:21:49.460639'
     item: Storage_Server_SSD_02
     msg: non-zero return code
     rc: 1
-    start: '2026-06-02 21:31:06.517826'
+    start: '2026-06-03 23:21:49.311495'
     stderr: 'Error from server (NotFound): nodes "storage_server_ssd_02" not found'
     stderr_lines: <omitted>
     stdout: ''
@@ -1755,15 +1755,15 @@ changed: [Host12_1] => (item=Host12_1) =>
     - host12-1
     - ceph-mon=enabled
     - --overwrite
-    delta: '0:00:00.169039'
-    end: '2026-06-02 21:31:09.282474'
+    delta: '0:00:00.160433'
+    end: '2026-06-03 23:21:52.683045'
     item: Host12_1
     msg: ''
     rc: 0
-    start: '2026-06-02 21:31:09.113435'
+    start: '2026-06-03 23:21:52.522612'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: node/host12-1 labeled
+    stdout: node/host12-1 not labeled
     stdout_lines: <omitted>
 changed: [Host12_1] => (item=Host34_1) =>
     ansible_loop_var: item
@@ -1775,15 +1775,15 @@ changed: [Host12_1] => (item=Host34_1) =>
     - host34-1
     - ceph-mon=enabled
     - --overwrite
-    delta: '0:00:00.163270'
-    end: '2026-06-02 21:31:11.266107'
+    delta: '0:00:00.170995'
+    end: '2026-06-03 23:21:54.627005'
     item: Host34_1
     msg: ''
     rc: 0
-    start: '2026-06-02 21:31:11.102837'
+    start: '2026-06-03 23:21:54.456010'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: node/host34-1 labeled
+    stdout: node/host34-1 not labeled
     stdout_lines: <omitted>
 
 TASK [Check for cached Rook operator chart] *********************************************************************************************************************************************************************
@@ -1799,23 +1799,23 @@ skipping: [Host12_1] =>
     skip_reason: Conditional result was False
 
 TASK [Add Rook Helm repository (if no cached chart)] ************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
+ok: [Host12_1] =>
+    changed: false
     cmd:
     - helm
     - repo
     - add
     - rook-release
     - https://charts.rook.io/release
-    delta: '0:00:00.305427'
-    end: '2026-06-02 21:31:20.683986'
+    delta: '0:00:00.104157'
+    end: '2026-06-03 23:22:02.872163'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-02 21:31:20.378559'
+    start: '2026-06-03 23:22:02.768006'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: '"rook-release" has been added to your repositories'
+    stdout: '"rook-release" already exists with the same configuration, skipping'
     stdout_lines: <omitted>
 
 TASK [Update Helm repos (if no cached chart)] *******************************************************************************************************************************************************************
@@ -1825,11 +1825,11 @@ ok: [Host12_1] =>
     - helm
     - repo
     - update
-    delta: '0:00:00.280510'
-    end: '2026-06-02 21:31:23.321905'
+    delta: '0:00:00.346070'
+    end: '2026-06-03 23:22:05.936838'
     msg: ''
     rc: 0
-    start: '2026-06-02 21:31:23.041395'
+    start: '2026-06-03 23:22:05.590768'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
@@ -1868,20 +1868,20 @@ changed: [Host12_1] =>
     - --wait
     - --timeout
     - 5m0s
-    delta: '0:01:59.373477'
-    end: '2026-06-02 21:33:26.244230'
+    delta: '0:00:10.714881'
+    end: '2026-06-03 23:22:19.663497'
     msg: ''
     rc: 0
-    start: '2026-06-02 21:31:26.870753'
+    start: '2026-06-03 23:22:08.948616'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
-        Release "rook-ceph" does not exist. Installing it now.
+        Release "rook-ceph" has been upgraded. Happy Helming!
         NAME: rook-ceph
-        LAST DEPLOYED: Tue Jun  2 21:31:27 2026
+        LAST DEPLOYED: Wed Jun  3 23:22:10 2026
         NAMESPACE: rook-ceph
         STATUS: deployed
-        REVISION: 1
+        REVISION: 2
         TEST SUITE: None
         NOTES:
         The Rook Operator has been installed. Check its status by running:
@@ -1910,11 +1910,11 @@ ok: [Host12_1] =>
     - -n
     - rook-ceph
     - --timeout=120s
-    delta: '0:00:00.273680'
-    end: '2026-06-02 21:33:29.620565'
+    delta: '0:00:00.268103'
+    end: '2026-06-03 23:22:22.317431'
     msg: ''
     rc: 0
-    start: '2026-06-02 21:33:29.346885'
+    start: '2026-06-03 23:22:22.049328'
     stderr: ''
     stderr_lines: <omitted>
     stdout: pod/rook-ceph-operator-b757f78f8-p6q2t condition met
@@ -1932,15 +1932,15 @@ ok: [Host12_1]
 TASK [Generate Rook CephCluster values file] ********************************************************************************************************************************************************************
 changed: [Host12_1] =>
     changed: true
-    checksum: bf0123d067608e11ba6d487751234eb0cd81088a
+    checksum: 43e0a13e69c17ea6e32fc4860be9f69eaffe4a46
     dest: /tmp/rook-ceph-cluster-values.yml
     gid: 0
     group: root
-    md5sum: 8d05507cb11065ec944d906d218fd421
+    md5sum: 92befa0718c2a353ce39723c5c446030
     mode: '0600'
     owner: root
-    size: 4868
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780436015.3102608-314780-242898650072527/.source.yml
+    size: 4291
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780528948.512813-316576-224501841535749/.source.yml
     state: file
     uid: 0
 
@@ -1956,49 +1956,44 @@ ok: [Host12_1] =>
         /opt/fabric-cache/helm-charts: '''/opt/fabric-cache/helm-charts'' is not a directory'
 
 TASK [Deploy CephCluster (from cache)] **************************************************************************************************************************************************************************
-skipping: [Host12_1] =>
-    changed: false
-    false_condition: cached_rook_cluster.files | default([]) | length > 0
-    skip_reason: Conditional result was False
+[ERROR]: Task failed: Finalization of task args for 'ansible.builtin.command' failed: Error while resolving value for '_raw_params': ansible._internal._templating._lazy_containers._AnsibleLazyTemplateList object has no element 0
 
-TASK [Deploy CephCluster (from repo)] ***************************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:283:7
+Task failed.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:274:7
 
-281       register: helm_cluster_cached
-282
-283     - name: Deploy CephCluster (from repo)
+272       register: cached_rook_cluster
+273
+274     - name: Deploy CephCluster (from cache)
           ^ column 7
 
+<<< caused by >>>
+
+Finalization of task args for 'ansible.builtin.command' failed.
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:275:7
+
+273
+274     - name: Deploy CephCluster (from cache)
+275       ansible.builtin.command: >
+          ^ column 7
+
+<<< caused by >>>
+
+Error while resolving value for '_raw_params': ansible._internal._templating._lazy_containers._AnsibleLazyTemplateList object has no element 0
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:275:32
+
+273
+274     - name: Deploy CephCluster (from cache)
+275       ansible.builtin.command: >
+                                   ^ column 32
+
 fatal: [Host12_1]: FAILED! =>
-    changed: true
-    cmd:
-    - helm
-    - upgrade
-    - --install
-    - rook-ceph-cluster
-    - rook-release/rook-ceph-cluster
-    - --namespace
-    - rook-ceph
-    - --values
-    - /tmp/rook-ceph-cluster-values.yml
-    - --version
-    - v1.14.7
-    - --wait
-    - --timeout
-    - 10m0s
-    delta: '0:07:30.048309'
-    end: '2026-06-02 21:41:25.564405'
-    msg: non-zero return code
-    rc: 1
-    start: '2026-06-02 21:33:55.516096'
-    stderr: 'Error: etcdserver: request timed out'
-    stderr_lines: <omitted>
-    stdout: Release "rook-ceph-cluster" does not exist. Installing it now.
-    stdout_lines: <omitted>
+    changed: false
+    msg: 'Task failed: Finalization of task args for ''ansible.builtin.command'' failed:
+        Error while resolving value for ''_raw_params'': ansible._internal._templating._lazy_containers._AnsibleLazyTemplateList
+        object has no element 0'
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=21   changed=5    unreachable=0    failed=1    skipped=3    rescued=0    ignored=1
+Host12_1                   : ok=21   changed=4    unreachable=0    failed=1    skipped=2    rescued=0    ignored=1
 Host12_2                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 Host12_3                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 Host34_1                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
@@ -2009,98 +2004,6 @@ Storage_Server_HDD_02      : ok=7    changed=0    unreachable=0    failed=0    s
 Storage_Server_SSD_01      : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=5
 Storage_Server_SSD_02      : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=5
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_validate -v
-Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
-
-PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
-
-PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
-
-PLAY [Phase 2: Deploy Ceph Cluster via Rook] ********************************************************************************************************************************************************************
-
-PLAY [Phase 3: Validate Rook-Ceph Cluster] **********************************************************************************************************************************************************************
-
-TASK [Get Ceph cluster status via toolbox] **********************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -z "$TOOLBOX" ]; then
-          echo "Toolbox pod not found — using direct kubectl exec on operator"
-          OPERATOR=$(kubectl get pod -n rook-ceph -l app=rook-ceph-operator -o jsonpath='{.items[0].metadata.name}')
-          kubectl exec -n rook-ceph "$OPERATOR" -- ceph -s 2>/dev/null || echo "Cannot reach ceph from operator pod"
-        else
-          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph -s
-        fi
-    delta: '0:01:46.182749'
-    end: '2026-06-02 21:43:50.392051'
-    msg: ''
-    rc: 0
-    start: '2026-06-02 21:42:04.209302'
-    stderr: |-
-        Error from server: etcdserver: request timed out
-        error executing jsonpath "{.items[0].metadata.name}": Error executing template: array index out of bounds: index 0, length 0. Printing more information for debugging the template:
-                template was:
-                        {.items[0].metadata.name}
-                object given to jsonpath engine was:
-                        map[string]interface {}{"apiVersion":"v1", "items":[]interface {}{}, "kind":"List", "metadata":map[string]interface {}{"resourceVersion":""}}
-    stderr_lines: <omitted>
-    stdout: |-
-        Toolbox pod not found — using direct kubectl exec on operator
-        Cannot reach ceph from operator pod
-    stdout_lines: <omitted>
-
-TASK [Get Ceph OSD tree] ****************************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-        if [ -n "$TOOLBOX" ]; then
-          kubectl exec -n rook-ceph "$TOOLBOX" -- ceph osd tree
-        fi
-    delta: '0:00:00.129549'
-    end: '2026-06-02 21:43:52.854939'
-    msg: ''
-    rc: 0
-    start: '2026-06-02 21:43:52.725390'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Get all pods in rook-ceph namespace] **********************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:378:7
-
-376       ignore_errors: true
-377
-378     - name: Get all pods in rook-ceph namespace
-          ^ column 7
-
-fatal: [Host12_1]: FAILED! =>
-    changed: false
-    cmd:
-    - kubectl
-    - get
-    - pods
-    - -n
-    - rook-ceph
-    - -o
-    - wide
-    delta: '0:00:00.137878'
-    end: '2026-06-02 21:43:57.657754'
-    msg: non-zero return code
-    rc: 1
-    start: '2026-06-02 21:43:57.519876'
-    stderr: The connection to the server 127.0.0.1:6443 was refused - did you specify
-        the right host or port?
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
 Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
 
@@ -2110,36 +2013,276 @@ TASK [Gathering Facts] *********************************************************
 ok: [Host12_1]
 
 TASK [Get Rook-Ceph toolbox pod name] ***************************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_infra_pool.yml:39:7
-
-37     rook_ceph_namespace: "rook-ceph"
-38   tasks:
-39     - name: Get Rook-Ceph toolbox pod name
-         ^ column 7
-
-fatal: [Host12_1]: FAILED! =>
+ok: [Host12_1] =>
     changed: false
     cmd: |-
         kubectl get pod -n rook-ceph -l app=rook-ceph-tools  -o jsonpath='{.items[0].metadata.name}'
-    delta: '0:00:00.121125'
-    end: '2026-06-02 21:44:46.477670'
-    failed_when_result: true
-    msg: non-zero return code
-    rc: 1
-    start: '2026-06-02 21:44:46.356545'
-    stderr: |-
-        The connection to the server 127.0.0.1:6443 was refused - did you specify the right host or port?
-        error executing jsonpath "{.items[0].metadata.name}": Error executing template: array index out of bounds: index 0, length 0. Printing more information for debugging the template:
-                template was:
-                        {.items[0].metadata.name}
-                object given to jsonpath engine was:
-                        map[string]interface {}{"apiVersion":"v1", "items":[]interface {}{}, "kind":"List", "metadata":map[string]interface {}{"resourceVersion":""}}
+    delta: '0:00:00.178817'
+    end: '2026-06-03 23:30:16.992722'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:16.813905'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: rook-ceph-tools-5797ff59db-lq577
+    stdout_lines: <omitted>
+
+TASK [Check if infra-storage pool already exists] ***************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - exec
+    - -n
+    - rook-ceph
+    - rook-ceph-tools-5797ff59db-lq577
+    - --
+    - ceph
+    - osd
+    - pool
+    - ls
+    delta: '0:00:01.052277'
+    end: '2026-06-03 23:30:20.528181'
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:19.475904'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        kube-rbd
+        dc-lab-ceph-fs-metadata
+        dc-lab-ceph-fs-data0
+    stdout_lines: <omitted>
+
+TASK [Create infra-storage pool] ********************************************************************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd:
+    - kubectl
+    - exec
+    - -n
+    - rook-ceph
+    - rook-ceph-tools-5797ff59db-lq577
+    - --
+    - ceph
+    - osd
+    - pool
+    - create
+    - infra-storage
+    - '32'
+    - '32'
+    - replicated
+    - replicated_rule
+    delta: '0:00:01.251284'
+    end: '2026-06-03 23:30:24.278387'
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:23.027103'
+    stderr: pool 'infra-storage' created
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+TASK [Set pool replication size] ********************************************************************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd:
+    - kubectl
+    - exec
+    - -n
+    - rook-ceph
+    - rook-ceph-tools-5797ff59db-lq577
+    - --
+    - ceph
+    - osd
+    - pool
+    - set
+    - infra-storage
+    - size
+    - '2'
+    delta: '0:00:01.787359'
+    end: '2026-06-03 23:30:28.469759'
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:26.682400'
+    stderr: set pool 4 size to 2
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
 
+TASK [Set pool minimum replication size] ************************************************************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd:
+    - kubectl
+    - exec
+    - -n
+    - rook-ceph
+    - rook-ceph-tools-5797ff59db-lq577
+    - --
+    - ceph
+    - osd
+    - pool
+    - set
+    - infra-storage
+    - min_size
+    - '1'
+    delta: '0:00:01.502294'
+    end: '2026-06-03 23:30:32.623625'
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:31.121331'
+    stderr: set pool 4 min_size to 1
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Enable RBD application on pool] ***************************************************************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd:
+    - kubectl
+    - exec
+    - -n
+    - rook-ceph
+    - rook-ceph-tools-5797ff59db-lq577
+    - --
+    - ceph
+    - osd
+    - pool
+    - application
+    - enable
+    - infra-storage
+    - rbd
+    delta: '0:00:01.590905'
+    end: '2026-06-03 23:30:36.788919'
+    msg: ''
+    rc: 0
+    start: '2026-06-03 23:30:35.198014'
+    stderr: enabled application 'rbd' on pool 'infra-storage'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Initialize RBD pool] **************************************************************************************************************************************************************************************
+^C[ERROR]: User interrupted execution
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o wide
+NAME                               READY   STATUS    RESTARTS   AGE   IP               NODE       NOMINATED NODE   READINESS GATES
+rook-ceph-tools-5797ff59db-lq577   1/1     Running   0          26h   10.233.126.198   host12-3   <none>           <none>
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ TOOLBOX=$(kubectl get pod -n rook-ceph -l app=rook-ceph-tools -o jsonpath='{.items[0].metadata.name}')
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph -s --connect-timeout 5
+  cluster:
+    id:     99f830e6-e4f6-45b4-ae67-53454707bda3
+    health: HEALTH_WARN
+            1 MDSs report slow metadata IOs
+            Reduced data availability: 35 pgs inactive
+            OSD count 0 < osd_pool_default_size 3
+
+  services:
+    mon: 2 daemons, quorum b,a (age 26h)
+    mgr: a(active, since 26h)
+    mds: 1/1 daemons up, 1 standby
+    osd: 0 osds: 0 up, 0 in
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 35 pgs
+    objects: 0 objects, 0 B
+    usage:   0 B used, 0 B / 0 B avail
+    pgs:     100.000% pgs unknown
+             35 unknown
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph pg ls-by-pool infra-storage
+PG    OBJECTS  DEGRADED  MISPLACED  UNFOUND  BYTES  OMAP_BYTES*  OMAP_KEYS*  LOG  LOG_DUPS  STATE    SINCE  VERSION  REPORTED  UP     ACTING  SCRUB_STAMP                      DEEP_SCRUB_STAMP                 LAST_SCRUB_DURATION  SCRUB_SCHEDULING
+4.0         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.2         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.3         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.4         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.5         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.6         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.7         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.8         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.9         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.a         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.b         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.c         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.d         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.e         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.f         0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.10        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.11        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.12        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.13        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.14        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.15        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.16        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.17        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.18        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.19        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1a        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1b        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1c        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1d        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1e        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+4.1f        0         0          0        0      0            0           0    0         0  unknown    53m      0'0       0:0  []p-1   []p-1  2026-06-03T23:30:24.165801+0000  2026-06-03T23:30:24.165801+0000                    0  --
+
+* NOTE: Omap statistics are gathered during deep scrub and may be inaccurate soon afterwards depending on utilization. See http://docs.ceph.com/en/latest/dev/placement-group/#omap-statistics for further details.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph osd tree
+ID  CLASS  WEIGHT  TYPE NAME     STATUS  REWEIGHT  PRI-AFF
+-1              0  root default
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph health --connect-timeout 10
+HEALTH_WARN 1 MDSs report slow metadata IOs; Reduced data availability: 35 pgs inactive; OSD count 0 < osd_pool_default_size 3
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl get pods -n rook-ceph | grep -E 'mon|mgr|osd'
+rook-ceph-mgr-a-7b846f47b4-7nk4l                      2/2     Running   0             26h
+rook-ceph-mon-a-55679cc49b-nbvrj                      2/2     Running   0             26h
+rook-ceph-mon-b-7949fc8b7d-l9bbc                      2/2     Running   0             26h
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph health detail
+HEALTH_WARN 1 MDSs report slow metadata IOs; Reduced data availability: 35 pgs inactive; OSD count 0 < osd_pool_default_size 3
+[WRN] MDS_SLOW_METADATA_IO: 1 MDSs report slow metadata IOs
+    mds.dc-lab-ceph-fs-b(mds.0): 31 slow metadata IOs are blocked > 30 secs, oldest blocked for 94865 secs
+[WRN] PG_AVAILABILITY: Reduced data availability: 35 pgs inactive
+    pg 1.0 is stuck inactive for 26h, current state unknown, last acting []
+    pg 2.0 is stuck inactive for 26h, current state unknown, last acting []
+    pg 3.0 is stuck inactive for 26h, current state unknown, last acting []
+    pg 4.0 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.2 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.3 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.4 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.5 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.6 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.7 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.8 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.9 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.a is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.b is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.c is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.d is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.e is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.f is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.10 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.11 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.12 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.13 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.14 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.15 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.16 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.17 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.18 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.19 is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1a is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1b is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1c is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1d is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1e is stuck inactive for 58m, current state unknown, last acting []
+    pg 4.1f is stuck inactive for 58m, current state unknown, last acting []
+[WRN] TOO_FEW_OSDS: OSD count 0 < osd_pool_default_size 3
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph osd pool get infra-storage size
+size: 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph osd stat
+0 osds: 0 up, 0 in; epoch: e129
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph $TOOLBOX -- ceph osd pool set infra-storage min_size 1
+set pool 4 min_size to 1
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
