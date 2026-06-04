@@ -90,6 +90,7 @@
 
     - name: Wipe OSD devices (only if empty/unformatted)
       ansible.builtin.shell: |
+        DEV="{{ item }}"
         if [ ! -b "$DEV" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
@@ -102,8 +103,6 @@
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
         dmsetup remove_all 2>/dev/null || true
         echo "WIPED: $DEV"
-      environment:
-        DEV: "{{ item }}"
       loop: "{{ _osd_devices }}"
       register: disk_wipe
       changed_when: "'WIPED' in disk_wipe.stdout"
@@ -318,18 +317,26 @@
         path: /tmp/rook-ceph-cluster-values.yml
         state: absent
 
-    - name: Wait for Ceph MON pods to be ready (3m timeout)
+    - name: Wait for Ceph MON pods to be ready (5m timeout)
       ansible.builtin.shell: |
-        kubectl wait --for=condition=ready pod \
-          -l app=rook-ceph-mon \
-          -n {{ rook_ceph_namespace }} \
-          --timeout=180s 2>&1 || echo "Waiting for MON pods..."
+        echo "Waiting for MON pods to be created by operator..."
+        for i in $(seq 1 60); do
+          MON_COUNT=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-mon --no-headers 2>/dev/null | wc -l)
+          if [ "$MON_COUNT" -ge 1 ]; then
+            echo "MON pod found, waiting for ready..."
+            kubectl wait --for=condition=ready pod \
+              -l app=rook-ceph-mon \
+              -n {{ rook_ceph_namespace }} \
+              --timeout=120s 2>&1
+            exit $?
+          fi
+          sleep 5
+        done
+        echo "WARNING: No MON pods created after 5 minutes — operator may still be initializing"
+        exit 0
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: mon_ready
-      retries: 3
-      delay: 30
-      until: mon_ready.rc == 0
       changed_when: false
 
     - name: Wait for Ceph OSD pods to be ready (5m timeout)
@@ -371,9 +378,41 @@
     kubeconfig_path: "/etc/kubernetes/admin.conf"
     ceph_dashboard_nodeport: "{{ ceph_dashboard_external_port | default(31443) | int }}"
   tasks:
+    - name: Wait for MGR pod to be ready (creates dashboard service)
+      ansible.builtin.shell: |
+        echo "Waiting for MGR pod (up to 5 min)..."
+        for i in $(seq 1 60); do
+          MGR_READY=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-mgr --no-headers 2>/dev/null | grep -c Running || true)
+          if [ "$MGR_READY" -ge 1 ]; then
+            echo "MGR pod is running"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "ERROR: MGR pod not ready after 5 minutes"
+        exit 1
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: mgr_wait
+      changed_when: false
+
+    - name: Wait for dashboard service to be created
+      ansible.builtin.shell: |
+        for i in $(seq 1 30); do
+          if kubectl get svc rook-ceph-mgr-dashboard -n {{ rook_ceph_namespace }} 2>/dev/null; then
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "ERROR: Dashboard service not created after 150s"
+        exit 1
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: svc_wait
+      changed_when: false
+
     - name: Patch dashboard service to NodePort
       ansible.builtin.shell: |
-        # First ensure type is NodePort
         kubectl patch svc rook-ceph-mgr-dashboard -n {{ rook_ceph_namespace }} \
           -p '{"spec":{"type":"NodePort","ports":[{"port":8443,"nodePort":{{ ceph_dashboard_nodeport }},"protocol":"TCP","name":"https-dashboard"}]}}'
       environment:
@@ -381,16 +420,6 @@
       register: dashboard_patch
       changed_when: "'patched' in dashboard_patch.stdout or 'configured' in dashboard_patch.stdout"
       failed_when: dashboard_patch.rc != 0
-
-    - name: Wait for MGR dashboard pod to be ready
-      ansible.builtin.command: >
-        kubectl wait --for=condition=ready pod
-        -l app=rook-ceph-mgr
-        -n {{ rook_ceph_namespace }}
-        --timeout=120s
-      environment:
-        KUBECONFIG: "{{ kubeconfig_path }}"
-      changed_when: false
 
     - name: Retrieve dashboard admin password
       ansible.builtin.shell: |

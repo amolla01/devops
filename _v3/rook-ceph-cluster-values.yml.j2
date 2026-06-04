@@ -29,8 +29,8 @@ cephClusterSpec:
   dataDirHostPath: /var/lib/rook
 
   mon:
-    count: {{ ceph_mon_count | default(2) }}
-    allowMultiplePerNode: {{ ceph_mon_allow_multiple_per_node | default(true) }}
+    count: {{ rook_ceph_mon_count | default(1) }}
+    allowMultiplePerNode: {{ rook_ceph_mon_allow_multiple_per_node | default(true) }}
 
   mgr:
     count: 1
@@ -53,6 +53,12 @@ cephClusterSpec:
         enabled: false
       compression:
         enabled: false
+
+  # Global Ceph config overrides (applied to ceph.conf)
+  cephConfig:
+    global:
+      osd_pool_default_size: "{{ ceph_osd_pool_default_size | default(2) }}"
+      osd_pool_default_min_size: "{{ ceph_osd_pool_default_min_size | default(1) }}"
 
   crashCollector:
     disable: false
@@ -104,16 +110,26 @@ cephClusterSpec:
         memory: "32Mi"
 
   storage:
+{% if ceph_rook_use_all_devices | default(true) %}
+    useAllNodes: true
+    useAllDevices: true
+    deviceFilter: "{{ ceph_rook_device_filter | default('') }}"
+{% else %}
     useAllNodes: false
     useAllDevices: false
     nodes:
 {% for host in groups['ceph_osd'] %}
       - name: "{{ hostvars[host]['kube_node_name'] | default(host | lower) }}"
+{% if hostvars[host]['ceph_osd_devices'] is defined %}
         devices:
-{% for dev in hostvars[host]['ceph_osd_devices'] | default(ceph_osd_devices_default | default(['/dev/vdb', '/dev/vdc'])) %}
+{% for dev in hostvars[host]['ceph_osd_devices'] %}
           - name: "{{ dev }}"
 {% endfor %}
+{% else %}
+        useAllDevices: true
+{% endif %}
 {% endfor %}
+{% endif %}
 
   placement:
     all:
@@ -133,6 +149,9 @@ cephBlockPools:
       failureDomain: host
       replicated:
         size: {{ ceph_osd_pool_default_size | default(2) }}
+      parameters:
+        pg_num: "{{ rook_ceph_pool_pg_num | default(32) }}"
+        pgp_num: "{{ rook_ceph_pool_pgp_num | default(32) }}"
     storageClass:
       enabled: true
       name: ceph-rbd
@@ -145,7 +164,7 @@ cephBlockPools:
         imageFeatures: layering
 
 cephFileSystems:
-{% if ceph_mds_enabled | default(true) %}
+{% if ceph_mds_enabled | default(false) %}
   - name: {{ ceph_cluster_name | default('dc-lab-ceph') }}-fs
     spec:
       metadataPool:
