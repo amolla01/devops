@@ -60,3 +60,15 @@ Or if you want a clean slate since pods are healthy:
 
 # Option B: Just rollback to let helm recognize it as deployed
 helm rollback metallb 0 -n metallb-system
+
+
+
+1. Dashboard Access — Working!
+MetalLB assigned IP 172.16.2.201. Access it at:
+
+https://172.16.2.201:8443
+Username: admin
+Password: (get from secret below)
+
+kubectl get secret rook-ceph-dashboard-password -n rook-ceph -o jsonpath='{.data.password}' | base64 -d; echo
+
