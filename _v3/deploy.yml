@@ -1,0 +1,83 @@
+---
+# =============================================================================
+# roles/metallb/tasks/deploy.yml — Install MetalLB via Helm
+# =============================================================================
+
+- name: "deploy | Add MetalLB Helm repository"
+  ansible.builtin.command: >
+    helm repo add metallb https://metallb.github.io/metallb
+  register: helm_repo_add
+  changed_when: "'has been added' in helm_repo_add.stdout"
+  failed_when:
+    - helm_repo_add.rc != 0
+    - "'already exists' not in helm_repo_add.stderr"
+
+- name: "deploy | Update Helm repositories"
+  ansible.builtin.command: helm repo update
+  changed_when: false
+
+- name: "deploy | Verify API server is responsive before Helm install"
+  ansible.builtin.command: kubectl get nodes --request-timeout=10s
+  changed_when: false
+  retries: 6
+  delay: 10
+  register: api_check
+  until: api_check.rc == 0
+
+- name: "deploy | Check for stuck Helm release"
+  ansible.builtin.shell: |
+    STATUS=$(helm status {{ metallb_helm_release }} -n {{ metallb_namespace }} -o json 2>/dev/null | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+    echo "$STATUS"
+  register: helm_release_status
+  changed_when: false
+  failed_when: false
+
+- name: "deploy | Recover stuck Helm release (pending-install/pending-upgrade)"
+  ansible.builtin.shell: |
+    helm history {{ metallb_helm_release }} -n {{ metallb_namespace }} --max 1 -o json 2>/dev/null | grep -q '"status":"pending'
+    if [ $? -eq 0 ]; then
+      # Delete the pending release secret so helm can proceed
+      kubectl delete secret -n {{ metallb_namespace }} -l owner=helm,name={{ metallb_helm_release }},status=pending-install 2>/dev/null || true
+      kubectl delete secret -n {{ metallb_namespace }} -l owner=helm,name={{ metallb_helm_release }},status=pending-upgrade 2>/dev/null || true
+    fi
+  when: helm_release_status.stdout in ['pending-install', 'pending-upgrade']
+  changed_when: true
+
+- name: "deploy | Install MetalLB Helm chart"
+  ansible.builtin.command: >
+    helm upgrade --install {{ metallb_helm_release }}
+    metallb/metallb
+    --namespace {{ metallb_namespace }}
+    --create-namespace
+    --version {{ metallb_chart_version }}
+    --set controller.replicas={{ metallb_controller_replicas }}
+    --set speaker.tolerateMaster=true
+    --wait
+    --timeout {{ metallb_wait_timeout }}s
+  register: helm_install
+  changed_when: "'STATUS: deployed' in helm_install.stdout"
+  retries: 2
+  delay: 30
+  until: helm_install.rc == 0
+
+- name: "deploy | Wait for MetalLB controller to be ready"
+  ansible.builtin.command: >
+    kubectl rollout status deployment/{{ metallb_helm_release }}-controller
+    --namespace {{ metallb_namespace }}
+    --timeout={{ metallb_wait_timeout }}s
+  changed_when: false
+
+- name: "deploy | Wait for MetalLB speaker DaemonSet to be ready"
+  ansible.builtin.command: >
+    kubectl rollout status daemonset/{{ metallb_helm_release }}-speaker
+    --namespace {{ metallb_namespace }}
+    --timeout={{ metallb_wait_timeout }}s
+  changed_when: false
+
+- name: "deploy | Verify MetalLB CRDs are installed"
+  ansible.builtin.command: kubectl get crd ipaddresspools.metallb.io
+  changed_when: false
+  register: crd_check
+  retries: 5
+  delay: 5
+  until: crd_check.rc == 0
