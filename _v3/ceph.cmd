@@ -380,3 +380,25 @@ Key facts about the teardown tag:
 Uses tags: [rook_teardown, never] — the never special tag means it only runs when you explicitly request it with --tags rook_teardown
 It will never accidentally run during a normal --tags rook invocation
 It's a full scorched-earth: Helm releases → finalizers → CRDs → namespace → disk wipe → /var/lib/rook removal
+# 1. Force-terminate stuck namespace (if still there)
+kubectl get ns rook-ceph 2>/dev/null && \
+  kubectl get ns rook-ceph -o json | \
+  python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+  kubectl replace --raw "/api/v1/namespaces/rook-ceph/finalize" -f -
+
+# 2. Verify namespace is gone
+kubectl get ns rook-ceph
+# Expect: "not found"
+
+# 3. Check if disks are visible on VMs
+ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
+
+# 4. If vdb/vdc NOT in output — reboot all VMs:
+ansible ceph_osd -i inventory/hosts.yml -m reboot -b
+
+# 5. After VMs come back (~1-2 min), verify disks are back:
+ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
+
+# 6. Fresh deploy (will now wait if namespace is still terminating)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml -v
