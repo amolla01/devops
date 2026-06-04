@@ -58,3 +58,5 @@ ansible-playbook playbooks/reused/deploy_metallb.yml -i inventory/hosts.yml -v
 
 Or if you want a clean slate since pods are healthy:
 
+# Option B: Just rollback to let helm recognize it as deployed
+helm rollback metallb 0 -n metallb-system
