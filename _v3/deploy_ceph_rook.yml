@@ -247,6 +247,9 @@
   gather_facts: true
   become: true
   tags: [rook, rook_cluster]
+  vars_files:
+    - "../../inventory/group_vars/ceph_mon.yml"
+    - "../../inventory/group_vars/ceph_osd.yml"
   vars:
     rook_ceph_namespace: "rook-ceph"
     rook_ceph_version: "v1.14.7"
@@ -267,6 +270,7 @@
         paths: "{{ cache_helm_dir }}"
         patterns: "rook-ceph-cluster-*.tgz"
       register: cached_rook_cluster
+      ignore_errors: true
 
     - name: Deploy CephCluster (from cache)
       ansible.builtin.command: >
@@ -274,7 +278,7 @@
         {{ cached_rook_cluster.files[0].path }}
         --namespace {{ rook_ceph_namespace }}
         --values /tmp/rook-ceph-cluster-values.yml
-        --wait --timeout 10m0s
+        --timeout 10m0s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       when: cached_rook_cluster.files | default([]) | length > 0
@@ -287,7 +291,7 @@
         --namespace {{ rook_ceph_namespace }}
         --values /tmp/rook-ceph-cluster-values.yml
         --version {{ rook_ceph_version }}
-        --wait --timeout 10m0s
+        --timeout 10m0s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       when:
@@ -316,6 +320,11 @@
 
     - name: Wait for Ceph OSD pods to be ready (5m timeout)
       ansible.builtin.shell: |
+        OSD_PODS=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-osd --no-headers 2>/dev/null | wc -l)
+        if [ "$OSD_PODS" -eq 0 ]; then
+          echo "WARNING: No OSD pods found — disks may not be attached to nodes yet"
+          exit 0
+        fi
         kubectl wait --for=condition=ready pod \
           -l app=rook-ceph-osd \
           -n {{ rook_ceph_namespace }} \
@@ -336,9 +345,85 @@
           OSD pods: {{ osd_ready.stdout | default('ready') }}
 
 # ===========================================================================
-# Phase 3: Validate Ceph Cluster Health
+# Phase 3: Expose Ceph Dashboard (NodePort + credentials)
 # ===========================================================================
-- name: "Phase 3: Validate Rook-Ceph Cluster"
+- name: "Phase 3: Expose Ceph Dashboard"
+  hosts: "kube_controllers[0]"
+  gather_facts: false
+  become: true
+  tags: [rook, rook_dashboard]
+  vars:
+    rook_ceph_namespace: "rook-ceph"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
+    ceph_dashboard_nodeport: "{{ ceph_dashboard_external_port | default(31443) | int }}"
+  tasks:
+    - name: Patch dashboard service to NodePort
+      ansible.builtin.shell: |
+        # First ensure type is NodePort
+        kubectl patch svc rook-ceph-mgr-dashboard -n {{ rook_ceph_namespace }} \
+          -p '{"spec":{"type":"NodePort","ports":[{"port":8443,"nodePort":{{ ceph_dashboard_nodeport }},"protocol":"TCP","name":"https-dashboard"}]}}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: dashboard_patch
+      changed_when: "'patched' in dashboard_patch.stdout or 'configured' in dashboard_patch.stdout"
+      failed_when: dashboard_patch.rc != 0
+
+    - name: Wait for MGR dashboard pod to be ready
+      ansible.builtin.command: >
+        kubectl wait --for=condition=ready pod
+        -l app=rook-ceph-mgr
+        -n {{ rook_ceph_namespace }}
+        --timeout=120s
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: false
+
+    - name: Retrieve dashboard admin password
+      ansible.builtin.shell: |
+        kubectl get secret rook-ceph-dashboard-password \
+          -n {{ rook_ceph_namespace }} \
+          -o jsonpath='{.data.password}' | base64 -d
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: dashboard_password
+      changed_when: false
+      no_log: true
+
+    - name: Get dashboard service details
+      ansible.builtin.command: >
+        kubectl get svc rook-ceph-mgr-dashboard -n {{ rook_ceph_namespace }}
+        -o jsonpath='{.spec.ports[0].nodePort}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: dashboard_nodeport_actual
+      changed_when: false
+
+    - name: Get any node IP for dashboard access
+      ansible.builtin.shell: |
+        kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: node_ip
+      changed_when: false
+
+    - name: Display dashboard access information
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║              CEPH DASHBOARD ACCESS INFORMATION                   ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║ URL:      https://{{ node_ip.stdout }}:{{ dashboard_nodeport_actual.stdout }}
+          ║ Username: admin
+          ║ Password: {{ dashboard_password.stdout }}
+          ║
+          ║ NOTE: Uses self-signed TLS certificate — accept browser warning.
+          ║ Accessible from any machine that can reach a cluster node IP.
+          ╚══════════════════════════════════════════════════════════════════╝
+
+# ===========================================================================
+# Phase 4: Validate Ceph Cluster Health
+# ===========================================================================
+- name: "Phase 4: Validate Rook-Ceph Cluster"
   hosts: "kube_controllers[0]"
   gather_facts: false
   become: true
@@ -471,9 +556,9 @@
           ════════════════════════════════════════════════
 
 # ===========================================================================
-# Phase 4: Teardown (DESTRUCTIVE — requires explicit tag)
+# Phase 5: Teardown (DESTRUCTIVE — requires explicit tag)
 # ===========================================================================
-- name: "Phase 4: Teardown Rook-Ceph (DESTRUCTIVE)"
+- name: "Phase 5: Teardown Rook-Ceph (DESTRUCTIVE)"
   hosts: "kube_controllers[0]"
   gather_facts: false
   become: true
@@ -489,6 +574,29 @@
         KUBECONFIG: "{{ kubeconfig_path }}"
       ignore_errors: true
       changed_when: true
+
+    - name: "TEARDOWN | Remove CephCluster finalizers (prevents namespace hang)"
+      ansible.builtin.shell: |
+        for resource in cephcluster cephblockpool cephfilesystem cephobjectstore; do
+          for item in $(kubectl get $resource -n {{ rook_ceph_namespace }} -o name 2>/dev/null); do
+            kubectl patch $item -n {{ rook_ceph_namespace }} --type merge \
+              -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          done
+        done
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete all Ceph CRs"
+      ansible.builtin.shell: |
+        kubectl delete cephcluster --all -n {{ rook_ceph_namespace }} --timeout=60s 2>/dev/null || true
+        kubectl delete cephblockpool --all -n {{ rook_ceph_namespace }} --timeout=30s 2>/dev/null || true
+        kubectl delete cephfilesystem --all -n {{ rook_ceph_namespace }} --timeout=30s 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
 
     - name: "TEARDOWN | Wait for OSD pods to terminate (2m)"
       ansible.builtin.shell: |
@@ -537,7 +645,8 @@
       ignore_errors: true
 
     - name: "TEARDOWN | Delete namespace"
-      ansible.builtin.command: kubectl delete namespace {{ rook_ceph_namespace }}
+      ansible.builtin.shell: |
+        kubectl delete namespace {{ rook_ceph_namespace }} --timeout=120s 2>/dev/null || true
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       ignore_errors: true
@@ -546,6 +655,50 @@
     - name: "TEARDOWN | Report"
       ansible.builtin.debug:
         msg: |
-          Rook-Ceph cluster REMOVED.
-          To clean OSD disks on nodes, run:
-            ansible ceph_osd -m shell -a "wipefs -af /dev/vdb /dev/vdc"
+          Rook-Ceph cluster REMOVED from Kubernetes.
+          Disk wipe running on OSD nodes next...
+
+# Phase 5b: Wipe OSD disks on all ceph_osd nodes
+- name: "Phase 5b: Wipe OSD Disks on All Nodes (DESTRUCTIVE)"
+  hosts: "ceph_osd"
+  gather_facts: false
+  become: true
+  tags: [rook_teardown, never]
+  tasks:
+    - name: "TEARDOWN | Wipe /dev/vdb signature"
+      ansible.builtin.shell: |
+        wipefs -af /dev/vdb 2>/dev/null || true
+        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
+        sgdisk --zap-all /dev/vdb 2>/dev/null || true
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Wipe /dev/vdc signature"
+      ansible.builtin.shell: |
+        wipefs -af /dev/vdc 2>/dev/null || true
+        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
+        sgdisk --zap-all /dev/vdc 2>/dev/null || true
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Remove Rook data directory"
+      ansible.builtin.file:
+        path: /var/lib/rook
+        state: absent
+
+    - name: "TEARDOWN | Complete"
+      ansible.builtin.debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║  • Helm releases removed                                    ║
+          ║  • CRDs deleted                                             ║
+          ║  • Namespace deleted                                        ║
+          ║  • OSD disks wiped (vdb, vdc)                               ║
+          ║  • /var/lib/rook removed                                    ║
+          ║                                                             ║
+          ║  Ready for fresh deploy:                                    ║
+          ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
+          ║      -i inventory/hosts.yml -v                              ║
+          ╚══════════════════════════════════════════════════════════════╝

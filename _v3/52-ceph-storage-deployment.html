@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>52 — Ceph Storage Deployment Reference</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#58a6ff;--success:#3fb950;--warn:#d29922;--danger:#f85149;--code-bg:#1c2128;--table-alt:#1c2128}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding:2rem;max-width:1200px;margin:0 auto}
+h1{color:var(--heading);font-size:2rem;border-bottom:2px solid var(--accent);padding-bottom:.5rem;margin-bottom:1.5rem}
+h2{color:var(--accent);font-size:1.4rem;margin-top:2.5rem;margin-bottom:.8rem;border-left:4px solid var(--accent);padding-left:.8rem}
+h3{color:var(--heading);font-size:1.1rem;margin-top:1.5rem;margin-bottom:.5rem}
+p{margin-bottom:.8rem}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+th{background:var(--surface);color:var(--accent);text-align:left;padding:.6rem .8rem;border:1px solid var(--border)}
+td{padding:.5rem .8rem;border:1px solid var(--border)}
+tr:nth-child(even){background:var(--table-alt)}
+code{background:var(--code-bg);padding:.15rem .4rem;border-radius:3px;font-size:.85rem;color:var(--success)}
+pre{background:var(--code-bg);padding:1rem;border-radius:6px;overflow-x:auto;margin:1rem 0;border:1px solid var(--border);color:var(--text)}
+pre code{padding:0;background:none;color:var(--text)}
+.architecture{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.5rem;margin:1rem 0;font-family:monospace;font-size:.85rem;white-space:pre;overflow-x:auto;color:var(--text)}
+.warn{background:#d299221a;border:1px solid var(--warn);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.warn::before{content:"⚠ ";color:var(--warn);font-weight:bold}
+.danger{background:#f851491a;border:1px solid var(--danger);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.danger::before{content:"🔴 ";font-weight:bold}
+.success{background:#3fb9501a;border:1px solid var(--success);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.success::before{content:"✓ ";color:var(--success);font-weight:bold}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-rook{background:#58a6ff33;color:var(--accent)}
+.badge-cephadm{background:#3fb95033;color:var(--success)}
+.badge-destructive{background:#f8514933;color:var(--danger)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1.2rem 1.5rem;margin-bottom:2rem}
+.toc ul{list-style:none;padding-left:1rem}
+.toc li{margin:.3rem 0}
+.toc a{font-size:.9rem}
+hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+</style>
+</head>
+<body>
+<h1>Ceph Storage Deployment — Complete Reference</h1>
+<h2>Overview</h2>
+<p>The lab deploys <strong>Ceph Reef v18.2.2</strong> as the unified block/filesystem storage backend for both Kubernetes and OpenStack workloads. Two deployment modes are supported:</p>
+<table>
+<tr><th>Mode</th><th>Mechanism</th><th>When to Use</th></tr>
+</tr>
+<tr><td>**Rook** (default)</td><td>K8s-native operator, Ceph runs as pods in `rook-ceph` namespace</td><td>Post-Kubespray; preferred for KVM lab</td></tr>
+<tr><td>**Cephadm**</td><td>Bare-metal podman containers orchestrated by cephadm CLI</td><td>Real hardware; no K8s available yet</td></tr>
+</table>
+<p>The active mode is controlled by <code>ceph_deploy_mode</code> in <code>roles/ceph/defaults/main.yml</code>.</p>
+<hr>
+<h2>Architecture</h2>
+<pre><code class="language-">
+┌───────────────────────────────────────────────────────────┐
+│                   Kubernetes Cluster                        │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │              rook-ceph namespace                       │ │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │ │
+│  │  │ MON Pod │  │ MGR Pod │  │  OSD Pods (per disk) │  │ │
+│  │  │ x1      │  │ x1      │  │  x12 (6 nodes × 2)  │  │ │
+│  │  └─────────┘  └─────────┘  └─────────────────────┘  │ │
+│  │  ┌─────────┐  ┌────────────────┐  ┌───────────────┐  │ │
+│  │  │ MDS Pod │  │ Rook Operator  │  │ Dashboard     │  │ │
+│  │  │ x1+stby │  │ (control loop) │  │ (NodePort:    │  │ │
+│  │  └─────────┘  └────────────────┘  │  31443/HTTPS) │  │ │
+│  │                                    └───────────────┘  │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                           │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │  StorageClasses                                       │ │
+│  │    ceph-rbd (default) — block volumes                │ │
+│  │    ceph-filesystem    — shared filesystem            │ │
+│  └──────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────┘
+</pre>
+<h3>Cluster Topology</h3>
+<table>
+<tr><th>Node</th><th>Role</th><th>IPs</th><th>OSD Devices</th></tr>
+</tr>
+<tr><td>Host12_1</td><td>K8s Controller + MON + OSD</td><td>172.16.2.40</td><td>/dev/vdb, /dev/vdc</td></tr>
+<tr><td>Host12_2</td><td>K8s Worker + OSD</td><td>172.16.2.41</td><td>/dev/vdb, /dev/vdc</td></tr>
+<tr><td>Host12_3</td><td>K8s Worker + OSD</td><td>172.16.2.42</td><td>/dev/vdb, /dev/vdc</td></tr>
+<tr><td>Host34_1</td><td>K8s Controller + MON + OSD</td><td>172.16.2.43</td><td>/dev/vdb, /dev/vdc</td></tr>
+<tr><td>Host34_2</td><td>K8s Worker + OSD</td><td>172.16.2.44</td><td>/dev/vdb, /dev/vdc</td></tr>
+<tr><td>HostB12_1</td><td>K8s Controller + OSD</td><td>172.16.2.45</td><td>/dev/vdb, /dev/vdc</td></tr>
+</table>
+<p><strong>Network:</strong> Single flat 172.16.2.0/24 (both public + cluster network in KVM lab).</p>
+<hr>
+<h2>File Inventory</h2>
+<h3>Playbooks</h3>
+<table>
+<tr><th>File</th><th>Purpose</th></tr>
+</tr>
+<tr><td>`playbooks/reused/deploy_ceph_rook.yml`</td><td>**Primary** — Rook-Ceph K8s deployment (6 phases)</td></tr>
+<tr><td>`playbooks/reused/deploy_ceph.yml`</td><td>Cephadm bare-metal deployment (6 phases)</td></tr>
+<tr><td>`playbooks/reused/deploy_ceph_infra_pool.yml`</td><td>Create `infra-storage` pool + K8s Secret</td></tr>
+<tr><td>`playbooks/reused/preflight_download.yml`</td><td>Pre-cache Rook charts + cephadm binary</td></tr>
+</table>
+<h3>Role (`roles/ceph/`)</h3>
+<table>
+<tr><th>File</th><th>Purpose</th></tr>
+</tr>
+<tr><td>`defaults/main.yml`</td><td>Default variables (version pins, cache paths, deploy mode)</td></tr>
+<tr><td>`tasks/main.yml`</td><td>Orchestrator — fails if mode=rook, else runs cephadm phases</td></tr>
+<tr><td>`tasks/preflight.yml`</td><td>Install packages + cephadm (3-priority cache lookup)</td></tr>
+<tr><td>`tasks/bootstrap.yml`</td><td>cephadm bootstrap on primary MON</td></tr>
+<tr><td>`tasks/add_hosts.yml`</td><td>Expand cluster to additional hosts</td></tr>
+<tr><td>`tasks/discover_volumes.yml`</td><td>Dynamic OSD device discovery (lsblk + OS root exclusion)</td></tr>
+<tr><td>`tasks/deploy_osds.yml`</td><td>Activate OSD devices (dynamic or static)</td></tr>
+<tr><td>`tasks/create_pools.yml`</td><td>Create pre-defined pools (kube-rbd, openstack-*, cephfs)</td></tr>
+<tr><td>`tasks/create_keyrings.yml`</td><td>Generate client keyrings (client.kube, client.openstack)</td></tr>
+<tr><td>`tasks/enable_services.yml`</td><td>Enable dashboard, MDS, prometheus modules</td></tr>
+<tr><td>`tasks/validate.yml`</td><td>Health check and status report</td></tr>
+<tr><td>`tasks/day1_osd_operations.yml`</td><td>Incremental OSD add/remove/rollback/update</td></tr>
+<tr><td>`templates/cluster-spec.yaml.j2`</td><td>Cephadm declarative cluster specification</td></tr>
+<tr><td>`templates/rook-ceph-cluster-values.yml.j2`</td><td>Rook CephCluster Helm values</td></tr>
+</table>
+<h3>Inventory Group Variables</h3>
+<table>
+<tr><th>File</th><th>Contents</th></tr>
+</tr>
+<tr><td>`inventory/group_vars/ceph_mon.yml`</td><td>FSID, network config, pool definitions, keyrings, MDS</td></tr>
+<tr><td>`inventory/group_vars/ceph_osd.yml`</td><td>Device selection, BlueStore config, performance tuning</td></tr>
+</table>
+<hr>
+<h2>Deployment Commands</h2>
+<h3>Prerequisites</h3>
+<pre><code class="language-bash">
+# 1. Kubernetes must be running (Kubespray completed)
+kubectl get nodes   # all nodes Ready
+
+# 2. Pre-cache artifacts (run on deployer with internet access)
+ansible-playbook playbooks/reused/preflight_download.yml \
+  -i inventory/hosts.yml --tags ceph -v
+</pre>
+<h3>Rook-Ceph Deployment (Recommended)</h3>
+<pre><code class="language-bash">
+# Full deployment (operator + cluster + validation)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml -v
+
+# Phase-by-phase:
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_prepare -v
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_operator -v
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_cluster -v
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_dashboard -v
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_validate -v
+</pre>
+<h3>Cephadm Deployment (Alternative)</h3>
+<pre><code class="language-bash">
+# Requires ceph_deploy_mode: "cephadm" in defaults
+ansible-playbook playbooks/reused/deploy_ceph.yml \
+  -i inventory/hosts.yml -v
+
+# Individual phases:
+ansible-playbook playbooks/reused/deploy_ceph.yml \
+  -i inventory/hosts.yml --tags ceph_preflight -v
+
+ansible-playbook playbooks/reused/deploy_ceph.yml \
+  -i inventory/hosts.yml --tags ceph_bootstrap -v
+
+ansible-playbook playbooks/reused/deploy_ceph.yml \
+  -i inventory/hosts.yml --tags ceph_osd -v
+
+ansible-playbook playbooks/reused/deploy_ceph.yml \
+  -i inventory/hosts.yml --tags ceph_pools,ceph_keyrings -v
+</pre>
+<h3>Post-Deployment: Infra Pool</h3>
+<pre><code class="language-bash">
+# Creates infra-storage pool + K8s secret in sheba-cloud-infra namespace
+ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml \
+  -i inventory/hosts.yml -v
+</pre>
+<hr>
+<h2>Tag Reference</h2>
+<h3>Rook Playbook Tags (`deploy_ceph_rook.yml`)</h3>
+<table>
+<tr><th>Tag</th><th>Scope</th><th>Description</th></tr>
+</tr>
+<tr><td>`rook`</td><td>All phases</td><td>Run all Rook phases (prepare + operator + cluster + dashboard)</td></tr>
+<tr><td>`rook_prepare`</td><td>Phase 0</td><td>Wipe OSD disks, load kernel modules</td></tr>
+<tr><td>`rook_operator`</td><td>Phase 1</td><td>Deploy Rook operator Helm chart</td></tr>
+<tr><td>`rook_cluster`</td><td>Phase 2</td><td>Deploy CephCluster CR (MON/OSD/MGR pods)</td></tr>
+<tr><td>`rook_dashboard`</td><td>Phase 3</td><td>Expose dashboard via NodePort (31443), print admin credentials</td></tr>
+<tr><td>`rook_validate`</td><td>Phase 4</td><td>Health check, PVC binding test</td></tr>
+<tr><td>`rook_teardown`</td><td>Phase 5+5b</td><td>**DESTRUCTIVE** — Full scorched-earth: Helm releases → finalizers → CRs → CRDs → namespace → disk wipe → /var/lib/rook (requires explicit tag; uses `never` so won't run accidentally)</td></tr>
+</table>
+<h3>Cephadm Role Tags (`roles/ceph/tasks/`)</h3>
+<table>
+<tr><th>Tag</th><th>Scope</th><th>Description</th></tr>
+</tr>
+<tr><td>`ceph_preflight`</td><td>All ceph nodes</td><td>Install cephadm, packages, kernel modules</td></tr>
+<tr><td>`ceph_bootstrap`</td><td>Primary MON</td><td>Bootstrap cluster with cephadm</td></tr>
+<tr><td>`ceph_hosts`</td><td>Primary MON</td><td>Expand cluster to additional hosts</td></tr>
+<tr><td>`ceph_discover`</td><td>OSD hosts</td><td>Dynamic volume discovery</td></tr>
+<tr><td>`ceph_osd`</td><td>Primary MON</td><td>Deploy OSDs on discovered devices</td></tr>
+<tr><td>`ceph_pools`</td><td>Primary MON</td><td>Create pre-defined pools</td></tr>
+<tr><td>`ceph_keyrings`</td><td>Primary MON</td><td>Generate client auth keyrings</td></tr>
+<tr><td>`ceph_services`</td><td>Primary MON</td><td>Enable dashboard, MDS, prometheus</td></tr>
+<tr><td>`ceph_validate`</td><td>Primary MON</td><td>Cluster health report</td></tr>
+</table>
+<hr>
+<h2>Key Variables</h2>
+<h3>Deployment Mode & Versions (`roles/ceph/defaults/main.yml`)</h3>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</tr>
+<tr><td>`ceph_deploy_mode`</td><td>`rook`</td><td>`rook` or `cephadm`</td></tr>
+<tr><td>`ceph_release`</td><td>`reef`</td><td>Ceph release name</td></tr>
+<tr><td>`ceph_version`</td><td>`18.2.2`</td><td>Exact version for binary lookup</td></tr>
+<tr><td>`ceph_container_image`</td><td>`quay.io/ceph/ceph:v18`</td><td>Container image for Rook pods</td></tr>
+<tr><td>`rook_ceph_version`</td><td>`v1.14.7`</td><td>Rook operator Helm chart version</td></tr>
+<tr><td>`rook_ceph_namespace`</td><td>`rook-ceph`</td><td>K8s namespace for all Ceph pods</td></tr>
+</table>
+<h3>Preflight Cache (`roles/ceph/defaults/main.yml`)</h3>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+</tr>
+<tr><td>`ceph_preflight_cache_dir`</td><td>`/opt/fabric-cache`</td><td>Root cache directory</td></tr>
+<tr><td>`ceph_preflight_binaries_dir`</td><td>`…/binaries`</td><td>cephadm binary location</td></tr>
+<tr><td>`ceph_preflight_images_dir`</td><td>`…/images`</td><td>Container images (tar)</td></tr>
+<tr><td>`ceph_preflight_helm_dir`</td><td>`…/helm-charts`</td><td>Helm chart tarballs</td></tr>
+<tr><td>`ceph_preflight_apt_dir`</td><td>`…/apt-packages`</td><td>Apt package cache</td></tr>
+</table>
+<h3>Cluster Identity (`inventory/group_vars/ceph_mon.yml`)</h3>
+<table>
+<tr><th>Variable</th><th>Value</th><th>Description</th></tr>
+</tr>
+<tr><td>`ceph_fsid`</td><td>`a1b2c3d4-e5f6-…`</td><td>Unique cluster UUID (never change)</td></tr>
+<tr><td>`ceph_cluster_name`</td><td>`dc-lab-ceph`</td><td>Cluster name</td></tr>
+<tr><td>`ceph_public_network`</td><td>`172.16.2.0/24`</td><td>Client-facing network</td></tr>
+<tr><td>`ceph_cluster_network`</td><td>`172.16.2.0/24`</td><td>OSD replication network</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>`2`</td><td>Replica count (2 for lab)</td></tr>
+<tr><td>`ceph_dashboard_port`</td><td>`8443`</td><td>Web UI port</td></tr>
+</table>
+<h3>OSD Configuration (`inventory/group_vars/ceph_osd.yml`)</h3>
+<table>
+<tr><th>Variable</th><th>Value</th><th>Description</th></tr>
+</tr>
+<tr><td>`ceph_osd_dynamic_discovery`</td><td>`true`</td><td>Auto-detect disks via lsblk</td></tr>
+<tr><td>`ceph_osd_devices_default_kvm`</td><td>`[/dev/vdb, /dev/vdc]`</td><td>Default OSD devices for KVM</td></tr>
+<tr><td>`ceph_osd_wipe_disks`</td><td>`true`</td><td>Wipe disk signatures before OSD create</td></tr>
+<tr><td>`ceph_bluestore_block_db_size`</td><td>`…`</td><td>BlueStore DB partition size</td></tr>
+</table>
+<hr>
+<h2>Pools Created</h2>
+<table>
+<tr><th>Pool Name</th><th>Application</th><th>Size</th><th>PGs</th><th>Consumer</th></tr>
+</tr>
+<tr><td>`kube-rbd`</td><td>rbd</td><td>2</td><td>32</td><td>K8s CSI (default StorageClass)</td></tr>
+<tr><td>`openstack-volumes`</td><td>rbd</td><td>2</td><td>32</td><td>Cinder block volumes</td></tr>
+<tr><td>`openstack-images`</td><td>rbd</td><td>2</td><td>16</td><td>Glance images</td></tr>
+<tr><td>`openstack-vms`</td><td>rbd</td><td>2</td><td>32</td><td>Nova ephemeral disks</td></tr>
+<tr><td>`cephfs-data`</td><td>cephfs</td><td>2</td><td>32</td><td>CephFS data (shared FS)</td></tr>
+<tr><td>`cephfs-metadata`</td><td>cephfs</td><td>2</td><td>16</td><td>CephFS metadata</td></tr>
+<tr><td>`infra-storage`</td><td>rbd</td><td>2</td><td>32</td><td>SDLC/infra services</td></tr>
+</table>
+<hr>
+<h2>Preflight Cache Integration</h2>
+<p>The <code>preflight_download.yml</code> playbook (with <code>--tags ceph</code>) caches:</p>
+<table>
+<tr><th>Artifact</th><th>Location</th><th>Used By</th></tr>
+</tr>
+<tr><td>`cephadm` binary</td><td>`/opt/fabric-cache/binaries/cephadm-18.2.2`</td><td>preflight.yml (cephadm mode)</td></tr>
+<tr><td>`rook-ceph-*.tgz`</td><td>`/opt/fabric-cache/helm-charts/`</td><td>deploy_ceph_rook.yml (operator)</td></tr>
+<tr><td>`rook-ceph-cluster-*.tgz`</td><td>`/opt/fabric-cache/helm-charts/`</td><td>deploy_ceph_rook.yml (cluster CR)</td></tr>
+</table>
+<h3>Cache Lookup Priority (preflight.yml)</h3>
+<p>1. <strong>Versioned binary</strong> — <code>/opt/fabric-cache/binaries/cephadm-18.2.2</code></p>
+<p>2. <strong>Unversioned binary</strong> — <code>/opt/fabric-cache/binaries/cephadm</code></p>
+<p>3. <strong>Internet download</strong> — <code>https://download.ceph.com/rpm-reef/el9/noarch/cephadm</code></p>
+<h3>Helm Chart Cache (deploy_ceph_rook.yml)</h3>
+<p>1. <strong>Cached tarball</strong> — <code>helm upgrade --install rook-ceph /opt/fabric-cache/helm-charts/rook-ceph-*.tgz</code></p>
+<p>2. <strong>Remote repo</strong> — <code>helm upgrade --install rook-ceph rook-release/rook-ceph --version v1.14.7</code></p>
+<hr>
+<h2>Day 1 Operations</h2>
+<p>After initial deployment, use <code>day1_osd_operations.yml</code> for incremental changes:</p>
+<pre><code class="language-bash">
+# Show OSD status vs available devices
+ansible-playbook playbooks/ceph_day1_operations.yml \
+  -i inventory/hosts.yml -e "ceph_day1_action=status"
+
+# Add newly discovered volumes as OSDs
+ansible-playbook playbooks/ceph_day1_operations.yml \
+  -i inventory/hosts.yml -e "ceph_day1_action=add"
+
+# Remove a specific OSD (graceful drain + rebalance)
+ansible-playbook playbooks/ceph_day1_operations.yml \
+  -i inventory/hosts.yml \
+  -e "ceph_day1_action=remove ceph_day1_target_host=Host12_2 ceph_day1_target_device=/dev/vdd"
+
+# Rollback (re-add) a removed device
+ansible-playbook playbooks/ceph_day1_operations.yml \
+  -i inventory/hosts.yml \
+  -e "ceph_day1_action=rollback ceph_day1_target_host=Host12_2 ceph_day1_target_device=/dev/vdd"
+
+# Change OSD device class
+ansible-playbook playbooks/ceph_day1_operations.yml \
+  -i inventory/hosts.yml \
+  -e "ceph_day1_action=update ceph_day1_osd_id=5 ceph_day1_device_class=ssd"
+</pre>
+<hr>
+<h2>Validation & Troubleshooting</h2>
+<h3>Quick Health Check (Rook)</h3>
+<pre><code class="language-bash">
+# From any K8s controller:
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph -s
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph osd tree
+kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph df
+</pre>
+<h3>Pod Status</h3>
+<pre><code class="language-bash">
+kubectl get pods -n rook-ceph -o wide
+kubectl get cephcluster -n rook-ceph
+kubectl get sc   # StorageClasses
+</pre>
+<h3>Test PVC Binding</h3>
+<pre><code class="language-bash">
+cat &lt;&lt;EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-rbd
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+kubectl get pvc test-rbd   # Should show Bound
+kubectl delete pvc test-rbd
+</pre>
+<h3>Common Issues</h3>
+<table>
+<tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+</tr>
+<tr><td>OSD pods CrashLoopBackOff</td><td>Dirty disks (leftover LVM/partition)</td><td>`wipefs -af /dev/vdb && dd if=/dev/zero of=/dev/vdb bs=1M count=100` on host</td></tr>
+<tr><td>MON not starting</td><td>Clock skew between nodes</td><td>Verify `chrony` running: `chronyc tracking`</td></tr>
+<tr><td>PVC stuck Pending</td><td>No default StorageClass</td><td>`kubectl get sc` — check `ceph-rbd` is default</td></tr>
+<tr><td>Operator pod not ready</td><td>CRDs not installed</td><td>`helm upgrade --install rook-ceph … --set crds.enabled=true`</td></tr>
+<tr><td>`HEALTH_WARN too few PGs`</td><td>Pool pg_num too low</td><td>`ceph osd pool set <pool> pg_num 64` via toolbox</td></tr>
+<tr><td>Cephadm role fails with "use deploy_ceph_rook.yml"</td><td>`ceph_deploy_mode: rook`</td><td>Expected — use Rook playbook instead</td></tr>
+<tr><td>0 OSDs — cluster HEALTH_WARN</td><td>Virtual disks not attached to VMs</td><td>On R810 host: create qcow2 + `virsh attach-disk` for /dev/vdb, /dev/vdc per VM</td></tr>
+<tr><td>`rbd pool init` hangs forever</td><td>0 OSDs up (no disks)</td><td>Playbook now skips init if 0 OSDs; attach disks first, then re-run</td></tr>
+</table>
+<h3>Dashboard Access</h3>
+<p>After Phase 3 (<code>rook_dashboard</code>), the Ceph Dashboard is exposed as a NodePort service on port <strong>31443</strong>.</p>
+<pre><code class="language-bash">
+# Get dashboard URL (from any machine that can reach cluster nodes)
+https://&lt;any-k8s-node-ip&gt;:31443
+
+# Username: admin
+# Password: retrieve from Kubernetes secret:
+kubectl -n rook-ceph get secret rook-ceph-dashboard-password \
+  -o jsonpath='{.data.password}' | base64 -d ; echo
+
+# From Lab-ControlNode (R810 host), use any VM node IP:
+https://172.16.2.40:31443   # Host12_1
+https://172.16.2.43:31443   # Host34_1
+
+# Verify service is exposed:
+kubectl get svc rook-ceph-mgr-dashboard -n rook-ceph
+</pre>
+<div class="warn">The dashboard uses a self-signed TLS certificate. Accept the browser warning to proceed.</div>
+<p><strong>Override NodePort:</strong> Set <code>ceph_dashboard_external_port</code> variable to change from default 31443:</p>
+<pre><code class="language-bash">
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_dashboard \
+  -e "ceph_dashboard_external_port=32443" -v
+</pre>
+<hr>
+<h3>Teardown (DESTRUCTIVE — Full Reset)</h3>
+<p>The <code>rook_teardown</code> tag performs a <strong>complete scorched-earth removal</strong> in two sub-phases:</p>
+<table>
+<tr><th>Step</th><th>Action</th><th>Why</th></tr>
+<tr><td>1</td><td>Helm uninstall rook-ceph-cluster</td><td>Remove CephCluster CR and all managed pods</td></tr>
+<tr><td>2</td><td>Remove finalizers from all Ceph CRs</td><td>Prevents namespace from hanging indefinitely during deletion (Rook adds finalizers that block delete until operator processes them)</td></tr>
+<tr><td>3</td><td>Delete all Ceph CRs (cephcluster, cephblockpool, cephfilesystem)</td><td>Clean up remaining custom resources</td></tr>
+<tr><td>4</td><td>Wait for OSD pods to terminate</td><td>Graceful shutdown before disk operations</td></tr>
+<tr><td>5</td><td>Helm uninstall rook-ceph (operator)</td><td>Remove the operator itself</td></tr>
+<tr><td>6</td><td>Delete all Rook CRDs</td><td>Remove API extensions from K8s API server</td></tr>
+<tr><td>7</td><td>Delete rook-ceph namespace</td><td>Final K8s cleanup</td></tr>
+<tr><td>8</td><td>Wipe /dev/vdb + /dev/vdc on all ceph_osd nodes</td><td>Remove BlueStore signatures so disks appear "empty" for fresh OSD creation (wipefs + dd zero + sgdisk --zap-all)</td></tr>
+<tr><td>9</td><td>Remove /var/lib/rook on all OSD nodes</td><td>Rook stores cluster metadata here; stale data prevents re-bootstrap</td></tr>
+</table>
+<pre><code class="language-bash">
+# Single command — does EVERYTHING (Helm + CRDs + namespace + disk wipe)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml --tags rook_teardown -v
+
+# After teardown, ready for fresh deploy:
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml -v
+</pre>
+<div class="danger">This is irreversible. All Ceph data, pools, and configuration will be permanently destroyed. The <code>never</code> tag ensures this cannot run accidentally during normal deployment.</div>
+<hr>
+<h2>Deployment Sequence in Lab Build</h2>
+<pre><code class="language-">
+deploy_lab_v13.sh sequence:
+  ├── 1. Infrastructure (fabric, servers, KVM)
+  ├── 2. Kubespray (K8s cluster)
+  ├── 3. ► Ceph (this playbook) ◄
+  │       ├── preflight_download.yml --tags ceph
+  │       ├── deploy_ceph_rook.yml (operator + cluster)
+  │       └── deploy_ceph_rook.yml --tags rook_dashboard
+  ├── 4. Infra Pool
+  │       └── deploy_ceph_infra_pool.yml
+  ├── 5. OpenStack (uses Ceph RBD for Cinder/Glance/Nova)
+  └── 6. Monitoring (Prometheus scrapes Ceph MGR metrics)
+</pre>
+<hr>
+<h2>R810 Physical Storage Layer (ubuntu_r810_kvm Profile)</h2>
+<h3>Host Disk Layout</h3>
+<p>The Dell PowerEdge R810 that hosts the KVM lab has the following physical disks:</p>
+<table>
+<tr><th>Device</th><th>Size</th><th>Role</th><th>Notes</th></tr>
+</tr>
+<tr><td>`/dev/sda`</td><td>465.3 GB</td><td>**OS (EXCLUDED)**</td><td>Ubuntu 24.04, boot/root partitions</td></tr>
+<tr><td>`/dev/sdb`</td><td>837.8 GB</td><td>OSD backing</td><td>Available for Ceph via KVM virtual disks</td></tr>
+<tr><td>`/dev/sdc`</td><td>931.0 GB</td><td>OSD backing</td><td>Available for Ceph via KVM virtual disks</td></tr>
+<tr><td>`/dev/sdd`</td><td>931.0 GB</td><td>OSD backing</td><td>Available for Ceph via KVM virtual disks</td></tr>
+<tr><td>`/dev/sde`</td><td>931.0 GB</td><td>OSD backing</td><td>Available for Ceph via KVM virtual disks</td></tr>
+<tr><td>`/dev/sdf`</td><td>1.1 TB</td><td>OSD backing</td><td>Available for Ceph via KVM virtual disks</td></tr>
+<tr><td>**Total Available**</td><td>**~4.6 TB**</td><td></td><td>5 physical disks for Ceph pool</td></tr>
+</table>
+<h3>Storage Path: Physical → Virtual → Ceph</h3>
+<pre><code class="language-">
+R810 Physical Disk (e.g. /dev/sdb, 838GB)
+  └── qcow2 image (e.g. host12-1-osd-01.qcow2, 100GB)
+        └── KVM VM sees as /dev/vdb
+              └── Rook-Ceph OSD Pod claims device
+                    └── BlueStore writes data directly
+                          └── Ceph Pool (kube-rbd, openstack-volumes, etc.)
+                                └── PVC consumed by PostgreSQL, OpenStack, etc.
+</pre>
+<h3>How `ceph_rook_use_all_devices` Maximizes Capacity</h3>
+<p>With <code>ceph_rook_use_all_devices: true</code> (default in <code>roles/ceph/defaults/main.yml</code>), the Rook operator <strong>automatically discovers and claims</strong> every empty block device on each OSD node — without needing explicit device lists in the inventory.</p>
+<p><strong>What this means in practice:</strong></p>
+<p>1. Provision KVM virtual disks from R810's 5 free physical drives</p>
+<p>2. Attach them to any VM in the <code>ceph_osd</code> group</p>
+<p>3. Rook finds the new device, creates an OSD pod, and expands the pool</p>
+<p>4. <strong>No Ansible/inventory change required</strong> — pure capacity scaling</p>
+<h3>Capacity Planning</h3>
+<table>
+<tr><th>Allocation Strategy</th><th>Usable Ceph Pool (replica=2)</th><th>Usable Ceph Pool (replica=3)</th></tr>
+</tr>
+<tr><td>Current (2×vdisk per VM, 6 VMs)</td><td>~600 GB</td><td>~400 GB</td></tr>
+<tr><td>Maximized (spread all 4.6TB)</td><td>~2.3 TB</td><td>~1.5 TB</td></tr>
+<tr><td>Balanced (80% of raw to Ceph)</td><td>~1.8 TB</td><td>~1.2 TB</td></tr>
+</table>
+<p><strong>Recommended for lab:</strong> Allocate ~80% of each physical disk as KVM qcow2 for OSD backing, leaving 20% for host snapshots and overhead.</p>
+<h3>Provisioning More Virtual Disks</h3>
+<p>To add more OSD capacity, create additional qcow2 images and attach to VMs:</p>
+<pre><code class="language-bash">
+# On R810 host (example: add 200GB disk to Host12_1)
+qemu-img create -f qcow2 /var/lib/libvirt/images/host12-1-osd-03.qcow2 200G
+virsh attach-disk Host12_1 /var/lib/libvirt/images/host12-1-osd-03.qcow2 vdd \
+  --driver qemu --subdriver qcow2 --persistent
+
+# Rook auto-discovers /dev/vdd and creates a new OSD pod — no playbook re-run needed
+</pre>
+<h3>Device Discovery Modes (Rook Template Logic)</h3>
+<p>The <code>rook-ceph-cluster-values.yml.j2</code> template supports two modes:</p>
+<table>
+<tr><th>Variable</th><th>Behavior</th><th>When to Use</th></tr>
+</tr>
+<tr><td>`ceph_rook_use_all_devices: true`</td><td>Rook scans all nodes, claims every empty block device</td><td>Default — maximizes capacity, zero-config scaling</td></tr>
+<tr><td>`ceph_rook_use_all_devices: false`</td><td>Uses per-host `ceph_osd_devices` from inventory</td><td>When you need precise control over which disks are OSDs</td></tr>
+</table>
+<p>Optional filter: <code>ceph_rook_device_filter: "^vd[b-z]$"</code> limits discovery to specific device name patterns.</p>
+<hr>
+<h2>KVM-Specific Optimizations</h2>
+<table>
+<tr><th>Setting</th><th>KVM Value</th><th>Production Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>Pool replica size</td><td>2</td><td>3</td><td>Fewer hosts in lab</td></tr>
+<tr><td>MON count</td><td>1</td><td>3-5</td><td>Minimum quorum (single MON for lab)</td></tr>
+<tr><td>OSD memory target</td><td>1 GiB</td><td>4+ GiB</td><td>Limited host RAM</td></tr>
+<tr><td>MGR pod memory</td><td>1 GiB</td><td>2+ GiB</td><td>Reduced workload</td></tr>
+<tr><td>PG autoscale</td><td>on</td><td>on</td><td>Same for both</td></tr>
+<tr><td>Device discovery</td><td>`ceph_rook_use_all_devices: true`</td><td>per-host lists</td><td>Auto-claim all empty disks</td></tr>
+<tr><td>Device filter</td><td>`""` (all devices)</td><td>`"^sd[b-z]$"`</td><td>Broader in lab, restrictive in prod</td></tr>
+<tr><td>Network</td><td>single (172.16.2.0/24)</td><td>dual (public+cluster)</td><td>Single flat network</td></tr>
+<tr><td>Control-plane toleration</td><td>yes</td><td>per-policy</td><td>Controllers are also OSDs</td></tr>
+<tr><td>R810 backing disks</td><td>sdb–sdf (4.6TB total)</td><td>N/A</td><td>Physical storage pool for VMs</td></tr>
+</table>
+<hr>
+<h2>Environment & Hardware-Profile Var Files</h2>
+<p>Ceph tuning is <strong>environment and hardware-aware</strong> via dedicated var files in <code>cd/vars/</code>. Each file configures MON count, PG counts, replication levels, and memory targets appropriate for its specific deployment context.</p>
+<h3>Var File Selector Matrix</h3>
+<p>Choose your var file based on <strong>deployment environment</strong> (dev/test/prod/dr) and <strong>hardware profile</strong> (R810 KVM / R620 KVM / real hardware):</p>
+<table>
+<tr><th>Environment</th><th>R810 KVM (12 OSDs)</th><th>R620 KVM (6 OSDs)</th><th>Real Hardware (36+ OSDs)</th></tr>
+</tr>
+<tr><td>**Development**</td><td>`ceph-values-r810-kvm.yml`</td><td>`ceph-values-r620-kvm.yml`</td><td>`ceph-values-real-hardware.yml`</td></tr>
+<tr><td>**Testing**</td><td>`ceph-values-test.yml`</td><td>`ceph-values-test.yml`</td><td>`ceph-values-test.yml`</td></tr>
+<tr><td>**Production**</td><td>N/A (R810 not for prod)</td><td>N/A (R620 not for prod)</td><td>`ceph-values-prod.yml`</td></tr>
+<tr><td>**Disaster Recovery**</td><td>N/A</td><td>N/A</td><td>`ceph-values-dr.yml`</td></tr>
+</table>
+<h3>Environment-Based Var Files</h3>
+<p>#### <code>ceph-values-dev.yml</code> — Development/Lab (Minimal Resources)</p>
+<p><strong>Use for:</strong> Quick testing, debugging, resource-constrained environments</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>1</td><td>Single MON sufficient for lab (minimum quorum, LOW etcd load)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>32</td><td>Extremely conservative (prevents etcd timeout with small clusters)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>32</td><td>Matches PG count for balanced distribution</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>2</td><td>2-way replication (acceptable for dev, one OSD loss OK)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>false</td><td>Disable CephFS (RBD-only labs)</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>1</td><td>Minimal concurrent recovery</td></tr>
+<tr><td>`ceph_osd_recovery_max_active`</td><td>1</td><td>One recovery op at a time</td></tr>
+</table>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-dev.yml" -v
+</pre>
+<p>#### <code>ceph-values-test.yml</code> — Testing/QA (Production-Like)</p>
+<p><strong>Use for:</strong> Staging tests, performance validation, pre-production verification</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>3</td><td>3-MON quorum (1-fault tolerance, representative)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>64</td><td>Moderate PG count (better data distribution than dev)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>64</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>3</td><td>3-way replication (production-like)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>true</td><td>Enable MDS if testing CephFS</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>1</td><td>Conservative recovery</td></tr>
+<tr><td>`ceph_osd_recovery_max_active`</td><td>1</td><td>One recovery op at a time</td></tr>
+</table>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-test.yml" -v
+</pre>
+<p>#### <code>ceph-values-prod.yml</code> — Production (Enterprise, 24+ OSDs)</p>
+<p><strong>Use for:</strong> Real production deployments with enterprise redundancy</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>5</td><td>5-MON quorum (2-fault tolerance, high availability)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>256</td><td>High capacity baseline (better for 24+ OSDs)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>256</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>3</td><td>3-way replication (standard production)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>true</td><td>Enable MDS for OpenStack Manila / K8s CephFS</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>2</td><td>2 concurrent backfills per OSD</td></tr>
+<tr><td>`ceph_osd_recovery_max_active`</td><td>3</td><td>3 concurrent recovery ops per OSD</td></tr>
+<tr><td>`ceph_osd_memory_target`</td><td>4GB</td><td>4GB per OSD (scaled for enterprise)</td></tr>
+</table>
+<p><strong>Pre-deployment validation:</strong></p>
+<p>- Verify cluster has 24+ OSDs</p>
+<p>- Verify etcd has 8GB+ free memory</p>
+<p>- Verify 3+ dedicated storage nodes</p>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-prod.yml" -v
+</pre>
+<p>#### <code>ceph-values-dr.yml</code> — Disaster Recovery (Standby/Failover)</p>
+<p><strong>Use for:</strong> DR site deployments, passive or active failover sites</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>3</td><td>3 MONs (compromise: HA + resource savings vs 5)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>128</td><td>Moderate PG count (standby site = lower active load)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>128</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>3</td><td>3-way replication (must match production)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>true</td><td>Match production for failover compatibility</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>1</td><td>Conservative (WAN link preservation)</td></tr>
+<tr><td>`ceph_osd_recovery_max_active`</td><td>2</td><td>Limited concurrency (geo-sync friendly)</td></tr>
+<tr><td>`ceph_osd_recovery_sleep`</td><td>0.5s</td><td>Throttle recovery (preserve WAN bandwidth)</td></tr>
+</table>
+<p><strong>Key notes:</strong></p>
+<p>- If DR is PASSIVE (warm standby): reduce PGs to 128, keep MON count at 3</p>
+<p>- If DR is ACTIVE (serving clients): use identical settings to production</p>
+<p>- Recovery must be conservative to preserve site-to-site replication bandwidth</p>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-dr.yml" -v
+</pre>
+<h3>Hardware-Profile Var Files</h3>
+<p>#### <code>ceph-values-r810-kvm.yml</code> — Dell R810 KVM Lab (12 OSDs)</p>
+<p><strong>Platform:</strong> Dell PowerEdge R810 (256GB RAM, 64 CPU) hosting 6 VMs × 2 virtual disks = 12 OSDs</p>
+<p><strong>Disk configuration:</strong></p>
+<p>- Physical R810: sda (OS, excluded) + sdb–sdf (4.6TB available)</p>
+<p>- 6 KVM VMs: Host12_1/2/3, Host34_1/2, HostB12_1 (each with /dev/vdb, /dev/vdc)</p>
+<p><strong>OSD calculation:</strong> 12 OSDs ÷ 2-way replication = (12 × 100) / 2 = 600 → round conservative to 128 PGs</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>1</td><td>Single MON (minimal K8s etcd load)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>128</td><td>Conservative (prevents etcd timeout with 12 OSDs)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>128</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>2</td><td>2-way replication (VMs are not critical)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>false</td><td>Disable MDS (RBD-only workloads)</td></tr>
+<tr><td>`ceph_osd_memory_target`</td><td>1GB</td><td>1GB per OSD (tight memory constraint on VMs)</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>1</td><td>Single backfill (avoid overwhelming VMs)</td></tr>
+<tr><td>`ceph_osd_recovery_sleep`</td><td>0.5s</td><td>Throttle recovery</td></tr>
+</table>
+<p><strong>Capacity planning:</strong></p>
+<p>- With 2-way replication: ~600 GB usable</p>
+<p>- With 3-way replication: ~400 GB usable</p>
+<p>- Can scale by adding more virtual disks to VMs (up to limit of 4.6TB physical)</p>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+export AUTOMATION_PROFILE=ubuntu_r810_kvm
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-r810-kvm.yml" -v
+</pre>
+<p>#### <code>ceph-values-r620-kvm.yml</code> — Dell R620 KVM Lab (6 OSDs)</p>
+<p><strong>Platform:</strong> Dell PowerEdge R620 (128GB RAM, 12-16 CPU) hosting 3 VMs × 2 virtual disks = 6 OSDs</p>
+<p><strong>Disk configuration:</strong></p>
+<p>- Physical R620: sda (OS, excluded) + sdb–sdg (~2-4TB each, smaller than R810)</p>
+<p>- 3 KVM VMs: smaller VMs than R810 (8-16GB RAM each)</p>
+<p><strong>OSD calculation:</strong> 6 OSDs ÷ 2-way replication = (6 × 100) / 2 = 300 → round conservative to 64 PGs</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>1</td><td>Single MON (minimal etcd load)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>64</td><td>More conservative than R810 (smaller cluster)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>64</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>2</td><td>2-way replication</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>false</td><td>Disable MDS</td></tr>
+<tr><td>`ceph_osd_memory_target`</td><td>1GB</td><td>1GB per OSD (very constrained on R620)</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>1</td><td>Single backfill</td></tr>
+<tr><td>`ceph_osd_recovery_sleep`</td><td>1.0s</td><td>More aggressive throttle than R810</td></tr>
+</table>
+<p><strong>Capacity planning:</strong></p>
+<p>- With 2-way replication: ~300 GB usable (smaller than R810)</p>
+<p>- More constrained resource budget than R810</p>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+export AUTOMATION_PROFILE=ubuntu_r620_kvm
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-r620-kvm.yml" -v
+</pre>
+<p>#### <code>ceph-values-real-hardware.yml</code> — Real Hardware (36+ OSDs)</p>
+<p><strong>Platform:</strong> Bare-metal enterprise servers with dedicated storage tier</p>
+<p><strong>OSD topology:</strong></p>
+<p>- 2 HDD Storage Nodes (Storage_Server_HDD_01/02): 10 OSDs each = 20 HDD OSDs</p>
+<p>- 2 SSD Storage Nodes (Storage_Server_SSD_01/02): 8 OSDs each = 16 SSD OSDs</p>
+<p>- <strong>Total: 36 OSDs</strong> with CRUSH-based tiering</p>
+<p><strong>Device configuration:</strong></p>
+<p>- HDD nodes: 10 × 4TB disks per node (sdb–sdl) = 40TB per HDD node</p>
+<p>- SSD nodes: 8 × 1TB disks per node (sdb–sdi) = 8TB per SSD node</p>
+<p><strong>OSD calculation:</strong> 36 OSDs ÷ 3-way replication = (36 × 100) / 3 = 1200 → round to 512 PGs</p>
+<p><strong>Etcd capacity planning:</strong></p>
+<p>- Baseline: 100MB</p>
+<p>- 512 PGs × 3 replicas = 1536 entries</p>
+<p>- Estimate: ~250MB additional (total ~350MB per cluster)</p>
+<p>- Supports up to 5 pools with 1024 PGs each</p>
+<table>
+<tr><th>Parameter</th><th>Value</th><th>Rationale</th></tr>
+</tr>
+<tr><td>`rook_ceph_mon_count`</td><td>5</td><td>5-MON HA (2-fault tolerance)</td></tr>
+<tr><td>`rook_ceph_pool_pg_num`</td><td>512</td><td>Production baseline (36 OSDs, 3-way)</td></tr>
+<tr><td>`rook_ceph_pool_pgp_num`</td><td>512</td><td>Matches PG count</td></tr>
+<tr><td>`ceph_osd_pool_default_size`</td><td>3</td><td>3-way replication (standard production)</td></tr>
+<tr><td>`ceph_mds_enabled`</td><td>true</td><td>Enable for CephFS + OpenStack Manila</td></tr>
+<tr><td>`ceph_osd_memory_target`</td><td>4GB</td><td>4GB per OSD (enterprise-grade)</td></tr>
+<tr><td>`ceph_osd_max_backfills`</td><td>2</td><td>2 concurrent backfills</td></tr>
+<tr><td>`ceph_osd_recovery_max_active`</td><td>3</td><td>3 concurrent recovery ops</td></tr>
+<tr><td>`ceph_osd_recovery_sleep`</td><td>0.1s</td><td>Minimal throttle (network-bound, not CPU)</td></tr>
+<tr><td>`ceph_network_mtu`</td><td>9000</td><td>Jumbo frames for high throughput</td></tr>
+</table>
+<p><strong>Capacity planning:</strong></p>
+<p>- 3-way replication on 36 OSDs with 512 PGs:</p>
+<p>  - HDD tier: ~13 TB usable (40TB × 2 nodes / 3)</p>
+<p>  - SSD tier: ~5 TB usable (8TB × 2 nodes / 3)</p>
+<p>  - Total: ~18 TB usable pool capacity</p>
+<p>- Can add multiple pools with same PG count without overwhelming etcd</p>
+<p><strong>Pre-deployment checklist:</strong></p>
+<p>- [ ] Verify all 36 OSDs auto-discovered by Rook</p>
+<p>- [ ] Verify etcd cluster has 8GB+ free memory</p>
+<p>- [ ] Verify all MON nodes have dedicated interfaces</p>
+<p>- [ ] Verify CRUSH rules for HDD/SSD separation</p>
+<p>- [ ] Enable Prometheus for capacity monitoring</p>
+<p><strong>Deployment:</strong></p>
+<pre><code class="language-bash">
+export AUTOMATION_PROFILE=real_hardware
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-real-hardware.yml" -v
+</pre>
+<h3>Key Parameter Explanations</h3>
+<p>#### MON Count (<code>rook_ceph_mon_count</code>)</p>
+<p><strong>What it does:</strong> Number of Ceph Monitors (cluster state managers)</p>
+<table>
+<tr><th>Count</th><th>Quorum</th><th>Fault Tolerance</th><th>etcd Load</th><th>Use Case</th></tr>
+</tr>
+<tr><td>1</td><td>Automatic</td><td>0 faults</td><td>Minimal</td><td>Lab/dev only</td></tr>
+<tr><td>3</td><td>2 of 3</td><td>1 node</td><td>Low</td><td>Testing, small prod</td></tr>
+<tr><td>5</td><td>3 of 5</td><td>2 nodes</td><td>Medium</td><td>Enterprise production</td></tr>
+<tr><td>7</td><td>4 of 7</td><td>3 nodes</td><td>High</td><td>Multi-zone production</td></tr>
+</table>
+<p><strong>Impact:</strong> Each MON = etcd replication + state distribution. More MONs = more etcd entries.</p>
+<p>#### PG Count (<code>rook_ceph_pool_pg_num</code>)</p>
+<p><strong>What it does:</strong> Number of Placement Groups per pool (data distribution granularity)</p>
+<p><strong>Formula:</strong> <code>PGs = (OSDs × 100) / pool_size</code>, round down to power of 2</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-">
+R810 lab (12 OSDs, 2-way):
+  (12 × 100) / 2 = 600
+  → Round down to conservative 128 PGs (not 512, avoid etcd pressure)
+
+Real hardware (36 OSDs, 3-way):
+  (36 × 100) / 3 = 1200
+  → Round to 512 PGs (production-grade with 8GB etcd budget)
+</pre>
+<p><strong>Impact:</strong> Each PG = etcd state entry (~10-100KB in CRUSH map)</p>
+<p>- 32 PGs × 3 copies = 96 entries × ~50KB = 4.8MB</p>
+<p>- 512 PGs × 3 copies = 1536 entries × ~50KB = 76.8MB</p>
+<p>- 1024 PGs × 3 copies = 3072 entries × ~50KB = 153.6MB (etcd may stall!)</p>
+<p><strong>Why conservative in labs:</strong> K8s etcd runs with only ~100MB baseline in small clusters. High PGs = memory pressure = API timeouts.</p>
+<p>#### Pool Replication (<code>ceph_osd_pool_default_size</code>)</p>
+<p><strong>What it does:</strong> Number of data replicas per object</p>
+<table>
+<tr><th>Size</th><th>Failure Tolerance</th><th>Space Overhead</th><th>Use Case</th></tr>
+</tr>
+<tr><td>1x</td><td>None (DANGER!)</td><td>100%</td><td>Never in production</td></tr>
+<tr><td>2x</td><td>1 OSD loss</td><td>50%</td><td>Lab/dev only</td></tr>
+<tr><td>3x</td><td>2 OSD loss</td><td>33%</td><td>Standard production</td></tr>
+<tr><td>4x</td><td>3 OSD loss</td><td>25%</td><td>Multi-zone DC, ultra-high-availability</td></tr>
+</table>
+<p><strong>Impact:</strong> Smaller pool_size = smaller PG count in formula. 2x vs 3x replication = ~25% fewer PGs needed.</p>
+<p>#### MDS Enable (<code>ceph_mds_enabled</code>)</p>
+<p><strong>What it does:</strong> Enables Ceph Metadata Server (required for CephFS)</p>
+<table>
+<tr><th>Setting</th><th>Impact</th><th>When to Disable</th></tr>
+</tr>
+<tr><td>true</td><td>Adds MDS pods, ~200-500MB memory per MDS</td><td>RBD-only labs, no CephFS needed</td></tr>
+<tr><td>false</td><td>No MDS = no CephFS support</td><td>Default for lab RBD deployments</td></tr>
+</table>
+<p><strong>Note:</strong> OpenStack CephFS/Manila support requires MDS enabled.</p>
+<h3>Var File Override Examples</h3>
+<p>#### Override PG Count for Custom Cluster Size</p>
+<p>If you have an R810 cluster with more VMs (e.g., 16 instead of 6):</p>
+<pre><code class="language-bash">
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-r810-kvm.yml" \
+  -e "rook_ceph_pool_pg_num=256" \  # Override 128 → 256
+  -v
+</pre>
+<p>#### Enable MDS for R810 Lab CephFS Testing</p>
+<pre><code class="language-bash">
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-r810-kvm.yml" \
+  -e "ceph_mds_enabled=true" \  # Override false → true
+  -v
+</pre>
+<p>#### Use Production Settings on Real Hardware with Only 18 OSDs (Pre-Production)</p>
+<pre><code class="language-bash">
+# Start with prod baseline, then adjust PGs down for smaller cluster
+# 18 OSDs, 3-way: (18 × 100) / 3 = 600 → use 256 instead of 512
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+  -i inventory/hosts.yml \
+  -e "@cd/vars/ceph-values-prod.yml" \
+  -e "rook_ceph_pool_pg_num=256" \  # Smaller cluster adjustment
+  -v
+</pre>
+<h3>Post-Deployment Validation</h3>
+<p>After deploying with a var file, verify the settings took effect:</p>
+<pre><code class="language-bash">
+# Check MON count
+kubectl get pod -n rook-ceph -l app=rook-ceph-mon
+
+# Check pool PG count
+kubectl exec -n rook-ceph &lt;toolbox-pod&gt; -- ceph osd pool get kube-rbd pg_num
+
+# Check pool replication size
+kubectl exec -n rook-ceph &lt;toolbox-pod&gt; -- ceph osd pool get kube-rbd size
+
+# Check MDS status
+kubectl get pod -n rook-ceph -l app=rook-ceph-mds
+
+# Monitor etcd latency (should be &lt;100ms)
+kubectl describe pod -n kube-system -l component=etcd
+</pre>
+<hr>
+<h2>Complete File Structure</h2>
+<pre><code class="language-">
+cd/vars/
+├── README.md                              # Complete var file selector guide
+├── ceph-values-dev.yml                    # Dev/lab — minimal resources
+├── ceph-values-test.yml                   # Test/QA — production-like
+├── ceph-values-prod.yml                   # Production — enterprise
+├── ceph-values-dr.yml                     # DR/failover — balanced
+├── ceph-values-r810-kvm.yml               # R810 KVM lab — 12 OSDs
+├── ceph-values-r620-kvm.yml               # R620 KVM lab — 6 OSDs
+└── ceph-values-real-hardware.yml          # Real hardware — 36+ OSDs
+
+inventory/group_vars/
+├── ceph_mon.yml                           # MON/MGR/MDS config (cluster identity)
+└── ceph_osd.yml                           # OSD device config (device discovery)
+
+playbooks/reused/
+├── deploy_ceph_rook.yml                   # Rook deployment (loads var files)
+├── deploy_ceph_infra_pool.yml             # Infra pool creation
+└── deploy_ceph.yml                        # Cephadm alternative
+
+roles/ceph/
+├── defaults/main.yml                      # Fallback defaults (vars_files override these)
+└── templates/
+    └── rook-ceph-cluster-values.yml.j2    # Helm values template (references vars)
+</pre>
+<hr>
+<h2>Change Log</h2>
+<table>
+<tr><th>Date</th><th>Change</th><th>Reasoning</th></tr>
+<tr><td>2026-06-03</td><td>Phase count updated from 5 → 6</td><td>Phase 3 (rook_dashboard) was added as a dedicated phase for NodePort exposure + credential retrieval. Phases renumbered: 0=prepare, 1=operator, 2=cluster, 3=dashboard, 4=validate, 5=teardown.</td></tr>
+<tr><td>2026-06-03</td><td>Architecture diagram MON count: x2 → x1</td><td>R810 KVM lab uses <code>rook_ceph_mon_count: 1</code> (single MON reduces etcd pressure in resource-constrained VMs). Previous value (2) was never deployed.</td></tr>
+<tr><td>2026-06-03</td><td>Infra-storage pool: size 3/PG 64 → size 2/PG 32</td><td>Lab uses 2-way replication (only 6 nodes; 3-way would require more OSDs for healthy distribution). PG 32 is conservative to prevent etcd pressure.</td></tr>
+<tr><td>2026-06-03</td><td>KVM Optimizations table: MON count 2 → 1</td><td>Aligned with actual <code>ceph-values-r810-kvm.yml</code> and <code>ceph_mon.yml</code> which both specify 1 MON for KVM lab.</td></tr>
+<tr><td>2026-06-03</td><td>Added troubleshooting: "0 OSDs" and "rbd pool init hangs"</td><td>These are the two most common KVM lab failures when virtual disks are not yet attached to VMs. Playbook now handles both gracefully (skips init, prints warning).</td></tr>
+<tr><td>2026-06-03</td><td>Storage_Server_HDD/SSD removed from ceph_osd inventory group</td><td>These hosts (172.16.2.50–53) are unreachable in KVM lab ("No route to host"). Commented out with note to re-enable for real_hardware profile.</td></tr>
+<tr><td>2026-06-03</td><td>Helm deploy: removed <code>--wait</code> flag from CephCluster install</td><td><code>--wait</code> blocks for 15 min if OSD pods never start (no disks). Removed to allow playbook to proceed to OSD readiness check which now handles 0-OSD gracefully.</td></tr>
+<tr><td>2026-06-03</td><td>Dashboard patch: changed to strategic merge patch</td><td>Previous JSON patch (<code>op: add</code>) fails if nodePort field already exists (re-run idempotency). Strategic merge patch is idempotent.</td></tr>
+<tr><td>2026-06-03</td><td>Teardown: enhanced to full scorched-earth (Phase 5 + 5b)</td><td>Previous teardown only removed Helm releases + CRDs + namespace but left disks dirty and <code>/var/lib/rook</code> intact. This caused re-deploy failures because: (1) Rook finalizers blocked namespace deletion indefinitely, (2) stale BlueStore signatures on disks prevented OSD re-creation, (3) leftover <code>/var/lib/rook</code> confused Rook's cluster detection. New teardown adds: finalizer removal, CR cleanup, disk wipe (wipefs + dd + sgdisk) on all ceph_osd nodes, and <code>/var/lib/rook</code> removal.</td></tr>
+<tr><td>2026-06-03</td><td>Teardown: disk wipe runs on ceph_osd group automatically</td><td>Previously required manual <code>ansible ceph_osd -m shell</code> after teardown. Now integrated as Phase 5b — no separate command needed for full reset.</td></tr>
+</table>
+</body>
+</html>
