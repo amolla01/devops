@@ -135,12 +135,26 @@
       changed_when: false
 
     - name: Create rook-ceph namespace
-      ansible.builtin.command: kubectl create namespace {{ rook_ceph_namespace }}
+      ansible.builtin.shell: |
+        # Wait if namespace is still terminating from a prior teardown
+        for i in $(seq 1 30); do
+          STATUS=$(kubectl get ns {{ rook_ceph_namespace }} -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+          if [ "$STATUS" = "NotFound" ] || [ -z "$STATUS" ]; then
+            kubectl create namespace {{ rook_ceph_namespace }}
+            exit $?
+          elif [ "$STATUS" = "Active" ]; then
+            echo "Namespace already exists and active"
+            exit 0
+          fi
+          echo "Namespace is $STATUS, waiting..."
+          sleep 5
+        done
+        echo "ERROR: Namespace stuck in Terminating state after 150s"
+        exit 1
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: ns_create
-      failed_when: ns_create.rc != 0 and 'AlreadyExists' not in ns_create.stderr
-      changed_when: ns_create.rc == 0
+      changed_when: "'created' in ns_create.stdout or 'namespace/' in ns_create.stdout"
 
     - name: Label OSD nodes for Rook scheduling
       ansible.builtin.command: >
@@ -651,6 +665,24 @@
         KUBECONFIG: "{{ kubeconfig_path }}"
       ignore_errors: true
       changed_when: true
+
+    - name: "TEARDOWN | Wait for namespace to fully terminate"
+      ansible.builtin.shell: |
+        for i in $(seq 1 60); do
+          if ! kubectl get ns {{ rook_ceph_namespace }} 2>/dev/null | grep -q Terminating; then
+            echo "Namespace gone"
+            exit 0
+          fi
+          sleep 5
+        done
+        # Force-remove finalizers if stuck
+        kubectl get ns {{ rook_ceph_namespace }} -o json 2>/dev/null | \
+          python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+          kubectl replace --raw "/api/v1/namespaces/{{ rook_ceph_namespace }}/finalize" -f - 2>/dev/null || true
+        echo "Namespace force-finalized"
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: false
 
     - name: "TEARDOWN | Report"
       ansible.builtin.debug:
