@@ -1,57 +1,269 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
-Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
-[ERROR]: Error loading tasks: failed at splitting arguments, either an unbalanced jinja2 block or quotes: DEV="{{ item }}"
-# Skip if device doesn't exist
-[ -b "$DEV" ] || { echo "SKIP (not found): $DEV"; exit 0; }
-# Skip if device has mounted partitions
-if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-  echo "SKIP (mounted): $DEV"
-  exit 0
-fi
-# Wipe filesystem signatures
-wipefs -af "$DEV" 2>/dev/null || true
-# Zero first 100MB (clear partition tables, LVM headers)
-dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-# Remove device-mapper entries for this device
-dmsetup remove_all 2>/dev/null || true
-echo "WIPED: $DEV"
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:90:7
+nh1221@PowerEdge-R810:~$ for VM in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 HostB12_1; do
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-01.qcow2 100G
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-02.qcow2 100G
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-01.qcow2 vdb \
+    --driver qemu --subdriver qcow2 --persistent
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-02.qcow2 vdc \
+    --driver qemu --subdriver qcow2 --persistent
+done
+Formatting '/var/lib/libvirt/images/Host12_1-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_1-osd-01.qcow2: Could not create '/var/lib/libvirt/images/Host12_1-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/Host12_1-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_1-osd-02.qcow2: Could not create '/var/lib/libvirt/images/Host12_1-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_1-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
 
-88         _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
-89
-90     - name: Wipe OSD devices (only if empty/unformatted)
-         ^ column 7
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_1-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-  
-  
-  nh1221@PowerEdge-R810:~$ lsblk
-NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-loop0    7:0    0  19.6M  1 loop /snap/desktop-security-center/150
-loop1    7:1    0     4K  1 loop /snap/bare/5
-loop2    7:2    0  16.5M  1 loop /snap/firmware-updater/226
-loop4    7:4    0  91.7M  1 loop /snap/gtk-common-themes/1535
-loop5    7:5    0  66.8M  1 loop /snap/core24/1587
-loop6    7:6    0 606.1M  1 loop /snap/gnome-46-2404/153
-loop7    7:7    0   395M  1 loop /snap/mesa-2404/1165
-loop8    7:8    0  18.8M  1 loop /snap/prompting-client/204
-loop9    7:9    0  15.7M  1 loop /snap/snap-store/1367
-loop10   7:10   0  49.3M  1 loop /snap/snapd/26865
-loop11   7:11   0   580K  1 loop /snap/snapd-desktop-integration/361
-loop12   7:12   0 227.6M  1 loop /snap/thunderbird/1057
-loop13   7:13   0  66.8M  1 loop /snap/core24/1643
-loop14   7:14   0    20M  1 loop /snap/desktop-security-center/151
-loop15   7:15   0  18.8M  1 loop /snap/prompting-client/222
-loop16   7:16   0 247.6M  1 loop /snap/firefox/8364
-loop17   7:17   0 227.7M  1 loop /snap/thunderbird/1117
-loop18   7:18   0 248.5M  1 loop /snap/firefox/8387
-sda      8:0    0 465.3G  0 disk
-├─sda1   8:1    0     1G  0 part /boot/efi
-└─sda2   8:2    0 464.2G  0 part /
-sdb      8:16   0 837.8G  0 disk
-sdc      8:32   0   931G  0 disk
-sdd      8:48   0   931G  0 disk
-sde      8:64   0   931G  0 disk
-sdf      8:80   0   1.1T  0 disk
-sr0     11:0    1  1024M  0 rom
+Formatting '/var/lib/libvirt/images/Host12_2-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_2-osd-01.qcow2: Could not create '/var/lib/libvirt/images/Host12_2-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/Host12_2-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_2-osd-02.qcow2: Could not create '/var/lib/libvirt/images/Host12_2-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_2-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
+
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_2-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
+
+Formatting '/var/lib/libvirt/images/Host12_3-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_3-osd-01.qcow2: Could not create '/var/lib/libvirt/images/Host12_3-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/Host12_3-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host12_3-osd-02.qcow2: Could not create '/var/lib/libvirt/images/Host12_3-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_3-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
+
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host12_3-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
+
+Formatting '/var/lib/libvirt/images/Host34_1-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host34_1-osd-01.qcow2: Could not create '/var/lib/libvirt/images/Host34_1-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/Host34_1-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host34_1-osd-02.qcow2: Could not create '/var/lib/libvirt/images/Host34_1-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host34_1-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
+
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host34_1-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
+
+Formatting '/var/lib/libvirt/images/Host34_2-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host34_2-osd-01.qcow2: Could not create '/var/lib/libvirt/images/Host34_2-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/Host34_2-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/Host34_2-osd-02.qcow2: Could not create '/var/lib/libvirt/images/Host34_2-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host34_2-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
+
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/Host34_2-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
+
+Formatting '/var/lib/libvirt/images/HostB12_1-osd-01.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/HostB12_1-osd-01.qcow2: Could not create '/var/lib/libvirt/images/HostB12_1-osd-01.qcow2': Permission denied
+Formatting '/var/lib/libvirt/images/HostB12_1-osd-02.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=107374182400 lazy_refcounts=off refcount_bits=16
+qemu-img: /var/lib/libvirt/images/HostB12_1-osd-02.qcow2: Could not create '/var/lib/libvirt/images/HostB12_1-osd-02.qcow2': Permission denied
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/HostB12_1-osd-01.qcow2' (as uid:64055, gid:991): No such file or directory
+
+error: Failed to attach disk
+error: Cannot access storage file '/var/lib/libvirt/images/HostB12_1-osd-02.qcow2' (as uid:64055, gid:991): No such file or directory
+
+nh1221@PowerEdge-R810:~$ ls -al /var/lib/libvirt/images
+ls: cannot open directory '/var/lib/libvirt/images': Permission denied
+nh1221@PowerEdge-R810:~$ sudo ls -al /var/lib/libvirt/images
+[sudo: authenticate] Password:
+total 8
+drwx--x--x 2 root root 4096 Mar 17 11:27 .
+drwxr-xr-x 6 root root 4096 May 24 23:25 ..
 nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$  kubectl get pods -n rook-ceph -l app=rook-ceph-osd
+Command 'kubectl' not found, but can be installed with:
+sudo snap install kubectl
+nh1221@PowerEdge-R810:~$
+
+nh1221@PowerEdge-R810:~$ ssh Host12_1
+nh1221@host12_1's password:
+Permission denied, please try again.
+nh1221@host12_1's password:
+
+nh1221@PowerEdge-R810:~$ ssh ubuntu@Host12_1
+ubuntu@host12_1's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-117-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Thu Jun  4 01:29:15 UTC 2026
+
+  System load:  0.56               Processes:               292
+  Usage of /:   53.5% of 18.33GB   Users logged in:         1
+  Memory usage: 12%                IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+2 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Wed Jun  3 22:28:34 2026 from 172.16.2.1
+ubuntu@host12-1:~$ watch kubectl get pods -n rook-ceph -l app=rook-ceph-osd
+ubuntu@host12-1:~$ kubectl get pods -n rook-ceph
+NAME                                                  READY   STATUS    RESTARTS      AGE
+csi-cephfsplugin-9b5xt                                2/2     Running   1 (27h ago)   27h
+csi-cephfsplugin-b8fg5                                2/2     Running   1 (27h ago)   27h
+csi-cephfsplugin-bz9t5                                2/2     Running   1 (27h ago)   27h
+csi-cephfsplugin-cskt2                                2/2     Running   1 (27h ago)   27h
+csi-cephfsplugin-kzszl                                2/2     Running   1 (27h ago)   27h
+csi-cephfsplugin-provisioner-55d789d7bd-2zt4s         5/5     Running   3 (27h ago)   27h
+csi-cephfsplugin-provisioner-55d789d7bd-9wlxh         5/5     Running   3 (27h ago)   27h
+csi-cephfsplugin-s7gv2                                2/2     Running   0             27h
+csi-rbdplugin-9kwll                                   2/2     Running   0             27h
+csi-rbdplugin-b4pmx                                   2/2     Running   1 (27h ago)   27h
+csi-rbdplugin-jjmv7                                   2/2     Running   1 (27h ago)   27h
+csi-rbdplugin-m4vw6                                   2/2     Running   1 (27h ago)   27h
+csi-rbdplugin-provisioner-7c6dcb4dff-c9smv            5/5     Running   3 (27h ago)   27h
+csi-rbdplugin-provisioner-7c6dcb4dff-r67np            5/5     Running   3 (27h ago)   27h
+csi-rbdplugin-rlqj4                                   2/2     Running   1 (27h ago)   27h
+csi-rbdplugin-tclbh                                   2/2     Running   1 (27h ago)   27h
+rook-ceph-crashcollector-host12-3-9445d8c65-6nf67     1/1     Running   0             27h
+rook-ceph-crashcollector-host34-2-76c4846f9d-7jv7k    1/1     Running   0             27h
+rook-ceph-crashcollector-hostb12-1-7bbfc47677-hslp2   1/1     Running   0             27h
+rook-ceph-exporter-host12-3-66f5bc4b7c-kdls9          1/1     Running   0             27h
+rook-ceph-exporter-host34-2-5cffc455c8-njz85          1/1     Running   0             27h
+rook-ceph-exporter-hostb12-1-76f886c88f-5bfmq         1/1     Running   0             27h
+rook-ceph-mds-dc-lab-ceph-fs-a-684bb58b7-86zhl        2/2     Running   0             27h
+rook-ceph-mds-dc-lab-ceph-fs-b-cd5bd7cc-q6dhk         2/2     Running   0             27h
+rook-ceph-mgr-a-7b846f47b4-7nk4l                      2/2     Running   0             27h
+rook-ceph-mon-a-55679cc49b-nbvrj                      2/2     Running   0             27h
+rook-ceph-mon-b-7949fc8b7d-l9bbc                      2/2     Running   0             27h
+rook-ceph-operator-b757f78f8-p6q2t                    1/1     Running   0             28h
+rook-ceph-tools-5797ff59db-lq577                      1/1     Running   0             28h
+ubuntu@host12-1:~$
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$  kubectl get pods -n rook-ceph -l app=rook-ceph-osd
+No resources found in rook-ceph namespace.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph -s
+  cluster:
+    id:     99f830e6-e4f6-45b4-ae67-53454707bda3
+    health: HEALTH_WARN
+            1 MDSs report slow metadata IOs
+            Reduced data availability: 35 pgs inactive
+            OSD count 0 < osd_pool_default_size 3
+
+  services:
+    mon: 2 daemons, quorum b,a (age 27h)
+    mgr: a(active, since 27h)
+    mds: 1/1 daemons up, 1 standby
+    osd: 0 osds: 0 up, 0 in
+
+  data:
+    volumes: 1/1 healthy
+    pools:   4 pools, 35 pgs
+    objects: 0 objects, 0 B
+    usage:   0 B used, 0 B / 0 B avail
+    pgs:     100.000% pgs unknown
+             35 unknown
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_dashboard -e "@cd/vars/ceph-values-r810-kvm.yml" -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+[WARNING]: Failed to parse inventory with 'script' plugin: Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+
+Failed to parse inventory with 'script' plugin.
+
+<<< caused by >>>
+
+Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+Origin: <inventory plugin 'script' with source '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml'>
+
+[WARNING]: Failed to parse inventory with 'auto' plugin: no root 'plugin' key found, '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml' is not a valid YAML inventory plugin config file
+
+Failed to parse inventory with 'auto' plugin.
+
+<<< caused by >>>
+
+no root 'plugin' key found, '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml' is not a valid YAML inventory plugin config file
+Origin: <inventory plugin 'auto' with source '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml'>
+
+[WARNING]: Failed to parse inventory with 'yaml' plugin: Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+
+Failed to parse inventory with 'yaml' plugin.
+
+<<< caused by >>>
+
+Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+Origin: <inventory plugin 'yaml' with source '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml'>
+
+[WARNING]: Failed to parse inventory with 'ini' plugin: Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+
+Failed to parse inventory with 'ini' plugin.
+
+<<< caused by >>>
+
+Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+Origin: <inventory plugin 'ini' with source '/mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml'>
+
+[WARNING]: Unable to parse /mnt/c/Users/nh1221/data-center/_v3/inventory/hosts.yml as an inventory source
+[WARNING]: No inventory was parsed, only implicit localhost is available
+[ERROR]: Unable to retrieve file contents.
+Could not find or access '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml' on the Ansible Controller.
+If you are using a module and expect the file to exist on the remote, see the remote_src option: [Errno 2] No such file or directory: '/mnt/c/Users/nh1221/data-center/_v3/cd/vars/ceph-values-r810-kvm.yml'
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph osd tree
+ID  CLASS  WEIGHT  TYPE NAME     STATUS  REWEIGHT  PRI-AFF
+-1              0  root default
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph df
+--- RAW STORAGE ---
+CLASS  SIZE  AVAIL  USED  RAW USED  %RAW USED
+TOTAL   0 B    0 B   0 B       0 B          0
+
+--- POOLS ---
+POOL                     ID  PGS  STORED  OBJECTS  USED  %USED  MAX AVAIL
+kube-rbd                  1    1     0 B        0   0 B      0        0 B
+dc-lab-ceph-fs-metadata   2    1     0 B        0   0 B      0        0 B
+dc-lab-ceph-fs-data0      3    1     0 B        0   0 B      0        0 B
+infra-storage             4   32     0 B        0   0 B      0        0 B
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl get sc
+NAME                 PROVISIONER                     RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+ceph-filesystem      rook-ceph.cephfs.csi.ceph.com   Retain          Immediate              true                   28h
+ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com      Retain          Immediate              true                   28h
+local-path           rancher.io/local-path           Delete          WaitForFirstConsumer   false                  46h
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-rbd
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: ceph-rbd
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+persistentvolumeclaim/test-rbd created
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl get pvc test-rbd
+NAME       STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+test-rbd   Pending                                      ceph-rbd       <unset>                 13s
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl delete pvc test-rbd
+persistentvolumeclaim "test-rbd" deleted
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
