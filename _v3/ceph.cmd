@@ -324,3 +324,59 @@ kubectl get pvc test-rbd   # Should show Bound
 kubectl delete pvc test-rbd
 
 Key point: Step 1 is the only manual action on the R810 hypervisor. Everything after that is either automatic (Rook discovery) or a single Ansible command. The playbooks now handle the "0 OSDs" case gracefully if you run them before disks are attached — they'll skip instead of hanging.
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Full Teardown + Fresh Start
+Option A: Use the playbook (recommended)
+# From Lab-ControlNode — this wipes EVERYTHING (Helm releases + CRDs + namespace + disks)
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_teardown -v
+
+
+Option B: Manual teardown (if playbook has issues)
+
+# 1. Remove Helm releases
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph osd pool rm kube-rbd kube-rbd --yes-i-really-really-mean-it
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph osd pool rm infra-storage infra-storage --yes-i-really-really-mean-it
+
+helm uninstall rook-ceph-cluster -n rook-ceph
+helm uninstall rook-ceph -n rook-ceph
+
+# 2. Remove finalizers (prevents namespace from hanging forever)
+for resource in cephcluster cephblockpool cephfilesystem; do
+  for item in $(kubectl get $resource -n rook-ceph -o name 2>/dev/null); do
+    kubectl patch $item -n rook-ceph --type merge -p '{"metadata":{"finalizers":null}}'
+  done
+done
+
+# 3. Delete CRDs
+kubectl delete crd --all -l app.kubernetes.io/part-of=rook-ceph-operator
+
+# 4. Delete namespace
+kubectl delete namespace rook-ceph --timeout=120s
+
+# 5. Wipe disks on ALL OSD nodes (from Lab-ControlNode)
+ansible ceph_osd -i inventory/hosts.yml -m shell \
+  -a "wipefs -af /dev/vdb /dev/vdc; dd if=/dev/zero of=/dev/vdb bs=1M count=100; dd if=/dev/zero of=/dev/vdc bs=1M count=100; rm -rf /var/lib/rook" -b
+
+Then: Create Disks + Fresh Deploy
+
+# Step 1: On R810 hypervisor (with sudo)
+sudo bash -c 'for VM in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 HostB12_1; do
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-01.qcow2 100G
+  qemu-img create -f qcow2 /var/lib/libvirt/images/${VM}-osd-02.qcow2 100G
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-01.qcow2 vdb \
+    --driver qemu --subdriver qcow2 --persistent
+  virsh attach-disk $VM /var/lib/libvirt/images/${VM}-osd-02.qcow2 vdc \
+    --driver qemu --subdriver qcow2 --persistent
+done'
+
+# Step 2: Fresh deploy (from Lab-ControlNode)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+
+Key facts about the teardown tag:
+
+Uses tags: [rook_teardown, never] — the never special tag means it only runs when you explicitly request it with --tags rook_teardown
+It will never accidentally run during a normal --tags rook invocation
+It's a full scorched-earth: Helm releases → finalizers → CRDs → namespace → disk wipe → /var/lib/rook removal
