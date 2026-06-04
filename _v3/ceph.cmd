@@ -446,3 +446,28 @@ To re-deploy with the fix (teardown first to clean DM):
 ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_teardown -v
 
 ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+
+
+The cluster shows osd: 0 osds: 0 up, 0 in and the PVC can't bind because there's no storage capacity. This is a timing issue — the Rook operator needs time after cluster creation to create OSD prepare jobs that scan for clean disks. It's not a regression; the operator just hadn't gotten to OSD provisioning yet when the validation ran (only ~1 minute after cluster deploy).
+
+Check if OSDs are coming up now:
+
+kubectl get pods -n rook-ceph -l app=rook-ceph-osd-prepare
+kubectl get pods -n rook-ceph -l app=rook-ceph-osd
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph -s
+
+If OSD prepare jobs ran but found no disks, check:
+
+kubectl logs -n rook-ceph -l app=rook-ceph-osd-prepare --tail=50
+
+3. "sheba-cloud-infra" namespace
+That namespace doesn't exist yet because you haven't run deploy_sheba_infra_services.yml. It's step 14+ in the deployment order — you're still at step 13 (Ceph). That's expected.
+
+Fix: Stale Banner Text
+I also noticed the dashboard banner still says "MetalLB L2 ARP" — let me fix that:
+
+Searched for MetalLB L2 ARP and updated deploy_ceph_rook.yml+1-1
+Fixed the stale "L2 ARP" banner text.
+
+Bottom line: The deployment succeeded. Give the Rook operator 3-5 minutes to create OSD prepare jobs and spin up OSD pods. Then ceph -s will show the disks online, and PVCs will bind. The sheba-cloud-infra namespace comes later when you run the infra services playbook.
+
