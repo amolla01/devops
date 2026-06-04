@@ -1,0 +1,234 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_metallb.yml -i inventory/hosts.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [MetalLB Deployment — Bare-Metal LoadBalancer] *************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+
+TASK [metallb : Include preflight checks] ***********************************************************************************************************************************************************************
+included: /mnt/c/Users/nh1221/data-center/_v3/roles/metallb/tasks/preflight.yml for Host12_1
+
+TASK [metallb : preflight | Verify kubectl access] **************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - cluster-info
+    delta: '0:00:00.146665'
+    end: '2026-06-04 22:43:23.360762'
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:23.214097'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        [0;32mKubernetes control plane[0m is running at [0;33mhttps://127.0.0.1:6443[0m
+
+        To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+    stdout_lines: <omitted>
+
+TASK [metallb : preflight | Verify Helm is installed] ***********************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - helm
+    - version
+    - --short
+    delta: '0:00:00.111172'
+    end: '2026-06-04 22:43:25.829361'
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:25.718189'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: v3.14.2+gc309b6f
+    stdout_lines: <omitted>
+
+TASK [metallb : preflight | Check if MetalLB namespace already exists] ******************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - namespace
+    - metallb-system
+    delta: '0:00:00.139165'
+    end: '2026-06-04 22:43:28.388932'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:28.249767'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        NAME             STATUS   AGE
+        metallb-system   Active   16m
+    stdout_lines: <omitted>
+
+TASK [metallb : preflight | Check if strict ARP is enabled (required for L2 mode)] ******************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: metallb_mode == "l2"
+    skip_reason: Conditional result was False
+
+TASK [metallb : preflight | Enable strict ARP in kube-proxy (L2 mode)] ******************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: metallb_mode == "l2"
+    skip_reason: Conditional result was False
+
+TASK [metallb : preflight | Verify IP pool range is not in use] *************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        start_ip=$(echo "172.16.2.200-172.16.2.220" | cut -d'-' -f1)
+        if ping -c1 -W1 "$start_ip" >/dev/null 2>&1; then
+          echo "IP_CONFLICT"
+        else
+          echo "IP_FREE"
+        fi
+    delta: '0:00:01.016653'
+    end: '2026-06-04 22:43:32.164510'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:31.147857'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: IP_FREE
+    stdout_lines: <omitted>
+
+TASK [metallb : Include MetalLB Helm deployment] ****************************************************************************************************************************************************************
+included: /mnt/c/Users/nh1221/data-center/_v3/roles/metallb/tasks/deploy.yml for Host12_1
+
+TASK [metallb : deploy | Add MetalLB Helm repository] ***********************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - helm
+    - repo
+    - add
+    - metallb
+    - https://metallb.github.io/metallb
+    delta: '0:00:00.107899'
+    end: '2026-06-04 22:43:35.359927'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:35.252028'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: '"metallb" already exists with the same configuration, skipping'
+    stdout_lines: <omitted>
+
+TASK [metallb : deploy | Update Helm repositories] **************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd:
+    - helm
+    - repo
+    - update
+    delta: '0:00:00.286783'
+    end: '2026-06-04 22:43:38.155461'
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:37.868678'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Hang tight while we grab the latest from your chart repositories...
+        ...Successfully got an update from the "metallb" chart repository
+        ...Successfully got an update from the "rook-release" chart repository
+        Update Complete. ⎈Happy Helming!⎈
+    stdout_lines: <omitted>
+
+TASK [metallb : deploy | Verify API server is responsive before Helm install] ***********************************************************************************************************************************
+ok: [Host12_1] =>
+    attempts: 1
+    changed: false
+    cmd:
+    - kubectl
+    - get
+    - nodes
+    - --request-timeout=10s
+    delta: '0:00:00.155675'
+    end: '2026-06-04 22:43:40.655119'
+    msg: ''
+    rc: 0
+    start: '2026-06-04 22:43:40.499444'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        NAME        STATUS   ROLES           AGE     VERSION
+        host12-1    Ready    control-plane   2d20h   v1.29.4
+        host12-2    Ready    <none>          2d19h   v1.29.4
+        host12-3    Ready    <none>          2d19h   v1.29.4
+        host34-1    Ready    control-plane   2d20h   v1.29.4
+        host34-2    Ready    <none>          2d19h   v1.29.4
+        hostb12-1   Ready    control-plane   2d20h   v1.29.4
+    stdout_lines: <omitted>
+
+TASK [metallb : deploy | Install MetalLB Helm chart] ************************************************************************************************************************************************************
+FAILED - RETRYING: [Host12_1]: deploy | Install MetalLB Helm chart (2 retries left).
+FAILED - RETRYING: [Host12_1]: deploy | Install MetalLB Helm chart (1 retries left).
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/roles/metallb/tasks/deploy.yml:27:3
+
+25   until: api_check.rc == 0
+26
+27 - name: "deploy | Install MetalLB Helm chart"
+     ^ column 3
+
+fatal: [Host12_1]: FAILED! =>
+    attempts: 2
+    changed: false
+    cmd:
+    - helm
+    - upgrade
+    - --install
+    - metallb
+    - metallb/metallb
+    - --namespace
+    - metallb-system
+    - --create-namespace
+    - --version
+    - 0.14.8
+    - --set
+    - controller.replicas=1
+    - --set
+    - speaker.tolerateMaster=true
+    - --wait
+    - --timeout
+    - 300s
+    delta: '0:00:00.457250'
+    end: '2026-06-04 22:44:51.371318'
+    msg: non-zero return code
+    rc: 1
+    start: '2026-06-04 22:44:50.914068'
+    stderr: 'Error: UPGRADE FAILED: another operation (install/upgrade/rollback) is in
+        progress'
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=10   changed=0    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+
+
+
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ kubectl get pods -n metallb-system
+NAME                                  READY   STATUS    RESTARTS   AGE
+metallb-controller-76bf5df6db-76f8h   1/1     Running   0          18m
+metallb-speaker-bg5xd                 4/4     Running   0          18m
+metallb-speaker-dvltx                 4/4     Running   0          18m
+metallb-speaker-n57qj                 4/4     Running   0          18m
+metallb-speaker-xdlhz                 4/4     Running   0          18m
+metallb-speaker-xt9qs                 4/4     Running   0          18m
+metallb-speaker-z4qwb                 4/4     Running   0          18m
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+
