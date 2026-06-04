@@ -400,5 +400,30 @@ ansible ceph_osd -i inventory/hosts.yml -m reboot -b
 ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
 
 # 6. Fresh deploy (will now wait if namespace is still terminating)
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+
+
+# 1. Wait for namespace to fully terminate
+kubectl get ns rook-ceph
+# If it shows "Terminating", force-delete it:
+kubectl get ns rook-ceph -o json | \
+  python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+  kubectl replace --raw "/api/v1/namespaces/rook-ceph/finalize" -f -
+
+# 2. Verify namespace is gone
+kubectl get ns rook-ceph
+# Should return: "Error from server (NotFound)"
+
+# 3. Check disk visibility on VMs (from Lab-ControlNode)
+ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
+
+# 4. If /dev/vdb and /dev/vdc do NOT appear in lsblk output, reboot VMs:
+ansible ceph_osd -i inventory/hosts.yml -m reboot -b
+
+# 5. After reboot, verify disks:
+ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
+# Should show: vdb 100G disk, vdc 100G disk
+
+# 6. Fresh deploy
 ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
   -i inventory/hosts.yml -v
