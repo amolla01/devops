@@ -427,3 +427,22 @@ ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE"
 # 6. Fresh deploy
 ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
   -i inventory/hosts.yml -v
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+
+For the dashboard timeout — that's a separate NodePort routing issue. Run these diagnostics:
+# 1. Check if kube-proxy is running on the node
+kubectl get pods -n kube-system -l k8s-app=kube-proxy -o wide
+
+# 2. Try curl from INSIDE the cluster (on Host12_1 directly)
+ansible kube_controllers[0] -i inventory/hosts.yml -m shell -a "curl -k https://localhost:31443/ 2>&1 | head -5" -b
+
+# 3. Check iptables rules for NodePort
+ansible kube_controllers[0] -i inventory/hosts.yml -m shell -a "iptables -t nat -L | grep 31443" -b
+
+
+To re-deploy with the fix (teardown first to clean DM):
+
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_teardown -v
+
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
