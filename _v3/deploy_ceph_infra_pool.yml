@@ -26,10 +26,10 @@
   tags: [ceph_infra_pool, create_pool]
   vars:
     ceph_infra_pool_name: "infra-storage"
-    ceph_infra_pool_pg_num: 64
-    ceph_infra_pool_pgp_num: 64
-    ceph_infra_pool_size: 3
-    ceph_infra_pool_min_size: 2
+    ceph_infra_pool_pg_num: 32        # Conservative for lab (reduced from 64)
+    ceph_infra_pool_pgp_num: 32       # Conservative for lab (reduced from 64)
+    ceph_infra_pool_size: 2           # Lab uses 2-way replication (reduced from 3)
+    ceph_infra_pool_min_size: 1       # Lab minimum (reduced from 2)
     ceph_infra_pool_application: "rbd"
     ceph_infra_pool_crush_rule: "replicated_rule"
     ceph_infra_client_name: "client.infra-storage"
@@ -94,14 +94,35 @@
       when: pool_created is changed
       changed_when: true
 
+    - name: Check OSD count before RBD init
+      ansible.builtin.shell: |
+        kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }} \
+          -- ceph osd stat -f json | python3 -c "import sys,json; print(json.load(sys.stdin).get('num_up_osds', 0))"
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: _osd_up_count
+      changed_when: false
+
     - name: Initialize RBD pool
       ansible.builtin.command: >
         kubectl exec -n {{ rook_ceph_namespace }} {{ _ceph_toolbox_pod.stdout }}
         -- rbd pool init {{ ceph_infra_pool_name }}
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
-      when: pool_created is changed
+      when:
+        - pool_created is changed
+        - (_osd_up_count.stdout | int) > 0
       changed_when: true
+
+    - name: Warn if no OSDs available (pool init skipped)
+      ansible.builtin.debug:
+        msg: |
+          WARNING: No OSDs are UP — rbd pool init skipped.
+          The pool '{{ ceph_infra_pool_name }}' was created but PGs will remain
+          in 'unknown' state until OSDs come online.
+          Re-run this playbook after OSDs are available:
+            ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
+      when: (_osd_up_count.stdout | int) == 0
 
     - name: Check if auth keyring exists
       ansible.builtin.command: >
@@ -267,25 +288,48 @@
         msg: "StorageClass '{{ storageclass_name }}' ready — backed by Ceph pool '{{ ceph_infra_pool_name }}'"
 
 - name: "Phase C: Validate infra-storage pool health"
-  hosts: "ceph_controllers[0]"
+  hosts: "kube_controllers[0]"
   gather_facts: false
   become: true
   tags: [ceph_infra_pool, validate]
   vars:
     ceph_infra_pool_name: "infra-storage"
+    rook_ceph_namespace: "rook-ceph"
+    kubeconfig_path: "/etc/kubernetes/admin.conf"
   tasks:
+    - name: Get toolbox pod name
+      ansible.builtin.shell: |
+        kubectl get pod -n {{ rook_ceph_namespace }} -l app=rook-ceph-tools \
+          -o jsonpath='{.items[0].metadata.name}'
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: toolbox_pod
+      changed_when: false
+
     - name: Check pool statistics
-      ansible.builtin.command: ceph osd pool stats {{ ceph_infra_pool_name }}
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ toolbox_pod.stdout }} --
+        ceph osd pool stats {{ ceph_infra_pool_name }}
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
       register: pool_stats
       changed_when: false
 
     - name: Check pool autoscaler status
-      ansible.builtin.command: ceph osd pool autoscale-status
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ toolbox_pod.stdout }} --
+        ceph osd pool autoscale-status
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
       register: autoscale
       changed_when: false
 
     - name: Final health check
-      ansible.builtin.command: ceph health
+      ansible.builtin.command: >
+        kubectl exec -n {{ rook_ceph_namespace }} {{ toolbox_pod.stdout }} --
+        ceph health
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
       register: health
       changed_when: false
 

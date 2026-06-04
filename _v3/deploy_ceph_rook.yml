@@ -91,7 +91,8 @@
     - name: Wipe OSD devices (only if empty/unformatted)
       ansible.builtin.shell: |
         DEV="{{ item }}"
-        if [ ! -b "$DEV" ]; then
+        # Use lsblk to verify device exists (test -b is unreliable after sgdisk --zap-all)
+        if ! lsblk "$DEV" >/dev/null 2>&1; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
@@ -99,9 +100,12 @@
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Refresh kernel partition table first
+        partprobe "$DEV" 2>/dev/null || true
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
       loop: "{{ _osd_devices }}"
       register: disk_wipe
