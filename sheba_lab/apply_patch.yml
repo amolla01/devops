@@ -913,7 +913,8 @@
       -c "redistribute connected route-map DENY_MGMT"{% for port in _effective_bgp_neighbors %} \
       -c "neighbor {{ port }} activate"{% endfor %}{% for dl in _effective_downlink_peers %} \
       -c "neighbor {{ dl.port }} activate"{% endfor %}{% for peer in _effective_ip_peers %} \
-      -c "neighbor {{ peer.neighbor_ip }} activate"{% endfor %} \
+      -c "neighbor {{ peer.neighbor_ip }} activate" \
+      -c "neighbor {{ peer.neighbor_ip }} route-map DENY_MGMT out"{% endfor %} \
       -c "exit-address-family" \
       -c "address-family ipv6 unicast" \
       -c "redistribute connected route-map DENY_MGMT"{% for port in _effective_bgp_neighbors %} \
@@ -923,8 +924,11 @@
       -c "end" \
       -c "write"
 
-    # Force FRR to re-evaluate redistributed routes against the route-map.
+    # Force FRR to re-evaluate all outbound routes against the route-maps.
+    # This withdraws any previously-advertised management routes from peers.
     docker exec bgp vtysh -c "clear ip bgp * soft out" 2>/dev/null || true
+    sleep 2
+    docker exec bgp vtysh -c "clear ip bgp * soft in" 2>/dev/null || true
     {%- else %}
     # No neighbors to configure — clear BGP entirely.
     docker exec bgp vtysh \
