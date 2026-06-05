@@ -273,4 +273,51 @@ ssh nh1221@R810 'sudo virsh dumpxml Exit_Router1 | grep -A2 "csum"'
 ssh admin@172.16.2.31 "show bgp summary"
 # Exit_Router1 peer should show Established
 
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Break down the following steps and list out all the playbooks it call in order:
+# ══════ STEP 13: INFRASTRUCTURE ══════
+./deploy_lab_v3.sh infra-services
 
+
+Here's the breakdown:
+
+./deploy_lab_v3.sh infra-services
+Calls ensure_preflight then run_infra_services(), 
+which runs these 6 playbooks sequentially:
+:
+#	Playbook	                                    Purpose
+1	playbooks/reused/deploy_kubespray.yml	        Kubernetes cluster (kubespray)
+2	playbooks/reused/deploy_postgresql.yml	      PostgreSQL database
+3	playbooks/reused/deploy_maas.yml	            MaaS (Metal as a Service)
+4	playbooks/reused/deploy_ceph.yml	            Ceph distributed storage
+5	playbooks/reused/deploy_openstack_helm.yml	  OpenStack via Helm charts
+6	playbooks/reused/deploy_monitoring.yml	      Monitoring stack
+Each is run via run_ansible which wraps ansible-playbook -i inventory/hosts.yml <playbook> -v (executed locally in WSL). No --limit is applied — all target all applicable hosts from inventory.
+
+We already decided that as long as we run in kvm, we do not need executing MaaS playbook, and also we added MetalLb playbook, in between. Please verify the scripts and validate our objectives.
+
+The deploy_metallb.yml playbook exists but run_infra_services() hasn't been updated yet. It still includes MaaS and is missing MetalLB.
+
+The fix — remove MaaS, insert MetalLB after Kubespray (MetalLB needs a running K8s cluster but should precede services that depend on LoadBalancer IPs):
+
+Edited
+deploy_lab_v3.sh+1-1
+Now let me also check if MaaS is referenced in the phased runs:
+
+There's still a MaaS reference in run_phase_r620(). Since MaaS is irrelevant for KVM, I'll replace it with MetalLB there too:
+
+Edited
+deploy_lab_v3.sh+1-1
+Now let me also update the usage/help text to reflect the change:
+
+Done. Here's the updated infra-services sequence:
+
+#	Playbook	                    Status
+1	deploy_kubespray.yml	        unchanged
+2	deploy_metallb.yml	          added (right after K8s is up)
+3	deploy_postgresql.yml	        unchanged
+4	deploy_maas.yml	              removed (not needed in KVM)
+5	deploy_ceph.yml	              unchanged
+6	deploy_openstack_helm.yml	    unchanged
+7	deploy_monitoring.yml	        unchanged
+The phase-r620 function was also updated: MaaS replaced with MetalLB (same host limit as kubespray since MetalLB deploys cluster-wide).
