@@ -1,0 +1,547 @@
+---
+# sonic_base/tasks/system_hardening.yml
+# Applies system-level hardening required for reliable Ansible management:
+#   1. Disables UseDNS in sshd to prevent banner-exchange timeouts.
+#   2. Ensures the device hostname resolves locally so sudo does not emit
+#      "unable to resolve host" warnings that cause SSH pipe breaks.
+# Safe to run on every Day-0 and re-run idempotently.
+
+# ---------------------------------------------------------------------------
+# Password — SONiC VS may still boot with the factory password in /etc/shadow.
+# Normalize every switch to the shared admin password and update Ansible's
+# in-play credentials so later tasks stay in sync.
+# ---------------------------------------------------------------------------
+- name: "hardening | Set target admin password fact"
+  ansible.builtin.set_fact:
+    _target_password: "{{ sonic_admin_password }}"
+
+# After preflight's meta: reset_connection and SSH transport pin, the SSH
+# connection may be stale (especially on resource-constrained KVM VS after
+# swap creation I/O). Re-establish before running any become tasks.
+- name: "hardening | Re-establish SSH before password sync"
+  ansible.builtin.wait_for_connection:
+    delay: 2
+    timeout: 60
+    sleep: 5
+
+# Unconditionally set the password — ansible.builtin.user only writes to
+# /etc/shadow when the hash differs, so this is idempotent. We also always
+# update the in-play become_password so it stays in sync regardless of what
+# value inventory has. The broken 'su' check (which always returned 'ok' when
+# running as root) is removed.
+- name: "hardening | Ensure admin password is synchronized"
+  ansible.builtin.user:
+    name: admin
+    password: "{{ _target_password | password_hash('sha512') }}"
+  no_log: true
+
+- name: "hardening | Sync ansible become_password with current admin password"
+  ansible.builtin.set_fact:
+    ansible_ssh_pass: "{{ _target_password }}"
+    ansible_become_password: "{{ _target_password }}"
+  no_log: true
+
+- name: "hardening | Disable UseDNS in sshd_config"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?UseDNS'
+    line: 'UseDNS no'
+    state: present
+    backup: yes
+  register: _sshd_usedns
+  when: sonic_enable_sshd_tuning | bool
+  tags: [hardening, sshd]
+
+- name: "hardening | Raise MaxStartups to prevent banner-exchange drops under load"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?MaxStartups'
+    line: 'MaxStartups 50'
+    state: present
+  register: _sshd_maxstartups
+  when: sonic_enable_sshd_tuning | bool
+  tags: [hardening, sshd]
+
+# Suppress all login banners — with pipelining=True, SSH banners/motd get
+# mixed into Ansible's stdin/stdout data pipe and corrupt module communication.
+- name: "hardening | Suppress SSH banners for pipelining compatibility"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^#?PrintMotd', line: 'PrintMotd no' }
+    - { regexp: '^#?Banner', line: 'Banner none' }
+    - { regexp: '^#?PrintLastLog', line: 'PrintLastLog no' }
+  loop_control:
+    label: "{{ item.line }}"
+  register: _sshd_banner
+  when: sonic_enable_sshd_tuning | bool
+  tags: [hardening, sshd]
+
+- name: "hardening | Clear /etc/issue.net to prevent stray banner output"
+  ansible.builtin.copy:
+    content: ''
+    dest: /etc/issue.net
+    mode: '0644'
+  register: _issue_cleared
+  when: sonic_enable_sshd_tuning | bool
+  tags: [hardening, sshd]
+
+- name: "hardening | Restart sshd to apply config changes"
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+  when: _sshd_usedns.changed or _sshd_maxstartups.changed or _sshd_banner.changed or _issue_cleared.changed
+  tags: [hardening, sshd]
+
+- name: "hardening | Kill stale SSH ControlMaster process after sshd restart"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _sshd_usedns.changed or _sshd_maxstartups.changed
+  tags: [hardening, sshd]
+
+- name: "hardening | Reset SSH ControlMaster socket after sshd restart"
+  ansible.builtin.meta: reset_connection
+
+- name: "hardening | Re-establish SSH connection after sshd restart"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_sshd_restart
+  changed_when: false
+  retries: 6
+  delay: 10
+  until: "'ok' in (_ssh_after_sshd_restart.stdout | default(''))"
+  when: _sshd_usedns.changed or _sshd_maxstartups.changed
+  tags: [hardening, sshd]
+
+- name: "hardening | Gather current Linux hostname"
+  ansible.builtin.command: hostname
+  register: _linux_hostname
+  changed_when: false
+  tags: [hardening, hosts]
+
+- name: "hardening | Set Linux hostname to match SONiC ConfigDB hostname"
+  ansible.builtin.command: hostnamectl set-hostname {{ hostname }}
+  when: _linux_hostname.stdout | trim != hostname
+  tags: [hardening, hosts]
+
+# Read back the hostname the kernel actually recorded. Linux (systemd-hostnamed)
+# may silently normalise the name: e.g. "Spine_S1" → "SpineS1" (underscores
+# stripped for RFC 952/1123 compliance). We use the actual kernel value in
+# /etc/hosts so that sudo can always resolve it without "unable to resolve host"
+# warnings that corrupt Ansible's pipelining stdin/stdout channel.
+- name: "hardening | Read back actual kernel hostname after hostnamectl"
+  ansible.builtin.command: hostname
+  register: _actual_hostname
+  changed_when: false
+  tags: [hardening, hosts]
+
+# With pipelining=True, sudo's "unable to resolve host" warning gets mixed
+# into the stdin/stdout pipe Ansible uses for module data, causing UNREACHABLE.
+# Disable pipelining for just this task so the warning goes to stderr safely.
+# After this succeeds, all subsequent sudo calls resolve the hostname fine.
+- name: "hardening | Ensure hostname resolves in /etc/hosts"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "^127\\.0\\.1\\.1\\s"
+    line: "127.0.1.1 {{ _actual_hostname.stdout | trim }}"
+    state: present
+    insertafter: '^127\.0\.0\.1'
+  vars:
+    ansible_pipelining: false
+  tags: [hardening, hosts]
+
+# ---------------------------------------------------------------------------
+# Swap — KVM VS ships with no swap. SONiC runs 15+ containers on 2GB RAM;
+# without swap, the Docker daemon deadlocks under memory pressure (OOM),
+# making every 'docker exec' hang indefinitely. A 2GB swapfile prevents this.
+#
+# IMPORTANT: dd writing 2GB causes heavy I/O that kills sshd on this KVM VS
+# (the SSH connection drops mid-task). The entire sequence is run as a single
+# async background job (poll:0) so the shell process keeps running even when
+# sshd restarts. We reconnect and poll async_status for completion.
+# ---------------------------------------------------------------------------
+# Check whether /swapfile already exists and is at the target size (2GB =
+# 2147483648 bytes). If preflight created a small 256MB /swapfile to protect
+# sonic-cfggen from OOM, hardening must still expand it to the full 2GB.
+- name: "hardening | Check /swapfile size"
+  ansible.builtin.stat:
+    path: /swapfile
+  register: _swapfile_stat_h
+  tags: [hardening, swap]
+
+# _swap_needs_setup is true when: no swapfile, OR swapfile is smaller than 1GB.
+# The preflight phase already creates a 1GB swap which is sufficient for 4GB
+# KVM VMs. Previously this threshold was 2GB which caused a slow dd write
+# (2.5 min) on every switch since fallocate isn't supported on SONiC's rootfs.
+- name: "hardening | Set swap setup flag"
+  ansible.builtin.set_fact:
+    _swap_needs_setup: >-
+      {{
+        (sonic_enable_swap_hardening | bool)
+        and (
+          (not (_swapfile_stat_h.stat.exists | default(false)))
+          or ((_swapfile_stat_h.stat.size | default(0)) | int < 1073741824)
+        )
+      }}
+  tags: [hardening, swap]
+
+# Keep _swap_active for backward-compat with poll/async_status when conditions.
+- name: "hardening | Check if any swap is already active"
+  ansible.builtin.command: swapon --show --noheadings
+  register: _swap_active
+  changed_when: false
+  failed_when: false
+  tags: [hardening, swap]
+
+# Explicitly refresh the SSH connection before launching the async dd job.
+# SONiC background events (swss, bgpd) can silently kill the ControlMaster
+# between tasks. Launching async on a dead ControlMaster gives UNREACHABLE.
+# Killing the socket and waiting for TCP ensures we start with a live channel.
+- name: "hardening | Kill stale ControlMaster before swap setup"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Reset connection cache before swap setup"
+  ansible.builtin.meta: reset_connection
+
+- name: "hardening | Wait for SSH port 22 before swap setup"
+  ansible.builtin.shell: |
+    for i in $(seq 1 12); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 60s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_swap_pre
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_swap_pre.stdout"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Re-establish SSH before swap setup"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_before_swap_setup
+  changed_when: false
+  retries: 8
+  delay: 10
+  until: "'ok' in (_ssh_before_swap_setup.stdout | default(''))"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Create and activate 2GB swap (async — survives sshd restart during dd)"
+  ansible.builtin.shell: |
+    # Create the new 2GB file at a temporary path BEFORE touching the live swap.
+    # fallocate is near-instant on ext4; no heavy I/O, sshd stays up.
+    if fallocate -l 2G /swapfile.new 2>/dev/null; then
+      : # fallocate succeeded
+    else
+      dd if=/dev/zero of=/swapfile.new bs=4M count=512 status=none
+    fi
+    chmod 600 /swapfile.new
+    mkswap /swapfile.new
+    # Activate the new swap FIRST so the kernel has headroom before we touch
+    # the old file.  Then DELETE the old /swapfile path in-place without
+    # calling swapoff — Linux orphans the inode and drains its pages naturally,
+    # which is instantaneous.  Calling swapoff here would block ~150 s on a
+    # loaded 2 GB guest while the kernel evicts every page back to RAM.
+    swapon /swapfile.new
+    rm -f /swapfile
+    mv /swapfile.new /swapfile
+  async: 300
+  poll: 0
+  register: _swap_job
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+# dd I/O causes sshd to restart. Kill the dead ControlMaster socket and
+# wait for sshd to recover before polling the async job status.
+- name: "hardening | Kill stale ControlMaster socket after dd I/O load"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Reset connection cache after dd"
+  ansible.builtin.meta: reset_connection
+
+- name: "hardening | Wait for SSH port 22 to recover after dd I/O load"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_swap_dd
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_swap_dd.stdout"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Re-establish SSH after dd"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+      -o LogLevel=ERROR -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no \
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_after_dd
+  changed_when: false
+  retries: 12
+  delay: 15
+  until: "'ok' in (_ssh_after_dd.stdout | default(''))"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Reset connection cache after raw SSH recovery from dd"
+  ansible.builtin.meta: reset_connection
+
+- name: "hardening | Poll async swap job until complete"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+      -o LogLevel=ERROR -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no \
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "cat ~/.ansible_async/{{ _swap_job.ansible_job_id }}" 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _swap_poll
+  retries: 30
+  delay: 5
+  until: >-
+    (_swap_poll.rc | default(1)) == 0
+    and ('"finished": 1' in (_swap_poll.stdout | default('')))
+  failed_when: >-
+    (_swap_poll.rc | default(1)) == 0
+    and ('"finished": 1' in (_swap_poll.stdout | default('')))
+    and ('"rc": 0' not in (_swap_poll.stdout | default('')))
+  changed_when: false
+  when: >-
+    _swap_needs_setup | bool
+    and (_swap_job.ansible_job_id is defined)
+  tags: [hardening, swap]
+
+# After heavy dd I/O + swap activation the ControlMaster socket may have
+# died. Re-establish before the final systemd tasks.
+- name: "hardening | Kill stale ControlMaster before systemd swap unit"
+  ansible.builtin.shell:
+    cmd: >
+      ssh -o ControlPath=/tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+          -O stop {{ ansible_host }} 2>/dev/null || true;
+      rm -f /tmp/ansible-ssh-{{ inventory_hostname }}-22-admin
+      /tmp/ansible-ssh-{{ ansible_host }}-22-admin 2>/dev/null || true
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  changed_when: false
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Reset connection before systemd swap unit"
+  ansible.builtin.meta: reset_connection
+
+- name: "hardening | Wait for SSH port 22 before systemd swap unit"
+  ansible.builtin.shell: |
+    for i in $(seq 1 24); do
+      output=$(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+               -o ConnectTimeout=5 -o BatchMode=yes -o LogLevel=ERROR \
+               {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1)
+      rc=$?
+      if [ $rc -eq 0 ] || echo "$output" | grep -qi "permission denied"; then
+        echo "PORT_OPEN"
+        exit 0
+      fi
+      sleep 5
+    done
+    echo "TIMEOUT after 120s waiting for {{ ansible_host }}:22"
+    exit 1
+  args:
+    executable: /bin/bash
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _port_check_swap_systemd
+  changed_when: false
+  failed_when: "'PORT_OPEN' not in _port_check_swap_systemd.stdout"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Probe privileged SSH before systemd swap unit"
+  ansible.builtin.command: /bin/true
+  register: _swap_systemd_probe
+  changed_when: false
+  failed_when: false
+  ignore_unreachable: true
+  vars:
+    ansible_pipelining: false
+    ansible_ssh_common_args: >-
+      -o ControlMaster=no -o ControlPath=none
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3
+      -o LogLevel=ERROR -o PreferredAuthentications=password
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Mark whether systemd swap unit probe needs recovery"
+  ansible.builtin.set_fact:
+    _swap_systemd_probe_failed: >-
+      {{
+        (_swap_systemd_probe.unreachable | default(false))
+        or ((_swap_systemd_probe.rc | default(1) | int) != 0)
+      }}
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Recover after failed systemd swap probe"
+  ansible.builtin.include_tasks: hardening_swap_probe_recovery.yml
+  when:
+    - _swap_needs_setup | bool
+    - _swap_systemd_probe_failed | bool
+  tags: [hardening, swap]
+
+- name: "hardening | Re-establish raw SSH before systemd swap unit tasks"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+      -o LogLevel=ERROR -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no \
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} echo ok 2>&1
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  register: _ssh_before_swap_systemd_tasks
+  changed_when: false
+  retries: 8
+  delay: 10
+  until: "'ok' in (_ssh_before_swap_systemd_tasks.stdout | default(''))"
+  when: _swap_needs_setup | bool
+  tags: [hardening, swap]
+
+# SONiC's boot sequence does not run 'swapon -a' from fstab. Use a systemd
+# .swap unit — the idiomatic approach — which handles "already active" cleanly
+# and is activated by swap.target on every boot.
+- name: "hardening | Install systemd .swap unit for /swapfile"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+      -o LogLevel=ERROR -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no \
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "sudo sed -i '/^\/swapfile/d' /etc/fstab && \
+      printf '[Unit]\nDescription=Swap /swapfile\nAfter=local-fs.target\nConditionPathExists=/swapfile\n\n[Swap]\nWhat=/swapfile\nPriority=10\n\n[Install]\nWantedBy=swap.target\n' | sudo tee /etc/systemd/system/swapfile.swap > /dev/null && \
+      sudo chmod 0644 /etc/systemd/system/swapfile.swap"
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  tags: [hardening, swap]
+
+- name: "hardening | Enable swapfile.swap unit"
+  ansible.builtin.shell: |
+    sshpass -p '{{ ansible_ssh_pass }}' ssh \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      -o ConnectTimeout=30 -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+      -o LogLevel=ERROR -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no \
+      -o PasswordAuthentication=yes -o GSSAPIAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }} \
+      "sudo systemctl daemon-reload && sudo systemctl enable swapfile.swap"
+  delegate_to: localhost
+  become: false
+  vars:
+    ansible_become: "false"
+  tags: [hardening, swap]
+
