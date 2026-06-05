@@ -88,7 +88,7 @@
       ansible.builtin.set_fact:
         _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
 
-    - name: Wipe OSD devices (only if empty/unformatted)
+    - name: Wipe OSD devices (full LVM + BlueStore cleanup)
       ansible.builtin.shell:
         cmd: |
           DEV={{ item }}
@@ -107,13 +107,21 @@
           for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
             dmsetup remove -f "$dm" 2>/dev/null || true
           done
-          # Also deactivate any LVM VGs on this device
+          # Deactivate any LVM VGs on this device, then remove PV label
           pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+            [ -n "$VG" ] && vgchange -an "$VG" 2>/dev/null || true
             [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
           done
-          # Now wipe
+          pvremove -ff "$DEV" 2>/dev/null || true
+          # Wipe all filesystem/RAID/LVM/Ceph signatures
           wipefs -af "$DEV" 2>/dev/null || true
+          # Zero first 100MB (GPT, LVM headers, BlueStore superblock)
           dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+          # Zero last 100MB (backup GPT, Ceph BlueStore label at end of device)
+          DEV_SIZE=$(blockdev --getsize64 "$DEV" 2>/dev/null || echo 0)
+          if [ "$DEV_SIZE" -gt 104857600 ]; then
+            dd if=/dev/zero of="$DEV" bs=1M count=100 seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+          fi
           sgdisk --zap-all "$DEV" 2>/dev/null || true
           partprobe "$DEV" 2>/dev/null || true
           echo "WIPED: $DEV"
@@ -125,6 +133,11 @@
     - name: Display disk preparation results
       ansible.builtin.debug:
         msg: "{{ disk_wipe.results | default([]) | map(attribute='stdout', default='skipped') | list }}"
+
+    - name: Remove stale Rook state directory
+      ansible.builtin.file:
+        path: /var/lib/rook
+        state: absent
 
 # ===========================================================================
 # Phase 1: Deploy Rook-Ceph Operator
@@ -393,6 +406,30 @@
           Ceph cluster deployed in '{{ rook_ceph_namespace }}' namespace
           MON pods: {{ mon_ready.stdout | default('ready') }}
           OSD pods: {{ osd_ready.stdout | default('ready') }}
+
+    - name: Diagnose OSD failure (operator logs)
+      ansible.builtin.shell: |
+        echo "=== OSD-related operator log entries ==="
+        kubectl logs -n {{ rook_ceph_namespace }} -l app=rook-ceph-operator --tail=100 2>/dev/null | grep -iE 'osd|provision|device|skipp|avail|reject' | tail -30
+        echo ""
+        echo "=== OSD prepare job/pod status ==="
+        kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-osd-prepare -o wide 2>/dev/null || echo "(none)"
+        echo ""
+        echo "=== Discovery daemon device report (first node) ==="
+        DISCOVER_POD=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-discover -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ -n "$DISCOVER_POD" ]; then
+          kubectl logs -n {{ rook_ceph_namespace }} "$DISCOVER_POD" --tail=30 2>/dev/null | grep -iE 'device|available|skipp|reject' || echo "(no device lines)"
+        fi
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      register: osd_diag
+      changed_when: false
+      when: "'WARNING' in osd_ready.stdout"
+
+    - name: Show OSD diagnostics
+      ansible.builtin.debug:
+        msg: "{{ osd_diag.stdout_lines | default(['OSD pods came up successfully']) }}"
+      when: osd_diag is not skipped
 
 # ===========================================================================
 # Phase 3: Expose Ceph Dashboard (LoadBalancer via MetalLB + credentials)
