@@ -1,75 +1,200 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
-Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
-[ERROR]: Error loading tasks: failed at splitting arguments, either an unbalanced jinja2 block or quotes: DEV="{{ item }}"
-DEVNAME=$(basename "$DEV")
-# Check device existence via sysfs (works regardless of DM/LVM state)
-if [ ! -d "/sys/block/$DEVNAME" ]; then
-  echo "SKIP (not found): $DEV"
-  exit 0
-fi
-# Check if mounted (use findmnt which doesn't choke on stale DM)
-if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
-  echo "SKIP (mounted): $DEV"
-  exit 0
-fi
-# Remove any stale device-mapper entries (LVM from previous Ceph OSD)
-for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
-  dmsetup remove -f "$dm" 2>/dev/null || true
-done
-# Also deactivate any LVM VGs on this device
-pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
-  [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
-done
-# Now wipe
-wipefs -af "$DEV" 2>/dev/null || true
-dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-sgdisk --zap-all "$DEV" 2>/dev/null || true
-partprobe "$DEV" 2>/dev/null || true
-echo "WIPED: $DEV"
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:91:7
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  DEV_SIZE=$(blockdev --getsize64 "$DEV")
+  dd if=/dev/zero of="$DEV" bs=1M count=100 seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+  echo "CLEAN: $DEV"
+done' -b
 
-89         _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
-90
-91     - name: Wipe OSD devices (only if empty/unformatted)
-         ^ column 7
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
-Host12_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host12_2 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host12_3 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
 Host34_2 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
+Host12_2 | CHANGED | rc=0 >>
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
+Host12_3 | CHANGED | rc=0 >>
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
 Host34_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
+Host12_1 | CHANGED | rc=0 >>
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
 HostB12_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
+  Labels on physical volume "/dev/vdb" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdb
+  Labels on physical volume "/dev/vdc" successfully wiped.
+Creating new GPT entries in memory.
+GPT data structures destroyed! You may now partition the disk using fdisk or
+other utilities.
+CLEAN: /dev/vdc
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible ceph_osd -i inventory/hosts.yml -m shell -a 'rm -rf /var/lib/rook' -b
+Host12_1 | CHANGED | rc=0 >>
+
+Host34_1 | CHANGED | rc=0 >>
+
+Host12_2 | CHANGED | rc=0 >>
+
+Host34_2 | CHANGED | rc=0 >>
+
+Host12_3 | CHANGED | rc=0 >>
+
+HostB12_1 | CHANGED | rc=0 >>
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl delete job -n rook-ceph -l app=rook-ceph-osd-prepare 2>/dev/null;
+No resources found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl delete pod -n rook-ceph -l app=rook-ceph-osd-prepare --force --grace-period=0 2>/dev/null
+No resources found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl rollout restart deployment rook-ceph-operator -n rook-ceph && \
+kubectl rollout status deployment rook-ceph-operator -n rook-ceph --timeout=60s
+deployment.apps/rook-ceph-operator restarted
+Waiting for deployment "rook-ceph-operator" rollout to finish: 0 out of 1 new replicas have been updated...
+Waiting for deployment "rook-ceph-operator" rollout to finish: 0 out of 1 new replicas have been updated...
+Waiting for deployment "rook-ceph-operator" rollout to finish: 0 out of 1 new replicas have been updated...
+Waiting for deployment "rook-ceph-operator" rollout to finish: 0 of 1 updated replicas are available...
+deployment "rook-ceph-operator" successfully rolled out
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph osd tree
+
+2026-06-05T02:50:58.547+0000 789dd79c9640  0 monclient(hunting): authenticate timed out after 300
+[errno 110] RADOS timed out (error connecting to the cluster)
+command terminated with exit code 1
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=100 | grep -iE 'osd|device|skipp|avail'
+2026-06-05 02:48:44.402574 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:44.403709 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:44.405749 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:45.353239 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:54.403889 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:54.404921 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:54.406565 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:48:55.376167 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:04.405499 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:04.406139 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:04.407362 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:05.401118 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:14.407308 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:14.407499 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:14.407629 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:15.422036 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:47:31Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:24.409067 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:24.409210 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:24.409251 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:25.454273 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:34.410403 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:34.410643 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:34.410779 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:35.475918 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:44.412115 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:44.412266 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:44.412319 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:45.496434 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:54.413275 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:54.413403 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:54.413507 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:49:55.525996 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:04.414490 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:04.414637 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:04.415433 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:05.544165 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:14.416256 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:14.416418 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:14.416480 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:15.563684 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:24.417656 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:24.417754 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:24.418054 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:25.583306 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:34.419117 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:34.419230 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:34.419382 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:35.605429 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:44.420931 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:44.421142 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:44.421206 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:45.626402 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:49:02Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:54.423000 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:54.423174 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:54.423247 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:50:55.652500 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:04.424665 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:04.426162 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:04.426464 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:05.672934 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:14.425807 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:14.426536 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:14.428177 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:15.695649 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:24.427029 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:24.427415 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:24.428930 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:25.717716 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:34.428225 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:34.428435 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:34.430295 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:35.735176 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:44.430157 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:44.430292 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:44.431039 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:45.754712 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:54.431727 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:54.431852 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:54.431939 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:51:55.783115 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:52:04.433027 I | ceph-spec: ceph-fs-subvolumegroup-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:52:04.433146 I | ceph-spec: ceph-file-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ sleep 30 && kubectl get pods -n rook-ceph | grep -E 'osd'
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+2026-06-05 02:52:04.433235 I | ceph-spec: ceph-block-pool-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
+2026-06-05 02:52:05.803640 I | ceph-spec: ceph-object-controller: CephCluster "rook-ceph" found but skipping reconcile since ceph health is &{Health:HEALTH_ERR Details:map[error:{Severity:Urgent Message:failed to get status. . timed out: exit status 1}] LastChecked:2026-06-05T02:50:32Z LastChanged:2026-06-05T02:41:00Z PreviousHealth:HEALTH_WARN Capacity:{TotalBytes:0 UsedBytes:0 AvailableBytes:0 LastUpdated:} Versions:<nil> FSID:}
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
