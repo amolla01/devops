@@ -72,3 +72,55 @@ Password: (get from secret below)
 
 kubectl get secret rook-ceph-dashboard-password -n rook-ceph -o jsonpath='{.data.password}' | base64 -d; echo
 
+
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+
+From my windows 'Lab-ControlNode', I tried 'https://172.16.2.201:8443', times out no access...is there anything specific on routing 
+to Windows-->wsl-->R810 --> Host12_1, I need to configure??
+
+The MetalLB IP 172.16.2.201 is a BGP-announced /32 route that exists only inside the L3 fabric. Your Windows browser sits outside the fabric — it has no route to that IP.
+
+Quick diagnosis from WSL:
+# Can WSL reach the MetalLB IP?
+curl -k https://172.16.2.201:8443 --connect-timeout 5
+
+# Can WSL reach any K8s node directly?
+ping -c1 172.16.2.40
+
+# Check what route WSL has for that subnet
+ip route get 172.16.2.201
+
+Three options to access the dashboard:
+
+Option 1: SSH Tunnel (quickest, no config changes)
+From your WSL terminal:
+ssh -L 8443:172.16.2.201:8443 nh1221@172.16.2.40 -N &
+Then open in Windows browser: https://localhost:8443
+
+Option 2: Static route on Windows (persistent access)
+If your Windows machine can reach the R810 host IP (e.g., 172.16.2.40), add a route so Windows sends MetalLB traffic through it:
+
+
+# Run as Administrator — replace GATEWAY with R810/node IP that's reachable from Windows
+route add 172.16.2.200 mask 255.255.255.240 <GATEWAY_IP> -p
+
+The gateway needs to be a host that IS in the BGP fabric and can forward traffic to the MetalLB IPs.
+
+Option 3: kubectl port-forward (no routing needed at all)
+From WSL:
+kubectl port-forward svc/rook-ceph-mgr-dashboard -n rook-ceph 8443:8443 --address 0.0.0.0 &
+
+Then from Windows: https://localhost:8443
+
+Why it times out: Your Windows machine (and likely WSL) don't participate in BGP peering with the SONiC leaf switches.
+The /32 route for 172.16.2.201 is only known to hosts that peer with the fabric. Unless your Lab-ControlNode runs FRR and peers with a leaf,
+it won't know how to reach MetalLB IPs natively.
+
+My recommendation: Option 1 (SSH tunnel) for now — zero infrastructure changes. For long-term, if this Windows box is your daily workstation, 
+Option 2 with a static route pointing through one of the K8s nodes as a gateway.
+
+
+
+
+
+
