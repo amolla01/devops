@@ -1,0 +1,230 @@
+---
+# =============================================================================
+# ceph_mon.yml — Ceph Monitor Node Variables
+# =============================================================================
+#
+# PURPOSE:
+#   Configures Ceph Monitor (MON) daemons on controller hosts. Ceph MONs
+#   maintain the cluster map, quorum, and CRUSH hierarchy. They are the
+#   brains of the Ceph cluster — all OSDs and clients must contact MONs
+#   for cluster state.
+#
+# DEPENDS ON:
+#   - hosts.yml → ceph_mon group members (Host12_1, Host34_1)
+#   - all.yml → server_mgmt_ip_map (for monitor_address binding)
+#   - all.yml → management_subnet (MON listens on mgmt network)
+#   - group_vars/servers.yml → bond_mode, bond_mtu
+#   - ceph_osd.yml → shares ceph_fsid and ceph_cluster_name
+#   - Kubernetes → Ceph CSI driver uses MON endpoints for RBD/CephFS
+#   - OpenStack → Glance, Cinder, Nova use librados via MON discovery
+#
+# DEPLOYMENT ORDER:
+#   1. MONs must be deployed FIRST (establish quorum)
+#   2. MGRs next (enable dashboard, orchestrator)
+#   3. OSDs join cluster via MON discovery
+#   4. MDS only if CephFS pools are needed
+#
+# HOSTS IN THIS GROUP:
+#   Host12_1 (172.16.2.40) — Primary MON + MGR + MDS
+#   Host34_1 (172.16.2.43) — Secondary MON + MGR
+#
+# MINIMUM QUORUM: 2 MONs (current setup). For production, 3+ is recommended
+# to survive single-node failure without losing quorum.
+# =============================================================================
+
+# ---- Cluster Identity ----
+# ceph_fsid: Unique cluster identifier. Generate once, never change.
+#   Generate with: python3 -c "import uuid; print(uuid.uuid4())"
+ceph_fsid: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ceph_cluster_name: "dc-lab-ceph"
+
+# ---- Network Configuration ----
+# public_network: Client-facing network (K8s pods, OpenStack VMs reach Ceph here)
+#   This is the management subnet since all VMs are on 172.16.2.0/24 in KVM lab.
+#   On real hardware, this would be a dedicated storage frontend network.
+# cluster_network: OSD-to-OSD replication network (higher bandwidth, isolated)
+#   In KVM lab: same as public (single flat network).
+#   On real hardware: dedicated 25G/100G replication fabric.
+ceph_public_network: "172.16.2.0/24"
+ceph_cluster_network: "172.16.2.0/24"
+
+# ---- Monitor Configuration ----
+# monitor_interface: NIC that MON binds to (must be on ceph_public_network)
+#   KVM: enp1s0 (mgmt). Real HW: bond0 or dedicated storage NIC.
+ceph_monitor_interface: "{{ kvm_interface_map.mgmt if automation_profile != 'real_hardware' else 'bond0' }}"
+
+# monitor_address_block: Alternatively, let Ceph auto-detect from this subnet
+ceph_monitor_address_block: "{{ ceph_public_network }}"
+
+# ---- MON Daemon Settings ----
+ceph_mon_clock_drift_allowed: "0.5"
+ceph_mon_election_timeout: "5"
+ceph_mon_lease: "5"
+
+# ---- Manager (MGR) Module Settings ----
+# MGR co-locates with MON on the same hosts
+ceph_mgr_modules_enabled:
+  - dashboard
+  - prometheus
+  - balancer
+  - crash
+  - iostat
+
+# Dashboard (Ceph web UI)
+ceph_dashboard_enabled: true
+ceph_dashboard_port: 8443
+ceph_dashboard_admin_user: "admin"
+# ceph_dashboard_admin_password: "{{ vault_ceph_dashboard_password | default('ceph-dash-2024') }}"
+
+# Prometheus module (metrics scraping)
+ceph_prometheus_port: 9283
+
+# ---- Rook-Ceph Deployment Tuning (Lab Stability) ----
+# These values are specifically for Rook-Ceph (K8s-native) deployments.
+# For cephadm deployments, some values may be ignored.
+#
+# MON count in Rook is configured via Helm values.
+# Odd numbers only: 1 (no fault tolerance), 3 (1-fault), 5 (2-fault).
+# NEVER use 2 — quorum requires majority, so 2 MONs = no fault tolerance
+# AND Rook may auto-scale up, creating a split-brain risk.
+rook_ceph_mon_count: 3
+rook_ceph_mon_allow_multiple_per_node: true
+
+# Pool PG tuning: Conservative baseline to prevent etcd overload
+# Formula: (OSDs × 100) / pool_size, rounded down to nearest power of 2
+# With ~12 OSDs and 2-way replication: (12 × 100) / 2 = 600 → conservative baseline = 32
+# Rationale: Each PG creates etcd state entries. High PGs = etcd memory pressure = K8s API timeout
+rook_ceph_pool_pg_num: 32
+rook_ceph_pool_pgp_num: 32
+
+# MDS (Metadata Server) — for CephFS
+# Required for OpenStack Manila (shared filesystems) and K8s ReadWriteMany PVCs.
+# Override per-environment via cd/vars/ceph-values-*.yml (-e flag takes precedence).
+ceph_mds_enabled: true
+ceph_mds_max_mds: 1
+
+# RGW (Ceph Object Gateway) — for S3/Swift-compatible object storage
+# Required for OpenStack Swift API integration and Velero backups.
+# Override per-environment via cd/vars/ceph-values-*.yml.
+ceph_rgw_enabled: true
+
+# ---- Pool Defaults ----
+# Applied when creating new pools. Can be overridden per-pool.
+ceph_osd_pool_default_size: 2          # 2 replicas (lab minimum; production should use 3)
+ceph_osd_pool_default_min_size: 1      # Allow degraded I/O with 1 copy
+ceph_osd_pool_default_pg_num: 32       # PGs per pool (auto-scale adjusts this)
+ceph_osd_pool_default_pgp_num: 32
+ceph_pg_autoscale_mode: "on"
+
+# ---- Pre-created Pools ----
+# These pools are created after cluster bootstrap for K8s and OpenStack
+ceph_pools:
+  - name: "kube-rbd"
+    application: "rbd"
+    size: 2
+    pg_num: 32
+    description: "Kubernetes RBD PersistentVolumes (CSI driver)"
+  - name: "openstack-volumes"
+    application: "rbd"
+    size: 2
+    pg_num: 32
+    description: "OpenStack Cinder volumes"
+  - name: "openstack-images"
+    application: "rbd"
+    size: 2
+    pg_num: 16
+    description: "OpenStack Glance images"
+  - name: "openstack-vms"
+    application: "rbd"
+    size: 2
+    pg_num: 32
+    description: "OpenStack Nova ephemeral disks"
+  - name: "cephfs-data"
+    application: "cephfs"
+    size: 2
+    pg_num: 32
+    description: "CephFS data pool (shared filesystem)"
+  - name: "cephfs-metadata"
+    application: "cephfs"
+    size: 2
+    pg_num: 16
+    description: "CephFS metadata pool"
+  # Object Gateway (RGW) pools — S3/Swift-compatible object storage
+  - name: ".rgw.root"
+    application: "rgw"
+    size: 2
+    pg_num: 8
+    description: "RGW root pool (realm/zone metadata)"
+  - name: "default.rgw.log"
+    application: "rgw"
+    size: 2
+    pg_num: 8
+    description: "RGW log pool (usage, sync logs)"
+  - name: "default.rgw.control"
+    application: "rgw"
+    size: 2
+    pg_num: 8
+    description: "RGW control pool (watch-notify)"
+  - name: "default.rgw.meta"
+    application: "rgw"
+    size: 2
+    pg_num: 8
+    description: "RGW meta pool (user info, bucket index)"
+  - name: "default.rgw.buckets.index"
+    application: "rgw"
+    size: 2
+    pg_num: 16
+    description: "RGW bucket index pool"
+  - name: "default.rgw.buckets.data"
+    application: "rgw"
+    size: 2
+    pg_num: 32
+    description: "RGW bucket data pool (actual object data)"
+
+# ---- CRUSH Rules ----
+# In KVM lab with limited hosts, use a simple failure domain.
+# Production would use rack-level failure domain.
+ceph_crush_rule_default: "replicated_rule"
+ceph_crush_failure_domain: "host"       # KVM: host-level isolation
+# ceph_crush_failure_domain: "rack"     # Real hardware: rack-level isolation
+
+# ---- Authentication ----
+ceph_auth_cluster_required: "cephx"
+ceph_auth_service_required: "cephx"
+ceph_auth_client_required: "cephx"
+
+# ---- Ceph Client Keyrings (created for external consumers) ----
+ceph_client_keyrings:
+  - name: "client.kube"
+    caps:
+      mon: "profile rbd"
+      osd: "profile rbd pool=kube-rbd"
+    description: "Kubernetes CSI RBD provisioner"
+  - name: "client.openstack"
+    caps:
+      mon: "profile rbd"
+      osd: "profile rbd pool=openstack-volumes, profile rbd pool=openstack-images, profile rbd pool=openstack-vms"
+    description: "OpenStack (Cinder, Glance, Nova)"
+  - name: "client.cephfs"
+    caps:
+      mon: "allow r"
+      osd: "allow rw pool=cephfs-data"
+      mds: "allow rw"
+    description: "CephFS mount client"
+  - name: "client.manila"
+    caps:
+      mon: "allow r"
+      osd: "allow rw pool=cephfs-data"
+      mds: "allow *"
+    description: "OpenStack Manila (CephFS share management)"
+  - name: "client.rgw"
+    caps:
+      mon: "allow rw"
+      osd: "allow rwx pool=default.rgw.buckets.data, allow rw pool=default.rgw.buckets.index, allow rw pool=default.rgw.meta, allow rw pool=default.rgw.log, allow rw pool=default.rgw.control, allow rw pool=.rgw.root"
+    description: "Ceph RGW (Object Gateway for S3/Swift)"
+
+# ---- Deployment Tool ----
+# ceph-ansible or cephadm (cephadm is default for Reef+)
+ceph_deploy_method: "cephadm"
+ceph_release: "reef"                    # Ceph 18.x (latest stable)
+ceph_container_image: "quay.io/ceph/ceph:v18"

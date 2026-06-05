@@ -78,9 +78,10 @@ ceph_osd_discovery_exclude_devices: []
 rook_ceph_pool_pg_num: 32
 rook_ceph_pool_pgp_num: 32
 
-# MON (Monitor) count: lab uses 1 (minimum quorum), production uses 5
-# Fewer MONs = less etcd load, but single point of failure
-rook_ceph_mon_count: 1
+# MON (Monitor) count: odd numbers only (1, 3, 5).
+# 3 MONs provides 1-fault-tolerance quorum with reasonable etcd load.
+# NEVER use 2 — Rook may auto-scale and 2 MONs have no fault tolerance.
+rook_ceph_mon_count: 3
 rook_ceph_mon_allow_multiple_per_node: true
 
 # Enable MDS (CephFS) — provides shared filesystem (ReadWriteMany PVCs, Manila)
