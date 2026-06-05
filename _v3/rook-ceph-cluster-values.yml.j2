@@ -113,7 +113,9 @@ cephClusterSpec:
 {% if ceph_rook_use_all_devices | default(true) %}
     useAllNodes: true
     useAllDevices: true
-    deviceFilter: "{{ ceph_rook_device_filter | default('') }}"
+{% if ceph_rook_device_filter | default('') | length > 0 %}
+    deviceFilter: "{{ ceph_rook_device_filter }}"
+{% endif %}
 {% else %}
     useAllNodes: false
     useAllDevices: false
@@ -196,4 +198,38 @@ cephFileSystems:
   []
 {% endif %}
 
-cephObjectStores: []
+cephObjectStores:
+{% if ceph_rgw_enabled | default(false) %}
+  - name: {{ ceph_cluster_name | default('dc-lab-ceph') }}-store
+    spec:
+      metadataPool:
+        failureDomain: host
+        replicated:
+          size: {{ ceph_osd_pool_default_size | default(2) }}
+      dataPool:
+        failureDomain: host
+        replicated:
+          size: {{ ceph_osd_pool_default_size | default(2) }}
+      preservePoolsOnDelete: true
+      gateway:
+        port: {{ ceph_rgw_port | default(8080) }}
+        securePort: {{ ceph_rgw_secure_port | default(8443) }}
+        instances: {{ ceph_rgw_instances | default(1) }}
+        resources:
+          limits:
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+      healthCheck:
+        bucket:
+          interval: 60s
+    storageClass:
+      enabled: true
+      name: ceph-bucket
+      reclaimPolicy: Retain
+      parameters:
+        region: us-east-1
+{% else %}
+  []
+{% endif %}

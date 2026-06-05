@@ -1,0 +1,102 @@
+---
+# =============================================================================
+# roles/ceph/defaults/main.yml — Default variables for Ceph role
+# =============================================================================
+
+ceph_bootstrap_host: "{{ groups['ceph_mon'][0] }}"
+ceph_datacenter: "DC-LAB-1"
+ceph_dashboard_admin_password: "ceph-dash-2024"
+
+# ---- Preflight Cache Integration ----
+# Path to preflight download cache (populated by preflight_download.yml)
+ceph_preflight_cache_dir: "/opt/fabric-cache"
+ceph_preflight_binaries_dir: "{{ ceph_preflight_cache_dir }}/binaries"
+ceph_preflight_images_dir: "{{ ceph_preflight_cache_dir }}/images"
+ceph_preflight_helm_dir: "{{ ceph_preflight_cache_dir }}/helm-charts"
+ceph_preflight_apt_dir: "{{ ceph_preflight_cache_dir }}/apt-packages"
+
+# ---- Deployment Mode ----
+# "cephadm"    — Traditional cephadm orchestrator (bare-metal containers via podman)
+# "rook"       — Rook-Ceph operator (Kubernetes-native, runs Ceph in pods)
+ceph_deploy_mode: "rook"
+
+# ---- Version Pins ----
+ceph_release: "reef"
+ceph_version: "18.2.2"
+ceph_container_image: "quay.io/ceph/ceph:v18"
+rook_ceph_version: "v1.14.7"
+rook_ceph_namespace: "rook-ceph"
+
+# ---- Rook Device Discovery ----
+# When true, Rook auto-discovers ALL available (empty) block devices on OSD nodes.
+# This maximizes pool capacity by using every non-OS disk without explicit listing.
+# Set to false to use per-host ceph_osd_devices lists from inventory.
+ceph_rook_use_all_devices: true
+
+# Optional: regex filter for Rook device discovery (e.g., "^vd[b-z]$" or "^sd[b-z]$")
+# For KVM lab, restrict to virtio disks (excludes vda=OS, sr0=cdrom).
+# For real hardware, adjust to match your OSD device naming (e.g., "^sd[b-z]$").
+ceph_rook_device_filter: "^vd[b-z]$"
+
+# ---- Dynamic Volume Discovery (Day 0) — cephadm mode ----
+# When true, the role SSHs to each OSD host, runs lsblk, identifies the OS
+# root device, excludes it, and uses all remaining block devices as OSD
+# candidates. This overrides ceph_osd_devices / ceph_osd_devices_default.
+ceph_osd_dynamic_discovery: true
+
+# Minimum device size (bytes) to be considered an OSD candidate (default: 5GB)
+ceph_osd_min_device_size_bytes: 5368709120
+
+# Device types to include in discovery (disk = whole disks only)
+ceph_osd_discovery_device_types:
+  - disk
+
+# Additional devices to ALWAYS exclude (beyond the OS root disk)
+# Example: ["/dev/sda", "/dev/nvme0n1"] for boot or RAID controller devices
+ceph_osd_discovery_exclude_devices: []
+
+# ---- Rook Pool Tuning (Lab Stability) ----
+# IMPORTANT: These are FALLBACK defaults only. Use environment-specific var files
+# to override for dev/test/prod/dr deployments.
+#
+# Environment-specific var files:
+#   - cd/vars/ceph-values-dev.yml  → KVM lab (1 MON, 32 PGs, 2-way replication)
+#   - cd/vars/ceph-values-test.yml → Staging (3 MON, 64 PGs, 3-way replication)
+#   - cd/vars/ceph-values-prod.yml → Production (5 MON, 256 PGs, 3-way replication)
+#   - cd/vars/ceph-values-dr.yml   → Disaster Recovery (3 MON, 128 PGs, 3-way replication)
+#
+# USAGE:
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml \
+#     -e "@cd/vars/ceph-values-dev.yml"
+#
+# PG (Placement Group) count is critical for etcd health.
+# Too many PGs → high memory usage + etcd overload → K8s API timeout
+# Formula: PGs = (OSDs × 100) / pool_size, rounded to nearest power of 2
+# Example: 12 OSDs, 2-way replication: (12 × 100) / 2 = 600 → round down to 256 (or conservative 32 for lab)
+#
+# Lab baseline (KVM): 32 PGs (prevents etcd overload with limited resources)
+rook_ceph_pool_pg_num: 32
+rook_ceph_pool_pgp_num: 32
+
+# MON (Monitor) count: lab uses 1 (minimum quorum), production uses 5
+# Fewer MONs = less etcd load, but single point of failure
+rook_ceph_mon_count: 1
+rook_ceph_mon_allow_multiple_per_node: true
+
+# Enable MDS (CephFS) — provides shared filesystem (ReadWriteMany PVCs, Manila)
+ceph_mds_enabled: true
+
+# Enable RGW (Ceph Object Gateway) — provides S3/Swift-compatible object storage
+# Integrates with OpenStack Swift API and standalone S3 access
+ceph_rgw_enabled: true
+ceph_rgw_port: 8080
+ceph_rgw_secure_port: 8443
+ceph_rgw_instances: 1
+
+# OSD replication size — lab uses 2, production should use 3
+ceph_osd_pool_default_size: 2
+
+# ---- Day 1 Operation Defaults ----
+# Default behavior for Day 1 operations (can be overridden via --extra-vars)
+ceph_day1_force: false
+

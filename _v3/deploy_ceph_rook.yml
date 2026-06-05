@@ -227,6 +227,7 @@
         --set csi.enableRbdDriver=true
         --set csi.enableCephfsDriver=true
         --set monitoring.enabled=true
+        --set enableDiscoveryDaemon=true
         --wait --timeout 5m0s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
@@ -243,6 +244,7 @@
         --set csi.enableRbdDriver=true
         --set csi.enableCephfsDriver=true
         --set monitoring.enabled=true
+        --set enableDiscoveryDaemon=true
         --wait --timeout 5m0s
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
@@ -353,22 +355,35 @@
       register: mon_ready
       changed_when: false
 
-    - name: Wait for Ceph OSD pods to be ready (5m timeout)
+    - name: Wait for Ceph OSD pods to be ready (10m timeout)
       ansible.builtin.shell: |
-        OSD_PODS=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-osd --no-headers 2>/dev/null | wc -l)
-        if [ "$OSD_PODS" -eq 0 ]; then
-          echo "WARNING: No OSD pods found — disks may not be attached to nodes yet"
-          exit 0
-        fi
-        kubectl wait --for=condition=ready pod \
-          -l app=rook-ceph-osd \
-          -n {{ rook_ceph_namespace }} \
-          --timeout=300s 2>&1 || echo "Waiting for OSD pods..."
+        echo "Waiting for OSD prepare jobs or OSD pods (up to 10 min)..."
+        for i in $(seq 1 120); do
+          # Check for running OSD pods
+          OSD_PODS=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-osd --no-headers 2>/dev/null | wc -l)
+          if [ "$OSD_PODS" -ge 1 ]; then
+            echo "OSD pods found ($OSD_PODS), waiting for ready..."
+            kubectl wait --for=condition=ready pod \
+              -l app=rook-ceph-osd \
+              -n {{ rook_ceph_namespace }} \
+              --timeout=300s 2>&1
+            exit $?
+          fi
+          # Check if prepare jobs are running (good sign — means discovery is working)
+          PREP_PODS=$(kubectl get pods -n {{ rook_ceph_namespace }} -l app=rook-ceph-osd-prepare --no-headers 2>/dev/null | wc -l)
+          if [ "$PREP_PODS" -ge 1 ]; then
+            echo "OSD prepare job(s) running ($PREP_PODS) — waiting for completion..."
+          fi
+          sleep 5
+        done
+        echo "WARNING: No OSD pods created after 10 minutes"
+        echo "Check operator logs: kubectl logs -n {{ rook_ceph_namespace }} -l app=rook-ceph-operator --tail=50"
+        exit 0
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       register: osd_ready
-      retries: 3
-      delay: 30
+      retries: 2
+      delay: 60
       until: osd_ready.rc == 0
       changed_when: false
 
@@ -496,7 +511,7 @@
           ║ MetalLB IP:   {{ dashboard_lb_ip.stdout | default('pending') }}
           ║
           ║ NOTE: Uses self-signed TLS certificate — accept browser warning.
-          ║ Accessible from any machine on the lab LAN (MetalLB L2 ARP).
+          ║ Accessible from any host on the fabric (MetalLB BGP /32 route).
           ╚══════════════════════════════════════════════════════════════════╝
 
 # ===========================================================================
