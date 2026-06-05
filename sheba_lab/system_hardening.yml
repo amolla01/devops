@@ -24,16 +24,18 @@
     timeout: 60
     sleep: 5
 
-# Unconditionally set the password — ansible.builtin.user only writes to
-# /etc/shadow when the hash differs, so this is idempotent. We also always
-# update the in-play become_password so it stays in sync regardless of what
-# value inventory has. The broken 'su' check (which always returned 'ok' when
-# running as root) is removed.
+# Unconditionally set the password. Use ansible.builtin.raw with explicit
+# sudo to bypass Ansible's become layer, which causes UNREACHABLE on
+# factory-password hosts where set_fact'd credentials don't propagate
+# cleanly through the become negotiation in free strategy.
+# The password_hash filter runs on the control node (Jinja); the pre-computed
+# hash is passed to usermod via single-quoted shell to avoid $ expansion.
 - name: "hardening | Ensure admin password is synchronized"
-  ansible.builtin.user:
-    name: admin
-    password: "{{ _target_password | password_hash('sha512') }}"
+  ansible.builtin.raw: >-
+    sudo usermod -p '{{ _target_password | password_hash("sha512") }}' admin
+  become: no
   no_log: true
+  changed_when: true
 
 - name: "hardening | Sync ansible become_password with current admin password"
   ansible.builtin.set_fact:
