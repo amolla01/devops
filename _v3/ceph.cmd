@@ -580,3 +580,60 @@ kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph osd tree
 If still no OSD prepare pods after 3 minutes, grab the operator logs:
 
 kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=100 | grep -iE 'osd|device|skipp|avail'
+
+
+
+
+
+
+
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+You need a full teardown and fresh deploy. This is the correct sequence:
+# 1. Uninstall helm releases
+helm uninstall rook-ceph-cluster -n rook-ceph 2>/dev/null
+helm uninstall rook-ceph -n rook-ceph 2>/dev/null
+
+# 2. Remove finalizers from stuck CRDs
+for resource in cephcluster cephblockpool cephfilesystem cephobjectstore cephfilesystemsubvolumegroup; do
+  for item in $(kubectl get $resource -n rook-ceph -o name 2>/dev/null); do
+    kubectl patch $item -n rook-ceph --type merge -p '{"metadata":{"finalizers":null}}'
+  done
+done
+
+# 3. Force-delete namespace
+kubectl delete namespace rook-ceph --timeout=30s 2>/dev/null
+kubectl get ns rook-ceph -o json 2>/dev/null | \
+  python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+  kubectl replace --raw "/api/v1/namespaces/rook-ceph/finalize" -f - 2>/dev/null
+
+# 4. Wait for namespace to disappear
+for i in $(seq 1 20); do
+  kubectl get ns rook-ceph 2>/dev/null || break
+  sleep 5
+done
+
+# 5. Wipe disks + rook state one more time (clean slate)
+ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+done
+rm -rf /var/lib/rook
+echo DONE' -b
+
+# 6. Delete leftover Rook CRDs (clean cluster-scoped resources)
+kubectl delete crd -l app.kubernetes.io/part-of=rook-ceph-operator 2>/dev/null
+
+# 7. Redeploy with the fixed playbook
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+What went wrong: The /var/lib/rook deletion should have been done before the operator started, not while MONs were live. The updated playbook now does this correctly in Phase 0 (before any Rook components are deployed).
+
+The key lesson: we confirmed pvremove found and wiped real LVM PV labels on all disks — that was the root cause of OSD discovery failure. With the fresh redeploy, the operator will find clean disks and should create OSD prepare jobs within 2-3 minutes of the cluster CR being applied.
+
+Claude Opus 4.6 • 
