@@ -897,16 +897,29 @@
       -c "neighbor {{ peer.neighbor_ip }} update-source {{ peer.local_ip.split('/')[0] }}" \
       -c "neighbor {{ peer.neighbor_ip }} disable-connected-check"{% endfor %} \
       -c "address-family ipv4 unicast" \
-      -c "redistribute connected"{% for port in _effective_bgp_neighbors %} \
+      -c "redistribute connected route-map DENY_MGMT"{% for port in _effective_bgp_neighbors %} \
       -c "neighbor {{ port }} activate"{% endfor %}{% for dl in _effective_downlink_peers %} \
       -c "neighbor {{ dl.port }} activate"{% endfor %}{% for peer in _effective_ip_peers %} \
       -c "neighbor {{ peer.neighbor_ip }} activate"{% endfor %} \
       -c "exit-address-family" \
       -c "address-family ipv6 unicast" \
-      -c "redistribute connected"{% for port in _effective_bgp_neighbors %} \
+      -c "redistribute connected route-map DENY_MGMT"{% for port in _effective_bgp_neighbors %} \
       -c "neighbor {{ port }} activate"{% endfor %}{% for dl in _effective_downlink_peers %} \
       -c "neighbor {{ dl.port }} activate"{% endfor %} \
       -c "exit-address-family" \
+      -c "end" \
+      -c "write"
+
+    # Define the route-map to suppress OOB management subnet from redistribution.
+    docker exec bgp vtysh \
+      -c "configure terminal" \
+      -c "ip prefix-list PL_NO_MGMT seq 5 deny {{ oob_management_subnet | default('172.16.2.0/24') }}" \
+      -c "ip prefix-list PL_NO_MGMT seq 100 permit 0.0.0.0/0 le 32" \
+      -c "ipv6 prefix-list PL6_NO_MGMT seq 100 permit ::/0 le 128" \
+      -c "route-map DENY_MGMT permit 10" \
+      -c "match ip address prefix-list PL_NO_MGMT" \
+      -c "route-map DENY_MGMT permit 20" \
+      -c "match ipv6 address prefix-list PL6_NO_MGMT" \
       -c "end" \
       -c "write"
     {%- else %}
