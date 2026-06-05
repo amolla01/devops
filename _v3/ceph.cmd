@@ -470,4 +470,40 @@ Searched for MetalLB L2 ARP and updated deploy_ceph_rook.yml+1-1
 Fixed the stale "L2 ARP" banner text.
 
 Bottom line: The deployment succeeded. Give the Rook operator 3-5 minutes to create OSD prepare jobs and spin up OSD pods. Then ceph -s will show the disks online, and PVCs will bind. The sheba-cloud-infra namespace comes later when you run the infra services playbook.
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 
+Since Rook is already deployed and the discovery daemons are running, you just need to:
+
+Wipe the disks properly (with pvremove)
+Clear /var/lib/rook
+Restart the operator to trigger a fresh reconciliation
+Run these commands on your lab:
+
+# 1. Wipe disks with full LVM removal on all OSD nodes
+ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  DEV_SIZE=$(blockdev --getsize64 "$DEV")
+  dd if=/dev/zero of="$DEV" bs=1M count=100 seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+  echo "CLEAN: $DEV"
+done' -b
+
+# 2. Remove stale Rook state
+ansible ceph_osd -i inventory/hosts.yml -m shell -a 'rm -rf /var/lib/rook' -b
+
+# 3. Delete any stuck OSD prepare jobs/pods
+kubectl delete job -n rook-ceph -l app=rook-ceph-osd-prepare 2>/dev/null
+kubectl delete pod -n rook-ceph -l app=rook-ceph-osd-prepare --force --grace-period=0 2>/dev/null
+
+# 4. Restart operator to force fresh device scan
+kubectl rollout restart deployment rook-ceph-operator -n rook-ceph
+kubectl rollout status deployment rook-ceph-operator -n rook-ceph --timeout=60s
+
+# 5. Wait and watch for OSD prepare jobs (should appear within 2-3 min)
+watch -n5 'kubectl get pods -n rook-ceph | grep -E "osd-prepare|osd"'
+
+The root cause was that pvremove was never called — the wipe task removed LVM VGs but left the PV label on the disk. Rook's device scanner sees the LVM PV signature and skips the device as "not available." The updated playbook now runs pvremove -ff and also zeros the end of the disk (BlueStore can place labels there too).
