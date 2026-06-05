@@ -245,4 +245,32 @@ CHR BGP stuck in Connect	rtl8139 NIC + qemu hook TX offload disable + Step 6 ver
 Cloud-init wiping netplan on reboot	Fixed in deploy script (user-data + runcmd cloud-init.disabled)
 VMs not starting after R810 reboot	virsh autostart + qemu hook + NAT persistence
 
-  
+
+
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+The fix is in place. Here's the summary:
+
+What was wrong: Line 1252 had [[ "$type" == "chr" ]] && fabric_model="rtl8139" — but rtl8139 never actually fixed the checksum issue (nor did e1000). All three NIC emulations pass partial TCP checksums through OVS.
+
+What's now implemented:
+
+CHR fabric NICs reverted to virtio — same model as all other VMs
+Post-creation XML patch — after virt-install succeeds for CHR VMs, the script:
+Shuts down the VM
+Dumps the inactive XML
+Injects <driver name='vhost'><host csum='off' gso='off' tso4='off' tso6='off'/></driver> into every fabric NIC (skipping the management NIC)
+Re-defines and re-starts the VM
+This disables VIRTIO_NET_F_CSUM capability advertisement from QEMU to the guest. RouterOS will no longer offload checksum computation — it will compute full TCP checksums in software before sending frames to the vNIC. The Border_Leaf SONiC switches will receive SYNs with correct checksums and reply with SYN-ACK, allowing BGP to establish.
+
+Verification after deploy:
+
+
+# On R810, check the XML has the patch:
+ssh nh1221@R810 'sudo virsh dumpxml Exit_Router1 | grep -A2 "csum"'
+# Should show: <host csum="off" gso="off" tso4="off" tso6="off"/>
+
+# After Day-1, check BGP from Border_Leaf side:
+ssh admin@172.16.2.31 "show bgp summary"
+# Exit_Router1 peer should show Established
+
+
