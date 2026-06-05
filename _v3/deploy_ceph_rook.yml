@@ -689,6 +689,20 @@
 # ===========================================================================
 # Phase 5: Teardown (DESTRUCTIVE — requires explicit tag)
 # ===========================================================================
+# This phase performs a COMPLETE removal of Rook-Ceph, including:
+#   - Helm releases (cluster + operator)
+#   - All Ceph CRs with finalizer stripping (prevents namespace hang)
+#   - All pods force-deleted (prevents graceful shutdown waiting on dead MONs)
+#   - CRDs removed (cluster-scoped)
+#   - Namespace force-finalized (handles stuck Terminating state)
+#   - Stale StorageClasses cleaned up
+#   - OSD disks fully wiped (LVM PV labels, BlueStore superblock, GPT)
+#   - /var/lib/rook removed on all nodes
+#
+# USAGE:
+#   ansible-playbook playbooks/reused/deploy_ceph_rook.yml \
+#     -i inventory/hosts.yml --tags rook_teardown -v
+# ===========================================================================
 - name: "Phase 5: Teardown Rook-Ceph (DESTRUCTIVE)"
   hosts: "kube_controllers[0]"
   gather_facts: false
@@ -706,39 +720,6 @@
       ignore_errors: true
       changed_when: true
 
-    - name: "TEARDOWN | Remove CephCluster finalizers (prevents namespace hang)"
-      ansible.builtin.shell: |
-        for resource in cephcluster cephblockpool cephfilesystem cephobjectstore; do
-          for item in $(kubectl get $resource -n {{ rook_ceph_namespace }} -o name 2>/dev/null); do
-            kubectl patch $item -n {{ rook_ceph_namespace }} --type merge \
-              -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-          done
-        done
-      environment:
-        KUBECONFIG: "{{ kubeconfig_path }}"
-      changed_when: true
-      ignore_errors: true
-
-    - name: "TEARDOWN | Delete all Ceph CRs"
-      ansible.builtin.shell: |
-        kubectl delete cephcluster --all -n {{ rook_ceph_namespace }} --timeout=60s 2>/dev/null || true
-        kubectl delete cephblockpool --all -n {{ rook_ceph_namespace }} --timeout=30s 2>/dev/null || true
-        kubectl delete cephfilesystem --all -n {{ rook_ceph_namespace }} --timeout=30s 2>/dev/null || true
-      environment:
-        KUBECONFIG: "{{ kubeconfig_path }}"
-      changed_when: true
-      ignore_errors: true
-
-    - name: "TEARDOWN | Wait for OSD pods to terminate (2m)"
-      ansible.builtin.shell: |
-        kubectl wait --for=delete pod \
-          -l app=rook-ceph-osd \
-          -n {{ rook_ceph_namespace }} \
-          --timeout=120s 2>/dev/null || true
-      environment:
-        KUBECONFIG: "{{ kubeconfig_path }}"
-      changed_when: false
-
     - name: "TEARDOWN | Delete Rook operator Helm release"
       ansible.builtin.command: >
         helm uninstall rook-ceph -n {{ rook_ceph_namespace }}
@@ -747,65 +728,131 @@
       ignore_errors: true
       changed_when: true
 
-    - name: "TEARDOWN | Delete CRDs"
+    - name: "TEARDOWN | Strip finalizers from ALL Rook custom resources"
       ansible.builtin.shell: |
-        kubectl delete crd \
-          cephblockpools.ceph.rook.io \
-          cephblockpoolradosnamespaces.ceph.rook.io \
-          cephbucketnotifications.ceph.rook.io \
-          cephbuckettopics.ceph.rook.io \
-          cephclients.ceph.rook.io \
-          cephclusters.ceph.rook.io \
-          cephcosidrivers.ceph.rook.io \
-          cephfilesystemmirrors.ceph.rook.io \
-          cephfilesystems.ceph.rook.io \
-          cephfilesystemsubvolumegroups.ceph.rook.io \
-          cephnfs.ceph.rook.io \
-          cephobjectrealms.ceph.rook.io \
-          cephobjectstores.ceph.rook.io \
-          cephobjectstoreusers.ceph.rook.io \
-          cephobjectzonegroups.ceph.rook.io \
-          cephobjectzones.ceph.rook.io \
-          cephrbdmirrors.ceph.rook.io \
-          objectbucketclaims.objectbucket.io \
-          objectbuckets.objectbucket.io \
-          2>/dev/null || true
+        RESOURCES="cephcluster cephblockpool cephfilesystem cephobjectstore
+                   cephfilesystemsubvolumegroup cephclient cephnfs
+                   cephobjectstoreuser cephobjectrealm cephobjectzonegroup
+                   cephobjectzone cephrbdmirror cephfilesystemmirror
+                   cephblockpoolradosnamespace cephbucketnotification
+                   cephbuckettopic"
+        for resource in $RESOURCES; do
+          for item in $(kubectl get $resource -n {{ rook_ceph_namespace }} -o name 2>/dev/null); do
+            kubectl patch $item -n {{ rook_ceph_namespace }} --type merge \
+              -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+          done
+        done
+        echo "All finalizers stripped"
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       changed_when: true
       ignore_errors: true
 
-    - name: "TEARDOWN | Delete namespace"
+    - name: "TEARDOWN | Delete all Ceph CRs"
       ansible.builtin.shell: |
-        kubectl delete namespace {{ rook_ceph_namespace }} --timeout=120s 2>/dev/null || true
+        for resource in cephcluster cephblockpool cephfilesystem cephobjectstore \
+                        cephfilesystemsubvolumegroup cephclient cephnfs; do
+          kubectl delete $resource --all -n {{ rook_ceph_namespace }} --timeout=10s 2>/dev/null || true
+        done
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Force-delete all pods in rook-ceph namespace"
+      ansible.builtin.shell: |
+        kubectl delete pods --all -n {{ rook_ceph_namespace }} \
+          --force --grace-period=0 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete OSD prepare jobs"
+      ansible.builtin.shell: |
+        kubectl delete job -n {{ rook_ceph_namespace }} \
+          -l app=rook-ceph-osd-prepare 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete Rook-managed StorageClasses"
+      ansible.builtin.shell: |
+        for sc in ceph-rbd ceph-filesystem ceph-bucket ceph-infra-rbd; do
+          kubectl delete storageclass "$sc" 2>/dev/null || true
+        done
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete all Rook CRDs"
+      ansible.builtin.shell: |
+        kubectl get crd -o name 2>/dev/null | grep -E 'rook|objectbucket' | \
+          xargs -r kubectl delete 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Delete namespace (may hang if finalizers stuck)"
+      ansible.builtin.shell: |
+        kubectl delete namespace {{ rook_ceph_namespace }} --timeout=60s 2>/dev/null || true
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       ignore_errors: true
       changed_when: true
 
-    - name: "TEARDOWN | Wait for namespace to fully terminate"
+    - name: "TEARDOWN | Force-finalize namespace if stuck in Terminating"
       ansible.builtin.shell: |
-        for i in $(seq 1 60); do
-          if ! kubectl get ns {{ rook_ceph_namespace }} 2>/dev/null | grep -q Terminating; then
+        for i in $(seq 1 24); do
+          STATUS=$(kubectl get ns {{ rook_ceph_namespace }} -o jsonpath='{.status.phase}' 2>/dev/null || echo "NotFound")
+          if [ "$STATUS" = "NotFound" ] || [ -z "$STATUS" ]; then
             echo "Namespace gone"
             exit 0
           fi
+          if [ "$STATUS" = "Terminating" ]; then
+            # Force-remove namespace finalizers via API
+            kubectl get ns {{ rook_ceph_namespace }} -o json | \
+              python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+              kubectl replace --raw "/api/v1/namespaces/{{ rook_ceph_namespace }}/finalize" -f - 2>/dev/null || true
+          fi
           sleep 5
         done
-        # Force-remove finalizers if stuck
-        kubectl get ns {{ rook_ceph_namespace }} -o json 2>/dev/null | \
-          python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
-          kubectl replace --raw "/api/v1/namespaces/{{ rook_ceph_namespace }}/finalize" -f - 2>/dev/null || true
-        echo "Namespace force-finalized"
+        # Final check
+        if kubectl get ns {{ rook_ceph_namespace }} 2>/dev/null; then
+          echo "WARNING: Namespace still exists after 120s"
+          exit 1
+        fi
+        echo "Namespace removed"
       environment:
         KUBECONFIG: "{{ kubeconfig_path }}"
       changed_when: false
+      ignore_errors: true
 
-    - name: "TEARDOWN | Report"
+    - name: "TEARDOWN | Remove node labels"
+      ansible.builtin.shell: |
+        for node in $(kubectl get nodes -o name); do
+          kubectl label $node ceph-osd- ceph-mon- storage-node- 2>/dev/null || true
+        done
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Clean up Ceph secrets in other namespaces"
+      ansible.builtin.shell: |
+        kubectl delete secret ceph-infra-rbd-secret -n sheba-cloud-infra 2>/dev/null || true
+        kubectl delete secret ceph-infra-rbd-admin-secret -n sheba-cloud-infra 2>/dev/null || true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | K8s cleanup complete"
       ansible.builtin.debug:
-        msg: |
-          Rook-Ceph cluster REMOVED from Kubernetes.
-          Disk wipe running on OSD nodes next...
+        msg: "Rook-Ceph fully removed from Kubernetes. Wiping OSD disks next..."
 
 # Phase 5b: Wipe OSD disks on all ceph_osd nodes
 - name: "Phase 5b: Wipe OSD Disks on All Nodes (DESTRUCTIVE)"
@@ -813,39 +860,51 @@
   gather_facts: false
   become: true
   tags: [rook_teardown, never]
+  vars:
+    ceph_osd_devices_default:
+      - /dev/vdb
+      - /dev/vdc
   tasks:
-    - name: "TEARDOWN | Remove stale device-mapper entries"
+    - name: "TEARDOWN | Build device list"
+      ansible.builtin.set_fact:
+        _osd_devices: "{{ ceph_osd_devices | default(ceph_osd_devices_default) }}"
+
+    - name: "TEARDOWN | Full disk wipe (LVM + BlueStore + GPT)"
       ansible.builtin.shell: |
-        # Remove all Ceph-related device-mapper entries
-        dmsetup ls 2>/dev/null | grep -i ceph | awk '{print $1}' | while read dm; do
+        DEV={{ item }}
+        DEVNAME=$(basename "$DEV")
+        [ -b "$DEV" ] || { echo "SKIP (not found): $DEV"; exit 0; }
+        # Remove device-mapper entries held by this device
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
           dmsetup remove -f "$dm" 2>/dev/null || true
         done
-        # Deactivate any LVM VGs on OSD devices
-        for DEV in /dev/vdb /dev/vdc; do
-          pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
-            [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
-          done
+        # Deactivate LVM VGs, then remove PV label
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgchange -an "$VG" 2>/dev/null || true
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
         done
-        # Final cleanup
+        pvremove -ff "$DEV" 2>/dev/null || true
+        # Wipe ALL signatures (filesystem, RAID, LVM, Ceph BlueStore)
+        wipefs -af "$DEV" 2>/dev/null || true
+        # Zero first 100MB (GPT header, LVM PV header, BlueStore superblock)
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        # Zero last 100MB (backup GPT, BlueStore label at end of device)
+        DEV_SIZE=$(blockdev --getsize64 "$DEV" 2>/dev/null || echo 0)
+        if [ "$DEV_SIZE" -gt 104857600 ]; then
+          dd if=/dev/zero of="$DEV" bs=1M count=100 \
+            seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+        fi
+        # Zap GPT/MBR partition table
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
+        echo "WIPED: $DEV"
+      loop: "{{ _osd_devices }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: "TEARDOWN | Remove ALL device-mapper entries"
+      ansible.builtin.shell: |
         dmsetup remove_all 2>/dev/null || true
-      changed_when: true
-      ignore_errors: true
-
-    - name: "TEARDOWN | Wipe /dev/vdb signature"
-      ansible.builtin.shell: |
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-        partprobe /dev/vdb 2>/dev/null || true
-      changed_when: true
-      ignore_errors: true
-
-    - name: "TEARDOWN | Wipe /dev/vdc signature"
-      ansible.builtin.shell: |
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-        partprobe /dev/vdc 2>/dev/null || true
       changed_when: true
       ignore_errors: true
 
@@ -854,6 +913,13 @@
         path: /var/lib/rook
         state: absent
 
+    - name: "TEARDOWN | Remove Ceph data directories"
+      ansible.builtin.shell: |
+        rm -rf /var/lib/ceph 2>/dev/null || true
+        rm -rf /etc/ceph 2>/dev/null || true
+      changed_when: true
+      ignore_errors: true
+
     - name: "TEARDOWN | Complete"
       ansible.builtin.debug:
         msg: |
@@ -861,10 +927,14 @@
           ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
           ╠══════════════════════════════════════════════════════════════╣
           ║  • Helm releases removed                                    ║
+          ║  • All Ceph CRs + finalizers stripped                       ║
+          ║  • All pods force-deleted                                   ║
           ║  • CRDs deleted                                             ║
-          ║  • Namespace deleted                                        ║
-          ║  • OSD disks wiped (vdb, vdc)                               ║
-          ║  • /var/lib/rook removed                                    ║
+          ║  • Namespace force-finalized                                ║
+          ║  • StorageClasses removed                                   ║
+          ║  • Node labels cleaned                                      ║
+          ║  • OSD disks fully wiped (pvremove + wipefs + zero + sgdisk)║
+          ║  • /var/lib/rook + /var/lib/ceph + /etc/ceph removed        ║
           ║                                                             ║
           ║  Ready for fresh deploy:                                    ║
           ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
