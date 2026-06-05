@@ -1,658 +1,18 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml --tags rook_teardown -v
-Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
-
-PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
-
-PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
-
-PLAY [Phase 2: Deploy Ceph Cluster via Rook] ********************************************************************************************************************************************************************
-
-PLAY [Phase 3: Expose Ceph Dashboard] ***************************************************************************************************************************************************************************
-
-PLAY [Phase 4: Validate Rook-Ceph Cluster] **********************************************************************************************************************************************************************
-
-PLAY [Phase 5: Teardown Rook-Ceph (DESTRUCTIVE)] ****************************************************************************************************************************************************************
-
-TASK [TEARDOWN | Delete CephCluster Helm release] ***************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - helm
-    - uninstall
-    - rook-ceph-cluster
-    - -n
-    - rook-ceph
-    delta: '0:00:00.642780'
-    end: '2026-06-04 03:13:46.092368'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:13:45.449588'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: release "rook-ceph-cluster" uninstalled
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Remove CephCluster finalizers (prevents namespace hang)] ***************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        for resource in cephcluster cephblockpool cephfilesystem cephobjectstore; do
-          for item in $(kubectl get $resource -n rook-ceph -o name 2>/dev/null); do
-            kubectl patch $item -n rook-ceph --type merge      -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-          done
-        done
-    delta: '0:00:01.907188'
-    end: '2026-06-04 03:13:50.329225'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:13:48.422037'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        cephcluster.ceph.rook.io/rook-ceph patched
-        cephblockpool.ceph.rook.io/kube-rbd patched
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Delete all Ceph CRs] ***************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        kubectl delete cephcluster --all -n rook-ceph --timeout=60s 2>/dev/null || true
-        kubectl delete cephblockpool --all -n rook-ceph --timeout=30s 2>/dev/null || true
-        kubectl delete cephfilesystem --all -n rook-ceph --timeout=30s 2>/dev/null || true
-    delta: '0:00:10.247536'
-    end: '2026-06-04 03:14:03.039663'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:13:52.792127'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        No resources found
-        No resources found
-        No resources found
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Wait for OSD pods to terminate (2m)] ***********************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        kubectl wait --for=delete pod  -l app=rook-ceph-osd  -n rook-ceph  --timeout=120s 2>/dev/null || true
-    delta: '0:00:00.350141'
-    end: '2026-06-04 03:14:06.105442'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:14:05.755301'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Delete Rook operator Helm release] *************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - helm
-    - uninstall
-    - rook-ceph
-    - -n
-    - rook-ceph
-    delta: '0:00:14.745588'
-    end: '2026-06-04 03:14:23.216313'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:14:08.470725'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        These resources were kept due to the resource policy:
-        [CustomResourceDefinition] cephblockpoolradosnamespaces.ceph.rook.io
-        [CustomResourceDefinition] cephblockpools.ceph.rook.io
-        [CustomResourceDefinition] cephbucketnotifications.ceph.rook.io
-        [CustomResourceDefinition] cephbuckettopics.ceph.rook.io
-        [CustomResourceDefinition] cephclients.ceph.rook.io
-        [CustomResourceDefinition] cephclusters.ceph.rook.io
-        [CustomResourceDefinition] cephcosidrivers.ceph.rook.io
-        [CustomResourceDefinition] cephfilesystemmirrors.ceph.rook.io
-        [CustomResourceDefinition] cephfilesystems.ceph.rook.io
-        [CustomResourceDefinition] cephfilesystemsubvolumegroups.ceph.rook.io
-        [CustomResourceDefinition] cephnfses.ceph.rook.io
-        [CustomResourceDefinition] cephobjectrealms.ceph.rook.io
-        [CustomResourceDefinition] cephobjectstores.ceph.rook.io
-        [CustomResourceDefinition] cephobjectstoreusers.ceph.rook.io
-        [CustomResourceDefinition] cephobjectzonegroups.ceph.rook.io
-        [CustomResourceDefinition] cephobjectzones.ceph.rook.io
-        [CustomResourceDefinition] cephrbdmirrors.ceph.rook.io
-        [CustomResourceDefinition] objectbucketclaims.objectbucket.io
-        [CustomResourceDefinition] objectbuckets.objectbucket.io
-
-        release "rook-ceph" uninstalled
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Delete CRDs] ***********************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        kubectl delete crd  cephblockpools.ceph.rook.io  cephblockpoolradosnamespaces.ceph.rook.io  cephbucketnotifications.ceph.rook.io  cephbuckettopics.ceph.rook.io  cephclients.ceph.rook.io  cephclusters.ceph.rook.io  cephcosidrivers.ceph.rook.io  cephfilesystemmirrors.ceph.rook.io  cephfilesystems.ceph.rook.io  cephfilesystemsubvolumegroups.ceph.rook.io  cephnfs.ceph.rook.io  cephobjectrealms.ceph.rook.io  cephobjectstores.ceph.rook.io  cephobjectstoreusers.ceph.rook.io  cephobjectzonegroups.ceph.rook.io  cephobjectzones.ceph.rook.io  cephrbdmirrors.ceph.rook.io  objectbucketclaims.objectbucket.io  objectbuckets.objectbucket.io  2>/dev/null || true
-    delta: '0:00:02.094167'
-    end: '2026-06-04 03:14:28.044143'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:14:25.949976'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        customresourcedefinition.apiextensions.k8s.io "cephblockpools.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephblockpoolradosnamespaces.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephbucketnotifications.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephbuckettopics.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephclients.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephclusters.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephcosidrivers.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephfilesystemmirrors.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephfilesystems.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephobjectrealms.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephobjectstores.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephobjectstoreusers.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephobjectzonegroups.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephobjectzones.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "cephrbdmirrors.ceph.rook.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "objectbucketclaims.objectbucket.io" deleted
-        customresourcedefinition.apiextensions.k8s.io "objectbuckets.objectbucket.io" deleted
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Delete namespace] ******************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        kubectl delete namespace rook-ceph --timeout=120s 2>/dev/null || true
-    delta: '0:02:00.157143'
-    end: '2026-06-04 03:16:30.510857'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:14:30.353714'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: namespace "rook-ceph" deleted
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Wait for namespace to fully terminate] *********************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        for i in $(seq 1 60); do
-          if ! kubectl get ns rook-ceph 2>/dev/null | grep -q Terminating; then
-            echo "Namespace gone"
-            exit 0
-          fi
-          sleep 5
-        done
-        # Force-remove finalizers if stuck
-        kubectl get ns rook-ceph -o json 2>/dev/null |  python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' |  kubectl replace --raw "/api/v1/namespaces/rook-ceph/finalize" -f - 2>/dev/null || true
-        echo "Namespace force-finalized"
-    delta: '0:02:29.479111'
-    end: '2026-06-04 03:19:03.373601'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:16:33.894490'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: Namespace gone
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Report] ****************************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg: |-
-        Rook-Ceph cluster REMOVED from Kubernetes.
-        Disk wipe running on OSD nodes next...
-
-PLAY [Phase 5b: Wipe OSD Disks on All Nodes (DESTRUCTIVE)] ******************************************************************************************************************************************************
-
-TASK [TEARDOWN | Wipe /dev/vdb signature] ***********************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:01.380221'
-    end: '2026-06-04 03:19:08.309708'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:06.929487'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host12_3] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:01.912325'
-    end: '2026-06-04 03:19:09.368076'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:07.455751'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host12_2] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:01.666687'
-    end: '2026-06-04 03:19:09.386827'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:07.720140'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host34_2] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:02.443696'
-    end: '2026-06-04 03:19:10.516189'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:08.072493'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host34_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:02.885923'
-    end: '2026-06-04 03:19:10.869697'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:07.983774'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [HostB12_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdb 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdb bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdb 2>/dev/null || true
-    delta: '0:00:01.496591'
-    end: '2026-06-04 03:19:13.659042'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:12.162451'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Wipe /dev/vdc signature] ***********************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:02.683961'
-    end: '2026-06-04 03:19:18.477560'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:15.793599'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host34_2] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:03.712964'
-    end: '2026-06-04 03:19:19.977073'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:16.264109'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host12_2] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:03.794020'
-    end: '2026-06-04 03:19:19.977790'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:16.183770'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host34_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:05.505508'
-    end: '2026-06-04 03:19:21.649755'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:16.144247'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [Host12_3] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:05.636819'
-    end: '2026-06-04 03:19:21.657873'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:16.021054'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-changed: [HostB12_1] =>
-    changed: true
-    cmd: |-
-        wipefs -af /dev/vdc 2>/dev/null || true
-        dd if=/dev/zero of=/dev/vdc bs=1M count=100 2>/dev/null || true
-        sgdisk --zap-all /dev/vdc 2>/dev/null || true
-    delta: '0:00:01.484067'
-    end: '2026-06-04 03:19:22.535306'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:19:21.051239'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        Creating new GPT entries in memory.
-        Warning: The kernel is still using the old partition table.
-        The new table will be used at the next reboot or after you
-        run partprobe(8) or kpartx(8)
-        GPT data structures destroyed! You may now partition the disk using fdisk or
-        other utilities.
-    stdout_lines: <omitted>
-
-TASK [TEARDOWN | Remove Rook data directory] ********************************************************************************************************************************************************************
-ok: [Host34_1] =>
-    changed: false
-    path: /var/lib/rook
-    state: absent
-changed: [Host34_2] =>
-    changed: true
-    path: /var/lib/rook
-    state: absent
-changed: [Host12_3] =>
-    changed: true
-    path: /var/lib/rook
-    state: absent
-ok: [Host12_1] =>
-    changed: false
-    path: /var/lib/rook
-    state: absent
-ok: [Host12_2] =>
-    changed: false
-    path: /var/lib/rook
-    state: absent
-changed: [HostB12_1] =>
-    changed: true
-    path: /var/lib/rook
-    state: absent
-
-TASK [TEARDOWN | Complete] **************************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-ok: [Host12_2] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-ok: [Host12_3] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-ok: [Host34_1] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-ok: [Host34_2] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-ok: [HostB12_1] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║  TEARDOWN COMPLETE — Ceph fully removed from this cluster   ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║  • Helm releases removed                                    ║
-        ║  • CRDs deleted                                             ║
-        ║  • Namespace deleted                                        ║
-        ║  • OSD disks wiped (vdb, vdc)                               ║
-        ║  • /var/lib/rook removed                                    ║
-        ║                                                             ║
-        ║  Ready for fresh deploy:                                    ║
-        ║    ansible-playbook playbooks/reused/deploy_ceph_rook.yml \ ║
-        ║      -i inventory/hosts.yml -v                              ║
-        ╚══════════════════════════════════════════════════════════════╝
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=13   changed=8    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host12_2                   : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host12_3                   : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_1                   : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_2                   : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-HostB12_1                  : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible ceph_osd -i inventory/hosts.yml -m shell -a "lsblk -d -o NAME,SIZE,TYPE" -b
-Host12_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host34_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host12_2 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host34_2 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-Host12_3 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
-HostB12_1 | CHANGED | rc=0 >>
-NAME  SIZE TYPE
-sr0   368K rom
-vda    20G disk
-vdb   100G disk
-vdc   100G disk
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
 Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
 
 PLAY [Phase 0: Prepare OSD Nodes for Rook] **********************************************************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host12_1]
-ok: [Host34_2]
-ok: [Host34_1]
 ok: [Host12_3]
+ok: [Host34_2]
 ok: [Host12_2]
+ok: [Host12_1]
+ok: [Host34_1]
 ok: [HostB12_1]
 
 TASK [Load required kernel modules for Ceph] ********************************************************************************************************************************************************************
-ok: [Host12_2] => (item=rbd) =>
-    ansible_loop_var: item
-    changed: false
-    item: rbd
-    name: rbd
-    params: ''
-    state: present
 ok: [Host34_2] => (item=rbd) =>
-    ansible_loop_var: item
-    changed: false
-    item: rbd
-    name: rbd
-    params: ''
-    state: present
-ok: [Host12_1] => (item=rbd) =>
     ansible_loop_var: item
     changed: false
     item: rbd
@@ -666,6 +26,20 @@ ok: [Host34_1] => (item=rbd) =>
     name: rbd
     params: ''
     state: present
+ok: [Host12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: false
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
+ok: [Host12_2] => (item=rbd) =>
+    ansible_loop_var: item
+    changed: false
+    item: rbd
+    name: rbd
+    params: ''
+    state: present
 ok: [Host12_3] => (item=rbd) =>
     ansible_loop_var: item
     changed: false
@@ -673,14 +47,7 @@ ok: [Host12_3] => (item=rbd) =>
     name: rbd
     params: ''
     state: present
-ok: [Host12_3] => (item=ceph) =>
-    ansible_loop_var: item
-    changed: false
-    item: ceph
-    name: ceph
-    params: ''
-    state: present
-ok: [Host12_1] => (item=ceph) =>
+ok: [Host34_2] => (item=ceph) =>
     ansible_loop_var: item
     changed: false
     item: ceph
@@ -694,7 +61,14 @@ ok: [Host34_1] => (item=ceph) =>
     name: ceph
     params: ''
     state: present
-ok: [Host34_2] => (item=ceph) =>
+ok: [Host12_1] => (item=ceph) =>
+    ansible_loop_var: item
+    changed: false
+    item: ceph
+    name: ceph
+    params: ''
+    state: present
+ok: [Host12_3] => (item=ceph) =>
     ansible_loop_var: item
     changed: false
     item: ceph
@@ -724,13 +98,19 @@ ok: [HostB12_1] => (item=ceph) =>
     state: present
 
 TASK [Persist kernel modules across reboots] ********************************************************************************************************************************************************************
+ok: [Host12_1] => (item=rbd) =>
+    ansible_loop_var: item
+    backup: ''
+    changed: false
+    item: rbd
+    msg: ''
 ok: [Host12_3] => (item=rbd) =>
     ansible_loop_var: item
     backup: ''
     changed: false
     item: rbd
     msg: ''
-ok: [Host12_1] => (item=rbd) =>
+ok: [Host34_1] => (item=rbd) =>
     ansible_loop_var: item
     backup: ''
     changed: false
@@ -748,12 +128,6 @@ ok: [Host34_2] => (item=rbd) =>
     changed: false
     item: rbd
     msg: ''
-ok: [Host34_1] => (item=rbd) =>
-    ansible_loop_var: item
-    backup: ''
-    changed: false
-    item: rbd
-    msg: ''
 ok: [Host12_1] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
@@ -766,13 +140,13 @@ ok: [Host12_3] => (item=ceph) =>
     changed: false
     item: ceph
     msg: ''
-ok: [Host12_2] => (item=ceph) =>
+ok: [Host34_1] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
     changed: false
     item: ceph
     msg: ''
-ok: [Host34_1] => (item=ceph) =>
+ok: [Host12_2] => (item=ceph) =>
     ansible_loop_var: item
     backup: ''
     changed: false
@@ -798,28 +172,28 @@ ok: [HostB12_1] => (item=ceph) =>
     msg: ''
 
 TASK [Install lvm2 (required for Ceph OSD LVM mode)] ************************************************************************************************************************************************************
-ok: [Host12_3] =>
-    cache_update_time: 1780454732
+ok: [Host12_1] =>
+    cache_update_time: 1780587050
     cache_updated: false
     changed: false
-ok: [Host12_1] =>
-    cache_update_time: 1780446549
+ok: [Host12_3] =>
+    cache_update_time: 1780623594
     cache_updated: false
     changed: false
 ok: [Host34_2] =>
-    cache_update_time: 1780447662
+    cache_update_time: 1780549856
     cache_updated: false
     changed: false
 ok: [Host12_2] =>
-    cache_update_time: 1780452175
+    cache_update_time: 1780582606
     cache_updated: false
     changed: false
 ok: [Host34_1] =>
-    cache_update_time: 1780446679
+    cache_update_time: 1780544240
     cache_updated: false
     changed: false
 ok: [HostB12_1] =>
-    cache_update_time: 1780448677
+    cache_update_time: 1780566326
     cache_updated: false
     changed: false
 
@@ -861,328 +235,559 @@ ok: [HostB12_1] =>
     changed: false
 
 TASK [Wipe OSD devices (only if empty/unformatted)] *************************************************************************************************************************************************************
-ok: [Host34_2] => (item=/dev/vdb) =>
+changed: [Host12_1] => (item=/dev/vdb) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007229'
-    end: '2026-06-04 03:21:22.136264'
+    delta: '0:00:15.432180'
+    end: '2026-06-05 01:53:03.934629'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:22.129035'
+    start: '2026-06-05 01:52:48.502449'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
-ok: [Host12_1] => (item=/dev/vdb) =>
+changed: [Host12_3] => (item=/dev/vdb) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.008165'
-    end: '2026-06-04 03:21:22.189437'
+    delta: '0:00:15.349339'
+    end: '2026-06-05 01:53:04.436203'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:22.181272'
+    start: '2026-06-05 01:52:49.086864'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
-ok: [Host12_3] => (item=/dev/vdb) =>
+changed: [Host34_2] => (item=/dev/vdb) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007394'
-    end: '2026-06-04 03:21:22.387490'
+    delta: '0:00:16.337276'
+    end: '2026-06-05 01:53:05.451264'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:22.380096'
+    start: '2026-06-05 01:52:49.113988'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
-ok: [Host34_1] => (item=/dev/vdb) =>
+changed: [Host34_1] => (item=/dev/vdb) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.008164'
-    end: '2026-06-04 03:21:22.491019'
+    delta: '0:00:16.598758'
+    end: '2026-06-05 01:53:05.704049'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:22.482855'
+    start: '2026-06-05 01:52:49.105291'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
-ok: [Host12_2] => (item=/dev/vdb) =>
+changed: [Host12_2] => (item=/dev/vdb) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007972'
-    end: '2026-06-04 03:21:22.533358'
+    delta: '0:00:16.800975'
+    end: '2026-06-05 01:53:05.867384'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:22.525386'
+    start: '2026-06-05 01:52:49.066409'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
-ok: [Host34_2] => (item=/dev/vdc) =>
+changed: [Host12_1] => (item=/dev/vdc) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdc"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdc
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.006810'
-    end: '2026-06-04 03:21:24.143971'
+    delta: '0:00:13.950550'
+    end: '2026-06-05 01:53:20.554145'
     item: /dev/vdc
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:24.137161'
+    start: '2026-06-05 01:53:06.603595'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
-    stdout_lines: <omitted>
-ok: [Host12_1] => (item=/dev/vdc) =>
-    ansible_loop_var: item
-    changed: false
-    cmd: |-
-        DEV="/dev/vdc"
-        if [ ! -b "$DEV" ]; then
-          echo "SKIP (not found): $DEV"
-          exit 0
-        fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-          echo "SKIP (mounted): $DEV"
-          exit 0
-        fi
-        wipefs -af "$DEV" 2>/dev/null || true
-        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
-        echo "WIPED: $DEV"
-    delta: '0:00:00.008549'
-    end: '2026-06-04 03:21:24.249645'
-    item: /dev/vdc
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:21:24.241096'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
-    stdout_lines: <omitted>
-ok: [Host34_1] => (item=/dev/vdc) =>
-    ansible_loop_var: item
-    changed: false
-    cmd: |-
-        DEV="/dev/vdc"
-        if [ ! -b "$DEV" ]; then
-          echo "SKIP (not found): $DEV"
-          exit 0
-        fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-          echo "SKIP (mounted): $DEV"
-          exit 0
-        fi
-        wipefs -af "$DEV" 2>/dev/null || true
-        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
-        echo "WIPED: $DEV"
-    delta: '0:00:00.007542'
-    end: '2026-06-04 03:21:24.573367'
-    item: /dev/vdc
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:21:24.565825'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
-    stdout_lines: <omitted>
-ok: [Host12_2] => (item=/dev/vdc) =>
-    ansible_loop_var: item
-    changed: false
-    cmd: |-
-        DEV="/dev/vdc"
-        if [ ! -b "$DEV" ]; then
-          echo "SKIP (not found): $DEV"
-          exit 0
-        fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
-          echo "SKIP (mounted): $DEV"
-          exit 0
-        fi
-        wipefs -af "$DEV" 2>/dev/null || true
-        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
-        echo "WIPED: $DEV"
-    delta: '0:00:00.007479'
-    end: '2026-06-04 03:21:24.728560'
-    item: /dev/vdc
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:21:24.721081'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdc'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
     stdout_lines: <omitted>
 changed: [Host12_3] => (item=/dev/vdc) =>
     ansible_loop_var: item
     changed: true
     cmd: |-
-        DEV="/dev/vdc"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdc
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.311002'
-    end: '2026-06-04 03:21:24.883495'
+    delta: '0:00:13.443643'
+    end: '2026-06-05 01:53:20.561361'
     item: /dev/vdc
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:24.572493'
+    start: '2026-06-05 01:53:07.117718'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'WIPED: /dev/vdc'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
     stdout_lines: <omitted>
-ok: [HostB12_1] => (item=/dev/vdb) =>
+changed: [Host34_2] => (item=/dev/vdc) =>
     ansible_loop_var: item
-    changed: false
+    changed: true
     cmd: |-
-        DEV="/dev/vdb"
-        if [ ! -b "$DEV" ]; then
+        DEV=/dev/vdc
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
           echo "SKIP (not found): $DEV"
           exit 0
         fi
-        if lsblk -n -o MOUNTPOINT "$DEV" 2>/dev/null | grep -q '/'; then
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
           echo "SKIP (mounted): $DEV"
           exit 0
         fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
         wipefs -af "$DEV" 2>/dev/null || true
         dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
-        dmsetup remove_all 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
         echo "WIPED: $DEV"
-    delta: '0:00:00.007792'
-    end: '2026-06-04 03:21:26.422016'
+    delta: '0:00:15.410299'
+    end: '2026-06-05 01:53:23.462455'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-05 01:53:08.052156'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
+    stdout_lines: <omitted>
+changed: [Host12_2] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: true
+    cmd: |-
+        DEV=/dev/vdc
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:15.387656'
+    end: '2026-06-05 01:53:24.087198'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-05 01:53:08.699542'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
+    stdout_lines: <omitted>
+changed: [Host34_1] => (item=/dev/vdc) =>
+    ansible_loop_var: item
+    changed: true
+    cmd: |-
+        DEV=/dev/vdc
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:15.504586'
+    end: '2026-06-05 01:53:24.095001'
+    item: /dev/vdc
+    msg: ''
+    rc: 0
+    start: '2026-06-05 01:53:08.590415'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
+    stdout_lines: <omitted>
+changed: [HostB12_1] => (item=/dev/vdb) =>
+    ansible_loop_var: item
+    changed: true
+    cmd: |-
+        DEV=/dev/vdb
+        DEVNAME=$(basename "$DEV")
+        # Check device existence via sysfs (works regardless of DM/LVM state)
+        if [ ! -d "/sys/block/$DEVNAME" ]; then
+          echo "SKIP (not found): $DEV"
+          exit 0
+        fi
+        # Check if mounted (use findmnt which doesn't choke on stale DM)
+        if findmnt -rn -S "$DEV" >/dev/null 2>&1; then
+          echo "SKIP (mounted): $DEV"
+          exit 0
+        fi
+        # Remove any stale device-mapper entries (LVM from previous Ceph OSD)
+        for dm in $(ls /sys/block/$DEVNAME/holders/ 2>/dev/null); do
+          dmsetup remove -f "$dm" 2>/dev/null || true
+        done
+        # Also deactivate any LVM VGs on this device
+        pvs "$DEV" --noheadings -o vg_name 2>/dev/null | while read VG; do
+          [ -n "$VG" ] && vgremove -f "$VG" 2>/dev/null || true
+        done
+        # Now wipe
+        wipefs -af "$DEV" 2>/dev/null || true
+        dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+        sgdisk --zap-all "$DEV" 2>/dev/null || true
+        partprobe "$DEV" 2>/dev/null || true
+        echo "WIPED: $DEV"
+    delta: '0:00:05.924048'
+    end: '2026-06-05 01:53:30.259208'
     item: /dev/vdb
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:26.414224'
+    start: '2026-06-05 01:53:24.335160'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'SKIP (not found): /dev/vdb'
+    stdout: |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
     stdout_lines: <omitted>
 
 TASK [Display disk preparation results] *************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg:
-    - 'SKIP (not found): /dev/vdb'
-    - 'SKIP (not found): /dev/vdc'
 ok: [Host12_2] =>
     msg:
-    - 'SKIP (not found): /dev/vdb'
-    - 'SKIP (not found): /dev/vdc'
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
+ok: [Host12_1] =>
+    msg:
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
 ok: [Host12_3] =>
     msg:
-    - 'SKIP (not found): /dev/vdb'
-    - 'WIPED: /dev/vdc'
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
 ok: [Host34_1] =>
     msg:
-    - 'SKIP (not found): /dev/vdb'
-    - 'SKIP (not found): /dev/vdc'
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
 ok: [Host34_2] =>
     msg:
-    - 'SKIP (not found): /dev/vdb'
-    - 'SKIP (not found): /dev/vdc'
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdc
 ok: [HostB12_1] =>
     msg:
-    - 'SKIP (not found): /dev/vdb'
+    - |-
+        Creating new GPT entries in memory.
+        GPT data structures destroyed! You may now partition the disk using fdisk or
+        other utilities.
+        WIPED: /dev/vdb
 
 PLAY [Phase 1: Deploy Rook-Ceph Operator] ***********************************************************************************************************************************************************************
 
@@ -1196,11 +801,11 @@ ok: [Host12_1] =>
     - helm
     - version
     - --short
-    delta: '0:00:00.104038'
-    end: '2026-06-04 03:21:34.027414'
+    delta: '0:00:00.373675'
+    end: '2026-06-05 01:53:38.158418'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:33.923376'
+    start: '2026-06-05 01:53:37.784743'
     stderr: ''
     stderr_lines: <omitted>
     stdout: v3.14.2+gc309b6f
@@ -1225,11 +830,11 @@ changed: [Host12_1] =>
         done
         echo "ERROR: Namespace stuck in Terminating state after 150s"
         exit 1
-    delta: '0:00:00.296979'
-    end: '2026-06-04 03:21:36.686067'
+    delta: '0:00:00.702221'
+    end: '2026-06-05 01:53:41.823432'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:36.389088'
+    start: '2026-06-05 01:53:41.121211'
     stderr: ''
     stderr_lines: <omitted>
     stdout: namespace/rook-ceph created
@@ -1247,12 +852,12 @@ changed: [Host12_1] => (item=Host12_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.148962'
-    end: '2026-06-04 03:21:39.997316'
+    delta: '0:00:00.196640'
+    end: '2026-06-05 01:53:44.560144'
     item: Host12_1
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:39.848354'
+    start: '2026-06-05 01:53:44.363504'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-1 not labeled
@@ -1268,12 +873,12 @@ changed: [Host12_1] => (item=Host12_2) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.419351'
-    end: '2026-06-04 03:21:42.185209'
+    delta: '0:00:00.164964'
+    end: '2026-06-05 01:53:46.687289'
     item: Host12_2
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:41.765858'
+    start: '2026-06-05 01:53:46.522325'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-2 not labeled
@@ -1289,12 +894,12 @@ changed: [Host12_1] => (item=Host12_3) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.201304'
-    end: '2026-06-04 03:21:44.103749'
+    delta: '0:00:00.159883'
+    end: '2026-06-05 01:53:48.590461'
     item: Host12_3
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:43.902445'
+    start: '2026-06-05 01:53:48.430578'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-3 not labeled
@@ -1310,12 +915,12 @@ changed: [Host12_1] => (item=Host34_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.159282'
-    end: '2026-06-04 03:21:46.112991'
+    delta: '0:00:00.152047'
+    end: '2026-06-05 01:53:50.461109'
     item: Host34_1
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:45.953709'
+    start: '2026-06-05 01:53:50.309062'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host34-1 not labeled
@@ -1331,12 +936,12 @@ changed: [Host12_1] => (item=Host34_2) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.638473'
-    end: '2026-06-04 03:21:48.650866'
+    delta: '0:00:00.159052'
+    end: '2026-06-05 01:53:52.390144'
     item: Host34_2
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:48.012393'
+    start: '2026-06-05 01:53:52.231092'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host34-2 not labeled
@@ -1352,12 +957,12 @@ changed: [Host12_1] => (item=HostB12_1) =>
     - ceph-osd=enabled
     - storage-node=true
     - --overwrite
-    delta: '0:00:00.150717'
-    end: '2026-06-04 03:21:50.536819'
+    delta: '0:00:00.155866'
+    end: '2026-06-05 01:53:54.330985'
     item: HostB12_1
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:50.386102'
+    start: '2026-06-05 01:53:54.175119'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/hostb12-1 not labeled
@@ -1374,12 +979,12 @@ changed: [Host12_1] => (item=Host12_1) =>
     - host12-1
     - ceph-mon=enabled
     - --overwrite
-    delta: '0:00:00.170934'
-    end: '2026-06-04 03:21:53.139554'
+    delta: '0:00:00.154262'
+    end: '2026-06-05 01:53:56.854620'
     item: Host12_1
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:52.968620'
+    start: '2026-06-05 01:53:56.700358'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host12-1 not labeled
@@ -1394,12 +999,12 @@ changed: [Host12_1] => (item=Host34_1) =>
     - host34-1
     - ceph-mon=enabled
     - --overwrite
-    delta: '0:00:00.372921'
-    end: '2026-06-04 03:21:55.442987'
+    delta: '0:00:00.166174'
+    end: '2026-06-05 01:53:58.942737'
     item: Host34_1
     msg: ''
     rc: 0
-    start: '2026-06-04 03:21:55.070066'
+    start: '2026-06-05 01:53:58.776563'
     stderr: ''
     stderr_lines: <omitted>
     stdout: node/host34-1 not labeled
@@ -1426,12 +1031,12 @@ ok: [Host12_1] =>
     - add
     - rook-release
     - https://charts.rook.io/release
-    delta: '0:00:00.108795'
-    end: '2026-06-04 03:22:02.384534'
+    delta: '0:00:00.110717'
+    end: '2026-06-05 01:54:05.875611'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:02.275739'
+    start: '2026-06-05 01:54:05.764894'
     stderr: ''
     stderr_lines: <omitted>
     stdout: '"rook-release" already exists with the same configuration, skipping'
@@ -1444,15 +1049,16 @@ ok: [Host12_1] =>
     - helm
     - repo
     - update
-    delta: '0:00:00.313342'
-    end: '2026-06-04 03:22:05.205558'
+    delta: '0:00:00.309352'
+    end: '2026-06-05 01:54:09.376715'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:04.892216'
+    start: '2026-06-05 01:54:09.067363'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         Hang tight while we grab the latest from your chart repositories...
+        ...Successfully got an update from the "metallb" chart repository
         ...Successfully got an update from the "rook-release" chart repository
         Update Complete. ⎈Happy Helming!⎈
     stdout_lines: <omitted>
@@ -1484,20 +1090,22 @@ changed: [Host12_1] =>
     - csi.enableCephfsDriver=true
     - --set
     - monitoring.enabled=true
+    - --set
+    - enableDiscoveryDaemon=true
     - --wait
     - --timeout
     - 5m0s
-    delta: '0:00:12.148746'
-    end: '2026-06-04 03:22:20.008445'
+    delta: '0:00:09.356823'
+    end: '2026-06-05 01:54:22.037090'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:07.859699'
+    start: '2026-06-05 01:54:12.680267'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         Release "rook-ceph" does not exist. Installing it now.
         NAME: rook-ceph
-        LAST DEPLOYED: Thu Jun  4 03:22:08 2026
+        LAST DEPLOYED: Fri Jun  5 01:54:13 2026
         NAMESPACE: rook-ceph
         STATUS: deployed
         REVISION: 1
@@ -1529,14 +1137,14 @@ ok: [Host12_1] =>
     - -n
     - rook-ceph
     - --timeout=120s
-    delta: '0:00:00.250312'
-    end: '2026-06-04 03:22:23.270149'
+    delta: '0:00:00.608775'
+    end: '2026-06-05 01:54:25.243979'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:23.019837'
+    start: '2026-06-05 01:54:24.635204'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: pod/rook-ceph-operator-b757f78f8-jw6q8 condition met
+    stdout: pod/rook-ceph-operator-b757f78f8-7jzzp condition met
     stdout_lines: <omitted>
 
 TASK [Display operator status] **********************************************************************************************************************************************************************************
@@ -1551,15 +1159,15 @@ ok: [Host12_1]
 TASK [Generate Rook CephCluster values file] ********************************************************************************************************************************************************************
 changed: [Host12_1] =>
     changed: true
-    checksum: 29834a2c00ac92782e31dee80f761bf714949a71
+    checksum: 0c2fb3684797e0b2c4365c6376d08e556864a96a
     dest: /tmp/rook-ceph-cluster-values.yml
     gid: 0
     group: root
-    md5sum: fc6f44c0a21529b632c3a95076b4495f
+    md5sum: 0876ff52c1e0c76d82fa08f7e5703b74
     mode: '0600'
     owner: root
-    size: 3190
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780543349.4610882-319335-132866245184551/.source.yml
+    size: 4426
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780624494.63296-325083-104943181136595/.source.yml
     state: file
     uid: 0
 
@@ -1597,17 +1205,17 @@ changed: [Host12_1] =>
     - v1.14.7
     - --timeout
     - 10m0s
-    delta: '0:00:01.045397'
-    end: '2026-06-04 03:22:49.428539'
+    delta: '0:00:34.715009'
+    end: '2026-06-05 01:56:01.605971'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:48.383142'
-    stderr: ''
+    start: '2026-06-05 01:55:26.890962'
+    stderr: W0605 01:56:01.519818   18731 warnings.go:70] unknown field "spec.healthCheck.bucket"
     stderr_lines: <omitted>
     stdout: |-
         Release "rook-ceph-cluster" does not exist. Installing it now.
         NAME: rook-ceph-cluster
-        LAST DEPLOYED: Thu Jun  4 03:22:48 2026
+        LAST DEPLOYED: Fri Jun  5 01:55:49 2026
         NAMESPACE: rook-ceph
         STATUS: deployed
         REVISION: 1
@@ -1645,39 +1253,55 @@ ok: [Host12_1] =>
         done
         echo "WARNING: No MON pods created after 5 minutes — operator may still be initializing"
         exit 0
-    delta: '0:01:02.395346'
-    end: '2026-06-04 03:23:59.251816'
+    delta: '0:01:40.302660'
+    end: '2026-06-05 01:57:48.896863'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:22:56.856470'
+    start: '2026-06-05 01:56:08.594203'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         Waiting for MON pods to be created by operator...
         MON pod found, waiting for ready...
-        pod/rook-ceph-mon-a-55679cc49b-pl4qd condition met
-        pod/rook-ceph-mon-b-7949fc8b7d-tcw4w condition met
+        pod/rook-ceph-mon-a-55679cc49b-g778x condition met
+        pod/rook-ceph-mon-b-7949fc8b7d-g679j condition met
     stdout_lines: <omitted>
 
-TASK [Wait for Ceph OSD pods to be ready (5m timeout)] **********************************************************************************************************************************************************
+TASK [Wait for Ceph OSD pods to be ready (10m timeout)] *********************************************************************************************************************************************************
 ok: [Host12_1] =>
     attempts: 1
     changed: false
     cmd: |-
-        OSD_PODS=$(kubectl get pods -n rook-ceph -l app=rook-ceph-osd --no-headers 2>/dev/null | wc -l)
-        if [ "$OSD_PODS" -eq 0 ]; then
-          echo "WARNING: No OSD pods found — disks may not be attached to nodes yet"
-          exit 0
-        fi
-        kubectl wait --for=condition=ready pod  -l app=rook-ceph-osd  -n rook-ceph  --timeout=300s 2>&1 || echo "Waiting for OSD pods..."
-    delta: '0:00:00.153648'
-    end: '2026-06-04 03:24:02.441117'
+        echo "Waiting for OSD prepare jobs or OSD pods (up to 10 min)..."
+        for i in $(seq 1 120); do
+          # Check for running OSD pods
+          OSD_PODS=$(kubectl get pods -n rook-ceph -l app=rook-ceph-osd --no-headers 2>/dev/null | wc -l)
+          if [ "$OSD_PODS" -ge 1 ]; then
+            echo "OSD pods found ($OSD_PODS), waiting for ready..."
+            kubectl wait --for=condition=ready pod      -l app=rook-ceph-osd      -n rook-ceph      --timeout=300s 2>&1
+            exit $?
+          fi
+          # Check if prepare jobs are running (good sign — means discovery is working)
+          PREP_PODS=$(kubectl get pods -n rook-ceph -l app=rook-ceph-osd-prepare --no-headers 2>/dev/null | wc -l)
+          if [ "$PREP_PODS" -ge 1 ]; then
+            echo "OSD prepare job(s) running ($PREP_PODS) — waiting for completion..."
+          fi
+          sleep 5
+        done
+        echo "WARNING: No OSD pods created after 10 minutes"
+        echo "Check operator logs: kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=50"
+        exit 0
+    delta: '0:10:53.899837'
+    end: '2026-06-05 02:08:45.837380'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:24:02.287469'
+    start: '2026-06-05 01:57:51.937543'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 'WARNING: No OSD pods found — disks may not be attached to nodes yet'
+    stdout: |-
+        Waiting for OSD prepare jobs or OSD pods (up to 10 min)...
+        WARNING: No OSD pods created after 10 minutes
+        Check operator logs: kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=50
     stdout_lines: <omitted>
 
 TASK [Display cluster deployment status] ************************************************************************************************************************************************************************
@@ -1686,9 +1310,11 @@ ok: [Host12_1] =>
         Ceph cluster deployed in 'rook-ceph' namespace
         MON pods: Waiting for MON pods to be created by operator...
         MON pod found, waiting for ready...
-        pod/rook-ceph-mon-a-55679cc49b-pl4qd condition met
-        pod/rook-ceph-mon-b-7949fc8b7d-tcw4w condition met
-        OSD pods: WARNING: No OSD pods found — disks may not be attached to nodes yet
+        pod/rook-ceph-mon-a-55679cc49b-g778x condition met
+        pod/rook-ceph-mon-b-7949fc8b7d-g679j condition met
+        OSD pods: Waiting for OSD prepare jobs or OSD pods (up to 10 min)...
+        WARNING: No OSD pods created after 10 minutes
+        Check operator logs: kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=50
 
 PLAY [Phase 3: Expose Ceph Dashboard] ***************************************************************************************************************************************************************************
 
@@ -1707,11 +1333,11 @@ ok: [Host12_1] =>
         done
         echo "ERROR: MGR pod not ready after 5 minutes"
         exit 1
-    delta: '0:00:41.720352'
-    end: '2026-06-04 03:24:47.060744'
+    delta: '0:00:00.163355'
+    end: '2026-06-05 02:08:49.456847'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:24:05.340392'
+    start: '2026-06-05 02:08:49.293492'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
@@ -1731,29 +1357,28 @@ ok: [Host12_1] =>
         done
         echo "ERROR: Dashboard service not created after 150s"
         exit 1
-    delta: '0:00:06.020759'
-    end: '2026-06-04 03:24:55.922933'
+    delta: '0:00:00.239695'
+    end: '2026-06-05 02:08:52.086647'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:24:49.902174'
+    start: '2026-06-05 02:08:51.846952'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         NAME                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-        rook-ceph-mgr-dashboard   ClusterIP   10.233.35.246   <none>        8443/TCP   2s
+        rook-ceph-mgr-dashboard   ClusterIP   10.233.29.191   <none>        8443/TCP   10m
     stdout_lines: <omitted>
 
-TASK [Patch dashboard service to NodePort] **********************************************************************************************************************************************************************
+TASK [Patch dashboard service to LoadBalancer (MetalLB assigns external IP)] ************************************************************************************************************************************
 changed: [Host12_1] =>
     changed: true
     cmd: |-
-        kubectl patch svc rook-ceph-mgr-dashboard -n rook-ceph  -p '{"spec":{"type":"NodePort","ports":[{"port":8443,"nodePort":31443,"protocol":"TCP","name":"https-dashboard"}]}}'
-    delta: '0:00:00.211266'
-    end: '2026-06-04 03:24:58.648897'
-    failed_when_result: false
+        kubectl patch svc rook-ceph-mgr-dashboard -n rook-ceph  -p '{"spec":{"type":"LoadBalancer","ports":[{"port":8443,"protocol":"TCP","name":"https-dashboard"}]}}'
+    delta: '0:00:00.189576'
+    end: '2026-06-05 02:08:54.533067'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:24:58.437631'
+    start: '2026-06-05 02:08:54.343491'
     stderr: ''
     stderr_lines: <omitted>
     stdout: service/rook-ceph-mgr-dashboard patched
@@ -1765,41 +1390,50 @@ ok: [Host12_1] =>
         for this result'
     changed: false
 
-TASK [Get dashboard service details] ****************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - get
-    - svc
-    - rook-ceph-mgr-dashboard
-    - -n
-    - rook-ceph
-    - -o
-    - jsonpath={.spec.ports[0].nodePort}
-    delta: '0:00:00.144414'
-    end: '2026-06-04 03:25:04.588122'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:25:04.443708'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: '31443'
-    stdout_lines: <omitted>
-
-TASK [Get any node IP for dashboard access] *********************************************************************************************************************************************************************
+TASK [Wait for LoadBalancer IP assignment (MetalLB)] ************************************************************************************************************************************************************
 ok: [Host12_1] =>
     changed: false
     cmd: |-
-        kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}'
-    delta: '0:00:00.188946'
-    end: '2026-06-04 03:25:07.282795'
+        for i in $(seq 1 30); do
+          LB_IP=$(kubectl get svc rook-ceph-mgr-dashboard -n rook-ceph    -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+          if [ -n "$LB_IP" ]; then
+            echo "$LB_IP"
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "WARN: No LB IP after 150s — MetalLB may not be ready"
+        exit 0
+    delta: '0:00:00.187939'
+    end: '2026-06-05 02:09:00.640678'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:07.093849'
+    start: '2026-06-05 02:09:00.452739'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: 172.16.2.40
+    stdout: 172.16.2.201
+    stdout_lines: <omitted>
+
+TASK [Get dashboard service external endpoint] ******************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        LB_IP=$(kubectl get svc rook-ceph-mgr-dashboard -n rook-ceph  -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+        if [ -n "$LB_IP" ]; then
+          echo "$LB_IP:8443"
+        else
+          NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          NODE_PORT=$(kubectl get svc rook-ceph-mgr-dashboard -n rook-ceph    -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo '8443')
+          echo "$NODE_IP:$NODE_PORT (fallback — MetalLB IP not assigned)"
+        fi
+    delta: '0:00:00.154581'
+    end: '2026-06-05 02:09:03.096141'
+    msg: ''
+    rc: 0
+    start: '2026-06-05 02:09:02.941560'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 172.16.2.201:8443
     stdout_lines: <omitted>
 
 TASK [Display dashboard access information] *********************************************************************************************************************************************************************
@@ -1808,12 +1442,15 @@ ok: [Host12_1] =>
         ╔══════════════════════════════════════════════════════════════════╗
         ║              CEPH DASHBOARD ACCESS INFORMATION                   ║
         ╠══════════════════════════════════════════════════════════════════╣
-        ║ URL:      https://172.16.2.40:31443
+        ║ URL:      https://172.16.2.201:8443
         ║ Username: admin
         ║ Password:
         ║
+        ║ Service type: LoadBalancer
+        ║ MetalLB IP:   172.16.2.201
+        ║
         ║ NOTE: Uses self-signed TLS certificate — accept browser warning.
-        ║ Accessible from any machine that can reach a cluster node IP.
+        ║ Accessible from any host on the fabric (MetalLB BGP /32 route).
         ╚══════════════════════════════════════════════════════════════════╝
 
 PLAY [Phase 4: Validate Rook-Ceph Cluster] **********************************************************************************************************************************************************************
@@ -1830,28 +1467,34 @@ ok: [Host12_1] =>
         else
           kubectl exec -n rook-ceph "$TOOLBOX" -- ceph -s
         fi
-    delta: '0:00:01.298069'
-    end: '2026-06-04 03:25:11.512686'
+    delta: '0:00:01.355765'
+    end: '2026-06-05 02:09:07.214572'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:10.214617'
+    start: '2026-06-05 02:09:05.858807'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |4-
           cluster:
             id:     99f830e6-e4f6-45b4-ae67-53454707bda3
-            health: HEALTH_OK
+            health: HEALTH_WARN
+                    1 MDSs report slow metadata IOs
+                    Reduced data availability: 60 pgs inactive
+                    OSD count 0 < osd_pool_default_size 2
 
           services:
-            mon: 2 daemons, quorum b,a (age 57s)
-            mgr: a(active, since 17s)
+            mon: 2 daemons, quorum b,a (age 11m)
+            mgr: a(active, since 10m)
+            mds: 1/1 daemons up, 1 standby
             osd: 0 osds: 0 up, 0 in
 
           data:
-            pools:   0 pools, 0 pgs
+            volumes: 1/1 healthy
+            pools:   11 pools, 60 pgs
             objects: 0 objects, 0 B
             usage:   0 B used, 0 B / 0 B avail
-            pgs:
+            pgs:     100.000% pgs unknown
+                     60 unknown
     stdout_lines: <omitted>
 
 TASK [Get Ceph OSD tree] ****************************************************************************************************************************************************************************************
@@ -1862,11 +1505,11 @@ ok: [Host12_1] =>
         if [ -n "$TOOLBOX" ]; then
           kubectl exec -n rook-ceph "$TOOLBOX" -- ceph osd tree
         fi
-    delta: '0:00:01.214926'
-    end: '2026-06-04 03:25:15.129477'
+    delta: '0:00:01.180018'
+    end: '2026-06-05 02:09:10.704369'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:13.914551'
+    start: '2026-06-05 02:09:09.524351'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
@@ -1885,40 +1528,50 @@ ok: [Host12_1] =>
     - rook-ceph
     - -o
     - wide
-    delta: '0:00:00.207070'
-    end: '2026-06-04 03:25:18.136359'
+    delta: '0:00:00.215365'
+    end: '2026-06-05 02:09:13.217853'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:17.929289'
+    start: '2026-06-05 02:09:13.002488'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
-        NAME                                                  READY   STATUS    RESTARTS   AGE     IP               NODE        NOMINATED NODE   READINESS GATES
-        csi-cephfsplugin-2g9nh                                2/2     Running   0          2m17s   172.16.2.45      hostb12-1   <none>           <none>
-        csi-cephfsplugin-6tshz                                2/2     Running   0          2m15s   172.16.2.43      host34-1    <none>           <none>
-        csi-cephfsplugin-gmf6z                                2/2     Running   0          2m17s   172.16.2.40      host12-1    <none>           <none>
-        csi-cephfsplugin-nflj5                                2/2     Running   0          2m15s   172.16.2.41      host12-2    <none>           <none>
-        csi-cephfsplugin-provisioner-55d789d7bd-k97cr         5/5     Running   0          2m15s   10.233.126.225   host12-3    <none>           <none>
-        csi-cephfsplugin-provisioner-55d789d7bd-xzpln         5/5     Running   0          2m15s   10.233.95.137    host12-2    <none>           <none>
-        csi-cephfsplugin-sbcgn                                2/2     Running   0          2m17s   172.16.2.44      host34-2    <none>           <none>
-        csi-cephfsplugin-vjfdk                                2/2     Running   0          2m15s   172.16.2.42      host12-3    <none>           <none>
-        csi-rbdplugin-9f74b                                   2/2     Running   0          2m18s   172.16.2.44      host34-2    <none>           <none>
-        csi-rbdplugin-bz5jl                                   2/2     Running   0          2m18s   172.16.2.41      host12-2    <none>           <none>
-        csi-rbdplugin-fddln                                   2/2     Running   0          2m18s   172.16.2.43      host34-1    <none>           <none>
-        csi-rbdplugin-jhlvx                                   2/2     Running   0          2m18s   172.16.2.42      host12-3    <none>           <none>
-        csi-rbdplugin-provisioner-7c6dcb4dff-8zbdz            5/5     Running   0          2m18s   10.233.119.32    host34-2    <none>           <none>
-        csi-rbdplugin-provisioner-7c6dcb4dff-r2hsv            5/5     Running   0          2m18s   10.233.95.136    host12-2    <none>           <none>
-        csi-rbdplugin-tf7b6                                   2/2     Running   0          2m18s   172.16.2.40      host12-1    <none>           <none>
-        csi-rbdplugin-v5rbs                                   2/2     Running   0          2m18s   172.16.2.45      hostb12-1   <none>           <none>
-        rook-ceph-crashcollector-host34-2-76c4846f9d-zdnwz    1/1     Running   0          46s     10.233.119.35    host34-2    <none>           <none>
-        rook-ceph-crashcollector-hostb12-1-7bbfc47677-8vfn8   1/1     Running   0          40s     10.233.126.75    hostb12-1   <none>           <none>
-        rook-ceph-exporter-host34-2-5cffc455c8-99lfp          1/1     Running   0          46s     10.233.119.36    host34-2    <none>           <none>
-        rook-ceph-exporter-hostb12-1-76f886c88f-mk4xr         1/1     Running   0          38s     10.233.126.76    hostb12-1   <none>           <none>
-        rook-ceph-mgr-a-7b846f47b4-rgwnh                      2/2     Running   0          46s     10.233.119.34    host34-2    <none>           <none>
-        rook-ceph-mon-a-55679cc49b-pl4qd                      2/2     Running   0          101s    10.233.119.33    host34-2    <none>           <none>
-        rook-ceph-mon-b-7949fc8b7d-tcw4w                      2/2     Running   0          100s    10.233.126.74    hostb12-1   <none>           <none>
-        rook-ceph-operator-b757f78f8-jw6q8                    1/1     Running   0          3m3s    10.233.95.135    host12-2    <none>           <none>
-        rook-ceph-tools-5797ff59db-hjgrj                      1/1     Running   0          2m29s   10.233.126.223   host12-3    <none>           <none>
+        NAME                                                  READY   STATUS    RESTARTS   AGE   IP               NODE        NOMINATED NODE   READINESS GATES
+        csi-cephfsplugin-2snq6                                2/2     Running   0          12m   172.16.2.41      host12-2    <none>           <none>
+        csi-cephfsplugin-6btcv                                2/2     Running   0          12m   172.16.2.43      host34-1    <none>           <none>
+        csi-cephfsplugin-b5d7r                                2/2     Running   0          12m   172.16.2.40      host12-1    <none>           <none>
+        csi-cephfsplugin-cfc8p                                2/2     Running   0          12m   172.16.2.44      host34-2    <none>           <none>
+        csi-cephfsplugin-mxkbz                                2/2     Running   0          12m   172.16.2.45      hostb12-1   <none>           <none>
+        csi-cephfsplugin-p8tfk                                2/2     Running   0          12m   172.16.2.42      host12-3    <none>           <none>
+        csi-cephfsplugin-provisioner-55d789d7bd-dt7g8         5/5     Running   0          12m   10.233.119.39    host34-2    <none>           <none>
+        csi-cephfsplugin-provisioner-55d789d7bd-p5pc9         5/5     Running   0          12m   10.233.95.149    host12-2    <none>           <none>
+        csi-rbdplugin-5f6qh                                   2/2     Running   0          12m   172.16.2.44      host34-2    <none>           <none>
+        csi-rbdplugin-7xvwx                                   2/2     Running   0          12m   172.16.2.43      host34-1    <none>           <none>
+        csi-rbdplugin-8pv8x                                   2/2     Running   0          12m   172.16.2.41      host12-2    <none>           <none>
+        csi-rbdplugin-cjgrs                                   2/2     Running   0          12m   172.16.2.42      host12-3    <none>           <none>
+        csi-rbdplugin-hljnr                                   2/2     Running   0          12m   172.16.2.45      hostb12-1   <none>           <none>
+        csi-rbdplugin-nrgzm                                   2/2     Running   0          12m   172.16.2.40      host12-1    <none>           <none>
+        csi-rbdplugin-provisioner-7c6dcb4dff-6pgpt            5/5     Running   0          12m   10.233.119.37    host34-2    <none>           <none>
+        csi-rbdplugin-provisioner-7c6dcb4dff-fchxh            5/5     Running   0          12m   10.233.126.202   host12-3    <none>           <none>
+        rook-ceph-crashcollector-host12-3-9445d8c65-8g44v     1/1     Running   0          11m   10.233.126.201   host12-3    <none>           <none>
+        rook-ceph-crashcollector-host34-2-85fb8fcf96-mwwtk    1/1     Running   0          10m   10.233.119.6     host34-2    <none>           <none>
+        rook-ceph-crashcollector-hostb12-1-5549994767-v5krw   1/1     Running   0          10m   10.233.126.96    hostb12-1   <none>           <none>
+        rook-ceph-exporter-host12-3-66f5bc4b7c-8kc8l          1/1     Running   0          11m   10.233.126.196   host12-3    <none>           <none>
+        rook-ceph-exporter-host34-2-65cb665bc6-f2v9k          1/1     Running   0          10m   10.233.119.5     host34-2    <none>           <none>
+        rook-ceph-exporter-hostb12-1-74f67c9879-48qxs         1/1     Running   0          10m   10.233.126.97    hostb12-1   <none>           <none>
+        rook-ceph-mds-dc-lab-ceph-fs-a-684bb58b7-vxbzl        2/2     Running   0          10m   10.233.126.95    hostb12-1   <none>           <none>
+        rook-ceph-mds-dc-lab-ceph-fs-b-cd5bd7cc-gq9k2         2/2     Running   0          10m   10.233.126.208   host12-3    <none>           <none>
+        rook-ceph-mgr-a-7b846f47b4-86mq8                      2/2     Running   0          11m   10.233.126.204   host12-3    <none>           <none>
+        rook-ceph-mon-a-55679cc49b-g778x                      2/2     Running   0          11m   10.233.119.60    host34-2    <none>           <none>
+        rook-ceph-mon-b-7949fc8b7d-g679j                      2/2     Running   0          11m   10.233.126.91    hostb12-1   <none>           <none>
+        rook-ceph-operator-b757f78f8-7jzzp                    1/1     Running   0          14m   10.233.119.41    host34-2    <none>           <none>
+        rook-ceph-tools-5797ff59db-g4mtd                      1/1     Running   0          13m   10.233.126.200   host12-3    <none>           <none>
+        rook-discover-bh2ns                                   1/1     Running   0          14m   10.233.119.42    host34-2    <none>           <none>
+        rook-discover-czfkz                                   1/1     Running   0          14m   10.233.126.90    hostb12-1   <none>           <none>
+        rook-discover-gpdb2                                   1/1     Running   0          14m   10.233.95.147    host12-2    <none>           <none>
+        rook-discover-mkj8p                                   1/1     Running   0          14m   10.233.126.199   host12-3    <none>           <none>
+        rook-discover-n9h4b                                   1/1     Running   0          14m   10.233.64.132    host12-1    <none>           <none>
+        rook-discover-xxq5c                                   1/1     Running   0          14m   10.233.116.133   host34-1    <none>           <none>
     stdout_lines: <omitted>
 
 TASK [Get StorageClasses] ***************************************************************************************************************************************************************************************
@@ -1928,17 +1581,20 @@ ok: [Host12_1] =>
     - kubectl
     - get
     - sc
-    delta: '0:00:00.156144'
-    end: '2026-06-04 03:25:20.828366'
+    delta: '0:00:00.149491'
+    end: '2026-06-05 02:09:15.562565'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:20.672222'
+    start: '2026-06-05 02:09:15.413074'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
-        NAME                 PROVISIONER                  RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com   Retain          Immediate              true                   2m31s
-        local-path           rancher.io/local-path        Delete          WaitForFirstConsumer   false                  2d
+        NAME                 PROVISIONER                     RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        ceph-bucket          rook-ceph.ceph.rook.io/bucket   Retain          Immediate              false                  13m
+        ceph-filesystem      rook-ceph.cephfs.csi.ceph.com   Retain          Immediate              true                   13m
+        ceph-infra-rbd       rbd.csi.ceph.com                Retain          Immediate              true                   22h
+        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com      Retain          Immediate              true                   13m
+        local-path           rancher.io/local-path           Delete          WaitForFirstConsumer   false                  2d23h
     stdout_lines: <omitted>
 
 TASK [Print Ceph Health Report] *********************************************************************************************************************************************************************************
@@ -1952,18 +1608,24 @@ ok: [Host12_1] =>
         ║ Cluster Status:
           cluster:
             id:     99f830e6-e4f6-45b4-ae67-53454707bda3
-            health: HEALTH_OK
+            health: HEALTH_WARN
+                    1 MDSs report slow metadata IOs
+                    Reduced data availability: 60 pgs inactive
+                    OSD count 0 < osd_pool_default_size 2
 
           services:
-            mon: 2 daemons, quorum b,a (age 57s)
-            mgr: a(active, since 17s)
+            mon: 2 daemons, quorum b,a (age 11m)
+            mgr: a(active, since 10m)
+            mds: 1/1 daemons up, 1 standby
             osd: 0 osds: 0 up, 0 in
 
           data:
-            pools:   0 pools, 0 pgs
+            volumes: 1/1 healthy
+            pools:   11 pools, 60 pgs
             objects: 0 objects, 0 B
             usage:   0 B used, 0 B / 0 B avail
-            pgs:
+            pgs:     100.000% pgs unknown
+                     60 unknown
 
         ╠══════════════════════════════════════════════════════════════════╣
         ║ OSD Tree:
@@ -1971,37 +1633,50 @@ ok: [Host12_1] =>
         -1              0  root default
         ╠══════════════════════════════════════════════════════════════════╣
         ║ Pods:
-        NAME                                                  READY   STATUS    RESTARTS   AGE     IP               NODE        NOMINATED NODE   READINESS GATES
-        csi-cephfsplugin-2g9nh                                2/2     Running   0          2m17s   172.16.2.45      hostb12-1   <none>           <none>
-        csi-cephfsplugin-6tshz                                2/2     Running   0          2m15s   172.16.2.43      host34-1    <none>           <none>
-        csi-cephfsplugin-gmf6z                                2/2     Running   0          2m17s   172.16.2.40      host12-1    <none>           <none>
-        csi-cephfsplugin-nflj5                                2/2     Running   0          2m15s   172.16.2.41      host12-2    <none>           <none>
-        csi-cephfsplugin-provisioner-55d789d7bd-k97cr         5/5     Running   0          2m15s   10.233.126.225   host12-3    <none>           <none>
-        csi-cephfsplugin-provisioner-55d789d7bd-xzpln         5/5     Running   0          2m15s   10.233.95.137    host12-2    <none>           <none>
-        csi-cephfsplugin-sbcgn                                2/2     Running   0          2m17s   172.16.2.44      host34-2    <none>           <none>
-        csi-cephfsplugin-vjfdk                                2/2     Running   0          2m15s   172.16.2.42      host12-3    <none>           <none>
-        csi-rbdplugin-9f74b                                   2/2     Running   0          2m18s   172.16.2.44      host34-2    <none>           <none>
-        csi-rbdplugin-bz5jl                                   2/2     Running   0          2m18s   172.16.2.41      host12-2    <none>           <none>
-        csi-rbdplugin-fddln                                   2/2     Running   0          2m18s   172.16.2.43      host34-1    <none>           <none>
-        csi-rbdplugin-jhlvx                                   2/2     Running   0          2m18s   172.16.2.42      host12-3    <none>           <none>
-        csi-rbdplugin-provisioner-7c6dcb4dff-8zbdz            5/5     Running   0          2m18s   10.233.119.32    host34-2    <none>           <none>
-        csi-rbdplugin-provisioner-7c6dcb4dff-r2hsv            5/5     Running   0          2m18s   10.233.95.136    host12-2    <none>           <none>
-        csi-rbdplugin-tf7b6                                   2/2     Running   0          2m18s   172.16.2.40      host12-1    <none>           <none>
-        csi-rbdplugin-v5rbs                                   2/2     Running   0          2m18s   172.16.2.45      hostb12-1   <none>           <none>
-        rook-ceph-crashcollector-host34-2-76c4846f9d-zdnwz    1/1     Running   0          46s     10.233.119.35    host34-2    <none>           <none>
-        rook-ceph-crashcollector-hostb12-1-7bbfc47677-8vfn8   1/1     Running   0          40s     10.233.126.75    hostb12-1   <none>           <none>
-        rook-ceph-exporter-host34-2-5cffc455c8-99lfp          1/1     Running   0          46s     10.233.119.36    host34-2    <none>           <none>
-        rook-ceph-exporter-hostb12-1-76f886c88f-mk4xr         1/1     Running   0          38s     10.233.126.76    hostb12-1   <none>           <none>
-        rook-ceph-mgr-a-7b846f47b4-rgwnh                      2/2     Running   0          46s     10.233.119.34    host34-2    <none>           <none>
-        rook-ceph-mon-a-55679cc49b-pl4qd                      2/2     Running   0          101s    10.233.119.33    host34-2    <none>           <none>
-        rook-ceph-mon-b-7949fc8b7d-tcw4w                      2/2     Running   0          100s    10.233.126.74    hostb12-1   <none>           <none>
-        rook-ceph-operator-b757f78f8-jw6q8                    1/1     Running   0          3m3s    10.233.95.135    host12-2    <none>           <none>
-        rook-ceph-tools-5797ff59db-hjgrj                      1/1     Running   0          2m29s   10.233.126.223   host12-3    <none>           <none>
+        NAME                                                  READY   STATUS    RESTARTS   AGE   IP               NODE        NOMINATED NODE   READINESS GATES
+        csi-cephfsplugin-2snq6                                2/2     Running   0          12m   172.16.2.41      host12-2    <none>           <none>
+        csi-cephfsplugin-6btcv                                2/2     Running   0          12m   172.16.2.43      host34-1    <none>           <none>
+        csi-cephfsplugin-b5d7r                                2/2     Running   0          12m   172.16.2.40      host12-1    <none>           <none>
+        csi-cephfsplugin-cfc8p                                2/2     Running   0          12m   172.16.2.44      host34-2    <none>           <none>
+        csi-cephfsplugin-mxkbz                                2/2     Running   0          12m   172.16.2.45      hostb12-1   <none>           <none>
+        csi-cephfsplugin-p8tfk                                2/2     Running   0          12m   172.16.2.42      host12-3    <none>           <none>
+        csi-cephfsplugin-provisioner-55d789d7bd-dt7g8         5/5     Running   0          12m   10.233.119.39    host34-2    <none>           <none>
+        csi-cephfsplugin-provisioner-55d789d7bd-p5pc9         5/5     Running   0          12m   10.233.95.149    host12-2    <none>           <none>
+        csi-rbdplugin-5f6qh                                   2/2     Running   0          12m   172.16.2.44      host34-2    <none>           <none>
+        csi-rbdplugin-7xvwx                                   2/2     Running   0          12m   172.16.2.43      host34-1    <none>           <none>
+        csi-rbdplugin-8pv8x                                   2/2     Running   0          12m   172.16.2.41      host12-2    <none>           <none>
+        csi-rbdplugin-cjgrs                                   2/2     Running   0          12m   172.16.2.42      host12-3    <none>           <none>
+        csi-rbdplugin-hljnr                                   2/2     Running   0          12m   172.16.2.45      hostb12-1   <none>           <none>
+        csi-rbdplugin-nrgzm                                   2/2     Running   0          12m   172.16.2.40      host12-1    <none>           <none>
+        csi-rbdplugin-provisioner-7c6dcb4dff-6pgpt            5/5     Running   0          12m   10.233.119.37    host34-2    <none>           <none>
+        csi-rbdplugin-provisioner-7c6dcb4dff-fchxh            5/5     Running   0          12m   10.233.126.202   host12-3    <none>           <none>
+        rook-ceph-crashcollector-host12-3-9445d8c65-8g44v     1/1     Running   0          11m   10.233.126.201   host12-3    <none>           <none>
+        rook-ceph-crashcollector-host34-2-85fb8fcf96-mwwtk    1/1     Running   0          10m   10.233.119.6     host34-2    <none>           <none>
+        rook-ceph-crashcollector-hostb12-1-5549994767-v5krw   1/1     Running   0          10m   10.233.126.96    hostb12-1   <none>           <none>
+        rook-ceph-exporter-host12-3-66f5bc4b7c-8kc8l          1/1     Running   0          11m   10.233.126.196   host12-3    <none>           <none>
+        rook-ceph-exporter-host34-2-65cb665bc6-f2v9k          1/1     Running   0          10m   10.233.119.5     host34-2    <none>           <none>
+        rook-ceph-exporter-hostb12-1-74f67c9879-48qxs         1/1     Running   0          10m   10.233.126.97    hostb12-1   <none>           <none>
+        rook-ceph-mds-dc-lab-ceph-fs-a-684bb58b7-vxbzl        2/2     Running   0          10m   10.233.126.95    hostb12-1   <none>           <none>
+        rook-ceph-mds-dc-lab-ceph-fs-b-cd5bd7cc-gq9k2         2/2     Running   0          10m   10.233.126.208   host12-3    <none>           <none>
+        rook-ceph-mgr-a-7b846f47b4-86mq8                      2/2     Running   0          11m   10.233.126.204   host12-3    <none>           <none>
+        rook-ceph-mon-a-55679cc49b-g778x                      2/2     Running   0          11m   10.233.119.60    host34-2    <none>           <none>
+        rook-ceph-mon-b-7949fc8b7d-g679j                      2/2     Running   0          11m   10.233.126.91    hostb12-1   <none>           <none>
+        rook-ceph-operator-b757f78f8-7jzzp                    1/1     Running   0          14m   10.233.119.41    host34-2    <none>           <none>
+        rook-ceph-tools-5797ff59db-g4mtd                      1/1     Running   0          13m   10.233.126.200   host12-3    <none>           <none>
+        rook-discover-bh2ns                                   1/1     Running   0          14m   10.233.119.42    host34-2    <none>           <none>
+        rook-discover-czfkz                                   1/1     Running   0          14m   10.233.126.90    hostb12-1   <none>           <none>
+        rook-discover-gpdb2                                   1/1     Running   0          14m   10.233.95.147    host12-2    <none>           <none>
+        rook-discover-mkj8p                                   1/1     Running   0          14m   10.233.126.199   host12-3    <none>           <none>
+        rook-discover-n9h4b                                   1/1     Running   0          14m   10.233.64.132    host12-1    <none>           <none>
+        rook-discover-xxq5c                                   1/1     Running   0          14m   10.233.116.133   host34-1    <none>           <none>
         ╠══════════════════════════════════════════════════════════════════╣
         ║ StorageClasses:
-        NAME                 PROVISIONER                  RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com   Retain          Immediate              true                   2m31s
-        local-path           rancher.io/local-path        Delete          WaitForFirstConsumer   false                  2d
+        NAME                 PROVISIONER                     RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+        ceph-bucket          rook-ceph.ceph.rook.io/bucket   Retain          Immediate              false                  13m
+        ceph-filesystem      rook-ceph.cephfs.csi.ceph.com   Retain          Immediate              true                   13m
+        ceph-infra-rbd       rbd.csi.ceph.com                Retain          Immediate              true                   22h
+        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com      Retain          Immediate              true                   13m
+        local-path           rancher.io/local-path           Delete          WaitForFirstConsumer   false                  2d23h
         ╚══════════════════════════════════════════════════════════════════╝
 
 TASK [Verify ceph-rbd StorageClass exists] **********************************************************************************************************************************************************************
@@ -2012,17 +1687,17 @@ ok: [Host12_1] =>
     - get
     - sc
     - ceph-rbd
-    delta: '0:00:00.140438'
-    end: '2026-06-04 03:25:24.051568'
+    delta: '0:00:00.182611'
+    end: '2026-06-05 02:09:18.492653'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:23.911130'
+    start: '2026-06-05 02:09:18.310042'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
         NAME                 PROVISIONER                  RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com   Retain          Immediate           true                   2m35s
+        ceph-rbd (default)   rook-ceph.rbd.csi.ceph.com   Retain          Immediate           true                   13m
     stdout_lines: <omitted>
 
 TASK [Test PVC creation with ceph-rbd StorageClass] *************************************************************************************************************************************************************
@@ -2033,11 +1708,11 @@ changed: [Host12_1] =>
     - apply
     - -f
     - '-'
-    delta: '0:00:00.344239'
-    end: '2026-06-04 03:25:26.769693'
+    delta: '0:00:03.467150'
+    end: '2026-06-05 02:09:24.229177'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:25:26.425454'
+    start: '2026-06-05 02:09:20.762027'
     stderr: ''
     stderr_lines: <omitted>
     stdout: persistentvolumeclaim/ceph-rbd-test-pvc created
@@ -2045,22 +1720,22 @@ changed: [Host12_1] =>
 
 TASK [Wait for test PVC to bind (60s)] **************************************************************************************************************************************************************************
 [ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:573:7
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_rook.yml:624:7
 
-571       when: sc_check.rc == 0
-572
-573     - name: Wait for test PVC to bind (60s)
+622       when: sc_check.rc == 0
+623
+624     - name: Wait for test PVC to bind (60s)
           ^ column 7
 
 fatal: [Host12_1]: FAILED! =>
     changed: false
     cmd: |-
         kubectl wait --for=jsonpath='{.status.phase}'=Bound  pvc/ceph-rbd-test-pvc -n rook-ceph --timeout=60s
-    delta: '0:01:00.120214'
-    end: '2026-06-04 03:26:29.478290'
+    delta: '0:01:00.103637'
+    end: '2026-06-05 02:10:26.615650'
     msg: non-zero return code
     rc: 1
-    start: '2026-06-04 03:25:29.358076'
+    start: '2026-06-05 02:09:26.512013'
     stderr: 'error: timed out waiting for the condition on persistentvolumeclaims/ceph-rbd-test-pvc'
     stderr_lines: <omitted>
     stdout: ''
@@ -2077,11 +1752,11 @@ changed: [Host12_1] =>
     - ceph-rbd-test-pvc
     - -n
     - rook-ceph
-    delta: '0:00:00.252058'
-    end: '2026-06-04 03:26:32.831149'
+    delta: '0:00:00.268025'
+    end: '2026-06-05 02:10:29.852402'
     msg: ''
     rc: 0
-    start: '2026-06-04 03:26:32.579091'
+    start: '2026-06-05 02:10:29.584377'
     stderr: ''
     stderr_lines: <omitted>
     stdout: persistentvolumeclaim "ceph-rbd-test-pvc" deleted
@@ -2101,522 +1776,83 @@ PLAY [Phase 5: Teardown Rook-Ceph (DESTRUCTIVE)] *******************************
 PLAY [Phase 5b: Wipe OSD Disks on All Nodes (DESTRUCTIVE)] ******************************************************************************************************************************************************
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=43   changed=10   unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
-Host12_2                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12_1                   : ok=43   changed=11   unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+Host12_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 Host12_3                   : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_1                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Host34_2                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-HostB12_1                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_1                   : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34_2                   : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12_1                  : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
-Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
-
-PLAY [Phase A: Create Ceph infra-storage pool] ******************************************************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host12_1]
-
-TASK [Get Rook-Ceph toolbox pod name] ***************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        kubectl get pod -n rook-ceph -l app=rook-ceph-tools  -o jsonpath='{.items[0].metadata.name}'
-    delta: '0:00:00.173351'
-    end: '2026-06-04 03:34:26.924895'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:26.751544'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: rook-ceph-tools-5797ff59db-hjgrj
-    stdout_lines: <omitted>
-
-TASK [Check if infra-storage pool already exists] ***************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - osd
-    - pool
-    - ls
-    delta: '0:00:01.118186'
-    end: '2026-06-04 03:34:31.068615'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:29.950429'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: kube-rbd
-    stdout_lines: <omitted>
-
-TASK [Create infra-storage pool] ********************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - osd
-    - pool
-    - create
-    - infra-storage
-    - '32'
-    - '32'
-    - replicated
-    - replicated_rule
-    delta: '0:00:01.333069'
-    end: '2026-06-04 03:34:34.947128'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:33.614059'
-    stderr: pool 'infra-storage' created
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Set pool replication size] ********************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - osd
-    - pool
-    - set
-    - infra-storage
-    - size
-    - '2'
-    delta: '0:00:01.906756'
-    end: '2026-06-04 03:34:39.285139'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:37.378383'
-    stderr: set pool 2 size to 2
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Set pool minimum replication size] ************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - osd
-    - pool
-    - set
-    - infra-storage
-    - min_size
-    - '1'
-    delta: '0:00:01.629928'
-    end: '2026-06-04 03:34:43.429123'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:41.799195'
-    stderr: set pool 2 min_size to 1
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Enable RBD application on pool] ***************************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - osd
-    - pool
-    - application
-    - enable
-    - infra-storage
-    - rbd
-    delta: '0:00:01.562790'
-    end: '2026-06-04 03:34:47.543397'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:45.980607'
-    stderr: enabled application 'rbd' on pool 'infra-storage'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Check OSD count before RBD init] **************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        kubectl exec -n rook-ceph rook-ceph-tools-5797ff59db-hjgrj  -- ceph osd stat -f json | python3 -c "import sys,json; print(json.load(sys.stdin).get('num_up_osds', 0))"
-    delta: '0:00:01.284594'
-    end: '2026-06-04 03:34:51.128399'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:49.843805'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: '0'
-    stdout_lines: <omitted>
-
-TASK [Initialize RBD pool] **************************************************************************************************************************************************************************************
-skipping: [Host12_1] =>
-    changed: false
-    false_condition: (_osd_up_count.stdout | int) > 0
-    skip_reason: Conditional result was False
-
-TASK [Warn if no OSDs available (pool init skipped)] ************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg: |-
-        WARNING: No OSDs are UP — rbd pool init skipped.
-        The pool 'infra-storage' was created but PGs will remain
-        in 'unknown' state until OSDs come online.
-        Re-run this playbook after OSDs are available:
-          ansible-playbook playbooks/reused/deploy_ceph_infra_pool.yml -i inventory/hosts.yml -v
-
-TASK [Check if auth keyring exists] *****************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - auth
-    - get
-    - client.infra-storage
-    delta: '0:00:01.173182'
-    end: '2026-06-04 03:34:55.438866'
-    failed_when_result: false
-    failed_when_suppressed_exception: (traceback unavailable)
-    msg: non-zero return code
-    rc: 2
-    start: '2026-06-04 03:34:54.265684'
-    stderr: |-
-        Error ENOENT: failed to find client.infra-storage in keyring
-        command terminated with exit code 2
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Create dedicated keyring for infra-storage] ***************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        kubectl exec -n rook-ceph "rook-ceph-tools-5797ff59db-hjgrj" --  bash -c 'ceph auth get-or-create client.infra-storage \
-            mon "profile rbd" \
-            osd "profile rbd pool=infra-storage" \
-            mgr "profile rbd pool=infra-storage"'
-    delta: '0:00:01.216145'
-    end: '2026-06-04 03:34:58.947880'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:34:57.731735'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        [client.infra-storage]
-                key = AQBi8iBqToRXNBAAxBOC7yc5lb2Ud9I9WrhP3g==
-    stdout_lines: <omitted>
-
-TASK [Retrieve keyring (if already exists)] *********************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - auth
-    - get-key
-    - client.infra-storage
-    delta: '0:00:01.207539'
-    end: '2026-06-04 03:35:02.413459'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:01.205920'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: AQBi8iBqToRXNBAAxBOC7yc5lb2Ud9I9WrhP3g==
-    stdout_lines: <omitted>
-
-TASK [Get Ceph cluster FSID] ************************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - fsid
-    delta: '0:00:01.218201'
-    end: '2026-06-04 03:35:05.988442'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:04.770241'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: 99f830e6-e4f6-45b4-ae67-53454707bda3
-    stdout_lines: <omitted>
-
-TASK [Get Ceph MON endpoints] ***********************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - exec
-    - -n
-    - rook-ceph
-    - rook-ceph-tools-5797ff59db-hjgrj
-    - --
-    - ceph
-    - mon
-    - dump
-    - -f
-    - json
-    delta: '0:00:01.233183'
-    end: '2026-06-04 03:35:09.599439'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:08.366256'
-    stderr: dumped monmap epoch 1
-    stderr_lines: <omitted>
-    stdout: |4-
-
-        {"epoch":1,"fsid":"99f830e6-e4f6-45b4-ae67-53454707bda3","modified":"2026-06-04T03:23:42.951724Z","created":"2026-06-04T03:23:42.951724Z","min_mon_release":18,"min_mon_release_name":"reef","election_strategy":1,"disallowed_leaders":"","stretch_mode":false,"tiebreaker_mon":"","removed_ranks":"1","features":{"persistent":["kraken","luminous","mimic","osdmap-prune","nautilus","octopus","pacific","elector-pinging","quincy","reef"],"optional":[]},"mons":[{"rank":0,"name":"b","public_addrs":{"addrvec":[{"type":"v2","addr":"10.233.15.190:3300","nonce":0},{"type":"v1","addr":"10.233.15.190:6789","nonce":0}]},"addr":"10.233.15.190:6789/0","public_addr":"10.233.15.190:6789/0","priority":0,"weight":0,"crush_location":"{}"},{"rank":1,"name":"a","public_addrs":{"addrvec":[{"type":"v2","addr":"10.233.52.0:3300","nonce":0},{"type":"v1","addr":"10.233.52.0:6789","nonce":0}]},"addr":"10.233.52.0:6789/0","public_addr":"10.233.52.0:6789/0","priority":0,"weight":0,"crush_location":"{}"}],"quorum":[0,1]}
-    stdout_lines: <omitted>
-
-TASK [Store pool metadata for K8s phase] ************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    ansible_facts:
-        ceph_cluster_id: 99f830e6-e4f6-45b4-ae67-53454707bda3
-        ceph_infra_key: AQBi8iBqToRXNBAAxBOC7yc5lb2Ud9I9WrhP3g==
-        ceph_mon_hosts:
-        - 10.233.15.190:6789
-        - 10.233.52.0:6789
-    changed: false
-
-TASK [Display pool creation summary] ****************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg: |-
-        ╔══════════════════════════════════════════════════════════════╗
-        ║ Ceph infra-storage Pool Ready                               ║
-        ╠══════════════════════════════════════════════════════════════╣
-        ║ Pool:       infra-storage
-        ║ PG Count:   32
-        ║ Size:       2 (min 1)
-        ║ Client:     client.infra-storage
-        ║ Cluster ID: 99f830e6-e4f6-45b4-ae67-53454707bda3
-        ╚══════════════════════════════════════════════════════════════╝
-
-PLAY [Phase B: Create K8s StorageClass + Secret for infra-storage] **********************************************************************************************************************************************
-
-TASK [Ensure sheba-cloud-infra namespace exists] ****************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd:
-    - kubectl
-    - create
-    - namespace
-    - sheba-cloud-infra
-    delta: '0:00:00.141794'
-    end: '2026-06-04 03:35:13.067573'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:12.925779'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: namespace/sheba-cloud-infra created
-    stdout_lines: <omitted>
-
-TASK [Check if Ceph CSI secret exists] **************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - get
-    - secret
-    - ceph-infra-rbd-secret
-    - -n
-    - sheba-cloud-infra
-    delta: '0:00:00.162286'
-    end: '2026-06-04 03:35:15.585803'
-    failed_when_result: false
-    failed_when_suppressed_exception: (traceback unavailable)
-    msg: non-zero return code
-    rc: 1
-    start: '2026-06-04 03:35:15.423517'
-    stderr: 'Error from server (NotFound): secrets "ceph-infra-rbd-secret" not found'
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-TASK [Create Ceph CSI user secret in namespace] *****************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        cat <<'EOF' | kubectl apply -f -
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: ceph-infra-rbd-secret
-          namespace: sheba-cloud-infra
-        type: Opaque
-        stringData:
-          userID: infra-storage
-          userKey: "AQBi8iBqToRXNBAAxBOC7yc5lb2Ud9I9WrhP3g=="
-        EOF
-    delta: '0:00:00.288579'
-    end: '2026-06-04 03:35:18.148350'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:17.859771'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: secret/ceph-infra-rbd-secret created
-    stdout_lines: <omitted>
-
-TASK [Create Ceph CSI admin secret (for provisioner)] ***********************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        cat <<'EOF' | kubectl apply -f -
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: ceph-infra-rbd-admin-secret
-          namespace: sheba-cloud-infra
-        type: Opaque
-        stringData:
-          adminID: infra-storage
-          adminKey: "AQBi8iBqToRXNBAAxBOC7yc5lb2Ud9I9WrhP3g=="
-        EOF
-    delta: '0:00:00.508065'
-    end: '2026-06-04 03:35:20.926819'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:20.418754'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: secret/ceph-infra-rbd-admin-secret created
-    stdout_lines: <omitted>
-
-TASK [Create StorageClass for infra-storage pool] ***************************************************************************************************************************************************************
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        cat <<'EOF' | kubectl apply -f -
-        apiVersion: storage.k8s.io/v1
-        kind: StorageClass
-        metadata:
-          name: ceph-infra-rbd
-          annotations:
-            storageclass.kubernetes.io/is-default-class: "false"
-        provisioner: rbd.csi.ceph.com
-        parameters:
-          clusterID: "99f830e6-e4f6-45b4-ae67-53454707bda3"
-          pool: infra-storage
-          imageFormat: "2"
-          imageFeatures: layering
-          csi.storage.k8s.io/provisioner-secret-name: ceph-infra-rbd-admin-secret
-          csi.storage.k8s.io/provisioner-secret-namespace: sheba-cloud-infra
-          csi.storage.k8s.io/node-stage-secret-name: ceph-infra-rbd-secret
-          csi.storage.k8s.io/node-stage-secret-namespace: sheba-cloud-infra
-          csi.storage.k8s.io/controller-expand-secret-name: ceph-infra-rbd-admin-secret
-          csi.storage.k8s.io/controller-expand-secret-namespace: sheba-cloud-infra
-        reclaimPolicy: Retain
-        allowVolumeExpansion: true
-        mountOptions:
-          - discard
-        EOF
-    delta: '0:00:00.212577'
-    end: '2026-06-04 03:35:24.176984'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:23.964407'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: storageclass.storage.k8s.io/ceph-infra-rbd created
-    stdout_lines: <omitted>
-
-TASK [Verify StorageClass] **************************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd:
-    - kubectl
-    - get
-    - sc
-    - ceph-infra-rbd
-    delta: '0:00:00.148984'
-    end: '2026-06-04 03:35:26.590266'
-    msg: ''
-    rc: 0
-    start: '2026-06-04 03:35:26.441282'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: |-
-        NAME             PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-        ceph-infra-rbd   rbd.csi.ceph.com   Retain          Immediate           true                   2s
-    stdout_lines: <omitted>
-
-TASK [Display StorageClass status] ******************************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    msg: StorageClass 'ceph-infra-rbd' ready — backed by Ceph pool 'infra-storage'
-
-PLAY [Phase C: Validate infra-storage pool health] **************************************************************************************************************************************************************
-
-TASK [Check pool statistics] ************************************************************************************************************************************************************************************
-[ERROR]: Task failed: Module failed: Error executing command: [Errno 2] No such file or directory: b'ceph'
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_ceph_infra_pool.yml:298:7
-
-296     ceph_infra_pool_name: "infra-storage"
-297   tasks:
-298     - name: Check pool statistics
-          ^ column 7
-
-fatal: [Host12_1]: FAILED! =>
-    changed: false
-    cmd: ceph osd pool stats infra-storage
-    msg: Error executing command.
-    rc: 2
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=23   changed=9    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
-
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ curl -k https://172.16.2.201:8443 --connect-timeout 5
+curl: (28) Failed to connect to 172.16.2.201 port 8443 after 5029 ms: Timeout was reached
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ssh R810
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-15-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+15 updates can be applied immediately.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+*** System restart required ***
+Last login: Thu Jun  4 19:28:00 2026 from 192.168.9.199
+nh1221@PowerEdge-R810:~$ curl -k https://172.16.2.201:8443 --connect-timeout 5
+curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3095 ms: Could not connect to server
+nh1221@PowerEdge-R810:~$ curl -k 172.16.2.201:8443 --connect-timeout 5
+curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3064 ms: Could not connect to server
+nh1221@PowerEdge-R810:~$ sudo ssh ubuntu@Host12_1
+[sudo: authenticate] Password:
+The authenticity of host 'host12_1 (172.16.2.40)' can't be established.
+ED25519 key fingerprint is: SHA256:N6onwCkaOh/XtMjsfNcJT3/hlUpnKm8gWVM9YLlBNk0
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'host12_1' (ED25519) to the list of known hosts.
+ubuntu@host12_1's password:
+Welcome to Ubuntu 24.04.4 LTS (GNU/Linux 6.8.0-124-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Jun  5 02:14:57 UTC 2026
+
+  System load:  0.35               Processes:               295
+  Usage of /:   56.7% of 18.33GB   Users logged in:         0
+  Memory usage: 9%                 IPv4 address for enp1s0: 172.16.2.40
+  Swap usage:   0%
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+6 updates can be applied immediately.
+2 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Last login: Fri Jun  5 01:34:18 2026 from 172.16.2.1
+ubuntu@host12-1:~$ curl -k https://172.16.2.201:8443 --connect-timeout 5
+curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3099 ms: Couldn't connect to server
+ubuntu@host12-1:~$ curl -k 172.16.2.201:8443 --connect-timeout 5
+curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3106 ms: Couldn't connect to server
+ubuntu@host12-1:~$ curl 172.16.2.201:8443 --connect-timeout 5
+curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3059 ms: Couldn't connect to server
+ubuntu@host12-1:~$
+
