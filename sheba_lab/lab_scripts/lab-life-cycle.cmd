@@ -321,3 +321,34 @@ Done. Here's the updated infra-services sequence:
 6	deploy_openstack_helm.yml	    unchanged
 7	deploy_monitoring.yml	        unchanged
 The phase-r620 function was also updated: MaaS replaced with MetalLB (same host limit as kubespray since MetalLB deploys cluster-wide).
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Border_Leaf2 is now fully operational (all 6 BGP sessions Established). The new failure is a policy violation — Border_Leaf2 is advertising the 172.16.2.0/24 management subnet to Exit_Router2 via BGP. Let me trace the source.
+
+Root cause: redistribute connected in the vtysh BGP config has no route-map — so Border_Leaf2's management interface (172.16.2.32/24 on eth0) gets advertised into the fabric. Let me find the exact vtysh command block:
+
+Now I can see the exact structure. I need to add a prefix-list and route-map before redistribute connected and apply it. Let me also check if oob_management_subnet is available as a variable:
+
+Good. Now I'll add a route-map to filter the management subnet from redistribute connected. The fix inserts prefix-list and route-map definitions before the address-family blocks:
+
+Fixed. The problem: redistribute connected in the vtysh BGP config had no route-map, so Border_Leaf2's management interface (172.16.2.32/24 on eth0/Management0) was advertised into the fabric — violating the OOB policy assertion on Exit_Router2.
+
+What I added (after the main BGP config block):
+
+ip prefix-list PL_NO_MGMT seq 5 deny 172.16.2.0/24
+ip prefix-list PL_NO_MGMT seq 100 permit 0.0.0.0/0 le 32
+ipv6 prefix-list PL6_NO_MGMT seq 100 permit ::/0 le 128
+route-map DENY_MGMT permit 10
+ match ip address prefix-list PL_NO_MGMT
+route-map DENY_MGMT permit 20
+ match ipv6 address prefix-list PL6_NO_MGMT
+
+And changed both address-families from:
+
+redistribute connected → redistribute connected route-map DENY_MGMT
+This applies to all SONiC switches (not just Border_Leaf2), which is correct since none should leak management routes. The route-map is defined in a second vtysh invocation after the main BGP config so FRR processes the prefix-list before the redistribute takes effect.
+
+Re-run (only Exit_Router2 needs re-run since BL2 succeeded, but you need to re-apply the route-map on BL2 first):
+
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_day1.yml --limit Border_Leaf2,Exit_Router2
+
