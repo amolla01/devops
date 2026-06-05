@@ -507,3 +507,76 @@ kubectl rollout status deployment rook-ceph-operator -n rook-ceph --timeout=60s
 watch -n5 'kubectl get pods -n rook-ceph | grep -E "osd-prepare|osd"'
 
 The root cause was that pvremove was never called — the wipe task removed LVM VGs but left the PV label on the disk. Rook's device scanner sees the LVM PV signature and skips the device as "not available." The updated playbook now runs pvremove -ff and also zeros the end of the disk (BlueStore can place labels there too).
+
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+hey're Windows PowerShell and don't have SSH/kubectl access to your lab cluster. You need to run them directly on your Lab-ControlNode where you have the venv active.
+
+Copy-paste this # Step 1: Full disk wipe with pvremove
+ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  DEV_SIZE=$(blockdev --getsize64 "$DEV")
+  dd if=/dev/zero of="$DEV" bs=1M count=100 seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+  echo "CLEAN: $DEV"
+done' -b
+
+# Step 2: Remove stale Rook state
+ansible ceph_osd -i inventory/hosts.yml -m shell -a 'rm -rf /var/lib/rook' -b
+
+# Step 3: Delete stuck OSD prepare artifacts
+kubectl delete job -n rook-ceph -l app=rook-ceph-osd-prepare 2>/dev/null; \
+kubectl delete pod -n rook-ceph -l app=rook-ceph-osd-prepare --force --grace-period=0 2>/dev/null
+
+# Step 4: Restart operator to trigger fresh reconciliation
+kubectl rollout restart deployment rook-ceph-operator -n rook-ceph && \
+kubectl rollout status deployment rook-ceph-operator -n rook-ceph --timeout=60s
+
+# Step 5: Watch for OSD pods (Ctrl+C to stop)
+echo "Watching for OSD prepare/run pods (wait 2-3 min)..."
+sleep 30 && kubectl get pods -n rook-ceph | grep -E 'osd'
+
+block into your existing shell session:
+# Step 1: Full disk wipe with pvremove
+ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  DEV_SIZE=$(blockdev --getsize64 "$DEV")
+  dd if=/dev/zero of="$DEV" bs=1M count=100 seek=$(( (DEV_SIZE / 1048576) - 100 )) 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+  echo "CLEAN: $DEV"
+done' -b
+
+# Step 2: Remove stale Rook state
+ansible ceph_osd -i inventory/hosts.yml -m shell -a 'rm -rf /var/lib/rook' -b
+
+# Step 3: Delete stuck OSD prepare artifacts
+kubectl delete job -n rook-ceph -l app=rook-ceph-osd-prepare 2>/dev/null; \
+kubectl delete pod -n rook-ceph -l app=rook-ceph-osd-prepare --force --grace-period=0 2>/dev/null
+
+# Step 4: Restart operator to trigger fresh reconciliation
+kubectl rollout restart deployment rook-ceph-operator -n rook-ceph && \
+kubectl rollout status deployment rook-ceph-operator -n rook-ceph --timeout=60s
+
+# Step 5: Watch for OSD pods (Ctrl+C to stop)
+echo "Watching for OSD prepare/run pods (wait 2-3 min)..."
+sleep 30 && kubectl get pods -n rook-ceph | grep -E 'osd'
+
+
+
+After step 5, if you see rook-ceph-osd-prepare-* pods in Running or Completed state, the fix worked. Follow up with:
+
+
+kubectl exec -n rook-ceph deploy/rook-ceph-tools -- ceph osd tree
+
+If still no OSD prepare pods after 3 minutes, grab the operator logs:
+
+kubectl logs -n rook-ceph -l app=rook-ceph-operator --tail=100 | grep -iE 'osd|device|skipp|avail'
