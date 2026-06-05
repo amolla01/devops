@@ -121,6 +121,51 @@ Option 2 with a static route pointing through one of the K8s nodes as a gateway.
 
 
 
+But honestly — since WSL IS on the same machine and ansible already reaches the nodes, just use the SSH tunnel from WSL:
+
+ssh -L 8443:172.16.2.201:8443 nh1221@<any-k8s-node-IP-WSL-can-reach> -N
+Then open https://localhost:8443 in your Windows browser. Done in 5 seconds, no routing changes needed.
+
+What IP does WSL use to SSH into the K8s nodes? (Check your inventory or ~/.ssh/config)
+
+
+Since the R810 (192.168.9.198) is the hypervisor hosting all VMs on 172.16.2.0/24, it can forward traffic to MetalLB IPs. Two steps:
+
+Step 1: Add route on Windows (Admin PowerShell)
+
+
+route add 172.16.2.0 mask 255.255.255.0 192.168.9.198 -p
+This routes the entire VM subnet (including MetalLB IPs 172.16.2.200-220) through the R810.
+
+Step 2: Enable IP forwarding on R810 (one-time)
+SSH to the R810 and ensure it forwards packets rather than dropping them:
+
+Then test from Windows:
+If IP forwarding is already enabled on the R810 (likely, since it's a KVM hypervisor with bridges), you should be able to hit https://172.16.2.201:8443 in your browser immediately after adding the route.
+
+Note: If you already SSH to VMs via ProxyJump only (no direct ping to 172.16.2.x from Windows currently), this route + IP forwarding is what's needed to make it direct. The SSH ProxyJump works at the application layer — it doesn't give Windows an IP route.
+
+# Check current state
+sysctl net.ipv4.ip_forward
+
+# If 0, enable it
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo sed -i 's/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/' /etc/sysctl.conf
+
+Then test from Windows:
+# Verify route
+route print | findstr "172.16.2"
+
+# Test connectivity
+curl -k https://172.16.2.201:8443
+If IP forwarding is already enabled on the R810 (likely, since it's a KVM hypervisor with bridges), 
+you should be able to hit https://172.16.2.201:8443 in your browser immediately after adding the route.
+
+Note: If you already SSH to VMs via ProxyJump only (no direct ping to 172.16.2.x from Windows currently), 
+this route + IP forwarding is what's needed to make it direct. 
+The SSH ProxyJump works at the application layer — it doesn't give Windows an IP route.
+
+
 
 
 
