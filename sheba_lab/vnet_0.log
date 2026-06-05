@@ -1,0 +1,25 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh nh1221@R810 'for vm in Exit_Router1 Exit_Router2 Host12_1 Spine_S1; do
+    echo "=== $vm ==="; virsh domiflist $vm | awk "/vnet/{print \$1}" | while read tap; do
+        echo "  $tap tx-off: $(ethtool -k $tap 2>/dev/null | grep "tx-checksumming" | awk "{print \$2}")"
+    done
+done'
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+=== Exit_Router1 ===
+  vnet82 tx-off: off
+  vnet83 tx-off: off
+=== Exit_Router2 ===
+  vnet87 tx-off: off
+  vnet88 tx-off: off
+=== Host12_1 ===
+  vnet205 tx-off: on
+  vnet206 tx-off: on
+  vnet207 tx-off: on
+=== Spine_S1 ===
+  vnet75 tx-off: on
+  vnet76 tx-off: on
+  vnet77 tx-off: on
+  vnet78 tx-off: on
+  vnet79 tx-off: on
+  vnet80 tx-off: on
+  vnet81 tx-off: on
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
