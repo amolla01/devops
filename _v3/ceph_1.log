@@ -1856,3 +1856,18 @@ ubuntu@host12-1:~$ curl 172.16.2.201:8443 --connect-timeout 5
 curl: (7) Failed to connect to 172.16.2.201 port 8443 after 3059 ms: Couldn't connect to server
 ubuntu@host12-1:~$
 
+When the Rook-operator fails to create OSD pods for raw devices like /dev/vdc or /dev/vdb inside a Virtual Machine, it is almost always due to lingering LVM traces, prior state from an old deployment, or device locks.Why the Rook-Operator Fails (Root Causes)Existing LVM/Filesystem SignaturesRook's osd-prepare job skips disks that contain any existing filesystem or Logical Volume Manager (LVM) metadata to prevent accidental data loss. If /dev/vdb was used in a previous cluster or for another Ceph test, Rook will detect the old LVM metadata and skip provisioning.Incomplete Disk WipingSimply deleting or zapping a partition table is often not enough. If signatures or LVs aren't fully scrubbed, the Rook osd-prepare pod will begin setting up the OSD, detect an incomplete LVM block member, and immediately abort.Previous Cluster State (/var/lib/rook)If you have torn down and redeployed your Kubernetes cluster, stateful data from /var/lib/rook or the host’s dataDirHostPath might still exist. Rook gets confused by mapping old OSD UUIDs to the newly formatted disk and fails to create the pod.Disk is Locked or MountedVirtual machine hypervisors may lock the disk, or the host OS may automatically mount a filesystem on /dev/vdb if it is not freshly partitioned and completely blank. Rook's provisioning scripts will fail if they cannot obtain an exclusive block lock.How to Resolve the Issue (Actionable Steps)1. Completely Wipe the Disks (Host-Level)SSH into the Kubernetes worker node where the failing disk resides and perform a full wipe:bash# Unmount the device if it is currently mounted
+sudo umount /dev/vdb
+
+# Zap all GPT/MBR partitions
+sudo sgdisk --zap-all /dev/vdb
+
+# Wipe all filesystem, RAID, and LVM signatures
+sudo wipefs -a /dev/vdb
+
+# Remove any lingering LVM physical volumes
+sudo pvremove -ff /dev/vdb
+Use code with caution.2. Clean the Local Rook Directory (If Redeploying)If you are recreating a Rook-Ceph cluster after a teardown, residual data can block OSD creation. Run the following on the host to clear it:bashsudo rm -rf /var/lib/rook/*
+Use code with caution.3. Delete the Failed OSD Jobs / PodsIf the Rook operator has previously tried and failed, it will not recreate the OSD prepare job automatically until the failed objects are deleted:bashkubectl delete job -n rook-ceph -l app=rook-ceph-osd-prepare
+kubectl delete pod -n rook-ceph -l app=rook-ceph-osd-prepare --force --grace-period=0
+Use code with caution.To help troubleshoot your specific OSD problem, you can run the following command and share the output to identify the exact blocking error:bashkubectl -n rook-ceph logs -l app=rook-ceph-osd-prepare --tail=200
