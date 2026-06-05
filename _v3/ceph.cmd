@@ -636,4 +636,62 @@ What went wrong: The /var/lib/rook deletion should have been done before the ope
 
 The key lesson: we confirmed pvremove found and wiped real LVM PV labels on all disks — that was the root cause of OSD discovery failure. With the fresh redeploy, the operator will find clean disks and should create OSD prepare jobs within 2-3 minutes of the cluster CR being applied.
 
-Claude Opus 4.6 • 
+SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+You must do a full teardown + fresh deploy. Run this sequence on your Lab-ControlNode:
+# === FULL TEARDOWN ===
+
+# 1. Uninstall Helm releases
+helm uninstall rook-ceph-cluster -n rook-ceph 2>/dev/null
+helm uninstall rook-ceph -n rook-ceph 2>/dev/null
+
+# 2. Remove finalizers from all stuck Rook CRs
+for resource in cephcluster cephblockpool cephfilesystem cephobjectstore cephfilesystemsubvolumegroup; do
+  for item in $(kubectl get $resource -n rook-ceph -o name 2>/dev/null); do
+    kubectl patch $item -n rook-ceph --type merge -p '{"metadata":{"finalizers":null}}'
+  done
+done
+
+# 3. Delete all remaining resources in namespace
+kubectl delete all --all -n rook-ceph --force --grace-period=0 2>/dev/null
+
+# 4. Force-remove namespace
+kubectl delete namespace rook-ceph --timeout=30s 2>/dev/null
+sleep 5
+kubectl get ns rook-ceph -o json 2>/dev/null | \
+  python3 -c 'import json,sys; ns=json.load(sys.stdin); ns["spec"]["finalizers"]=[]; print(json.dumps(ns))' | \
+  kubectl replace --raw "/api/v1/namespaces/rook-ceph/finalize" -f - 2>/dev/null
+
+# 5. Wait for namespace gone
+echo "Waiting for namespace deletion..."
+for i in $(seq 1 30); do
+  kubectl get ns rook-ceph 2>&1 | grep -q "not found" && echo "GONE" && break
+  sleep 5
+done
+
+# 6. Delete Rook CRDs
+kubectl get crd -o name | grep -i rook | xargs kubectl delete 2>/dev/null
+kubectl get crd -o name | grep -i objectbucket | xargs kubectl delete 2>/dev/null
+
+# 7. Wipe disks + /var/lib/rook on ALL OSD nodes
+ansible ceph_osd -i inventory/hosts.yml -m shell -a '
+for DEV in /dev/vdb /dev/vdc; do
+  [ -b "$DEV" ] || continue
+  pvremove -ff "$DEV" 2>/dev/null || true
+  wipefs -af "$DEV" 2>/dev/null || true
+  dd if=/dev/zero of="$DEV" bs=1M count=100 2>/dev/null || true
+  sgdisk --zap-all "$DEV" 2>/dev/null || true
+done
+rm -rf /var/lib/rook
+echo DONE' -b
+
+# === FRESH DEPLOY (with 3 MONs, fixed disk wipe, pvremove) ===
+ansible-playbook playbooks/reused/deploy_ceph_rook.yml -i inventory/hosts.yml -v
+Key changes for this deploy:
+
+3 MONs (odd number = proper quorum, can tolerate 1 MON failure)
+/var/lib/rook cleaned in Phase 0 (before operator deploys)
+pvremove -ff in disk wipe (strips LVM PV labels that blocked OSD discovery)
+Discovery daemon enabled (enableDiscoveryDaemon=true)
+deviceFilter only rendered when non-empty
+The previous 2-MON situation was the root cause of the HEALTH_ERR spiral — it was auto-scaled from 1 and created an unstable even-numbered quorum.
