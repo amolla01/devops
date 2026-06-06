@@ -21,16 +21,20 @@ sudo systemctl restart tinyproxy && sudo systemctl enable tinyproxy
 
 
 XXXXXXXXXXXXXXXXXXXX
-Tinyproxy is running on R810. Now let me fix the playbook task to not fail when SSH key auth isn't set up — it should just verify the proxy is reachable instead of trying to install it:
+Tinyproxy is running on R810. Now let me fix the playbook task to not fail when SSH key auth isn't set up 
+— it should just verify the proxy is reachable instead of trying to install it:
 
 Edited
 deploy_kubespray.yml+19-18
-Done. The task now just verifies tinyproxy is reachable (which it is since you installed it manually) and prints a warning with install instructions if it ever isn't. No more SSH auth issues.
+Done. The task now just verifies tinyproxy is reachable (which it is since you installed it manually) 
+and prints a warning with install instructions if it ever isn't. No more SSH auth issues.
 
 Copy the updated file and re-run:
 
 
-Note: The uri check from Lab-ControlNode to 172.16.2.1:8888 might not work since your laptop isn't on the 172.16.2.0/24 network. If it shows the warning but continues, that's fine — what matters is that the KVM VMs can reach 172.16.2.1:8888. You can verify from a host:
+Note: The uri check from Lab-ControlNode to 172.16.2.1:8888 might not work since your laptop isn't on the 172.16.2.0/24 network. 
+If it shows the warning but continues, that's fine — what matters is that the KVM VMs can reach 172.16.2.1:8888. 
+You can verify from a host:
 ssh -J nh1221@R810 ubuntu@172.16.2.40 "curl -x http://172.16.2.1:8888 http://archive.ubuntu.com/ubuntu/dists/noble/Release -o /dev/null -w '%{http_code}' -s"
 If that returns 200, KubeSpray will succeed.
 
