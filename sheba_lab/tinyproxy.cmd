@@ -33,3 +33,27 @@ Copy the updated file and re-run:
 Note: The uri check from Lab-ControlNode to 172.16.2.1:8888 might not work since your laptop isn't on the 172.16.2.0/24 network. If it shows the warning but continues, that's fine — what matters is that the KVM VMs can reach 172.16.2.1:8888. You can verify from a host:
 ssh -J nh1221@R810 ubuntu@172.16.2.40 "curl -x http://172.16.2.1:8888 http://archive.ubuntu.com/ubuntu/dists/noble/Release -o /dev/null -w '%{http_code}' -s"
 If that returns 200, KubeSpray will succeed.
+
+XXXXXXXXXXXXXXXX
+
+Most likely issues on R810's tinyproxy config:
+
+Allow directive doesn't include the KVM node IPs — check /etc/tinyproxy/tinyproxy.conf on R810:
+grep -i "^Allow" /etc/tinyproxy/tinyproxy.conf
+
+
+You need: Allow 172.16.2.0/24
+
+ConnectPort restricts HTTPS — tinyproxy by default only allows CONNECT to port 443. Container registries use 443, so this should be fine, but verify.
+
+DNS resolution from R810 itself — tinyproxy on R810 needs to resolve registry.k8s.io, docker.io, etc. Check:
+
+# On R810:
+curl -x http://127.0.0.1:8888 -I https://registry.k8s.io/v2/
+
+Quick diagnosis — SSH into one KVM node and test:
+
+# From any KVM node (e.g., Host12_1):
+export https_proxy=http://172.16.2.1:8888
+curl -v https://registry.k8s.io/v2/
+If that returns 403 or hangs, the proxy is the bottleneck. Fix the tinyproxy Allow rule on R810 and restart it, then kill and re-run the playbook.
