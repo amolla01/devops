@@ -109,3 +109,42 @@ curl -I http://archive.ubuntu.com/ubuntu/dists/noble/Release
 
 If that works but tinyproxy doesn't forward it, check /etc/tinyproxy/tinyproxy.conf for ConnectPort restrictions or upstream DNS issues.Meanwhile, if you want to fix the actual proxy issue for future use, SSH into R810 and test:
 
+ZZZZZZZZZZZZZZZZZZZZZZZZ
+
+Now I have the full package list. For Ubuntu (Debian family), KubeSpray v2.25.0 requires:
+
+apparmor, apt-transport-https, bash-completion, conntrack, curl, e2fsprogs, ebtables, gnupg (Debian 11/12 only), ipset, iptables, ipvsadm (if IPVS mode), libseccomp2, openssl, python3-apt, rsync, socat, software-properties-common, tar, unzip, xfsprogs
+Most of these are already installed on Ubuntu 24.04 by default. The 2 that are missing are ebtables and unzip. Let me update Phase 3's list:
+
+Now I need to add a second patch in Phase 4 to also skip KubeSpray's Install packages requirements task. This is the safety net — if any package is still missing and apt can't download it, this prevents a 47-minute retry loop:
+
+Now let me verify the dpkg fallback logic will properly find and install the .deb files. Let me check the find patterns:
+
+The dpkg fallback looks correct — it uses glob patterns like ebtables_*.deb against /opt/fabric-cache/apt-packages/. With 258 .deb files cached, those should be there from your --tags apt_cache preflight run.
+
+Here's the summary of what I fixed:
+
+Changes Made
+1. Phase 3 package list expanded — Added all KubeSpray-required packages:
+
+ebtables, unzip (the 2 that failed)
+apparmor, bash-completion, e2fsprogs, iptables, libseccomp2, openssl, python3-apt, rsync, software-properties-common, tar, xfsprogs
+2. Second KubeSpray patch added — Phase 4 now patches BOTH:
+
+Update package management cache (APT) → when: false
+Install packages requirements → when: false
+This means even if some package is missing that we haven't thought of, KubeSpray won't hang for 47 minutes retrying apt downloads that will never work.
+
+Before Re-running
+First, verify you have ebtables and unzip .deb files in your cache:
+ls /opt/fabric-cache/apt-packages/ebtables* /opt/fabric-cache/apt-packages/unzip*
+
+If they're NOT there, grab them on the deployer (which has internet via WSL):
+
+apt-get download ebtables unzip && mv ebtables*.deb unzip*.deb /opt/fabric-cache/apt-packages/
+
+Then re-run:
+
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
+
+Phase 3 will now detect ebtables and unzip as missing, try apt (fail), then push .debs via dpkg. Phase 4 will patch KubeSpray to skip both apt tasks entirely.
