@@ -100,3 +100,12 @@ R810 itself has no internet (can't forward to Ubuntu repos)
 Ubuntu 24.04 sources use HTTPS but tinyproxy ConnectPort doesn't allow 443
 DNS resolution fails on R810 for archive.ubuntu.com
 If R810 has no real internet, you could add Ubuntu mirror sources pointing to a local cache, or skip apt-get update entirely by patching KubeSpray's preinstall. Want me to prepare a workaround that skips KubeSpray's apt cache update since all packages are already installed via our Phase 3 dpkg fallback?
+
+
+
+Meanwhile, if you want to fix the actual proxy issue for future use, SSH into R810 and test:
+
+curl -I http://archive.ubuntu.com/ubuntu/dists/noble/Release
+
+If that works but tinyproxy doesn't forward it, check /etc/tinyproxy/tinyproxy.conf for ConnectPort restrictions or upstream DNS issues.Meanwhile, if you want to fix the actual proxy issue for future use, SSH into R810 and test:
+
