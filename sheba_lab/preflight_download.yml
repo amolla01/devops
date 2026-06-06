@@ -1,0 +1,618 @@
+---
+# =============================================================================
+# preflight_download.yml — Pre-stage all images, binaries, and packages
+# =============================================================================
+# Downloads everything needed for a full topology deployment into
+# /opt/fabric-cache/ on the deployer. Subsequent playbook runs use the
+# local cache instead of hitting the internet.
+#
+# Supports all automation profiles:
+#   - win11_kvm, ubuntu_r620_kvm, ubuntu_r810_kvm, real_hardware
+#
+# Usage:
+#   # Full preflight (all categories):
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml
+#
+#   # Specific categories:
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags kubespray
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags k8s
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags openstack
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags openstack_helm
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags ceph
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags maas
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags ubuntu
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags packer
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags postgresql
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags prometheus
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags grafana
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags helm_charts
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags metallb
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags apt_cache
+#   ansible-playbook playbooks/reused/preflight_download.yml -i inventory/hosts.yml --tags pip_cache
+#
+# Cache Structure:
+#   /opt/fabric-cache/
+#   ├── binaries/          — cephadm, kubectl, helm, yq, k9s, argocd
+#   ├── images/            — cirros, ubuntu-cloud, container tarballs
+#   ├── kubespray/         — All KubeSpray artifacts (unified)
+#   │   ├── src/           — KubeSpray git repo clone
+#   │   ├── venv/          — Python virtual environment
+#   │   └── download-cache/ — Container images pulled during deployment
+#   ├── maas/              — MaaS snap + dependencies
+#   ├── helm-charts/       — Pre-pulled Helm chart tarballs
+#   ├── apt-packages/      — Cached .deb packages for offline install
+#   └── pip-packages/      — Cached pip wheels for venv creation
+#
+# IMPORTANT: Run this ONCE before the first full deployment (or when
+# upgrading versions). Subsequent deploy_* playbooks will use the cache
+# automatically via:
+#   - KubeSpray: download_run_once + download_cache_dir
+#   - Ceph: roles/ceph/tasks/preflight.yml checks /opt/fabric-cache/binaries/
+#   - OpenStack: validate.yml checks /opt/fabric-cache/images/
+#   - Helm: --chart-cache flag
+# =============================================================================
+
+- name: "Preflight Download: Stage all deployment artifacts to /opt/fabric-cache/"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: false
+  vars:
+    cache_root: "/opt/fabric-cache"
+    cache_binaries: "{{ cache_root }}/binaries"
+    cache_images: "{{ cache_root }}/images"
+    cache_kubespray: "{{ cache_root }}/kubespray"
+    cache_kubespray_src: "{{ cache_kubespray }}/src"
+    cache_kubespray_venv: "{{ cache_kubespray }}/venv"
+    cache_kubespray_downloads: "{{ cache_kubespray }}/download-cache"
+    cache_maas: "{{ cache_root }}/maas"
+    cache_helm: "{{ cache_root }}/helm-charts"
+    cache_apt: "{{ cache_root }}/apt-packages"
+    cache_pip: "{{ cache_root }}/pip-packages"
+
+    # ---- Pinned Versions ----
+    kubespray_version: "v2.25.0"
+    kubectl_version: "v1.29.4"
+    helm_version: "v3.14.4"
+    yq_version: "v4.44.1"
+    k9s_version: "v0.32.4"
+    argocd_version: "v2.11.3"
+    cephadm_version: "18.2.2"
+    cirros_version: "0.6.2"
+    kolla_ansible_version: "18.0.0"
+    maas_version: "3.4"
+    packer_version: "1.10.3"
+    postgresql_version: "16"
+    ubuntu_iso_version: "24.04.2"
+    ubuntu_iso_url: "https://releases.ubuntu.com/24.04.2/ubuntu-24.04.2-live-server-amd64.iso"
+    ubuntu_iso_checksum: "sha256:d6fea1f11b4d23b481a48f4f7af7eaee4a91e1aaedf030acb4fc8fa1e0e1e495"
+    ubuntu_cloud_url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+
+    # ---- Helm Charts to Pre-Pull ----
+    helm_repos:
+      - { name: "bitnami", url: "https://charts.bitnami.com/bitnami" }
+      - { name: "openstack-helm", url: "https://tarballs.opendev.org/openstack/openstack-helm/" }
+      - { name: "openstack-helm-infra", url: "https://tarballs.opendev.org/openstack/openstack-helm-infra/" }
+      - { name: "prometheus-community", url: "https://prometheus-community.github.io/helm-charts" }
+      - { name: "grafana", url: "https://grafana.github.io/helm-charts" }
+      - { name: "jetstack", url: "https://charts.jetstack.io" }
+      - { name: "rook-release", url: "https://charts.rook.io/release" }
+      - { name: "metallb", url: "https://metallb.github.io/metallb" }
+
+    helm_charts_to_cache:
+      # PostgreSQL / Databases
+      - { repo: "bitnami", chart: "postgresql", tags: ["postgresql"] }
+      - { repo: "bitnami", chart: "postgresql-ha", tags: ["postgresql"] }
+      - { repo: "bitnami", chart: "mongodb", tags: [] }
+      - { repo: "bitnami", chart: "redis", tags: [] }
+      - { repo: "bitnami", chart: "rabbitmq", tags: [] }
+      - { repo: "bitnami", chart: "elasticsearch", tags: [] }
+      - { repo: "bitnami", chart: "minio", tags: [] }
+      - { repo: "bitnami", chart: "keycloak", tags: [] }
+      # OpenStack-Helm infrastructure
+      - { repo: "openstack-helm-infra", chart: "ingress", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm-infra", chart: "mariadb", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm-infra", chart: "rabbitmq", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm-infra", chart: "memcached", tags: ["openstack_helm"] }
+      # OpenStack-Helm services
+      - { repo: "openstack-helm", chart: "keystone", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "glance", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "cinder", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "placement", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "nova", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "neutron", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "horizon", tags: ["openstack_helm"] }
+      - { repo: "openstack-helm", chart: "heat", tags: ["openstack_helm"] }
+      # Prometheus / Monitoring
+      - { repo: "prometheus-community", chart: "kube-prometheus-stack", tags: ["prometheus"] }
+      - { repo: "prometheus-community", chart: "prometheus-node-exporter", tags: ["prometheus"] }
+      - { repo: "prometheus-community", chart: "alertmanager", tags: ["prometheus"] }
+      # Grafana / Observability
+      - { repo: "grafana", chart: "grafana", tags: ["grafana"] }
+      - { repo: "grafana", chart: "loki-stack", tags: ["grafana"] }
+      - { repo: "grafana", chart: "tempo", tags: ["grafana"] }
+      - { repo: "grafana", chart: "promtail", tags: ["grafana"] }
+      # Cert-Manager
+      - { repo: "jetstack", chart: "cert-manager", tags: [] }
+      # Rook-Ceph (Kubernetes-native Ceph deployment)
+      - { repo: "rook-release", chart: "rook-ceph", tags: ["ceph"] }
+      - { repo: "rook-release", chart: "rook-ceph-cluster", tags: ["ceph"] }
+      # MetalLB (Bare-metal LoadBalancer for K8s services)
+      - { repo: "metallb", chart: "metallb", tags: ["metallb"] }
+
+    # ---- APT Packages to Cache ----
+    apt_packages_to_cache:
+      - openvswitch-switch
+      - frr
+      - frr-pythontools
+      - lldpd
+      - conntrack
+      - socat
+      - ipset
+      - libipset13
+      - ipvsadm
+      - qemu-kvm
+      - libvirt-daemon-system
+      - chrony
+      - apt-transport-https
+      - ca-certificates
+
+    # ---- Pip Packages to Cache (wheels) ----
+    pip_packages_to_cache:
+      - "kolla-ansible=={{ kolla_ansible_version }}"
+      - python-openstackclient
+      - python-heatclient
+      - docker
+      - ansible-core>=2.15
+      - netaddr
+      - jinja2>=3.1
+
+  tasks:
+    # ==== Create cache directory structure ====
+    - name: Create cache directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ cache_binaries }}"
+        - "{{ cache_images }}"
+        - "{{ cache_kubespray }}"
+        - "{{ cache_kubespray_src }}"
+        - "{{ cache_kubespray_venv }}"
+        - "{{ cache_kubespray_downloads }}"
+        - "{{ cache_maas }}"
+        - "{{ cache_helm }}"
+        - "{{ cache_apt }}"
+        - "{{ cache_pip }}"
+      become: true
+      tags: [always]
+
+    # ===========================================================================
+    # BINARIES — kubectl, helm, yq, k9s, argocd, cephadm
+    # ===========================================================================
+    - name: "binaries | Download kubectl {{ kubectl_version }}"
+      ansible.builtin.get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: "{{ cache_binaries }}/kubectl-{{ kubectl_version }}"
+        mode: "0755"
+      register: dl_kubectl
+      ignore_errors: true
+      tags: [binaries, k8s, kubespray]
+
+    - name: "binaries | Download helm {{ helm_version }}"
+      ansible.builtin.unarchive:
+        src: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
+        dest: "{{ cache_binaries }}/"
+        remote_src: true
+        extra_opts: ["--strip-components=1", "linux-amd64/helm"]
+        creates: "{{ cache_binaries }}/helm"
+      register: dl_helm
+      ignore_errors: true
+      tags: [binaries, k8s, kubespray, helm_charts, prometheus, grafana, postgresql]
+
+    - name: "binaries | Download yq {{ yq_version }}"
+      ansible.builtin.get_url:
+        url: "https://github.com/mikefarah/yq/releases/download/{{ yq_version }}/yq_linux_amd64"
+        dest: "{{ cache_binaries }}/yq-{{ yq_version }}"
+        mode: "0755"
+      register: dl_yq
+      ignore_errors: true
+      tags: [binaries]
+
+    - name: "binaries | Download k9s {{ k9s_version }}"
+      ansible.builtin.get_url:
+        url: "https://github.com/derailed/k9s/releases/download/{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+        dest: "{{ cache_binaries }}/k9s-{{ k9s_version }}.tar.gz"
+        mode: "0644"
+      register: dl_k9s
+      ignore_errors: true
+      tags: [binaries]
+
+    - name: "binaries | Download argocd {{ argocd_version }}"
+      ansible.builtin.get_url:
+        url: "https://github.com/argoproj/argo-cd/releases/download/{{ argocd_version }}/argocd-linux-amd64"
+        dest: "{{ cache_binaries }}/argocd-{{ argocd_version }}"
+        mode: "0755"
+      register: dl_argocd
+      ignore_errors: true
+      tags: [binaries]
+
+    - name: "binaries | Download cephadm {{ cephadm_version }}"
+      ansible.builtin.get_url:
+        url: "https://download.ceph.com/rpm-{{ cephadm_version }}/el9/noarch/cephadm"
+        dest: "{{ cache_binaries }}/cephadm-{{ cephadm_version }}"
+        mode: "0755"
+      register: dl_cephadm
+      ignore_errors: true
+      tags: [binaries, ceph]
+
+    # ===========================================================================
+    # IMAGES — cirros (OpenStack test), Ubuntu cloud image
+    # ===========================================================================
+    - name: "images | Download cirros {{ cirros_version }}"
+      ansible.builtin.get_url:
+        url: "https://download.cirros-cloud.net/{{ cirros_version }}/cirros-{{ cirros_version }}-x86_64-disk.img"
+        dest: "{{ cache_images }}/cirros-{{ cirros_version }}-x86_64-disk.img"
+        mode: "0644"
+      register: dl_cirros
+      ignore_errors: true
+      tags: [images, openstack, openstack_helm]
+
+    - name: "images | Download Ubuntu 22.04 cloud image"
+      ansible.builtin.get_url:
+        url: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+        dest: "{{ cache_images }}/ubuntu-22.04-server-cloudimg-amd64.img"
+        mode: "0644"
+      register: dl_ubuntu2204
+      ignore_errors: true
+      tags: [images, openstack, openstack_helm]
+
+    - name: "images | Download Ubuntu 24.04.2 live-server ISO (for Packer builds)"
+      ansible.builtin.get_url:
+        url: "{{ ubuntu_iso_url }}"
+        dest: "{{ cache_images }}/ubuntu-24.04.2-live-server-amd64.iso"
+        checksum: "{{ ubuntu_iso_checksum }}"
+        mode: "0644"
+        timeout: 600
+      register: dl_ubuntu_iso
+      ignore_errors: true
+      tags: [images, ubuntu, packer, maas]
+
+    - name: "images | Download Ubuntu 24.04 cloud image (Noble)"
+      ansible.builtin.get_url:
+        url: "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+        dest: "{{ cache_images }}/ubuntu-24.04-server-cloudimg-amd64.img"
+        mode: "0644"
+      register: dl_ubuntu2404
+      ignore_errors: true
+      tags: [images, ubuntu, openstack]
+
+    # ===========================================================================
+    # PACKER — HashiCorp Packer for custom image builds
+    # ===========================================================================
+    - name: "packer | Download Packer {{ packer_version }}"
+      ansible.builtin.get_url:
+        url: "https://releases.hashicorp.com/packer/{{ packer_version }}/packer_{{ packer_version }}_linux_amd64.zip"
+        dest: "{{ cache_binaries }}/packer_{{ packer_version }}_linux_amd64.zip"
+        mode: "0644"
+      register: dl_packer
+      ignore_errors: true
+      tags: [binaries, packer]
+
+    - name: "packer | Extract Packer binary"
+      ansible.builtin.unarchive:
+        src: "{{ cache_binaries }}/packer_{{ packer_version }}_linux_amd64.zip"
+        dest: "{{ cache_binaries }}/"
+        remote_src: true
+        creates: "{{ cache_binaries }}/packer"
+      when: dl_packer is defined and dl_packer is not failed
+      ignore_errors: true
+      tags: [binaries, packer]
+
+    - name: "packer | Download QEMU/KVM packages for image building"
+      ansible.builtin.shell: |
+        cd {{ cache_apt }}
+        apt-get download \
+          qemu-system-x86 qemu-utils cloud-image-utils genisoimage \
+          2>/dev/null || true
+      become: true
+      changed_when: false
+      ignore_errors: true
+      tags: [packer]
+
+    # ===========================================================================
+    # KUBESPRAY — Clone repo + install requirements (the actual KubeSpray source)
+    # ===========================================================================
+    - name: "kubespray | Clone KubeSpray {{ kubespray_version }} repository"
+      ansible.builtin.git:
+        repo: "https://github.com/kubernetes-sigs/kubespray.git"
+        dest: "{{ cache_kubespray_src }}"
+        version: "{{ kubespray_version }}"
+        force: false
+      register: dl_kubespray_repo
+      ignore_errors: true
+      tags: [kubespray]
+
+    - name: "kubespray | Create Python venv for KubeSpray"
+      ansible.builtin.command:
+        cmd: "python3 -m venv {{ cache_kubespray_venv }}"
+        creates: "{{ cache_kubespray_venv }}/bin/activate"
+      when: dl_kubespray_repo is defined and dl_kubespray_repo is not failed
+      ignore_errors: true
+      tags: [kubespray]
+
+    - name: "kubespray | Install KubeSpray requirements into venv"
+      ansible.builtin.pip:
+        requirements: "{{ cache_kubespray_src }}/requirements.txt"
+        virtualenv: "{{ cache_kubespray_venv }}"
+        state: present
+      when: dl_kubespray_repo is defined and dl_kubespray_repo is not failed
+      ignore_errors: true
+      tags: [kubespray]
+
+    - name: "kubespray | Pre-download pip wheels for KubeSpray requirements"
+      ansible.builtin.command: >
+        pip download
+          --dest {{ cache_pip }}/
+          -r {{ cache_kubespray_src }}/requirements.txt
+      changed_when: false
+      ignore_errors: true
+      tags: [kubespray]
+
+    # ===========================================================================
+    # MAAS — Metal-as-a-Service snap + CLI + dependencies
+    # ===========================================================================
+    - name: "maas | Download MaaS {{ maas_version }} snap (offline install)"
+      ansible.builtin.command: >
+        snap download maas --channel={{ maas_version }}/stable
+          --target-directory={{ cache_maas }}/
+      args:
+        creates: "{{ cache_maas }}/maas_*.snap"
+      ignore_errors: true
+      tags: [maas]
+
+    - name: "maas | Download MaaS CLI snap"
+      ansible.builtin.command: >
+        snap download maas-cli --channel={{ maas_version }}/stable
+          --target-directory={{ cache_maas }}/
+      args:
+        creates: "{{ cache_maas }}/maas-cli_*.snap"
+      ignore_errors: true
+      tags: [maas]
+
+    - name: "maas | Download MaaS test-db snap"
+      ansible.builtin.command: >
+        snap download maas-test-db --channel={{ maas_version }}/stable
+          --target-directory={{ cache_maas }}/
+      args:
+        creates: "{{ cache_maas }}/maas-test-db_*.snap"
+      ignore_errors: true
+      tags: [maas]
+
+    - name: "maas | Download MaaS-related APT packages"
+      ansible.builtin.shell: |
+        cd {{ cache_apt }}
+        apt-get download \
+          jq curl libvirt-clients ipmitool freeipmi-tools wakeonlan \
+          2>/dev/null || true
+      become: true
+      changed_when: false
+      ignore_errors: true
+      tags: [maas]
+
+    # ===========================================================================
+    # POSTGRESQL — Client tools + Helm charts for database clusters
+    # ===========================================================================
+    - name: "postgresql | Download PostgreSQL {{ postgresql_version }} client packages"
+      ansible.builtin.shell: |
+        cd {{ cache_apt }}
+        apt-get download \
+          postgresql-client-{{ postgresql_version }} \
+          postgresql-{{ postgresql_version }} \
+          libpq-dev \
+          2>/dev/null || true
+      become: true
+      changed_when: false
+      ignore_errors: true
+      tags: [postgresql]
+
+    - name: "postgresql | Download pgAdmin pip package"
+      ansible.builtin.command: >
+        pip download --dest {{ cache_pip }}/ pgcli psycopg2-binary
+      changed_when: false
+      ignore_errors: true
+      tags: [postgresql]
+
+    # ===========================================================================
+    # PROMETHEUS — Monitoring stack binaries + Helm charts
+    # ===========================================================================
+    - name: "prometheus | Download node_exporter binary"
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.8.1/node_exporter-1.8.1.linux-amd64.tar.gz"
+        dest: "{{ cache_binaries }}/node_exporter-1.8.1.linux-amd64.tar.gz"
+        mode: "0644"
+      register: dl_node_exporter
+      ignore_errors: true
+      tags: [prometheus]
+
+    - name: "prometheus | Download prometheus binary"
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v2.52.0/prometheus-2.52.0.linux-amd64.tar.gz"
+        dest: "{{ cache_binaries }}/prometheus-2.52.0.linux-amd64.tar.gz"
+        mode: "0644"
+      register: dl_prometheus
+      ignore_errors: true
+      tags: [prometheus]
+
+    - name: "prometheus | Download alertmanager binary"
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/alertmanager/releases/download/v0.27.0/alertmanager-0.27.0.linux-amd64.tar.gz"
+        dest: "{{ cache_binaries }}/alertmanager-0.27.0.linux-amd64.tar.gz"
+        mode: "0644"
+      register: dl_alertmanager
+      ignore_errors: true
+      tags: [prometheus]
+
+    # ===========================================================================
+    # GRAFANA — Dashboard + Loki + Tempo binaries
+    # ===========================================================================
+    - name: "grafana | Download Grafana .deb package"
+      ansible.builtin.get_url:
+        url: "https://dl.grafana.com/oss/release/grafana_11.0.0_amd64.deb"
+        dest: "{{ cache_apt }}/grafana_11.0.0_amd64.deb"
+        mode: "0644"
+      register: dl_grafana
+      ignore_errors: true
+      tags: [grafana]
+
+    - name: "grafana | Download Loki binary"
+      ansible.builtin.get_url:
+        url: "https://github.com/grafana/loki/releases/download/v3.0.0/loki-linux-amd64.zip"
+        dest: "{{ cache_binaries }}/loki-3.0.0-linux-amd64.zip"
+        mode: "0644"
+      register: dl_loki
+      ignore_errors: true
+      tags: [grafana]
+
+    - name: "grafana | Download Promtail binary"
+      ansible.builtin.get_url:
+        url: "https://github.com/grafana/loki/releases/download/v3.0.0/promtail-linux-amd64.zip"
+        dest: "{{ cache_binaries }}/promtail-3.0.0-linux-amd64.zip"
+        mode: "0644"
+      register: dl_promtail
+      ignore_errors: true
+      tags: [grafana]
+
+    # ===========================================================================
+    # HELM CHARTS — pre-pull chart tarballs
+    # ===========================================================================
+    - name: "helm | Add Helm repositories"
+      ansible.builtin.command: >
+        helm repo add {{ item.name }} {{ item.url }}
+      loop: "{{ helm_repos }}"
+      changed_when: false
+      ignore_errors: true
+      tags: [helm_charts, openstack_helm, prometheus, grafana, postgresql]
+
+    - name: "helm | Update Helm repositories"
+      ansible.builtin.command: helm repo update
+      changed_when: false
+      ignore_errors: true
+      tags: [helm_charts, openstack_helm, prometheus, grafana, postgresql]
+
+    - name: "helm | Pull chart tarballs to cache"
+      ansible.builtin.command: >
+        helm pull {{ item.repo }}/{{ item.chart }}
+          --destination {{ cache_helm }}/
+          --untar=false
+      loop: "{{ helm_charts_to_cache }}"
+      args:
+        creates: "{{ cache_helm }}/{{ item.chart }}-*.tgz"
+      ignore_errors: true
+      tags: [helm_charts, openstack_helm, prometheus, grafana, postgresql]
+
+    # ===========================================================================
+    # APT PACKAGES — download .deb files for offline install
+    # ===========================================================================
+    - name: "apt | Download .deb packages to cache (requires apt on deployer)"
+      ansible.builtin.shell: |
+        cd {{ cache_apt }}
+        apt-get download {{ apt_packages_to_cache | join(' ') }} 2>/dev/null || true
+        # Also resolve and download dependencies
+        apt-get download $(apt-cache depends --recurse --no-recommends --no-suggests \
+          --no-conflicts --no-breaks --no-replaces --no-enhances \
+          {{ apt_packages_to_cache | join(' ') }} 2>/dev/null | grep '^\w' | sort -u) 2>/dev/null || true
+      become: true
+      changed_when: false
+      ignore_errors: true
+      tags: [apt_cache]
+
+    # ===========================================================================
+    # PIP PACKAGES — download wheels for offline venv creation
+    # ===========================================================================
+    - name: "pip | Download pip wheels to cache"
+      ansible.builtin.command: >
+        pip download --dest {{ cache_pip }}/ {{ pip_packages_to_cache | join(' ') }}
+      changed_when: false
+      ignore_errors: true
+      tags: [pip_cache]
+
+    # ===========================================================================
+    # SUMMARY
+    # ===========================================================================
+    - name: "summary | Report cache contents"
+      ansible.builtin.shell: |
+        echo "=== /opt/fabric-cache/ contents ==="
+        echo ""
+        echo "--- binaries/ ---"
+        ls -lh {{ cache_binaries }}/ 2>/dev/null | tail -20
+        echo ""
+        echo "--- images/ ---"
+        ls -lh {{ cache_images }}/ 2>/dev/null | tail -10
+        echo ""
+        echo "--- kubespray/ ---"
+        du -sh {{ cache_kubespray }}/ 2>/dev/null || echo "(empty — populated during first KubeSpray run)"
+        echo ""
+        echo "--- helm-charts/ ---"
+        ls {{ cache_helm }}/*.tgz 2>/dev/null | wc -l | xargs -I{} echo "{} charts cached"
+        echo ""
+        echo "--- apt-packages/ ---"
+        ls {{ cache_apt }}/*.deb 2>/dev/null | wc -l | xargs -I{} echo "{} .deb files cached"
+        echo ""
+        echo "--- pip-packages/ ---"
+        ls {{ cache_pip }}/*.whl 2>/dev/null | wc -l | xargs -I{} echo "{} pip wheels cached"
+        echo ""
+        du -sh {{ cache_root }}/ | awk '{print "Total cache size: " $1}'
+      register: cache_summary
+      changed_when: false
+      tags: [always]
+
+    - name: "summary | Display"
+      ansible.builtin.debug:
+        msg: "{{ cache_summary.stdout_lines }}"
+      tags: [always]
+
+    - name: "summary | Collect failed downloads"
+      ansible.builtin.set_fact:
+        preflight_failures: >-
+          {{
+            ([] +
+              ((['kubectl'] if (dl_kubectl is defined and dl_kubectl is failed) else [])) +
+              ((['helm'] if (dl_helm is defined and dl_helm is failed) else [])) +
+              ((['yq'] if (dl_yq is defined and dl_yq is failed) else [])) +
+              ((['k9s'] if (dl_k9s is defined and dl_k9s is failed) else [])) +
+              ((['argocd'] if (dl_argocd is defined and dl_argocd is failed) else [])) +
+              ((['cephadm'] if (dl_cephadm is defined and dl_cephadm is failed) else [])) +
+              ((['packer'] if (dl_packer is defined and dl_packer is failed) else [])) +
+              ((['cirros'] if (dl_cirros is defined and dl_cirros is failed) else [])) +
+              ((['ubuntu-22.04-cloud'] if (dl_ubuntu2204 is defined and dl_ubuntu2204 is failed) else [])) +
+              ((['ubuntu-24.04-iso'] if (dl_ubuntu_iso is defined and dl_ubuntu_iso is failed) else [])) +
+              ((['ubuntu-24.04-cloud'] if (dl_ubuntu2404 is defined and dl_ubuntu2404 is failed) else [])) +
+              ((['kubespray-repo'] if (dl_kubespray_repo is defined and dl_kubespray_repo is failed) else [])) +
+              ((['node_exporter'] if (dl_node_exporter is defined and dl_node_exporter is failed) else [])) +
+              ((['prometheus'] if (dl_prometheus is defined and dl_prometheus is failed) else [])) +
+              ((['alertmanager'] if (dl_alertmanager is defined and dl_alertmanager is failed) else [])) +
+              ((['grafana'] if (dl_grafana is defined and dl_grafana is failed) else [])) +
+              ((['loki'] if (dl_loki is defined and dl_loki is failed) else [])) +
+              ((['promtail'] if (dl_promtail is defined and dl_promtail is failed) else []))
+            )
+          }}
+      tags: [always]
+
+    - name: "summary | Report failed downloads (if any)"
+      ansible.builtin.debug:
+        msg: |
+          ⚠️  The following downloads FAILED ({{ preflight_failures | length }} total):
+          {% for item in preflight_failures %}
+            - {{ item }}
+          {% endfor %}
+          Re-run with the relevant --tags to retry, or check URLs/network connectivity.
+      when: preflight_failures | length > 0
+      tags: [always]
+
+    - name: "summary | All downloads succeeded"
+      ansible.builtin.debug:
+        msg: "✅ All preflight downloads completed successfully."
+      when: preflight_failures | length == 0
+      tags: [always]
