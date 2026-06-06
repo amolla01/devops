@@ -466,11 +466,20 @@
 
     - name: Pre-create KubeSpray staging directory with correct ownership
       ansible.builtin.file:
-        path: /tmp/releases
+        path: "{{ item }}"
         state: directory
         owner: "{{ ansible_user | default('ubuntu') }}"
         mode: "0755"
+      loop:
+        - /tmp/releases
+        - /tmp/releases/images
       become: true
+
+    - name: Fix ownership of stale /tmp/releases subdirectories from previous runs
+      ansible.builtin.command:
+        cmd: chown -R {{ ansible_user | default('ubuntu') }}:{{ ansible_user | default('ubuntu') }} /tmp/releases
+      become: true
+      changed_when: true
 
     - name: Set hostname to kube_node_name
       ansible.builtin.hostname:
