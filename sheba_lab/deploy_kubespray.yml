@@ -90,6 +90,27 @@
         mode: '0755'
       become: true
 
+    - name: Install and configure tinyproxy on R810 hypervisor for air-gapped nodes
+      ansible.builtin.shell: |
+        ssh -o StrictHostKeyChecking=no {{ proxy_jump_resolved }} bash -s <<'EOF'
+        if ! command -v tinyproxy &>/dev/null; then
+          sudo apt-get install -y tinyproxy
+        fi
+        # Allow all KVM hosts on 172.16.2.0/24 to use this proxy
+        sudo grep -q 'Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf || \
+          sudo sed -i '/^Allow 127.0.0.1/a Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf
+        # Bind to all interfaces so VMs can reach it
+        sudo sed -i 's/^#\?Listen .*/Listen 0.0.0.0/' /etc/tinyproxy/tinyproxy.conf
+        sudo systemctl restart tinyproxy
+        sudo systemctl enable tinyproxy
+        echo "tinyproxy configured and running on R810"
+        EOF
+      register: _tinyproxy_result
+      changed_when: "'configured' in _tinyproxy_result.stdout"
+      when:
+        - automation_profile in ['ubuntu_r620_kvm', 'ubuntu_r810_kvm']
+        - proxy_jump_resolved | default('') | length > 0
+
     - name: Install Helm binary on deployer
       ansible.builtin.shell: |
         if ! command -v helm &>/dev/null; then
