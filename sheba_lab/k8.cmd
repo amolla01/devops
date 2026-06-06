@@ -40,4 +40,28 @@ sudo cp /var/cache/apt/archives/{conntrack,socat,ipset,ipvsadm,libipset*,libnetf
 # Verify
 ls /opt/fabric-cache/apt-packages/
 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+This is the same root cause documented in your repo memory. The fix is already known:
+
+Problem: download_run_once: true with download_localhost: false means host12-1 is delegated to download images, 
+but the -> localhost delegation is trying to use ctr on the deployer (Lab-ControlNode), which doesn't have containerd installed.
+
+Immediate fix — install ctr on the deployer:
+
+# On Lab-ControlNode (WSL):
+cd /tmp
+curl -fsSL https://github.com/containerd/containerd/releases/download/v1.7.16/containerd-1.7.16-linux-amd64.tar.gz | sudo tar -xz -C /usr/local
+sudo ctr --version
+
+This is the same containerd v1.7.16 that KubeSpray already downloaded and deployed to your nodes 
+— you just need the ctr binary locally so the deployer can pull and cache images before distributing them.
+
+Then re-run:
+
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
+
+KubeSpray is idempotent — it will skip all 360 completed tasks and resume at the calico_cni image pull.
+
+Alternative (if you don't want containerd on the deployer): Update your all.yml to set download_localhost: false 
+- so host12-1 itself pulls images directly rather than delegating to localhost. Based on your repo memory, this was already the intended production fix.
