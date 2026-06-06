@@ -464,6 +464,14 @@
             path: /tmp/preflight-debs
             state: absent
 
+    - name: Pre-create KubeSpray staging directory with correct ownership
+      ansible.builtin.file:
+        path: /tmp/releases
+        state: directory
+        owner: "{{ ansible_user | default('ubuntu') }}"
+        mode: "0755"
+      become: true
+
     - name: Set hostname to kube_node_name
       ansible.builtin.hostname:
         name: "{{ kube_node_name | default(inventory_hostname | lower | replace('_', '-')) }}"
