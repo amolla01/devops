@@ -1,3 +1,414 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/preflight_download.yml --tags kubespray -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Preflight Download: Stage all deployment artifacts to /opt/fabric-cache/] *********************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Create cache directories] *********************************************************************************************************************************************************************************
+ok: [localhost] => (item=/opt/fabric-cache/binaries) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/binaries
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/binaries
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/images) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/images
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/images
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/kubespray) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/kubespray
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray
+    size: 4096
+    state: directory
+    uid: 0
+changed: [localhost] => (item=/opt/fabric-cache/kubespray/src) =>
+    ansible_loop_var: item
+    changed: true
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/kubespray/src
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/kubespray/venv) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/kubespray/venv
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/venv
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/kubespray/download-cache) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/kubespray/download-cache
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/download-cache
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/maas) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/maas
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/maas
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/helm-charts) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/helm-charts
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/helm-charts
+    size: 4096
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/apt-packages) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/apt-packages
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/apt-packages
+    size: 20480
+    state: directory
+    uid: 0
+ok: [localhost] => (item=/opt/fabric-cache/pip-packages) =>
+    ansible_loop_var: item
+    changed: false
+    gid: 0
+    group: root
+    item: /opt/fabric-cache/pip-packages
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/pip-packages
+    size: 12288
+    state: directory
+    uid: 0
+
+TASK [binaries | Download kubectl v1.29.4] **********************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    dest: /opt/fabric-cache/binaries/kubectl-v1.29.4
+    elapsed: 0
+    gid: 0
+    group: root
+    mode: '0755'
+    msg: 'HTTP Error 304: Not Modified'
+    owner: root
+    size: 49819648
+    state: file
+    status_code: 304
+    uid: 0
+    url: https://dl.k8s.io/release/v1.29.4/bin/linux/amd64/kubectl
+
+TASK [binaries | Download helm v3.14.4] *************************************************************************************************************************************************************************
+skipping: [localhost] =>
+    changed: false
+    msg: skipped, since /opt/fabric-cache/binaries/helm exists
+
+TASK [kubespray | Check if KubeSpray source already cached] *****************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    stat:
+        exists: false
+
+TASK [kubespray | Clone KubeSpray v2.25.0 repository] ***********************************************************************************************************************************************************
+changed: [localhost] =>
+    after: 7e0a40725067f7818bb0cd4acaf27a6620af6e3f
+    before: null
+    changed: true
+
+TASK [kubespray | Create Python venv for KubeSpray] *************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - python3
+    - -m
+    - venv
+    - /opt/fabric-cache/kubespray/venv
+    delta: null
+    end: null
+    msg: Did not run command since '/opt/fabric-cache/kubespray/venv/bin/activate' exists
+    rc: 0
+    start: null
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: skipped, since /opt/fabric-cache/kubespray/venv/bin/activate exists
+    stdout_lines: <omitted>
+
+TASK [kubespray | Install KubeSpray requirements into venv] *****************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - /opt/fabric-cache/kubespray/venv/bin/pip3
+    - install
+    - -r
+    - /opt/fabric-cache/kubespray/src/requirements.txt
+    name: null
+    requirements: /opt/fabric-cache/kubespray/src/requirements.txt
+    state: present
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Requirement already satisfied: ansible==9.5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (9.5.1)
+        Requirement already satisfied: cryptography==42.0.7 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (42.0.7)
+        Requirement already satisfied: jinja2==3.1.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 3)) (3.1.4)
+        Requirement already satisfied: jmespath==1.0.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 4)) (1.0.1)
+        Requirement already satisfied: MarkupSafe==2.1.5 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 5)) (2.1.5)
+        Requirement already satisfied: netaddr==1.2.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 6)) (1.2.1)
+        Requirement already satisfied: pbr==6.0.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 7)) (6.0.0)
+        Requirement already satisfied: ruamel.yaml==0.18.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 8)) (0.18.6)
+        Requirement already satisfied: ruamel.yaml.clib==0.2.8 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 9)) (0.2.8)
+        Requirement already satisfied: jsonschema==4.22.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.22.0)
+        Requirement already satisfied: ansible-core~=2.16.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))(2.16.18)
+        Requirement already satisfied: cffi>=1.12 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (2.0.0)
+        Requirement already satisfied: attrs>=22.2.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (26.1.0)
+        Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2025.9.1)
+        Requirement already satisfied: referencing>=0.28.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (0.37.0)
+        Requirement already satisfied: rpds-py>=0.7.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2026.5.1)
+        Requirement already satisfied: PyYAML>=5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (6.0.3)
+        Requirement already satisfied: packaging in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (26.2)
+        Requirement already satisfied: resolvelib<1.1.0,>=0.5.3 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (1.0.1)
+        Requirement already satisfied: pycparser in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cffi>=1.12->cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (3.0)
+        Requirement already satisfied: typing-extensions>=4.4.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from referencing>=0.28.4->jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.15.0)
+    stdout_lines: <omitted>
+    version: null
+    virtualenv: /opt/fabric-cache/kubespray/venv
+
+TASK [kubespray | Pre-download pip wheels for KubeSpray requirements] *******************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - pip
+    - download
+    - --dest
+    - /opt/fabric-cache/pip-packages/
+    - -r
+    - /opt/fabric-cache/kubespray/src/requirements.txt
+    delta: '0:00:03.023386'
+    end: '2026-06-06 12:43:46.776733'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 12:43:43.753347'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Collecting ansible==9.5.1 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))
+          File was already downloaded /opt/fabric-cache/pip-packages/ansible-9.5.1-py3-none-any.whl
+        Collecting cryptography==42.0.7 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 2))
+          File was already downloaded /opt/fabric-cache/pip-packages/cryptography-42.0.7-cp39-abi3-manylinux_2_28_x86_64.whl
+        Collecting jinja2==3.1.4 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 3))
+          File was already downloaded /opt/fabric-cache/pip-packages/jinja2-3.1.4-py3-none-any.whl
+        Collecting jmespath==1.0.1 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 4))
+          File was already downloaded /opt/fabric-cache/pip-packages/jmespath-1.0.1-py3-none-any.whl
+        Collecting MarkupSafe==2.1.5 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 5))
+          File was already downloaded /opt/fabric-cache/pip-packages/MarkupSafe-2.1.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+        Collecting netaddr==1.2.1 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 6))
+          File was already downloaded /opt/fabric-cache/pip-packages/netaddr-1.2.1-py3-none-any.whl
+        Collecting pbr==6.0.0 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 7))
+          File was already downloaded /opt/fabric-cache/pip-packages/pbr-6.0.0-py2.py3-none-any.whl
+        Collecting ruamel.yaml==0.18.6 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 8))
+          File was already downloaded /opt/fabric-cache/pip-packages/ruamel.yaml-0.18.6-py3-none-any.whl
+        Collecting ruamel.yaml.clib==0.2.8 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 9))
+          File was already downloaded /opt/fabric-cache/pip-packages/ruamel.yaml.clib-0.2.8-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl
+        Collecting jsonschema==4.22.0 (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/jsonschema-4.22.0-py3-none-any.whl
+        Collecting ansible-core~=2.16.6 (from ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))
+          File was already downloaded /opt/fabric-cache/pip-packages/ansible_core-2.16.18-py3-none-any.whl
+        Collecting cffi>=1.12 (from cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2))
+          File was already downloaded /opt/fabric-cache/pip-packages/cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
+        Collecting attrs>=22.2.0 (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/attrs-26.1.0-py3-none-any.whl
+        Collecting jsonschema-specifications>=2023.03.6 (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/jsonschema_specifications-2025.9.1-py3-none-any.whl
+        Collecting referencing>=0.28.4 (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/referencing-0.37.0-py3-none-any.whl
+        Collecting rpds-py>=0.7.1 (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/rpds_py-2026.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+        Collecting PyYAML>=5.1 (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))
+          File was already downloaded /opt/fabric-cache/pip-packages/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+        Collecting packaging (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))
+          File was already downloaded /opt/fabric-cache/pip-packages/packaging-26.2-py3-none-any.whl
+        Collecting resolvelib<1.1.0,>=0.5.3 (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1))
+          File was already downloaded /opt/fabric-cache/pip-packages/resolvelib-1.0.1-py2.py3-none-any.whl
+        Collecting pycparser (from cffi>=1.12->cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2))
+          File was already downloaded /opt/fabric-cache/pip-packages/pycparser-3.0-py3-none-any.whl
+        Collecting typing-extensions>=4.4.0 (from referencing>=0.28.4->jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10))
+          File was already downloaded /opt/fabric-cache/pip-packages/typing_extensions-4.15.0-py3-none-any.whl
+        Successfully downloaded ansible cryptography jinja2 jmespath MarkupSafe netaddr pbr ruamel.yaml ruamel.yaml.clib jsonschema ansible-core attrs cffi jsonschema-specifications referencing rpds-py PyYAMLresolvelib typing-extensions packaging pycparser
+    stdout_lines: <omitted>
+
+TASK [summary | Report cache contents] **************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd: |-
+        echo "=== /opt/fabric-cache/ contents ==="
+        echo ""
+        echo "--- binaries/ ---"
+        ls -lh /opt/fabric-cache/binaries/ 2>/dev/null | tail -20
+        echo ""
+        echo "--- images/ ---"
+        ls -lh /opt/fabric-cache/images/ 2>/dev/null | tail -10
+        echo ""
+        echo "--- kubespray/ ---"
+        du -sh /opt/fabric-cache/kubespray/ 2>/dev/null || echo "(empty — populated during first KubeSpray run)"
+        echo ""
+        echo "--- helm-charts/ ---"
+        ls /opt/fabric-cache/helm-charts/*.tgz 2>/dev/null | wc -l | xargs -I{} echo "{} charts cached"
+        echo ""
+        echo "--- apt-packages/ ---"
+        ls /opt/fabric-cache/apt-packages/*.deb 2>/dev/null | wc -l | xargs -I{} echo "{} .deb files cached"
+        echo ""
+        echo "--- pip-packages/ ---"
+        ls /opt/fabric-cache/pip-packages/*.whl 2>/dev/null | wc -l | xargs -I{} echo "{} pip wheels cached"
+        echo ""
+        du -sh /opt/fabric-cache/ | awk '{print "Total cache size: " $1}'
+    delta: '0:00:01.111120'
+    end: '2026-06-06 12:43:48.495052'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 12:43:47.383932'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        === /opt/fabric-cache/ contents ===
+
+        --- binaries/ ---
+        total 492M
+        -rw-r--r-- 1 root root  30M May 31 18:52 alertmanager-0.27.0.linux-amd64.tar.gz
+        -rwxr-xr-x 1 root root 155M May 31 18:22 argocd-v2.11.3
+        -rwxr-xr-x 1 root root 208K May 31 18:32 cephadm-18.2.2
+        -rwxr-xr-x 1 1001  127  49M Apr 10  2024 helm
+        -rw-r--r-- 1 root root  29M May 31 18:22 k9s-v0.32.4.tar.gz
+        -rwxr-xr-x 1 root root  48M May 31 18:22 kubectl-v1.29.4
+        -rw-r--r-- 1 root root  22M May 31 18:52 loki-3.0.0-linux-amd64.zip
+        -rw-r--r-- 1 root root  11M May 31 18:52 node_exporter-1.8.1.linux-amd64.tar.gz
+        -rw-r--r-- 1 root root  16M May 31 18:50 packer_1.10.3_linux_amd64.zip
+        -rw-r--r-- 1 root root 100M May 31 18:52 prometheus-2.52.0.linux-amd64.tar.gz
+        -rw-r--r-- 1 root root  27M May 31 18:53 promtail-3.0.0-linux-amd64.zip
+        -rwxr-xr-x 1 root root 9.6M May 31 18:22 yq-v4.44.1
+
+        --- images/ ---
+        total 1.3G
+        -rw-r--r-- 1 root root    0 May 31 18:22 cirros-0.6.2-x86_64-disk.img
+        -rw-r--r-- 1 root root 663M May 31 18:33 ubuntu-22.04-server-cloudimg-amd64.img
+        -rw-r--r-- 1 root root 599M May 31 18:50 ubuntu-24.04-server-cloudimg-amd64.img
+
+        --- kubespray/ ---
+        1.1G    /opt/fabric-cache/kubespray/
+
+        --- helm-charts/ ---
+        30 charts cached
+
+        --- apt-packages/ ---
+        258 .deb files cached
+
+        --- pip-packages/ ---
+        102 pip wheels cached
+
+        Total cache size: 3.3G
+    stdout_lines: <omitted>
+
+TASK [summary | Display] ****************************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg:
+    - === /opt/fabric-cache/ contents ===
+    - ''
+    - '--- binaries/ ---'
+    - total 492M
+    - -rw-r--r-- 1 root root  30M May 31 18:52 alertmanager-0.27.0.linux-amd64.tar.gz
+    - -rwxr-xr-x 1 root root 155M May 31 18:22 argocd-v2.11.3
+    - -rwxr-xr-x 1 root root 208K May 31 18:32 cephadm-18.2.2
+    - -rwxr-xr-x 1 1001  127  49M Apr 10  2024 helm
+    - -rw-r--r-- 1 root root  29M May 31 18:22 k9s-v0.32.4.tar.gz
+    - -rwxr-xr-x 1 root root  48M May 31 18:22 kubectl-v1.29.4
+    - -rw-r--r-- 1 root root  22M May 31 18:52 loki-3.0.0-linux-amd64.zip
+    - -rw-r--r-- 1 root root  11M May 31 18:52 node_exporter-1.8.1.linux-amd64.tar.gz
+    - -rw-r--r-- 1 root root  16M May 31 18:50 packer_1.10.3_linux_amd64.zip
+    - -rw-r--r-- 1 root root 100M May 31 18:52 prometheus-2.52.0.linux-amd64.tar.gz
+    - -rw-r--r-- 1 root root  27M May 31 18:53 promtail-3.0.0-linux-amd64.zip
+    - -rwxr-xr-x 1 root root 9.6M May 31 18:22 yq-v4.44.1
+    - ''
+    - '--- images/ ---'
+    - total 1.3G
+    - -rw-r--r-- 1 root root    0 May 31 18:22 cirros-0.6.2-x86_64-disk.img
+    - -rw-r--r-- 1 root root 663M May 31 18:33 ubuntu-22.04-server-cloudimg-amd64.img
+    - -rw-r--r-- 1 root root 599M May 31 18:50 ubuntu-24.04-server-cloudimg-amd64.img
+    - ''
+    - '--- kubespray/ ---'
+    - "1.1G\t/opt/fabric-cache/kubespray/"
+    - ''
+    - '--- helm-charts/ ---'
+    - 30 charts cached
+    - ''
+    - '--- apt-packages/ ---'
+    - 258 .deb files cached
+    - ''
+    - '--- pip-packages/ ---'
+    - 102 pip wheels cached
+    - ''
+    - 'Total cache size: 3.3G'
+
+TASK [summary | Collect failed downloads] ***********************************************************************************************************************************************************************
+ok: [localhost] =>
+    ansible_facts:
+        preflight_failures: []
+    changed: false
+
+TASK [summary | Report failed downloads (if any)] ***************************************************************************************************************************************************************
+skipping: [localhost] =>
+    false_condition: preflight_failures | length > 0
+
+TASK [summary | All downloads succeeded] ************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: ✅ All preflight downloads completed successfully.
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+localhost                  : ok=12   changed=2    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
 Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
 
@@ -10,7 +421,7 @@ TASK [Check if preflight cache already has KubeSpray] **************************
 ok: [localhost] =>
     changed: false
     stat:
-        atime: 1780702676.2516725
+        atime: 1780767814.9834905
         attr_flags: e
         attributes:
         - extents
@@ -18,14 +429,14 @@ ok: [localhost] =>
         blocks: 8
         charset: us-ascii
         checksum: 839788fd9abeb621a45d90f4402e50452d2c5fae
-        ctime: 1780348752.9773448
+        ctime: 1780767814.9834905
         dev: 2096
         device_type: 0
         executable: false
         exists: true
         gid: 0
         gr_name: root
-        inode: 215624
+        inode: 53432
         isblk: false
         ischr: false
         isdir: false
@@ -37,7 +448,7 @@ ok: [localhost] =>
         isuid: false
         mimetype: text/plain
         mode: '0644'
-        mtime: 1780348752.9773448
+        mtime: 1780767814.9834905
         nlink: 1
         path: /opt/fabric-cache/kubespray/src/cluster.yml
         pw_name: root
@@ -47,7 +458,7 @@ ok: [localhost] =>
         rusr: true
         size: 88
         uid: 0
-        version: '1215577206'
+        version: '4175300135'
         wgrp: false
         woth: false
         writeable: true
@@ -188,34 +599,41 @@ skipping: [localhost] =>
     false_condition: _proxy_check is failed or (_proxy_check.status | default(-1)) ==
         -1
 
-TASK [Install Helm binary on deployer] **************************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+TASK [Install Helm binary on deployer (cache-first)] ************************************************************************************************************************************************************
+changed: [localhost] =>
+    changed: true
     cmd: |-
-        if ! command -v helm &>/dev/null; then
+        if command -v helm &>/dev/null; then
+          echo "already installed"
+        elif [ -f /opt/fabric-cache/binaries/helm ]; then
+          cp /opt/fabric-cache/binaries/helm /usr/local/bin/helm
+          chmod 0755 /usr/local/bin/helm
+          echo "installed from cache"
+        else
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          echo "installed from internet"
         fi
         helm version --short
-    delta: '0:00:00.598668'
-    end: '2026-06-06 10:29:11.243929'
+    delta: '0:00:00.205717'
+    end: '2026-06-06 12:45:09.257904'
     msg: ''
     rc: 0
-    start: '2026-06-06 10:29:10.645261'
+    start: '2026-06-06 12:45:09.052187'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
+        already installed
         /usr/local/bin/helm
-        Helm v3.21.0 is already latest
         v3.21.0+ge0878d4
     stdout_lines: <omitted>
 
 TASK [Display KubeSpray readiness] ******************************************************************************************************************************************************************************
 ok: [localhost] =>
     msg: |-
-        KubeSpray v2.24.1 ready at: /opt/fabric-cache/kubespray/src
+        KubeSpray v2.25.0 ready at: /opt/fabric-cache/kubespray/src
         Virtual env: /opt/fabric-cache/kubespray/venv
-        Helm: /usr/local/bin/helm
-        Helm v3.21.0 is already latest
+        Helm: already installed
+        /usr/local/bin/helm
         v3.21.0+ge0878d4
         Profile: ubuntu_r810_kvm
         Source: preflight cache
@@ -228,8 +646,8 @@ ok: [localhost] =>
     msg: All assertions passed
 
 TASK [Create KubeSpray inventory directory] *********************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     gid: 0
     group: root
     mode: '0755'
@@ -240,8 +658,8 @@ ok: [localhost] =>
     uid: 0
 
 TASK [Create KubeSpray inventory directory (k8s-cluster)] *******************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     gid: 0
     group: root
     mode: '0755'
@@ -252,58 +670,62 @@ ok: [localhost] =>
     uid: 0
 
 TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     checksum: ec13de1bebc11fa15b63382aca6bb63e5929d046
     dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
     gid: 0
     group: root
+    md5sum: 34138237f500eb1d7c41016e066d5e5b
     mode: '0644'
     owner: root
-    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
     size: 1734
+    src: /home/nh1221/.ansible/tmp/ansible-tmp-1780767911.4823556-499517-91028635544183/.source.yml
     state: file
     uid: 0
 
 TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     checksum: 4c35870794841bffe3872530a5a6d4fe164d2d86
     dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
     gid: 0
     group: root
+    md5sum: 79b3611295dc3ae55b01c428a5c1190b
     mode: '0644'
     owner: root
-    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
     size: 2448
+    src: /home/nh1221/.ansible/tmp/ansible-tmp-1780767915.8374424-499558-244273285500604/.source.yml
     state: file
     uid: 0
 
 TASK [Generate KubeSpray k8s-cluster.yml vars] ******************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     checksum: 17dae6501499b01aed972ca7749614e675243583
     dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/k8s-cluster.yml
     gid: 0
     group: root
+    md5sum: ee6185dd8fd80fad72ad598046fcaf54
     mode: '0644'
     owner: root
-    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/k8s-cluster.yml
     size: 1759
+    src: /home/nh1221/.ansible/tmp/ansible-tmp-1780767917.1810925-499599-272144190266465/.source.yml
     state: file
     uid: 0
 
 TASK [Generate KubeSpray addons.yml] ****************************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
+changed: [localhost] =>
+    changed: true
     checksum: 3784ee4db54f6a123647a3b6f79c7883dc57782a
     dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/addons.yml
     gid: 0
     group: root
+    md5sum: 50bafd503551ac49320d936efcec3f5f
     mode: '0644'
     owner: root
-    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/addons.yml
     size: 1032
+    src: /home/nh1221/.ansible/tmp/ansible-tmp-1780767918.4423447-499640-51277442126836/.source.yml
     state: file
     uid: 0
 
@@ -318,24 +740,24 @@ ok: [localhost] =>
 PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [Host12_1]
 ok: [Host34_1]
 ok: [Host12_2]
 ok: [Host12_3]
 ok: [HostB12_1]
+ok: [Host12_1]
 ok: [Host34_2]
 
 TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
-changed: [Host12_1] =>
+changed: [Host12_2] =>
     changed: true
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013779'
-    end: '2026-06-06 15:29:32.159197'
+    delta: '0:00:00.012532'
+    end: '2026-06-06 17:45:31.568881'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:32.145418'
+    start: '2026-06-06 17:45:31.556349'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -345,11 +767,11 @@ changed: [Host34_1] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013072'
-    end: '2026-06-06 15:29:32.220014'
+    delta: '0:00:00.012513'
+    end: '2026-06-06 17:45:32.141911'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:32.206942'
+    start: '2026-06-06 17:45:32.129398'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -359,25 +781,11 @@ changed: [HostB12_1] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013782'
-    end: '2026-06-06 15:29:32.462157'
+    delta: '0:00:00.016690'
+    end: '2026-06-06 17:45:32.173434'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:32.448375'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-changed: [Host12_2] =>
-    changed: true
-    cmd: |-
-        swapoff -a
-        sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.014105'
-    end: '2026-06-06 15:29:32.462800'
-    msg: ''
-    rc: 0
-    start: '2026-06-06 15:29:32.448695'
+    start: '2026-06-06 17:45:32.156744'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -387,11 +795,25 @@ changed: [Host12_3] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013823'
-    end: '2026-06-06 15:29:32.560741'
+    delta: '0:00:00.013700'
+    end: '2026-06-06 17:45:32.213763'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:32.546918'
+    start: '2026-06-06 17:45:32.200063'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_1] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.015350'
+    end: '2026-06-06 17:45:32.202790'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 17:45:32.187440'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -401,11 +823,11 @@ changed: [Host34_2] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.012788'
-    end: '2026-06-06 15:29:34.668539'
+    delta: '0:00:00.013557'
+    end: '2026-06-06 17:45:33.830635'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:34.655751'
+    start: '2026-06-06 17:45:33.817078'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -439,47 +861,11 @@ changed: [Host34_1] =>
         if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
           rm -f /var/lib/dpkg/lock
         fi
-    delta: '0:00:02.651400'
-    end: '2026-06-06 15:29:39.903510'
+    delta: '0:00:02.590954'
+    end: '2026-06-06 17:45:38.904393'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:37.252110'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-changed: [Host12_1] =>
-    changed: true
-    cmd: |-
-        systemctl stop unattended-upgrades.service 2>/dev/null || true
-        systemctl disable unattended-upgrades.service 2>/dev/null || true
-        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
-        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
-        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
-        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
-        # Wait for any running apt/dpkg process to finish (max 60s)
-        for i in $(seq 1 60); do
-          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
-            sleep 1
-          else
-            break
-          fi
-        done
-        # Remove stale lock files only if no process holds them
-        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
-          rm -f /var/lib/apt/lists/lock
-        fi
-        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
-          rm -f /var/lib/dpkg/lock-frontend
-        fi
-        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
-          rm -f /var/lib/dpkg/lock
-        fi
-    delta: '0:00:02.736062'
-    end: '2026-06-06 15:29:40.216996'
-    msg: ''
-    rc: 0
-    start: '2026-06-06 15:29:37.480934'
+    start: '2026-06-06 17:45:36.313439'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -511,11 +897,11 @@ changed: [HostB12_1] =>
         if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
           rm -f /var/lib/dpkg/lock
         fi
-    delta: '0:00:02.715519'
-    end: '2026-06-06 15:29:40.381661'
+    delta: '0:00:02.748522'
+    end: '2026-06-06 17:45:38.932012'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:37.666142'
+    start: '2026-06-06 17:45:36.183490'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -547,11 +933,11 @@ changed: [Host12_2] =>
         if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
           rm -f /var/lib/dpkg/lock
         fi
-    delta: '0:00:02.705283'
-    end: '2026-06-06 15:29:40.433634'
+    delta: '0:00:02.595616'
+    end: '2026-06-06 17:45:39.132592'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:37.728351'
+    start: '2026-06-06 17:45:36.536976'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -583,11 +969,47 @@ changed: [Host12_3] =>
         if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
           rm -f /var/lib/dpkg/lock
         fi
-    delta: '0:00:02.748512'
-    end: '2026-06-06 15:29:40.677945'
+    delta: '0:00:02.561193'
+    end: '2026-06-06 17:45:39.225893'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:37.929433'
+    start: '2026-06-06 17:45:36.664700'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_1] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:02.779615'
+    end: '2026-06-06 17:45:39.398518'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 17:45:36.618903'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -619,18 +1041,18 @@ changed: [Host34_2] =>
         if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
           rm -f /var/lib/dpkg/lock
         fi
-    delta: '0:00:02.582310'
-    end: '2026-06-06 15:29:44.788404'
+    delta: '0:00:02.527397'
+    end: '2026-06-06 17:45:43.682392'
     msg: ''
     rc: 0
-    start: '2026-06-06 15:29:42.206094'
+    start: '2026-06-06 17:45:41.154995'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
 TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
-ok: [HostB12_1] => (item=br_netfilter) =>
+ok: [Host12_2] => (item=br_netfilter) =>
     ansible_loop_var: item
     changed: false
     item: br_netfilter
@@ -638,6 +1060,13 @@ ok: [HostB12_1] => (item=br_netfilter) =>
     params: ''
     state: present
 ok: [Host34_1] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=br_netfilter) =>
     ansible_loop_var: item
     changed: false
     item: br_netfilter
@@ -658,11 +1087,11 @@ ok: [Host12_1] => (item=br_netfilter) =>
     name: br_netfilter
     params: ''
     state: present
-ok: [Host12_2] => (item=br_netfilter) =>
+ok: [Host12_2] => (item=overlay) =>
     ansible_loop_var: item
     changed: false
-    item: br_netfilter
-    name: br_netfilter
+    item: overlay
+    name: overlay
     params: ''
     state: present
 ok: [HostB12_1] => (item=overlay) =>
@@ -693,11 +1122,11 @@ ok: [Host12_1] => (item=overlay) =>
     name: overlay
     params: ''
     state: present
-ok: [Host12_2] => (item=overlay) =>
+ok: [Host12_2] => (item=ip_vs) =>
     ansible_loop_var: item
     changed: false
-    item: overlay
-    name: overlay
+    item: ip_vs
+    name: ip_vs
     params: ''
     state: present
 ok: [HostB12_1] => (item=ip_vs) =>
@@ -728,21 +1157,14 @@ ok: [Host12_1] => (item=ip_vs) =>
     name: ip_vs
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs) =>
-    ansible_loop_var: item
-    changed: false
-    item: ip_vs
-    name: ip_vs
-    params: ''
-    state: present
-ok: [HostB12_1] => (item=ip_vs_rr) =>
+ok: [Host12_2] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_rr
     name: ip_vs_rr
     params: ''
     state: present
-ok: [Host12_3] => (item=ip_vs_rr) =>
+ok: [HostB12_1] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_rr
@@ -756,7 +1178,7 @@ ok: [Host34_1] => (item=ip_vs_rr) =>
     name: ip_vs_rr
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_rr) =>
+ok: [Host12_3] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_rr
@@ -768,6 +1190,13 @@ ok: [Host12_1] => (item=ip_vs_rr) =>
     changed: false
     item: ip_vs_rr
     name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host12_2] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
     params: ''
     state: present
 ok: [HostB12_1] => (item=ip_vs_wrr) =>
@@ -791,13 +1220,6 @@ ok: [Host12_3] => (item=ip_vs_wrr) =>
     name: ip_vs_wrr
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_wrr) =>
-    ansible_loop_var: item
-    changed: false
-    item: ip_vs_wrr
-    name: ip_vs_wrr
-    params: ''
-    state: present
 ok: [Host12_1] => (item=ip_vs_wrr) =>
     ansible_loop_var: item
     changed: false
@@ -812,7 +1234,7 @@ ok: [HostB12_1] => (item=ip_vs_sh) =>
     name: ip_vs_sh
     params: ''
     state: present
-ok: [Host34_1] => (item=ip_vs_sh) =>
+ok: [Host12_2] => (item=ip_vs_sh) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_sh
@@ -826,7 +1248,7 @@ ok: [Host12_3] => (item=ip_vs_sh) =>
     name: ip_vs_sh
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_sh) =>
+ok: [Host34_1] => (item=ip_vs_sh) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_sh
@@ -884,30 +1306,6 @@ ok: [Host34_2] => (item=ip_vs_sh) =>
     state: present
 
 TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
-ok: [HostB12_1] =>
-    changed: false
-    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
-    dest: /etc/modules-load.d/k8s.conf
-    gid: 0
-    group: root
-    mode: '0644'
-    owner: root
-    path: /etc/modules-load.d/k8s.conf
-    size: 55
-    state: file
-    uid: 0
-ok: [Host12_1] =>
-    changed: false
-    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
-    dest: /etc/modules-load.d/k8s.conf
-    gid: 0
-    group: root
-    mode: '0644'
-    owner: root
-    path: /etc/modules-load.d/k8s.conf
-    size: 55
-    state: file
-    uid: 0
 ok: [Host12_2] =>
     changed: false
     checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
@@ -920,7 +1318,31 @@ ok: [Host12_2] =>
     size: 55
     state: file
     uid: 0
+ok: [HostB12_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
 ok: [Host34_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host12_1] =>
     changed: false
     checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
     dest: /etc/modules-load.d/k8s.conf
@@ -958,7 +1380,7 @@ ok: [Host34_2] =>
     uid: 0
 
 TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
-ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -970,13 +1392,7 @@ ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '
     item:
         key: net.bridge.bridge-nf-call-iptables
         value: '1'
-ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.bridge.bridge-nf-call-iptables
-        value: '1'
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -988,11 +1404,11 @@ ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '
     item:
         key: net.bridge.bridge-nf-call-iptables
         value: '1'
-ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
-        key: net.bridge.bridge-nf-call-ip6tables
+        key: net.bridge.bridge-nf-call-iptables
         value: '1'
 ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
@@ -1006,7 +1422,7 @@ ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 
     item:
         key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1018,11 +1434,11 @@ ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 
     item:
         key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
-ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
-        key: net.ipv4.ip_forward
+        key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
 ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     ansible_loop_var: item
@@ -1036,7 +1452,7 @@ ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     item:
         key: net.ipv4.ip_forward
         value: '1'
-ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1048,13 +1464,19 @@ ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     item:
         key: net.ipv4.ip_forward
         value: '1'
-ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
         key: net.ipv6.conf.all.forwarding
         value: '1'
-ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1066,13 +1488,13 @@ ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =
     item:
         key: net.ipv6.conf.all.forwarding
         value: '1'
-ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
         key: net.ipv6.conf.all.forwarding
         value: '1'
-ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1104,106 +1526,80 @@ ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =
         value: '1'
 
 TASK [Configure apt to use R810 proxy (air-gapped nodes need this for apt-get update)] **************************************************************************************************************************
-changed: [Host12_2] =>
-    changed: true
+ok: [HostB12_1] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759853.4701207-490237-145261039318827/.source
     state: file
     uid: 0
-changed: [Host12_1] =>
-    changed: true
+ok: [Host34_1] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759853.4840965-490234-40611004891201/.source
     state: file
     uid: 0
-changed: [Host34_1] =>
-    changed: true
+ok: [Host12_1] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759853.5936103-490235-80200671393294/.source
     state: file
     uid: 0
-changed: [Host12_3] =>
-    changed: true
+ok: [Host12_2] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759853.7140422-490238-70729233247267/.source
     state: file
     uid: 0
-changed: [HostB12_1] =>
-    changed: true
+ok: [Host12_3] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759853.5935972-490236-168998905071326/.source
     state: file
     uid: 0
-changed: [Host34_2] =>
-    changed: true
+ok: [Host34_2] =>
+    changed: false
     checksum: 6940493b31ca4d582fdfd4f82665f735b62f9cf1
     dest: /etc/apt/apt.conf.d/90proxy
     gid: 0
     group: root
-    md5sum: 95814020ee124b9719b0880fd119770d
     mode: '0644'
     owner: root
+    path: /etc/apt/apt.conf.d/90proxy
     size: 95
-    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780759869.661734-490424-67104457564573/.source
     state: file
     uid: 0
 
 TASK [Identify missing prerequisite packages] *******************************************************************************************************************************************************************
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        missing=""
-        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
-          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-            missing="$missing $pkg"
-          fi
-        done
-        echo "$missing"
-    delta: '0:00:00.182636'
-    end: '2026-06-06 15:31:20.667812'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-06 15:31:20.485176'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
 ok: [Host34_1] =>
     changed: false
     cmd: |-
@@ -1214,12 +1610,32 @@ ok: [Host34_1] =>
           fi
         done
         echo "$missing"
-    delta: '0:00:00.219517'
-    end: '2026-06-06 15:31:20.722560'
+    delta: '0:00:00.178865'
+    end: '2026-06-06 17:47:01.984391'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 15:31:20.503043'
+    start: '2026-06-06 17:47:01.805526'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.183794'
+    end: '2026-06-06 17:47:02.079510'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 17:47:01.895716'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -1234,32 +1650,12 @@ ok: [Host12_2] =>
           fi
         done
         echo "$missing"
-    delta: '0:00:00.178819'
-    end: '2026-06-06 15:31:21.032561'
+    delta: '0:00:00.180736'
+    end: '2026-06-06 17:47:02.608660'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 15:31:20.853742'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: ''
-    stdout_lines: <omitted>
-ok: [Host12_3] =>
-    changed: false
-    cmd: |-
-        missing=""
-        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
-          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-            missing="$missing $pkg"
-          fi
-        done
-        echo "$missing"
-    delta: '0:00:00.183019'
-    end: '2026-06-06 15:31:21.101624'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-06 15:31:20.918605'
+    start: '2026-06-06 17:47:02.427924'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -1274,12 +1670,32 @@ ok: [HostB12_1] =>
           fi
         done
         echo "$missing"
-    delta: '0:00:00.185232'
-    end: '2026-06-06 15:31:21.245647'
+    delta: '0:00:00.184914'
+    end: '2026-06-06 17:47:02.701718'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 15:31:21.060415'
+    start: '2026-06-06 17:47:02.516804'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host12_3] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.183531'
+    end: '2026-06-06 17:47:02.702439'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 17:47:02.518908'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -1294,12 +1710,12 @@ ok: [Host34_2] =>
           fi
         done
         echo "$missing"
-    delta: '0:00:00.185103'
-    end: '2026-06-06 15:31:23.292062'
+    delta: '0:00:00.182964'
+    end: '2026-06-06 17:47:04.510296'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 15:31:23.106959'
+    start: '2026-06-06 17:47:04.327332'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -1510,6 +1926,14 @@ ok: [Host12_2] =>
         ansible_nodename: host12-2
     changed: false
     name: host12-2
+ok: [HostB12_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: hostb12-1
+        ansible_hostname: hostb12-1
+        ansible_nodename: hostb12-1
+    changed: false
+    name: hostb12-1
 ok: [Host34_1] =>
     ansible_facts:
         ansible_domain: ''
@@ -1534,14 +1958,6 @@ ok: [Host12_1] =>
         ansible_nodename: host12-1
     changed: false
     name: host12-1
-ok: [HostB12_1] =>
-    ansible_facts:
-        ansible_domain: ''
-        ansible_fqdn: hostb12-1
-        ansible_hostname: hostb12-1
-        ansible_nodename: hostb12-1
-    changed: false
-    name: hostb12-1
 ok: [Host34_2] =>
     ansible_facts:
         ansible_domain: ''
@@ -1607,11 +2023,11 @@ TASK [Clear stale SSH ControlMaster sockets] ***********************************
 ok: [localhost] =>
     changed: false
     cmd: rm -f ~/.ansible/cp/* /tmp/ansible-ssh-* 2>/dev/null || true
-    delta: '0:00:00.008341'
-    end: '2026-06-06 10:31:50.992500'
+    delta: '0:00:00.006709'
+    end: '2026-06-06 12:47:27.326079'
     msg: ''
     rc: 0
-    start: '2026-06-06 10:31:50.984159'
+    start: '2026-06-06 12:47:27.319370'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -1632,16 +2048,16 @@ ok: [localhost] =>
     uid: 0
 
 TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
-ok: [localhost] =>
+changed: [localhost] =>
     backup: ''
-    changed: false
-    msg: ''
+    changed: true
+    msg: line replaced
 
 TASK [Patch kubespray ansible.cfg — SSH args via ProxyCommand script] *******************************************************************************************************************************************
-ok: [localhost] =>
+changed: [localhost] =>
     backup: ''
-    changed: false
-    msg: ''
+    changed: true
+    msg: line replaced
 
 TASK [Patch kubespray ansible.cfg — SSH args (no proxy)] ********************************************************************************************************************************************************
 skipping: [localhost] =>
@@ -1650,18 +2066,71 @@ skipping: [localhost] =>
     skip_reason: Conditional result was False
 
 TASK [Patch kubespray ansible.cfg — disable pipelining] *********************************************************************************************************************************************************
-ok: [localhost] =>
+changed: [localhost] =>
     backup: ''
-    changed: false
+    changed: true
+    msg: line replaced
+
+TASK [Patch KubeSpray: Skip apt cache update (packages pre-installed in Phase 3)] *******************************************************************************************************************************
+changed: [localhost] =>
+    changed: true
+    cmd: |-
+        set -e
+        TARGET=$(grep -rl "Update package management cache (APT)"  /opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/tasks/ 2>/dev/null | head -1)
+        if [ -z "$TARGET" ]; then
+          echo "SKIP: task file not found"
+          exit 0
+        fi
+        if grep -q "PATCHED_SKIP_APT_UPDATE" "$TARGET"; then
+          echo "SKIP: already patched"
+          exit 0
+        fi
+        # The actual kubespray task looks like:
+        #   - name: Update package management cache (APT)
+        #     apt:
+        #       update_cache: yes
+        #       cache_valid_time: 3600
+        #     when: ansible_os_family == "Debian"
+        #
+        # Replace the existing 'when:' line with 'when: false'
+        python3 -c "
+        import re, sys
+        target = sys.argv[1]
+        with open(target, 'r') as f:
+            content = f.read()
+        patched = re.sub(
+            r'(- name: Update package management cache \(APT\)\n'
+            r'  apt:\n'
+            r'    update_cache: (?:yes|true)\n'
+            r'    cache_valid_time: \d+\n)'
+            r'  when: .*',
+            r'\g<1>  when: false  # PATCHED_SKIP_APT_UPDATE — air-gapped, packages pre-installed',
+            content
+        )
+        if patched != content:
+            with open(target, 'w') as f:
+                f.write(patched)
+            print('DONE: patched ' + target)
+        else:
+            print('SKIP: pattern not matched in ' + target)
+        " "$TARGET"
+    delta: '0:00:00.038620'
+    end: '2026-06-06 12:47:35.000042'
     msg: ''
+    rc: 0
+    start: '2026-06-06 12:47:34.961422'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: 'DONE: patched /opt/fabric-cache/kubespray/src/roles/kubernetes/preinstall/tasks/0070-system-packages.yml'
+    stdout_lines: <omitted>
 
 TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
 [ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:521:7
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:576:7
 
-519         insertafter: '^\[ssh_connection\]'
-520
-521     - name: Run KubeSpray cluster.yml
+574       when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+575
+576     - name: Run KubeSpray cluster.yml
           ^ column 7
 
 fatal: [localhost]: FAILED! =>
@@ -1671,11 +2140,11 @@ fatal: [localhost]: FAILED! =>
         source /opt/fabric-cache/kubespray/venv/bin/activate
         cd /opt/fabric-cache/kubespray/src
         ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
-    delta: '1:10:59.857383'
-    end: '2026-06-06 11:42:59.022588'
+    delta: '0:55:46.602498'
+    end: '2026-06-06 13:43:22.443603'
     msg: non-zero return code
     rc: 2
-    start: '2026-06-06 10:31:59.165205'
+    start: '2026-06-06 12:47:35.841105'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
@@ -1685,21 +2154,21 @@ fatal: [localhost]: FAILED! =>
         [WARNING]: Skipping callback plugin 'ara_default', unable to load
 
         PLAY [Check Ansible version] ***************************************************
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.019)       0:00:00.019 *********
+        Saturday 06 June 2026  12:47:37 -0500 (0:00:00.016)       0:00:00.016 *********
 
         TASK [Check 2.16.4 <= Ansible version < 2.17.0] ********************************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.034)       0:00:00.054 *********
+        Saturday 06 June 2026  12:47:37 -0500 (0:00:00.045)       0:00:00.061 *********
 
         TASK [Check that python netaddr is installed] **********************************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.093)       0:00:00.147 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.092)       0:00:00.154 *********
         [WARNING]: Could not match supplied host pattern, ignoring: kube-master
         [WARNING]: Could not match supplied host pattern, ignoring: kube-node
         [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
@@ -1732,132 +2201,132 @@ fatal: [localhost]: FAILED! =>
         skipping: no hosts matched
 
         PLAY [Bootstrap hosts for Ansible] *********************************************
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.026)       0:00:00.173 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.062)       0:00:00.236 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.031)       0:00:00.267 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.083)       0:00:00.351 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.033)       0:00:00.385 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.075)       0:00:00.460 *********
-        Saturday 06 June 2026  10:32:01 -0500 (0:00:00.092)       0:00:00.553 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.031)       0:00:00.186 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.074)       0:00:00.261 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.029)       0:00:00.290 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.089)       0:00:00.380 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.030)       0:00:00.410 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.081)       0:00:00.491 *********
+        Saturday 06 June 2026  12:47:38 -0500 (0:00:00.083)       0:00:00.575 *********
         [WARNING]: raw module does not support the environment keyword
 
         TASK [bootstrap-os : Fetch /etc/os-release] ************************************
-        ok: [host12-1]
-        ok: [host12-2]
-        ok: [host12-3]
         ok: [hostb12-1]
         ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [host12-2]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:04 -0500 (0:00:02.741)       0:00:03.294 *********
-        Saturday 06 June 2026  10:32:04 -0500 (0:00:00.091)       0:00:03.385 *********
+        Saturday 06 June 2026  12:47:42 -0500 (0:00:04.031)       0:00:04.606 *********
+        Saturday 06 June 2026  12:47:42 -0500 (0:00:00.096)       0:00:04.703 *********
 
         TASK [bootstrap-os : Include tasks] ********************************************
-        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml for host12-1, host34-1, hostb12-1, host12-2, host12-3, host34-2 => (item=/opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml)
-        Saturday 06 June 2026  10:32:04 -0500 (0:00:00.190)       0:00:03.576 *********
+        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml for host12-1, host34-1, host12-2, hostb12-1, host12-3, host34-2 => (item=/opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml)
+        Saturday 06 June 2026  12:47:42 -0500 (0:00:00.174)       0:00:04.877 *********
 
         TASK [bootstrap-os : Check if bootstrap is needed] *****************************
-        ok: [host12-2]
-        ok: [hostb12-1]
-        ok: [host12-3]
         ok: [host12-1]
+        ok: [host12-2]
         ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:06 -0500 (0:00:01.957)       0:00:05.533 *********
+        Saturday 06 June 2026  12:47:44 -0500 (0:00:01.914)       0:00:06.792 *********
 
         TASK [bootstrap-os : Check http::proxy in apt configuration files] *************
+        ok: [host12-2]
         ok: [hostb12-1]
         ok: [host34-1]
-        ok: [host12-1]
-        ok: [host12-2]
         ok: [host12-3]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:08 -0500 (0:00:01.942)       0:00:07.476 *********
-        Saturday 06 June 2026  10:32:08 -0500 (0:00:00.071)       0:00:07.548 *********
+        Saturday 06 June 2026  12:47:46 -0500 (0:00:01.922)       0:00:08.714 *********
+        Saturday 06 June 2026  12:47:46 -0500 (0:00:00.061)       0:00:08.776 *********
 
         TASK [bootstrap-os : Check https::proxy in apt configuration files] ************
+        ok: [host12-2]
         ok: [hostb12-1]
         ok: [host34-1]
-        ok: [host12-1]
         ok: [host12-3]
-        ok: [host12-2]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:11 -0500 (0:00:02.894)       0:00:10.443 *********
-        Saturday 06 June 2026  10:32:11 -0500 (0:00:00.075)       0:00:10.518 *********
-        Saturday 06 June 2026  10:32:11 -0500 (0:00:00.053)       0:00:10.571 *********
-        Saturday 06 June 2026  10:32:11 -0500 (0:00:00.073)       0:00:10.645 *********
+        Saturday 06 June 2026  12:47:48 -0500 (0:00:01.871)       0:00:10.647 *********
+        Saturday 06 June 2026  12:47:48 -0500 (0:00:00.069)       0:00:10.716 *********
+        Saturday 06 June 2026  12:47:48 -0500 (0:00:00.062)       0:00:10.779 *********
+        Saturday 06 June 2026  12:47:48 -0500 (0:00:00.092)       0:00:10.872 *********
 
         TASK [bootstrap-os : Create remote_tmp for it is used by another module] *******
         ok: [hostb12-1]
-        ok: [host34-1]
-        ok: [host12-3]
-        ok: [host12-1]
         ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:24 -0500 (0:00:12.760)       0:00:23.405 *********
+        Saturday 06 June 2026  12:48:00 -0500 (0:00:12.170)       0:00:23.042 *********
 
         TASK [bootstrap-os : Gather facts] *********************************************
-        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
         ok: [host34-1]
         ok: [host12-1]
-        ok: [hostb12-1]
-        ok: [host12-2]
+        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:39 -0500 (0:00:14.897)       0:00:38.303 *********
+        Saturday 06 June 2026  12:48:14 -0500 (0:00:13.605)       0:00:36.647 *********
 
         TASK [bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora)] ***
-        ok: [host34-1]
         ok: [hostb12-1]
         ok: [host12-2]
+        ok: [host34-1]
         ok: [host12-1]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:32:55 -0500 (0:00:16.367)       0:00:54.670 *********
-        Saturday 06 June 2026  10:32:55 -0500 (0:00:00.076)       0:00:54.747 *********
+        Saturday 06 June 2026  12:48:28 -0500 (0:00:13.953)       0:00:50.600 *********
+        Saturday 06 June 2026  12:48:28 -0500 (0:00:00.067)       0:00:50.667 *********
 
         TASK [bootstrap-os : Ensure bash_completion.d folder exists] *******************
-        ok: [hostb12-1]
         ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
         ok: [host12-3]
         ok: [host12-1]
-        ok: [host12-2]
         ok: [host34-2]
 
         PLAY [Gather facts] ************************************************************
-        Saturday 06 June 2026  10:33:07 -0500 (0:00:12.124)       0:01:06.872 *********
+        Saturday 06 June 2026  12:48:40 -0500 (0:00:12.088)       0:01:02.756 *********
 
         TASK [Gather minimal facts] ****************************************************
-        ok: [host34-1]
         ok: [hostb12-1]
+        ok: [host34-1]
         ok: [host12-2]
-        ok: [host12-1]
         ok: [host12-3]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:33:21 -0500 (0:00:13.780)       0:01:20.652 *********
+        Saturday 06 June 2026  12:48:55 -0500 (0:00:14.676)       0:01:17.432 *********
 
         TASK [Gather necessary facts (network)] ****************************************
-        ok: [host12-2]
-        ok: [hostb12-1]
         ok: [host34-1]
+        ok: [hostb12-1]
         ok: [host12-3]
         ok: [host12-1]
+        ok: [host12-2]
         ok: [host34-2]
-        Saturday 06 June 2026  10:33:37 -0500 (0:00:15.595)       0:01:36.248 *********
+        Saturday 06 June 2026  12:49:09 -0500 (0:00:13.816)       0:01:31.249 *********
 
         TASK [Gather necessary facts (hardware)] ***************************************
-        ok: [host12-1]
-        ok: [hostb12-1]
-        ok: [host34-1]
-        ok: [host12-3]
         ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
         ok: [host34-2]
 
         PLAY [Prepare for etcd install] ************************************************
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:15.922)       0:01:52.171 *********
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.084)       0:01:52.255 *********
+        Saturday 06 June 2026  12:49:23 -0500 (0:00:14.688)       0:01:45.937 *********
+        Saturday 06 June 2026  12:49:23 -0500 (0:00:00.083)       0:01:46.021 *********
 
         TASK [kubespray-defaults : Create fallback_ips_base] ***************************
         ok: [host12-1 -> localhost]
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.039)       0:01:52.295 *********
+        Saturday 06 June 2026  12:49:23 -0500 (0:00:00.041)       0:01:46.063 *********
 
         TASK [kubespray-defaults : Set fallback_ips] ***********************************
         ok: [host12-1]
@@ -1866,98 +2335,98 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.082)       0:01:52.378 *********
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.030)       0:01:52.408 *********
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.088)       0:01:52.497 *********
-        Saturday 06 June 2026  10:33:53 -0500 (0:00:00.079)       0:01:52.576 *********
+        Saturday 06 June 2026  12:49:24 -0500 (0:00:00.079)       0:01:46.142 *********
+        Saturday 06 June 2026  12:49:24 -0500 (0:00:00.032)       0:01:46.174 *********
+        Saturday 06 June 2026  12:49:24 -0500 (0:00:00.087)       0:01:46.261 *********
+        Saturday 06 June 2026  12:49:24 -0500 (0:00:00.076)       0:01:46.338 *********
 
         TASK [adduser : User | Create User Group] **************************************
         ok: [hostb12-1]
         ok: [host12-2]
-        ok: [host34-1]
         ok: [host12-1]
         ok: [host12-3]
+        ok: [host34-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:34:06 -0500 (0:00:12.467)       0:02:05.043 *********
+        Saturday 06 June 2026  12:49:36 -0500 (0:00:12.312)       0:01:58.650 *********
 
         TASK [adduser : User | Create User] ********************************************
         ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-1]
         ok: [host12-2]
         ok: [host12-1]
-        ok: [host34-1]
-        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:34:18 -0500 (0:00:12.827)       0:02:17.870 *********
+        Saturday 06 June 2026  12:49:49 -0500 (0:00:12.673)       0:02:11.323 *********
 
         TASK [kubernetes/preinstall : Check if /etc/fstab exists] **********************
-        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [hostb12-1]
         ok: [host34-1]
-        ok: [host12-3]
         ok: [host12-1]
+        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:34:31 -0500 (0:00:12.263)       0:02:30.134 *********
+        Saturday 06 June 2026  12:50:01 -0500 (0:00:12.238)       0:02:23.562 *********
 
         TASK [kubernetes/preinstall : Remove swapfile from /etc/fstab] *****************
         ok: [hostb12-1] => (item=swap)
-        ok: [host34-1] => (item=swap)
         ok: [host12-2] => (item=swap)
-        ok: [host12-1] => (item=swap)
+        ok: [host34-1] => (item=swap)
         ok: [host12-3] => (item=swap)
-        ok: [host34-1] => (item=none)
+        ok: [host12-1] => (item=swap)
         ok: [hostb12-1] => (item=none)
         ok: [host12-2] => (item=none)
-        ok: [host12-1] => (item=none)
+        ok: [host34-1] => (item=none)
         ok: [host12-3] => (item=none)
+        ok: [host12-1] => (item=none)
         ok: [host34-2] => (item=swap)
         ok: [host34-2] => (item=none)
-        Saturday 06 June 2026  10:34:56 -0500 (0:00:25.271)       0:02:55.406 *********
+        Saturday 06 June 2026  12:50:25 -0500 (0:00:24.258)       0:02:47.821 *********
 
         TASK [kubernetes/preinstall : Mask swap.target (persist swapoff)] **************
-        ok: [hostb12-1]
-        ok: [host12-3]
         ok: [host34-1]
-        ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [host12-3]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:35:11 -0500 (0:00:15.475)       0:03:10.881 *********
+        Saturday 06 June 2026  12:50:39 -0500 (0:00:13.730)       0:03:01.551 *********
 
         TASK [kubernetes/preinstall : Disable swap] ************************************
         changed: [host34-1]
+        changed: [hostb12-1]
+        changed: [host12-1]
         changed: [host12-3]
         changed: [host12-2]
-        changed: [host12-1]
-        changed: [hostb12-1]
         changed: [host34-2]
-        Saturday 06 June 2026  10:35:24 -0500 (0:00:12.991)       0:03:23.873 *********
-        Saturday 06 June 2026  10:35:25 -0500 (0:00:00.077)       0:03:23.951 *********
+        Saturday 06 June 2026  12:50:51 -0500 (0:00:12.414)       0:03:13.966 *********
+        Saturday 06 June 2026  12:50:51 -0500 (0:00:00.061)       0:03:14.027 *********
 
         TASK [kubernetes/preinstall : Check resolvconf] ********************************
-        ok: [host12-2]
-        ok: [host34-1]
         ok: [hostb12-1]
-        ok: [host12-3]
+        ok: [host34-1]
         ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:35:37 -0500 (0:00:12.418)       0:03:36.369 *********
+        Saturday 06 June 2026  12:51:04 -0500 (0:00:12.391)       0:03:26.418 *********
 
         TASK [kubernetes/preinstall : Check existence of /etc/resolvconf/resolv.conf.d] ***
         ok: [hostb12-1]
         ok: [host34-1]
-        ok: [host12-2]
         ok: [host12-3]
+        ok: [host12-2]
         ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:35:49 -0500 (0:00:11.967)       0:03:48.337 *********
+        Saturday 06 June 2026  12:51:16 -0500 (0:00:12.017)       0:03:38.436 *********
 
         TASK [kubernetes/preinstall : Check status of /etc/resolv.conf] ****************
         ok: [host34-1]
-        ok: [host12-3]
-        ok: [hostb12-1]
         ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host12-2]
+        ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:01 -0500 (0:00:12.264)       0:04:00.601 *********
+        Saturday 06 June 2026  12:51:28 -0500 (0:00:11.826)       0:03:50.263 *********
 
         TASK [kubernetes/preinstall : Get content of /etc/resolv.conf] *****************
         ok: [host34-1]
@@ -1966,35 +2435,35 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-1]
         ok: [host12-2]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:15 -0500 (0:00:13.891)       0:04:14.492 *********
+        Saturday 06 June 2026  12:51:39 -0500 (0:00:11.740)       0:04:02.003 *********
 
         TASK [kubernetes/preinstall : Get currently configured nameservers] ************
-        ok: [host12-1]
         ok: [host34-1]
+        ok: [host12-1]
         ok: [hostb12-1]
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:15 -0500 (0:00:00.132)       0:04:14.625 *********
-        Saturday 06 June 2026  10:36:15 -0500 (0:00:00.073)       0:04:14.698 *********
+        Saturday 06 June 2026  12:51:40 -0500 (0:00:00.162)       0:04:02.165 *********
+        Saturday 06 June 2026  12:51:40 -0500 (0:00:00.075)       0:04:02.241 *********
 
         TASK [kubernetes/preinstall : NetworkManager | Check if host has NetworkManager] ***
-        ok: [host34-1]
-        ok: [host12-1]
-        ok: [host12-3]
         ok: [host12-2]
         ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:31 -0500 (0:00:15.501)       0:04:30.200 *********
+        Saturday 06 June 2026  12:51:53 -0500 (0:00:13.013)       0:04:15.255 *********
 
         TASK [kubernetes/preinstall : Check systemd-resolved] **************************
-        ok: [host12-1]
-        ok: [host12-3]
-        ok: [host34-1]
         ok: [host12-2]
         ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:45 -0500 (0:00:14.097)       0:04:44.297 *********
+        Saturday 06 June 2026  12:52:05 -0500 (0:00:12.491)       0:04:27.746 *********
 
         TASK [kubernetes/preinstall : Set default dns if remove_default_searchdomains is false] ***
         ok: [host12-1]
@@ -2003,7 +2472,7 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:45 -0500 (0:00:00.080)       0:04:44.378 *********
+        Saturday 06 June 2026  12:52:05 -0500 (0:00:00.103)       0:04:27.850 *********
 
         TASK [kubernetes/preinstall : Set dns facts] ***********************************
         ok: [host12-1]
@@ -2012,16 +2481,16 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:36:45 -0500 (0:00:00.083)       0:04:44.461 *********
+        Saturday 06 June 2026  12:52:05 -0500 (0:00:00.081)       0:04:27.931 *********
 
         TASK [kubernetes/preinstall : Check if kubelet is configured] ******************
+        ok: [host34-1]
+        ok: [host12-1]
         ok: [host12-2]
         ok: [host12-3]
-        ok: [host34-1]
         ok: [hostb12-1]
-        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:00 -0500 (0:00:14.529)       0:04:58.990 *********
+        Saturday 06 June 2026  12:52:17 -0500 (0:00:11.735)       0:04:39.667 *********
 
         TASK [kubernetes/preinstall : Check if early DNS configuration stage] **********
         ok: [host12-1]
@@ -2030,7 +2499,7 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:00 -0500 (0:00:00.093)       0:04:59.084 *********
+        Saturday 06 June 2026  12:52:17 -0500 (0:00:00.081)       0:04:39.749 *********
 
         TASK [kubernetes/preinstall : Target resolv.conf files] ************************
         ok: [host12-1]
@@ -2039,29 +2508,29 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:00 -0500 (0:00:00.087)       0:04:59.172 *********
-        Saturday 06 June 2026  10:37:00 -0500 (0:00:00.066)       0:04:59.238 *********
+        Saturday 06 June 2026  12:52:17 -0500 (0:00:00.086)       0:04:39.835 *********
+        Saturday 06 June 2026  12:52:17 -0500 (0:00:00.060)       0:04:39.896 *********
 
         TASK [kubernetes/preinstall : Check if /etc/dhclient.conf exists] **************
-        ok: [host34-1]
         ok: [host12-2]
-        ok: [host12-3]
         ok: [hostb12-1]
         ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:13 -0500 (0:00:13.289)       0:05:12.528 *********
-        Saturday 06 June 2026  10:37:13 -0500 (0:00:00.083)       0:05:12.611 *********
+        Saturday 06 June 2026  12:52:30 -0500 (0:00:12.425)       0:04:52.321 *********
+        Saturday 06 June 2026  12:52:30 -0500 (0:00:00.059)       0:04:52.381 *********
 
         TASK [kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists] *********
+        ok: [host12-3]
         ok: [host34-1]
-        ok: [hostb12-1]
         ok: [host12-2]
         ok: [host12-1]
-        ok: [host12-3]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:27 -0500 (0:00:14.169)       0:05:26.781 *********
-        Saturday 06 June 2026  10:37:27 -0500 (0:00:00.068)       0:05:26.849 *********
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.063)       0:05:26.913 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:13.152)       0:05:05.534 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.060)       0:05:05.594 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.056)       0:05:05.651 *********
 
         TASK [kubernetes/preinstall : Target dhclient hook file for Debian family] *****
         ok: [host12-1]
@@ -2070,7 +2539,7 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.080)       0:05:26.993 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.087)       0:05:05.739 *********
 
         TASK [kubernetes/preinstall : Generate search domains to resolvconf] ***********
         ok: [host12-1]
@@ -2079,17 +2548,17 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.080)       0:05:27.074 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.076)       0:05:05.815 *********
 
         TASK [kubernetes/preinstall : Pick coredns cluster IP or default resolver] *****
         ok: [host12-1]
-        ok: [host34-1]
         ok: [hostb12-1]
+        ok: [host34-1]
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.143)       0:05:27.218 *********
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.060)       0:05:27.278 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.144)       0:05:05.960 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.064)       0:05:06.025 *********
 
         TASK [kubernetes/preinstall : Generate nameservers for resolvconf, not including cluster DNS] ***
         ok: [host12-1]
@@ -2098,18 +2567,18 @@ fatal: [localhost]: FAILED! =>
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.088)       0:05:27.366 *********
-        Saturday 06 June 2026  10:37:28 -0500 (0:00:00.056)       0:05:27.423 *********
+        Saturday 06 June 2026  12:52:43 -0500 (0:00:00.100)       0:05:06.125 *********
+        Saturday 06 June 2026  12:52:44 -0500 (0:00:00.068)       0:05:06.194 *********
 
         TASK [kubernetes/preinstall : Check /usr readonly] *****************************
-        ok: [hostb12-1]
-        ok: [host12-1]
         ok: [host34-1]
         ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-1]
         ok: [host12-2]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:14.083)       0:05:41.506 *********
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:00.077)       0:05:41.584 *********
+        Saturday 06 June 2026  12:52:55 -0500 (0:00:11.927)       0:05:18.121 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.060)       0:05:18.182 *********
 
         TASK [kubernetes/preinstall : Stop if either kube_control_plane or kube_node group is empty] ***
         ok: [host12-1] => (item=kube_control_plane) => {
@@ -2124,14 +2593,14 @@ fatal: [localhost]: FAILED! =>
             "item": "kube_node",
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:00.039)       0:05:41.624 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.039)       0:05:18.221 *********
 
         TASK [kubernetes/preinstall : Stop if etcd group is empty in external etcd mode] ***
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:00.030)       0:05:41.655 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.031)       0:05:18.253 *********
 
         TASK [kubernetes/preinstall : Stop if non systemd OS type] *********************
         ok: [host12-1] => {
@@ -2158,7 +2627,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:00.081)       0:05:41.736 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.081)       0:05:18.335 *********
 
         TASK [kubernetes/preinstall : Stop if the os does not support] *****************
         ok: [host12-1] => {
@@ -2185,7 +2654,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:42 -0500 (0:00:00.086)       0:05:41.823 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.074)       0:05:18.409 *********
 
         TASK [kubernetes/preinstall : Stop if unknown network plugin] ******************
         ok: [host12-1] => {
@@ -2212,7 +2681,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.090)       0:05:41.914 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.080)       0:05:18.490 *********
 
         TASK [kubernetes/preinstall : Stop if unsupported version of Kubernetes] *******
         ok: [host12-1] => {
@@ -2239,7 +2708,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.096)       0:05:42.010 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.086)       0:05:18.577 *********
 
         TASK [kubernetes/preinstall : Stop if known booleans are set as strings (Use JSON format on CLI: -e "{'key': true }")] ***
         ok: [host12-1] => (item={'name': 'download_run_once', 'value': True}) => {
@@ -2287,7 +2756,7 @@ fatal: [localhost]: FAILED! =>
             },
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.064)       0:05:42.075 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.062)       0:05:18.639 *********
 
         TASK [kubernetes/preinstall : Stop if even number of etcd hosts] ***************
         ok: [host12-1] => {
@@ -2302,7 +2771,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.062)       0:05:42.137 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.069)       0:05:18.708 *********
 
         TASK [kubernetes/preinstall : Stop if memory is too small for masters] *********
         ok: [host12-1] => {
@@ -2317,7 +2786,7 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.059)       0:05:42.197 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.061)       0:05:18.770 *********
 
         TASK [kubernetes/preinstall : Stop if memory is too small for nodes] ***********
         ok: [host12-1] => {
@@ -2344,17 +2813,17 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:43 -0500 (0:00:00.084)       0:05:42.281 *********
+        Saturday 06 June 2026  12:52:56 -0500 (0:00:00.085)       0:05:18.855 *********
 
         TASK [kubernetes/preinstall : Stop if cgroups are not enabled on nodes] ********
+        ok: [host12-2]
         ok: [host34-1]
         ok: [host12-3]
-        ok: [hostb12-1]
         ok: [host12-1]
-        ok: [host12-2]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:37:56 -0500 (0:00:13.035)       0:05:55.317 *********
-        Saturday 06 June 2026  10:37:56 -0500 (0:00:00.080)       0:05:55.397 *********
+        Saturday 06 June 2026  12:53:09 -0500 (0:00:13.142)       0:05:31.998 *********
+        Saturday 06 June 2026  12:53:09 -0500 (0:00:00.067)       0:05:32.065 *********
 
         TASK [kubernetes/preinstall : Stop if ip var does not match local ips] *********
         ok: [host12-1] => {
@@ -2381,28 +2850,28 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:37:56 -0500 (0:00:00.097)       0:05:55.494 *********
+        Saturday 06 June 2026  12:53:10 -0500 (0:00:00.093)       0:05:32.159 *********
 
         TASK [kubernetes/preinstall : Ensure ping package] *****************************
-        ok: [host12-1]
-        ok: [hostb12-1]
-        ok: [host12-3]
         ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
         ok: [host12-2]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:38:17 -0500 (0:00:20.523)       0:06:16.018 *********
+        Saturday 06 June 2026  12:53:24 -0500 (0:00:14.957)       0:05:47.116 *********
 
         TASK [kubernetes/preinstall : Stop if access_ip is not pingable] ***************
-        ok: [host12-3]
         ok: [host34-1]
-        ok: [hostb12-1]
-        ok: [host12-1]
+        ok: [host12-3]
         ok: [host12-2]
+        ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:15.044)       0:06:31.062 *********
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.060)       0:06:31.123 *********
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.086)       0:06:31.209 *********
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.089)       0:06:31.299 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:11.554)       0:05:58.671 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.065)       0:05:58.737 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.062)       0:05:58.799 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.076)       0:05:58.876 *********
 
         TASK [kubernetes/preinstall : Stop if bad hostname] ****************************
         ok: [host12-1] => {
@@ -2429,58 +2898,58 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.089)       0:06:31.389 *********
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.071)       0:06:31.460 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.081)       0:05:58.958 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.068)       0:05:59.026 *********
 
         TASK [kubernetes/preinstall : Check that kube_service_addresses is a network range] ***
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.052)       0:06:31.513 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.052)       0:05:59.078 *********
 
         TASK [kubernetes/preinstall : Check that kube_pods_subnet is a network range] ***
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.069)       0:06:31.583 *********
+        Saturday 06 June 2026  12:53:36 -0500 (0:00:00.050)       0:05:59.129 *********
 
         TASK [kubernetes/preinstall : Check that kube_pods_subnet does not collide with kube_service_addresses] ***
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.083)       0:06:31.666 *********
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.016)       0:06:31.682 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.059)       0:05:59.189 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.014)       0:05:59.203 *********
 
         TASK [kubernetes/preinstall : Stop if unknown dns mode] ************************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.031)       0:06:31.714 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.031)       0:05:59.235 *********
 
         TASK [kubernetes/preinstall : Stop if unknown kube proxy mode] *****************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.031)       0:06:31.745 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.031)       0:05:59.266 *********
 
         TASK [kubernetes/preinstall : Stop if unknown cert_management] *****************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.028)       0:06:31.774 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.029)       0:05:59.295 *********
 
         TASK [kubernetes/preinstall : Stop if unknown resolvconf_mode] *****************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.031)       0:06:31.805 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.038)       0:05:59.334 *********
 
         TASK [kubernetes/preinstall : Stop if etcd deployment type is not host, docker or kubeadm] ***
         ok: [host12-1] => {
@@ -2495,14 +2964,14 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.057)       0:06:31.862 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.096)       0:05:59.430 *********
 
         TASK [kubernetes/preinstall : Stop if container manager is not docker, crio or containerd] ***
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:32 -0500 (0:00:00.029)       0:06:31.892 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.032)       0:05:59.462 *********
 
         TASK [kubernetes/preinstall : Stop if etcd deployment type is not host or kubeadm when container_manager != docker] ***
         ok: [host12-1] => {
@@ -2517,9 +2986,9 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.072)       0:06:31.965 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.022)       0:06:31.987 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.024)       0:06:32.011 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.085)       0:05:59.548 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.027)       0:05:59.575 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.033)       0:05:59.608 *********
 
         TASK [kubernetes/preinstall : Stop if download_localhost is enabled but download_run_once is not] ***
         ok: [host12-1] => {
@@ -2546,9 +3015,9 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.098)       0:06:32.110 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.060)       0:06:32.170 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.058)       0:06:32.229 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.123)       0:05:59.732 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.081)       0:05:59.813 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.088)       0:05:59.901 *********
 
         TASK [kubernetes/preinstall : Stop if download_localhost is enabled for Flatcar Container Linux] ***
         ok: [host12-1] => {
@@ -2575,26 +3044,26 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.083)       0:06:32.312 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.096)       0:05:59.998 *********
 
         TASK [kubernetes/preinstall : Ensure minimum containerd version] ***************
         ok: [host12-1] => {
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.035)       0:06:32.348 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.066)       0:06:32.414 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.058)       0:06:32.473 *********
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.070)       0:06:32.544 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.037)       0:06:00.035 *********
+        Saturday 06 June 2026  12:53:37 -0500 (0:00:00.074)       0:06:00.109 *********
+        Saturday 06 June 2026  12:53:38 -0500 (0:00:00.074)       0:06:00.183 *********
+        Saturday 06 June 2026  12:53:38 -0500 (0:00:00.078)       0:06:00.262 *********
 
         TASK [kubernetes/preinstall : Verify that the packages list structure is valid] ***
-        ok: [hostb12-1]
-        ok: [host12-1]
         ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
         ok: [host12-2]
         ok: [host12-3]
         ok: [host34-2]
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.200)       0:06:32.745 *********
+        Saturday 06 June 2026  12:53:38 -0500 (0:00:00.225)       0:06:00.488 *********
 
         TASK [kubernetes/preinstall : Verify that the packages list is sorted] *********
         ok: [host12-1] => {
@@ -2621,40 +3090,40 @@ fatal: [localhost]: FAILED! =>
             "changed": false,
             "msg": "All assertions passed"
         }
-        Saturday 06 June 2026  10:38:33 -0500 (0:00:00.132)       0:06:32.877 *********
+        Saturday 06 June 2026  12:53:38 -0500 (0:00:00.147)       0:06:00.635 *********
 
         TASK [kubernetes/preinstall : Create kubernetes directories] *******************
         ok: [host34-1] => (item=/etc/kubernetes)
         ok: [hostb12-1] => (item=/etc/kubernetes)
-        ok: [host12-1] => (item=/etc/kubernetes)
         ok: [host12-2] => (item=/etc/kubernetes)
         ok: [host12-3] => (item=/etc/kubernetes)
-        ok: [host34-1] => (item=/etc/kubernetes/manifests)
-        ok: [hostb12-1] => (item=/etc/kubernetes/manifests)
-        ok: [host12-1] => (item=/etc/kubernetes/manifests)
-        ok: [host12-2] => (item=/etc/kubernetes/manifests)
+        ok: [host12-1] => (item=/etc/kubernetes)
         ok: [host12-3] => (item=/etc/kubernetes/manifests)
+        ok: [host12-2] => (item=/etc/kubernetes/manifests)
+        ok: [hostb12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host34-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-2] => (item=/usr/local/bin/kubernetes-scripts)
         ok: [host34-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-3] => (item=/usr/local/bin/kubernetes-scripts)
         ok: [hostb12-1] => (item=/usr/local/bin/kubernetes-scripts)
         ok: [host12-1] => (item=/usr/local/bin/kubernetes-scripts)
-        ok: [host12-2] => (item=/usr/local/bin/kubernetes-scripts)
-        ok: [host12-3] => (item=/usr/local/bin/kubernetes-scripts)
-        ok: [host34-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
-        ok: [hostb12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
         ok: [host12-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
-        ok: [host12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
         ok: [host12-3] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [hostb12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host34-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
         ok: [host34-2] => (item=/etc/kubernetes)
         ok: [host34-2] => (item=/etc/kubernetes/manifests)
         ok: [host34-2] => (item=/usr/local/bin/kubernetes-scripts)
         ok: [host34-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
-        Saturday 06 June 2026  10:39:31 -0500 (0:00:57.299)       0:07:30.176 *********
+        Saturday 06 June 2026  12:54:26 -0500 (0:00:48.194)       0:06:48.830 *********
 
         TASK [kubernetes/preinstall : Create other directories of root owner] **********
-        ok: [hostb12-1] => (item=/etc/kubernetes/ssl)
-        ok: [host12-1] => (item=/etc/kubernetes/ssl)
         ok: [host12-2] => (item=/etc/kubernetes/ssl)
+        ok: [hostb12-1] => (item=/etc/kubernetes/ssl)
         ok: [host12-3] => (item=/etc/kubernetes/ssl)
+        ok: [host12-1] => (item=/etc/kubernetes/ssl)
         ok: [host34-1] => (item=/etc/kubernetes/ssl)
         ok: [hostb12-1] => (item=/usr/local/bin)
         ok: [host12-2] => (item=/usr/local/bin)
@@ -2663,126 +3132,153 @@ fatal: [localhost]: FAILED! =>
         ok: [host34-1] => (item=/usr/local/bin)
         ok: [host34-2] => (item=/etc/kubernetes/ssl)
         ok: [host34-2] => (item=/usr/local/bin)
-        Saturday 06 June 2026  10:40:00 -0500 (0:00:29.022)       0:07:59.199 *********
+        Saturday 06 June 2026  12:54:51 -0500 (0:00:24.364)       0:07:13.194 *********
 
         TASK [kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists] ***
-        ok: [host34-1]
-        ok: [host12-1]
-        ok: [hostb12-1]
         ok: [host12-2]
         ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:40:14 -0500 (0:00:13.841)       0:08:13.040 *********
-        Saturday 06 June 2026  10:40:14 -0500 (0:00:00.065)       0:08:13.106 *********
+        Saturday 06 June 2026  12:55:03 -0500 (0:00:12.528)       0:07:25.723 *********
+        Saturday 06 June 2026  12:55:03 -0500 (0:00:00.098)       0:07:25.821 *********
 
         TASK [kubernetes/preinstall : Create cni directories] **************************
-        ok: [hostb12-1] => (item=/etc/cni/net.d)
         ok: [host12-2] => (item=/etc/cni/net.d)
-        ok: [host34-1] => (item=/etc/cni/net.d)
-        ok: [host12-1] => (item=/etc/cni/net.d)
+        ok: [hostb12-1] => (item=/etc/cni/net.d)
         ok: [host12-3] => (item=/etc/cni/net.d)
-        ok: [hostb12-1] => (item=/opt/cni/bin)
-        ok: [host34-1] => (item=/opt/cni/bin)
+        ok: [host12-1] => (item=/etc/cni/net.d)
+        ok: [host34-1] => (item=/etc/cni/net.d)
         ok: [host12-2] => (item=/opt/cni/bin)
-        ok: [host12-1] => (item=/opt/cni/bin)
         ok: [host12-3] => (item=/opt/cni/bin)
+        ok: [hostb12-1] => (item=/opt/cni/bin)
+        ok: [host12-1] => (item=/opt/cni/bin)
+        ok: [host34-1] => (item=/opt/cni/bin)
         ok: [host34-2] => (item=/etc/cni/net.d)
         ok: [host34-2] => (item=/opt/cni/bin)
-        Saturday 06 June 2026  10:40:39 -0500 (0:00:25.755)       0:08:38.862 *********
+        Saturday 06 June 2026  12:55:27 -0500 (0:00:23.882)       0:07:49.704 *********
 
         TASK [kubernetes/preinstall : Create calico cni directories] *******************
-        ok: [hostb12-1] => (item=/var/lib/calico)
         ok: [host12-2] => (item=/var/lib/calico)
-        ok: [host12-1] => (item=/var/lib/calico)
         ok: [host12-3] => (item=/var/lib/calico)
+        ok: [hostb12-1] => (item=/var/lib/calico)
+        ok: [host12-1] => (item=/var/lib/calico)
         ok: [host34-1] => (item=/var/lib/calico)
         ok: [host34-2] => (item=/var/lib/calico)
-        Saturday 06 June 2026  10:41:01 -0500 (0:00:22.005)       0:09:00.867 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.110)       0:09:00.978 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.067)       0:09:01.045 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.065)       0:09:01.111 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.106)       0:09:01.217 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.112)       0:09:01.330 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.067)       0:09:01.397 *********
-        Saturday 06 June 2026  10:41:02 -0500 (0:00:00.067)       0:09:01.464 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:11.744)       0:08:01.448 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.076)       0:08:01.525 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.064)       0:08:01.590 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.066)       0:08:01.657 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.106)       0:08:01.764 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.109)       0:08:01.873 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.068)       0:08:01.942 *********
+        Saturday 06 June 2026  12:55:39 -0500 (0:00:00.064)       0:08:02.007 *********
 
         TASK [kubernetes/preinstall : Create systemd-resolved drop-in directory] *******
-        ok: [host34-1]
+        ok: [host12-2]
         ok: [hostb12-1]
         ok: [host12-3]
         ok: [host12-1]
-        ok: [host12-2]
+        ok: [host34-1]
         ok: [host34-2]
-        Saturday 06 June 2026  10:41:16 -0500 (0:00:13.705)       0:09:15.170 *********
+        Saturday 06 June 2026  12:55:51 -0500 (0:00:11.560)       0:08:13.568 *********
 
         TASK [kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved] ***
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host12-1]
         ok: [host34-1]
         ok: [hostb12-1]
-        ok: [host12-1]
-        ok: [host12-3]
-        ok: [host12-2]
         ok: [host34-2]
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:21.116)       0:09:36.286 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.068)       0:09:36.354 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.073)       0:09:36.427 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.074)       0:09:36.502 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.073)       0:09:36.576 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.064)       0:09:36.640 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.067)       0:09:36.708 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.064)       0:09:36.772 *********
-        Saturday 06 June 2026  10:41:37 -0500 (0:00:00.059)       0:09:36.832 *********
-        Saturday 06 June 2026  10:41:38 -0500 (0:00:00.067)       0:09:36.900 *********
-        Saturday 06 June 2026  10:41:38 -0500 (0:00:00.061)       0:09:36.962 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:19.748)       0:08:33.316 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.058)       0:08:33.375 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.056)       0:08:33.431 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.062)       0:08:33.494 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.066)       0:08:33.560 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.060)       0:08:33.621 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.063)       0:08:33.684 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.063)       0:08:33.747 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.063)       0:08:33.811 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.061)       0:08:33.872 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.062)       0:08:33.934 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.060)       0:08:33.995 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.065)       0:08:34.061 *********
+        Saturday 06 June 2026  12:56:11 -0500 (0:00:00.068)       0:08:34.129 *********
+        FAILED - RETRYING: [host34-1]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [host12-1]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [host12-2]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [hostb12-1]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [host12-3]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [host34-1]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [hostb12-1]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [host12-1]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [host12-3]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [host12-2]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [host34-1]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [hostb12-1]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [host12-3]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [host12-1]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [host12-2]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [host34-1]: Install packages requirements (1 retries left).
+        FAILED - RETRYING: [hostb12-1]: Install packages requirements (1 retries left).
+        FAILED - RETRYING: [host12-3]: Install packages requirements (1 retries left).
+        FAILED - RETRYING: [host12-1]: Install packages requirements (1 retries left).
+        FAILED - RETRYING: [host12-2]: Install packages requirements (1 retries left).
 
-        TASK [kubernetes/preinstall : Update package management cache (APT)] ***********
-        fatal: [host34-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
-        fatal: [host12-2]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
-        fatal: [host12-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
-        fatal: [hostb12-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
-        fatal: [host12-3]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
-        fatal: [host34-2]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        TASK [kubernetes/preinstall : Install packages requirements] *******************
+        fatal: [host34-1]: FAILED! => {"attempts": 4, "cache_update_time": 1780687020, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\n1 not fully installed or removed.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.", "1 not fully installed or removed.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
+        fatal: [hostb12-1]: FAILED! => {"attempts": 4, "cache_update_time": 1780687106, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.debTemporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\n1 not fully installed or removed.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Buildingdependency tree...", "Reading state information...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 notupgraded.", "1 not fully installed or removed.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
+        fatal: [host12-3]: FAILED! => {"attempts": 4, "cache_update_time": 1780687020, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading stateinformation...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/mainamd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
+        fatal: [host12-1]: FAILED! => {"attempts": 4, "cache_update_time": 1780687194, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\n1 not fully installed or removed.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.", "1 not fully installed or removed.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
+        fatal: [host12-2]: FAILED! => {"attempts": 4, "cache_update_time": 1780687022, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\n1 not fully installed or removed.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.", "1 not fully installed or removed.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
+        FAILED - RETRYING: [host34-2]: Install packages requirements (4 retries left).
+        FAILED - RETRYING: [host34-2]: Install packages requirements (3 retries left).
+        FAILED - RETRYING: [host34-2]: Install packages requirements (2 retries left).
+        FAILED - RETRYING: [host34-2]: Install packages requirements (1 retries left).
+        fatal: [host34-2]: FAILED! => {"attempts": 4, "cache_update_time": 1780687020, "cache_updated": false, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\"       install 'ebtables=2.0.11-6build1' 'unzip=6.0-28ubuntu4.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "rc": 100, "stderr": "E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'\nE: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?\n", "stderr_lines": ["E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/e/ebtables/ebtables_2.0.11-6build1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Failed to fetch http://security.ubuntu.com/ubuntu/pool/main/u/unzip/unzip_6.0-28ubuntu4.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'", "E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?"], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nSuggested packages:\n  zip\nThe following NEW packages will be installed:\n  ebtables unzip\n0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.\n1 not fully installed or removed.\nNeed to get 263 kB of archives.\nAfter this operation, 671 kB of additional disk space will be used.\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nIgn:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1\n  Temporary failure resolving 'archive.ubuntu.com'\nIgn:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\nErr:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1\n  Temporary failure resolving 'archive.ubuntu.com'\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "Suggested packages:", "  zip", "The following NEW packages will be installed:", "  ebtables unzip", "0 upgraded, 2 newly installed, 0 to remove and 27 not upgraded.", "1 not fully installed or removed.", "Need to get 263 kB of archives.", "After this operation, 671 kB of additional disk space will be used.", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ebtables amd64 2.0.11-6build1", "  Temporary failure resolving 'archive.ubuntu.com'", "Ign:2 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "Err:2 http://security.ubuntu.com/ubuntu noble-updates/main amd64 unzip amd64 6.0-28ubuntu4.1", "  Temporary failure resolving 'archive.ubuntu.com'"]}
 
         NO MORE HOSTS LEFT *************************************************************
 
         PLAY RECAP *********************************************************************
-        host12-1                   : ok=79   changed=1    unreachable=0    failed=1    skipped=56   rescued=0    ignored=0
-        host12-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
-        host12-3                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
-        host34-1                   : ok=63   changed=1    unreachable=0    failed=1    skipped=48   rescued=0    ignored=0
-        host34-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
-        hostb12-1                  : ok=63   changed=1    unreachable=0    failed=1    skipped=48   rescued=0    ignored=0
+        host12-1                   : ok=79   changed=1    unreachable=0    failed=1    skipped=59   rescued=0    ignored=0
+        host12-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=55   rescued=0    ignored=0
+        host12-3                   : ok=59   changed=1    unreachable=0    failed=1    skipped=55   rescued=0    ignored=0
+        host34-1                   : ok=63   changed=1    unreachable=0    failed=1    skipped=51   rescued=0    ignored=0
+        host34-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=55   rescued=0    ignored=0
+        hostb12-1                  : ok=63   changed=1    unreachable=0    failed=1    skipped=51   rescued=0    ignored=0
 
-        Saturday 06 June 2026  11:42:58 -0500 (1:01:20.012)       1:10:56.975 *********
+        Saturday 06 June 2026  13:43:22 -0500 (0:47:10.104)       0:55:44.234 *********
         ===============================================================================
-        kubernetes/preinstall : Update package management cache (APT) -------- 3680.01s
-        kubernetes/preinstall : Create kubernetes directories ------------------ 57.30s
-        kubernetes/preinstall : Create other directories of root owner --------- 29.02s
-        kubernetes/preinstall : Create cni directories ------------------------- 25.76s
-        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 25.27s
-        kubernetes/preinstall : Create calico cni directories ------------------ 22.01s
-        kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved -- 21.12s
-        kubernetes/preinstall : Ensure ping package ---------------------------- 20.52s
-        bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora) -- 16.37s
-        Gather necessary facts (hardware) -------------------------------------- 15.92s
-        Gather necessary facts (network) --------------------------------------- 15.60s
-        kubernetes/preinstall : NetworkManager | Check if host has NetworkManager -- 15.50s
-        kubernetes/preinstall : Mask swap.target (persist swapoff) ------------- 15.48s
-        kubernetes/preinstall : Stop if access_ip is not pingable -------------- 15.04s
-        bootstrap-os : Gather facts -------------------------------------------- 14.90s
-        kubernetes/preinstall : Check if kubelet is configured ----------------- 14.53s
-        kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists -------- 14.17s
-        kubernetes/preinstall : Check systemd-resolved ------------------------- 14.10s
-        kubernetes/preinstall : Check /usr readonly ---------------------------- 14.08s
-        kubernetes/preinstall : Get content of /etc/resolv.conf ---------------- 13.89s
+        kubernetes/preinstall : Install packages requirements ---------------- 2830.10s
+        kubernetes/preinstall : Create kubernetes directories ------------------ 48.19s
+        kubernetes/preinstall : Create other directories of root owner --------- 24.36s
+        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 24.26s
+        kubernetes/preinstall : Create cni directories ------------------------- 23.88s
+        kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved -- 19.75s
+        kubernetes/preinstall : Ensure ping package ---------------------------- 14.96s
+        Gather necessary facts (hardware) -------------------------------------- 14.69s
+        Gather minimal facts --------------------------------------------------- 14.68s
+        bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora) -- 13.95s
+        Gather necessary facts (network) --------------------------------------- 13.82s
+        kubernetes/preinstall : Mask swap.target (persist swapoff) ------------- 13.73s
+        bootstrap-os : Gather facts -------------------------------------------- 13.61s
+        kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists -------- 13.15s
+        kubernetes/preinstall : Stop if cgroups are not enabled on nodes ------- 13.14s
+        kubernetes/preinstall : NetworkManager | Check if host has NetworkManager -- 13.01s
+        adduser : User | Create User ------------------------------------------- 12.67s
+        kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists -- 12.53s
+        kubernetes/preinstall : Check systemd-resolved ------------------------- 12.49s
+        kubernetes/preinstall : Check if /etc/dhclient.conf exists ------------- 12.43s
     stdout_lines: <omitted>
 
 PLAY RECAP ******************************************************************************************************************************************************************************************************
-Host12_1                   : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-Host12_2                   : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-Host12_3                   : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-Host34_1                   : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-Host34_2                   : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-HostB12_1                  : ok=9    changed=3    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
-localhost                  : ok=24   changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+Host12_1                   : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Host12_2                   : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Host12_3                   : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Host34_1                   : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Host34_2                   : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+HostB12_1                  : ok=9    changed=2    unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+localhost                  : ok=25   changed=11   unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
