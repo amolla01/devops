@@ -254,14 +254,16 @@
         - { key: "net.ipv6.conf.all.forwarding", value: "1" }
 
     - name: Identify missing prerequisite packages
-      ansible.builtin.shell: |
-        missing=""
-        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
-          if ! dpkg -s "$pkg" &>/dev/null; then
-            missing="$missing $pkg"
-          fi
-        done
-        echo "$missing"
+      ansible.builtin.shell:
+        cmd: |
+          missing=""
+          for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+            if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+              missing="$missing $pkg"
+            fi
+          done
+          echo "$missing"
+        executable: /bin/bash
       register: _missing_pkgs
       changed_when: false
       failed_when: false
@@ -273,7 +275,7 @@
         update_cache: false
       when: _missing_pkgs.stdout | trim | length > 0
       register: _apt_prereq
-      failed_when: false
+      ignore_errors: true
 
     - name: Copy cached .deb packages from deployer (air-gapped fallback)
       when:
@@ -314,14 +316,16 @@
           when: _cached_debs.files | length > 0
 
         - name: Verify packages after dpkg install
-          ansible.builtin.shell: |
-            still_missing=""
-            for pkg in {{ _missing_pkgs.stdout }}; do
-              if ! dpkg -s "$pkg" &>/dev/null; then
-                still_missing="$still_missing $pkg"
-              fi
-            done
-            echo "$still_missing"
+          ansible.builtin.shell:
+            cmd: |
+              still_missing=""
+              for pkg in {{ _missing_pkgs.stdout }}; do
+                if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+                  still_missing="$still_missing $pkg"
+                fi
+              done
+              echo "$still_missing"
+            executable: /bin/bash
           register: _still_missing
           changed_when: false
 
