@@ -90,26 +90,27 @@
         mode: '0755'
       become: true
 
-    - name: Install and configure tinyproxy on R810 hypervisor for air-gapped nodes
-      ansible.builtin.shell: |
-        ssh -o StrictHostKeyChecking=no {{ proxy_jump_resolved }} bash -s <<'EOF'
-        if ! command -v tinyproxy &>/dev/null; then
-          sudo apt-get install -y tinyproxy
-        fi
-        # Allow all KVM hosts on 172.16.2.0/24 to use this proxy
-        sudo grep -q 'Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf || \
-          sudo sed -i '/^Allow 127.0.0.1/a Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf
-        # Bind to all interfaces so VMs can reach it
-        sudo sed -i 's/^#\?Listen .*/Listen 0.0.0.0/' /etc/tinyproxy/tinyproxy.conf
-        sudo systemctl restart tinyproxy
-        sudo systemctl enable tinyproxy
-        echo "tinyproxy configured and running on R810"
-        EOF
-      register: _tinyproxy_result
-      changed_when: "'configured' in _tinyproxy_result.stdout"
+    - name: Verify tinyproxy is reachable on R810 hypervisor (air-gapped proxy)
+      ansible.builtin.uri:
+        url: "http://172.16.2.1:8888"
+        method: GET
+        timeout: 5
+        status_code: [200, 400, 403, 405]
+      register: _proxy_check
+      failed_when: false
+      when: automation_profile in ['ubuntu_r620_kvm', 'ubuntu_r810_kvm']
+
+    - name: Warn if tinyproxy not reachable on R810
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: tinyproxy on 172.16.2.1:8888 is not reachable from deployer.
+          SSH to R810 and run: sudo apt install -y tinyproxy &&
+          sudo sed -i '/^Allow 127.0.0.1/a Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf &&
+          sudo sed -i 's/^#\?Listen .*/Listen 0.0.0.0/' /etc/tinyproxy/tinyproxy.conf &&
+          sudo systemctl restart tinyproxy && sudo systemctl enable tinyproxy
       when:
         - automation_profile in ['ubuntu_r620_kvm', 'ubuntu_r810_kvm']
-        - proxy_jump_resolved | default('') | length > 0
+        - _proxy_check is failed or (_proxy_check.status | default(-1)) == -1
 
     - name: Install Helm binary on deployer
       ansible.builtin.shell: |
