@@ -1,0 +1,1877 @@
+Verify all these below "UNREACHEABLE" and investigate this, whther it will fail our this kubespray playbook run as well:
+We are going back and forth with this a lot...
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] **********************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Check if preflight cache already has KubeSpray] ***********************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    stat:
+        atime: 1780702676.2516725
+        attr_flags: e
+        attributes:
+        - extents
+        block_size: 4096
+        blocks: 8
+        charset: us-ascii
+        checksum: 839788fd9abeb621a45d90f4402e50452d2c5fae
+        ctime: 1780348752.9773448
+        dev: 2096
+        device_type: 0
+        executable: false
+        exists: true
+        gid: 0
+        gr_name: root
+        inode: 215624
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mimetype: text/plain
+        mode: '0644'
+        mtime: 1780348752.9773448
+        nlink: 1
+        path: /opt/fabric-cache/kubespray/src/cluster.yml
+        pw_name: root
+        readable: true
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 88
+        uid: 0
+        version: '1215577206'
+        wgrp: false
+        woth: false
+        writeable: true
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+
+TASK [Display automation profile] *******************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        Automation Profile: ubuntu_r810_kvm
+        KubeSpray dir: /opt/fabric-cache/kubespray/src (already cached)
+        Controllers: Host12_1, Host34_1, HostB12_1
+        Workers: Host12_2, Host12_3, Host34_2
+        All kube_nodes: Host12_1, Host34_1, HostB12_1, Host12_2, Host12_3, Host34_2
+
+TASK [Install system packages for KubeSpray] ********************************************************************************************************************************************************************
+ok: [localhost] =>
+    cache_update_time: 1780713988
+    cache_updated: false
+    changed: false
+
+TASK [Clone KubeSpray repository (skipped if preflight cache available)] ****************************************************************************************************************************************
+skipping: [localhost] =>
+    changed: false
+    false_condition: not _cache_stat.stat.exists
+    skip_reason: Conditional result was False
+
+TASK [Create Python virtual environment] ************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - python3
+    - -m
+    - venv
+    - /opt/fabric-cache/kubespray/venv
+    delta: null
+    end: null
+    msg: Did not run command since '/opt/fabric-cache/kubespray/venv/bin/activate' exists
+    rc: 0
+    start: null
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: skipped, since /opt/fabric-cache/kubespray/venv/bin/activate exists
+    stdout_lines: <omitted>
+
+TASK [Install KubeSpray requirements in venv] *******************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - /opt/fabric-cache/kubespray/venv/bin/pip3
+    - install
+    - -r
+    - /opt/fabric-cache/kubespray/src/requirements.txt
+    name: null
+    requirements: /opt/fabric-cache/kubespray/src/requirements.txt
+    state: present
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Requirement already satisfied: ansible==9.5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (9.5.1)
+        Requirement already satisfied: cryptography==42.0.7 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (42.0.7)
+        Requirement already satisfied: jinja2==3.1.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 3)) (3.1.4)
+        Requirement already satisfied: jmespath==1.0.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 4)) (1.0.1)
+        Requirement already satisfied: MarkupSafe==2.1.5 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 5)) (2.1.5)
+        Requirement already satisfied: netaddr==1.2.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 6)) (1.2.1)
+        Requirement already satisfied: pbr==6.0.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 7)) (6.0.0)
+        Requirement already satisfied: ruamel.yaml==0.18.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 8)) (0.18.6)
+        Requirement already satisfied: ruamel.yaml.clib==0.2.8 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 9)) (0.2.8)
+        Requirement already satisfied: jsonschema==4.22.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.22.0)
+        Requirement already satisfied: ansible-core~=2.16.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (2.16.18)
+        Requirement already satisfied: cffi>=1.12 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (2.0.0)
+        Requirement already satisfied: attrs>=22.2.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (26.1.0)
+        Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2025.9.1)
+        Requirement already satisfied: referencing>=0.28.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (0.37.0)
+        Requirement already satisfied: rpds-py>=0.7.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2026.5.1)
+        Requirement already satisfied: PyYAML>=5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (6.0.3)
+        Requirement already satisfied: packaging in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (26.2)
+        Requirement already satisfied: resolvelib<1.1.0,>=0.5.3 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (1.0.1)
+        Requirement already satisfied: pycparser in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cffi>=1.12->cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (3.0)
+        Requirement already satisfied: typing-extensions>=4.4.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from referencing>=0.28.4->jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.15.0)
+    stdout_lines: <omitted>
+    version: null
+    virtualenv: /opt/fabric-cache/kubespray/venv
+
+TASK [Ensure KubeSpray download cache directory exists] *********************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/download-cache
+    size: 4096
+    state: directory
+    uid: 0
+
+TASK [Verify tinyproxy is reachable on R810 hypervisor (air-gapped proxy)] **************************************************************************************************************************************
+ok: [localhost] =>
+    body: |-
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
+        <head>
+        <title>403 Access denied</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        </head>
+
+        <body>
+
+        <h1>Access denied</h1>
+
+        <p>The administrator of this proxy has not configured it to service requests from your host.</p>
+
+        <hr />
+
+        <p><em>Generated by <a href="https://tinyproxy.github.io/">tinyproxy</a>.</em></p>
+
+        </body>
+
+        </html>
+    changed: false
+    connection: close
+    content_type: text/html
+    elapsed: 0
+    failed_when_result: false
+    msg: 'HTTP Error 403: Access denied'
+    redirected: false
+    server: tinyproxy
+    status: 403
+    url: http://R810:8888
+
+TASK [Warn if tinyproxy not reachable on R810] ******************************************************************************************************************************************************************
+skipping: [localhost] =>
+    false_condition: _proxy_check is failed or (_proxy_check.status | default(-1)) ==
+        -1
+
+TASK [Install Helm binary on deployer] **************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd: |-
+        if ! command -v helm &>/dev/null; then
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        fi
+        helm version --short
+    delta: '0:00:00.436367'
+    end: '2026-06-06 06:24:08.279381'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 06:24:07.843014'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        /usr/local/bin/helm
+        Helm v3.21.0 is already latest
+        v3.21.0+ge0878d4
+    stdout_lines: <omitted>
+
+TASK [Display KubeSpray readiness] ******************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        KubeSpray v2.24.1 ready at: /opt/fabric-cache/kubespray/src
+        Virtual env: /opt/fabric-cache/kubespray/venv
+        Helm: /usr/local/bin/helm
+        Helm v3.21.0 is already latest
+        v3.21.0+ge0878d4
+        Profile: ubuntu_r810_kvm
+        Source: preflight cache
+
+PLAY [Phase 2: Generate KubeSpray Inventory (multi-node, profile-aware)] ****************************************************************************************************************************************
+
+TASK [Validate kube_nodes group is populated] *******************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    msg: All assertions passed
+
+TASK [Create KubeSpray inventory directory] *********************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all
+    size: 4096
+    state: directory
+    uid: 0
+
+TASK [Create KubeSpray inventory directory (k8s-cluster)] *******************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster
+    size: 4096
+    state: directory
+    uid: 0
+
+TASK [Generate KubeSpray hosts.yml] *****************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: ec13de1bebc11fa15b63382aca6bb63e5929d046
+    dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
+    size: 1734
+    state: file
+    uid: 0
+
+TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: dc73e891dc1ecd87b8a3633c7f8470ccd8b0567b
+    dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
+    size: 2402
+    state: file
+    uid: 0
+
+TASK [Generate KubeSpray k8s-cluster.yml vars] ******************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: 17dae6501499b01aed972ca7749614e675243583
+    dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/k8s-cluster.yml
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/k8s-cluster.yml
+    size: 1759
+    state: file
+    uid: 0
+
+TASK [Generate KubeSpray addons.yml] ****************************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: 3784ee4db54f6a123647a3b6f79c7883dc57782a
+    dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/addons.yml
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/k8s_cluster/addons.yml
+    size: 1032
+    state: file
+    uid: 0
+
+TASK [Display generated inventory summary] **********************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        KubeSpray inventory generated at: /opt/fabric-cache/kubespray/src/inventory/dc-lab
+        Profile: ubuntu_r810_kvm
+        Controllers (kube_control_plane + etcd): Host12_1, Host34_1, HostB12_1
+        Workers (kube_node): Host12_2, Host12_3, Host34_2
+
+PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
+ok: [Host12_1]
+ok: [Host34_1]
+ok: [HostB12_1]
+ok: [Host12_2]
+ok: [Host12_3]
+ok: [Host34_2]
+
+TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
+changed: [Host34_1] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.015262'
+    end: '2026-06-06 11:24:30.199341'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:30.184079'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_1] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.014874'
+    end: '2026-06-06 11:24:30.304722'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:30.289848'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_2] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.015304'
+    end: '2026-06-06 11:24:30.498693'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:30.483389'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_3] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.013054'
+    end: '2026-06-06 11:24:30.712997'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:30.699943'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [HostB12_1] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.026563'
+    end: '2026-06-06 11:24:31.121046'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:31.094483'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host34_2] =>
+    changed: true
+    cmd: |-
+        swapoff -a
+        sed -i '/\sswap\s/d' /etc/fstab
+    delta: '0:00:00.013533'
+    end: '2026-06-06 11:24:32.671902'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:24:32.658369'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
+ok: [Host34_1] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [Host12_3] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [Host12_1] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [Host12_2] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [Host34_1] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host12_3] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host12_1] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host12_2] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host34_1] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [Host12_3] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [Host12_2] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [Host34_1] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host12_3] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host12_2] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host34_1] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host12_3] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host12_2] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host12_3] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+ok: [Host34_1] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+ok: [Host12_2] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+ok: [HostB12_1] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+ok: [Host34_2] => (item=br_netfilter) =>
+    ansible_loop_var: item
+    changed: false
+    item: br_netfilter
+    name: br_netfilter
+    params: ''
+    state: present
+ok: [Host34_2] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host34_2] => (item=ip_vs) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs
+    name: ip_vs
+    params: ''
+    state: present
+ok: [Host34_2] => (item=ip_vs_rr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_rr
+    name: ip_vs_rr
+    params: ''
+    state: present
+ok: [Host34_2] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host34_2] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
+
+TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
+ok: [HostB12_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host34_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host12_2] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host12_3] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host12_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+ok: [Host34_2] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
+
+TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+[ERROR]: Task failed: Data could not be sent to remote host "172.16.2.45". Make sure this host can be reached over ssh: ssh: connect to host 192.168.9.198 port 22: Network is unreachable
+Connection closed by UNKNOWN port 65535
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:244:7
+
+242         mode: '0644'
+243
+244     - name: Set sysctl parameters for Kubernetes
+          ^ column 7
+
+failed: [HostB12_1] (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+    msg: |-
+        Task failed: Data could not be sent to remote host "172.16.2.45". Make sure this host can be reached over ssh: ssh: connect to host 192.168.9.198 port 22: Network is unreachable
+        Connection closed by UNKNOWN port 65535
+    unreachable: true
+ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+fatal: [HostB12_1]: UNREACHABLE! =>
+    changed: false
+    msg: All items completed
+    results:
+    -   ansible_loop_var: item
+        changed: false
+        failed: false
+        invocation:
+            module_args:
+                ignoreerrors: false
+                name: net.bridge.bridge-nf-call-iptables
+                reload: true
+                state: present
+                sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+                sysctl_set: false
+                value: '1'
+        item:
+            key: net.bridge.bridge-nf-call-iptables
+            value: '1'
+    -   ansible_loop_var: item
+        changed: false
+        failed: false
+        invocation:
+            module_args:
+                ignoreerrors: false
+                name: net.bridge.bridge-nf-call-ip6tables
+                reload: true
+                state: present
+                sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+                sysctl_set: false
+                value: '1'
+        item:
+            key: net.bridge.bridge-nf-call-ip6tables
+            value: '1'
+    -   ansible_loop_var: item
+        changed: false
+        exception: (traceback unavailable)
+        item:
+            key: net.ipv4.ip_forward
+            value: '1'
+        msg: |-
+            Task failed: Data could not be sent to remote host "172.16.2.45". Make sure this host can be reached over ssh: ssh: connect to host 192.168.9.198 port 22: Network is unreachable
+            Connection closed by UNKNOWN port 65535
+        unreachable: true
+    -   ansible_loop_var: item
+        changed: false
+        failed: false
+        invocation:
+            module_args:
+                ignoreerrors: false
+                name: net.ipv6.conf.all.forwarding
+                reload: true
+                state: present
+                sysctl_file: /etc/sysctl.d/99-kubernetes.conf
+                sysctl_set: false
+                value: '1'
+        item:
+            key: net.ipv6.conf.all.forwarding
+            value: '1'
+    unreachable: true
+ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host34_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-ip6tables
+        value: '1'
+ok: [Host34_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
+
+TASK [Identify missing prerequisite packages] *******************************************************************************************************************************************************************
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+          if ! dpkg -s "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.054679'
+    end: '2026-06-06 11:25:44.814471'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:25:44.759792'
+    stderr: |-
+        dpkg-query: package 'apt-transport-https' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipvsadm' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'conntrack' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipset' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'socat' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+    stderr_lines: <omitted>
+    stdout: |4-
+         apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm
+        Package: curl
+        Status: install ok installed
+        Priority: optional
+        Section: web
+        Installed-Size: 522
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: amd64
+        Multi-Arch: foreign
+        Version: 8.5.0-2ubuntu10.9
+        Depends: libc6 (>= 2.34), libcurl4t64 (= 8.5.0-2ubuntu10.9), zlib1g (>= 1:1.1.4)
+        Description: command line tool for transferring data with URL syntax
+         curl is a command line tool for transferring data with URL syntax, supporting
+         DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3,
+         POP3S, RTMP, RTSP, SCP, SFTP, SMTP, SMTPS, TELNET and TFTP.
+         .
+         curl supports SSL certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form
+         based upload, proxies, cookies, user+password authentication (Basic, Digest,
+         NTLM, Negotiate, kerberos...), file transfer resume, proxy tunneling and a
+         busload of other useful tricks.
+        Homepage: https://curl.se/
+        Original-Maintainer: Debian Curl Maintainers <team+curl@tracker.debian.org>
+        Package: ca-certificates
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 386
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Version: 20240203
+        Depends: openssl (>= 1.1.1), debconf (>= 0.5) | debconf-2.0
+        Breaks: ca-certificates-java (<< 20121112+nmu1)
+        Enhances: openssl
+        Description: Common CA certificates
+         Contains the certificate authorities shipped with Mozilla's browser to allow
+         SSL-based applications to check for the authenticity of SSL connections.
+         .
+         Please note that Debian can neither confirm nor deny whether the
+         certificate authorities whose certificates are included in this package
+         have in any way been audited for trustworthiness or RFC 3647 compliance.
+         Full responsibility to assess them belongs to the local system
+         administrator.
+        Original-Maintainer: Julien Cristau <jcristau@debian.org>
+        Package: lsb-release
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 17
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: lsb-release-minimal
+        Version: 12.0-2
+        Description: Linux Standard Base version reporting utility (minimal implementation)
+         The Linux Standard Base (http://www.linuxbase.org/) is a standard
+         core system that third-party applications written for Linux can
+         depend upon.
+         .
+         The lsb_release command is a simple tool to help identify the Linux
+         distribution being used and its compliance with the Linux Standard Base.
+         .
+         This package contains a bare-bones implementation that uses the
+         information in /etc/os-release instead of relying on LSB packages.
+        Original-Maintainer: Gioele Barabucci <gioele@svario.it>
+        Homepage: https://gioele.io/lsb-release-minimal
+        Package: gnupg
+        Status: install ok installed
+        Priority: optional
+        Section: utils
+        Installed-Size: 509
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: gnupg2
+        Version: 2.4.4-2ubuntu17.4
+        Depends: dirmngr (<< 2.4.4-2ubuntu17.4.1~), dirmngr (>= 2.4.4-2ubuntu17.4), gnupg-utils (<< 2.4.4-2ubuntu17.4.1~), gnupg-utils (>= 2.4.4-2ubuntu17.4), gpg (<< 2.4.4-2ubuntu17.4.1~), gpg (>= 2.4.4-2ubuntu17.4), gpg-agent (<< 2.4.4-2ubuntu17.4.1~), gpg-agent (>= 2.4.4-2ubuntu17.4), gpgsm (<< 2.4.4-2ubuntu17.4.1~), gpgsm (>= 2.4.4-2ubuntu17.4), gpgv (<< 2.4.4-2ubuntu17.4.1~), gpgv (>= 2.4.4-2ubuntu17.4), keyboxd (<< 2.4.4-2ubuntu17.4.1~), keyboxd (>= 2.4.4-2ubuntu17.4)
+        Recommends: gnupg-l10n (= 2.4.4-2ubuntu17.4), gpg-wks-client (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-client (>= 2.4.4-2ubuntu17.4)
+        Suggests: parcimonie, xloadimage, gpg-wks-server (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-server (>= 2.4.4-2ubuntu17.4)
+        Breaks: debsig-verify (<< 0.15), dirmngr (<< 2.4.4-2ubuntu17.4), libgnupg-interface-perl (<< 0.52-3), libgnupg-perl (<= 0.19-1), libmail-gnupg-perl (<= 0.22-1), monkeysphere (<< 0.38~), php-crypt-gpg (<= 1.4.1-1), python-apt (<= 1.1.0~beta4), python-gnupg (<< 0.3.8-3), python3-apt (<= 1.1.0~beta4)
+        Description: GNU privacy guard - a free PGP replacement
+         GnuPG is GNU's tool for secure communication and data storage.
+         It can be used to encrypt data and to create digital signatures.
+         It includes an advanced key management facility and is compliant
+         with the proposed OpenPGP Internet standard as described in RFC4880.
+         .
+         This package contains the full suite of GnuPG tools for cryptographic
+         communications and data storage.
+        Homepage: https://www.gnupg.org/
+        Original-Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
+    stdout_lines: <omitted>
+ok: [Host12_3] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+          if ! dpkg -s "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.039845'
+    end: '2026-06-06 11:25:44.958081'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:25:44.918236'
+    stderr: |-
+        dpkg-query: package 'ipvsadm' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'conntrack' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'apt-transport-https' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'socat' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipset' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+    stderr_lines: <omitted>
+    stdout: |4-
+         apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm
+        Package: curl
+        Status: install ok installed
+        Priority: optional
+        Section: web
+        Installed-Size: 522
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: amd64
+        Multi-Arch: foreign
+        Version: 8.5.0-2ubuntu10.9
+        Depends: libc6 (>= 2.34), libcurl4t64 (= 8.5.0-2ubuntu10.9), zlib1g (>= 1:1.1.4)
+        Description: command line tool for transferring data with URL syntax
+         curl is a command line tool for transferring data with URL syntax, supporting
+         DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3,
+         POP3S, RTMP, RTSP, SCP, SFTP, SMTP, SMTPS, TELNET and TFTP.
+         .
+         curl supports SSL certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form
+         based upload, proxies, cookies, user+password authentication (Basic, Digest,
+         NTLM, Negotiate, kerberos...), file transfer resume, proxy tunneling and a
+         busload of other useful tricks.
+        Homepage: https://curl.se/
+        Original-Maintainer: Debian Curl Maintainers <team+curl@tracker.debian.org>
+        Package: ca-certificates
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 386
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Version: 20240203
+        Depends: openssl (>= 1.1.1), debconf (>= 0.5) | debconf-2.0
+        Breaks: ca-certificates-java (<< 20121112+nmu1)
+        Enhances: openssl
+        Description: Common CA certificates
+         Contains the certificate authorities shipped with Mozilla's browser to allow
+         SSL-based applications to check for the authenticity of SSL connections.
+         .
+         Please note that Debian can neither confirm nor deny whether the
+         certificate authorities whose certificates are included in this package
+         have in any way been audited for trustworthiness or RFC 3647 compliance.
+         Full responsibility to assess them belongs to the local system
+         administrator.
+        Original-Maintainer: Julien Cristau <jcristau@debian.org>
+        Package: gnupg
+        Status: install ok installed
+        Priority: optional
+        Section: utils
+        Installed-Size: 509
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: gnupg2
+        Version: 2.4.4-2ubuntu17.4
+        Depends: dirmngr (<< 2.4.4-2ubuntu17.4.1~), dirmngr (>= 2.4.4-2ubuntu17.4), gnupg-utils (<< 2.4.4-2ubuntu17.4.1~), gnupg-utils (>= 2.4.4-2ubuntu17.4), gpg (<< 2.4.4-2ubuntu17.4.1~), gpg (>= 2.4.4-2ubuntu17.4), gpg-agent (<< 2.4.4-2ubuntu17.4.1~), gpg-agent (>= 2.4.4-2ubuntu17.4), gpgsm (<< 2.4.4-2ubuntu17.4.1~), gpgsm (>= 2.4.4-2ubuntu17.4), gpgv (<< 2.4.4-2ubuntu17.4.1~), gpgv (>= 2.4.4-2ubuntu17.4), keyboxd (<< 2.4.4-2ubuntu17.4.1~), keyboxd (>= 2.4.4-2ubuntu17.4)
+        Recommends: gnupg-l10n (= 2.4.4-2ubuntu17.4), gpg-wks-client (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-client (>= 2.4.4-2ubuntu17.4)
+        Suggests: parcimonie, xloadimage, gpg-wks-server (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-server (>= 2.4.4-2ubuntu17.4)
+        Breaks: debsig-verify (<< 0.15), dirmngr (<< 2.4.4-2ubuntu17.4), libgnupg-interface-perl (<< 0.52-3), libgnupg-perl (<= 0.19-1), libmail-gnupg-perl (<= 0.22-1), monkeysphere (<< 0.38~), php-crypt-gpg (<= 1.4.1-1), python-apt (<= 1.1.0~beta4), python-gnupg (<< 0.3.8-3), python3-apt (<= 1.1.0~beta4)
+        Description: GNU privacy guard - a free PGP replacement
+         GnuPG is GNU's tool for secure communication and data storage.
+         It can be used to encrypt data and to create digital signatures.
+         It includes an advanced key management facility and is compliant
+         with the proposed OpenPGP Internet standard as described in RFC4880.
+         .
+         This package contains the full suite of GnuPG tools for cryptographic
+         communications and data storage.
+        Homepage: https://www.gnupg.org/
+        Original-Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
+        Package: lsb-release
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 17
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: lsb-release-minimal
+        Version: 12.0-2
+        Description: Linux Standard Base version reporting utility (minimal implementation)
+         The Linux Standard Base (http://www.linuxbase.org/) is a standard
+         core system that third-party applications written for Linux can
+         depend upon.
+         .
+         The lsb_release command is a simple tool to help identify the Linux
+         distribution being used and its compliance with the Linux Standard Base.
+         .
+         This package contains a bare-bones implementation that uses the
+         information in /etc/os-release instead of relying on LSB packages.
+        Original-Maintainer: Gioele Barabucci <gioele@svario.it>
+        Homepage: https://gioele.io/lsb-release-minimal
+    stdout_lines: <omitted>
+ok: [Host34_2] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+          if ! dpkg -s "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.031249'
+    end: '2026-06-06 11:25:45.238857'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:25:45.207608'
+    stderr: |-
+        dpkg-query: package 'conntrack' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'apt-transport-https' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'socat' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipvsadm' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipset' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+    stderr_lines: <omitted>
+    stdout: |4-
+         apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm
+        Package: ca-certificates
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 386
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Version: 20240203
+        Depends: openssl (>= 1.1.1), debconf (>= 0.5) | debconf-2.0
+        Breaks: ca-certificates-java (<< 20121112+nmu1)
+        Enhances: openssl
+        Description: Common CA certificates
+         Contains the certificate authorities shipped with Mozilla's browser to allow
+         SSL-based applications to check for the authenticity of SSL connections.
+         .
+         Please note that Debian can neither confirm nor deny whether the
+         certificate authorities whose certificates are included in this package
+         have in any way been audited for trustworthiness or RFC 3647 compliance.
+         Full responsibility to assess them belongs to the local system
+         administrator.
+        Original-Maintainer: Julien Cristau <jcristau@debian.org>
+        Package: gnupg
+        Status: install ok installed
+        Priority: optional
+        Section: utils
+        Installed-Size: 509
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: gnupg2
+        Version: 2.4.4-2ubuntu17.4
+        Depends: dirmngr (<< 2.4.4-2ubuntu17.4.1~), dirmngr (>= 2.4.4-2ubuntu17.4), gnupg-utils (<< 2.4.4-2ubuntu17.4.1~), gnupg-utils (>= 2.4.4-2ubuntu17.4), gpg (<< 2.4.4-2ubuntu17.4.1~), gpg (>= 2.4.4-2ubuntu17.4), gpg-agent (<< 2.4.4-2ubuntu17.4.1~), gpg-agent (>= 2.4.4-2ubuntu17.4), gpgsm (<< 2.4.4-2ubuntu17.4.1~), gpgsm (>= 2.4.4-2ubuntu17.4), gpgv (<< 2.4.4-2ubuntu17.4.1~), gpgv (>= 2.4.4-2ubuntu17.4), keyboxd (<< 2.4.4-2ubuntu17.4.1~), keyboxd (>= 2.4.4-2ubuntu17.4)
+        Recommends: gnupg-l10n (= 2.4.4-2ubuntu17.4), gpg-wks-client (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-client (>= 2.4.4-2ubuntu17.4)
+        Suggests: parcimonie, xloadimage, gpg-wks-server (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-server (>= 2.4.4-2ubuntu17.4)
+        Breaks: debsig-verify (<< 0.15), dirmngr (<< 2.4.4-2ubuntu17.4), libgnupg-interface-perl (<< 0.52-3), libgnupg-perl (<= 0.19-1), libmail-gnupg-perl (<= 0.22-1), monkeysphere (<< 0.38~), php-crypt-gpg (<= 1.4.1-1), python-apt (<= 1.1.0~beta4), python-gnupg (<< 0.3.8-3), python3-apt (<= 1.1.0~beta4)
+        Description: GNU privacy guard - a free PGP replacement
+         GnuPG is GNU's tool for secure communication and data storage.
+         It can be used to encrypt data and to create digital signatures.
+         It includes an advanced key management facility and is compliant
+         with the proposed OpenPGP Internet standard as described in RFC4880.
+         .
+         This package contains the full suite of GnuPG tools for cryptographic
+         communications and data storage.
+        Homepage: https://www.gnupg.org/
+        Original-Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
+        Package: curl
+        Status: install ok installed
+        Priority: optional
+        Section: web
+        Installed-Size: 522
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: amd64
+        Multi-Arch: foreign
+        Version: 8.5.0-2ubuntu10.9
+        Depends: libc6 (>= 2.34), libcurl4t64 (= 8.5.0-2ubuntu10.9), zlib1g (>= 1:1.1.4)
+        Description: command line tool for transferring data with URL syntax
+         curl is a command line tool for transferring data with URL syntax, supporting
+         DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3,
+         POP3S, RTMP, RTSP, SCP, SFTP, SMTP, SMTPS, TELNET and TFTP.
+         .
+         curl supports SSL certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form
+         based upload, proxies, cookies, user+password authentication (Basic, Digest,
+         NTLM, Negotiate, kerberos...), file transfer resume, proxy tunneling and a
+         busload of other useful tricks.
+        Homepage: https://curl.se/
+        Original-Maintainer: Debian Curl Maintainers <team+curl@tracker.debian.org>
+        Package: lsb-release
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 17
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: lsb-release-minimal
+        Version: 12.0-2
+        Description: Linux Standard Base version reporting utility (minimal implementation)
+         The Linux Standard Base (http://www.linuxbase.org/) is a standard
+         core system that third-party applications written for Linux can
+         depend upon.
+         .
+         The lsb_release command is a simple tool to help identify the Linux
+         distribution being used and its compliance with the Linux Standard Base.
+         .
+         This package contains a bare-bones implementation that uses the
+         information in /etc/os-release instead of relying on LSB packages.
+        Original-Maintainer: Gioele Barabucci <gioele@svario.it>
+        Homepage: https://gioele.io/lsb-release-minimal
+    stdout_lines: <omitted>
+ok: [Host12_2] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+          if ! dpkg -s "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.049015'
+    end: '2026-06-06 11:25:45.481371'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:25:45.432356'
+    stderr: |-
+        dpkg-query: package 'apt-transport-https' is not installed and no information is available
+        dpkg-query: package 'ipvsadm' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'socat' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipset' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'conntrack' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+    stderr_lines: <omitted>
+    stdout: |4-
+         apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm
+        Package: lsb-release
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 17
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: lsb-release-minimal
+        Version: 12.0-2
+        Description: Linux Standard Base version reporting utility (minimal implementation)
+         The Linux Standard Base (http://www.linuxbase.org/) is a standard
+         core system that third-party applications written for Linux can
+         depend upon.
+         .
+         The lsb_release command is a simple tool to help identify the Linux
+         distribution being used and its compliance with the Linux Standard Base.
+         .
+         This package contains a bare-bones implementation that uses the
+         information in /etc/os-release instead of relying on LSB packages.
+        Original-Maintainer: Gioele Barabucci <gioele@svario.it>
+        Homepage: https://gioele.io/lsb-release-minimal
+        Package: curl
+        Status: install ok installed
+        Priority: optional
+        Section: web
+        Installed-Size: 522
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: amd64
+        Multi-Arch: foreign
+        Version: 8.5.0-2ubuntu10.9
+        Depends: libc6 (>= 2.34), libcurl4t64 (= 8.5.0-2ubuntu10.9), zlib1g (>= 1:1.1.4)
+        Description: command line tool for transferring data with URL syntax
+         curl is a command line tool for transferring data with URL syntax, supporting
+         DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3,
+         POP3S, RTMP, RTSP, SCP, SFTP, SMTP, SMTPS, TELNET and TFTP.
+         .
+         curl supports SSL certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form
+         based upload, proxies, cookies, user+password authentication (Basic, Digest,
+         NTLM, Negotiate, kerberos...), file transfer resume, proxy tunneling and a
+         busload of other useful tricks.
+        Homepage: https://curl.se/
+        Original-Maintainer: Debian Curl Maintainers <team+curl@tracker.debian.org>
+        Package: gnupg
+        Status: install ok installed
+        Priority: optional
+        Section: utils
+        Installed-Size: 509
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: gnupg2
+        Version: 2.4.4-2ubuntu17.4
+        Depends: dirmngr (<< 2.4.4-2ubuntu17.4.1~), dirmngr (>= 2.4.4-2ubuntu17.4), gnupg-utils (<< 2.4.4-2ubuntu17.4.1~), gnupg-utils (>= 2.4.4-2ubuntu17.4), gpg (<< 2.4.4-2ubuntu17.4.1~), gpg (>= 2.4.4-2ubuntu17.4), gpg-agent (<< 2.4.4-2ubuntu17.4.1~), gpg-agent (>= 2.4.4-2ubuntu17.4), gpgsm (<< 2.4.4-2ubuntu17.4.1~), gpgsm (>= 2.4.4-2ubuntu17.4), gpgv (<< 2.4.4-2ubuntu17.4.1~), gpgv (>= 2.4.4-2ubuntu17.4), keyboxd (<< 2.4.4-2ubuntu17.4.1~), keyboxd (>= 2.4.4-2ubuntu17.4)
+        Recommends: gnupg-l10n (= 2.4.4-2ubuntu17.4), gpg-wks-client (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-client (>= 2.4.4-2ubuntu17.4)
+        Suggests: parcimonie, xloadimage, gpg-wks-server (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-server (>= 2.4.4-2ubuntu17.4)
+        Breaks: debsig-verify (<< 0.15), dirmngr (<< 2.4.4-2ubuntu17.4), libgnupg-interface-perl (<< 0.52-3), libgnupg-perl (<= 0.19-1), libmail-gnupg-perl (<= 0.22-1), monkeysphere (<< 0.38~), php-crypt-gpg (<= 1.4.1-1), python-apt (<= 1.1.0~beta4), python-gnupg (<< 0.3.8-3), python3-apt (<= 1.1.0~beta4)
+        Description: GNU privacy guard - a free PGP replacement
+         GnuPG is GNU's tool for secure communication and data storage.
+         It can be used to encrypt data and to create digital signatures.
+         It includes an advanced key management facility and is compliant
+         with the proposed OpenPGP Internet standard as described in RFC4880.
+         .
+         This package contains the full suite of GnuPG tools for cryptographic
+         communications and data storage.
+        Homepage: https://www.gnupg.org/
+        Original-Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
+        Package: ca-certificates
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 386
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Version: 20240203
+        Depends: openssl (>= 1.1.1), debconf (>= 0.5) | debconf-2.0
+        Breaks: ca-certificates-java (<< 20121112+nmu1)
+        Enhances: openssl
+        Description: Common CA certificates
+         Contains the certificate authorities shipped with Mozilla's browser to allow
+         SSL-based applications to check for the authenticity of SSL connections.
+         .
+         Please note that Debian can neither confirm nor deny whether the
+         certificate authorities whose certificates are included in this package
+         have in any way been audited for trustworthiness or RFC 3647 compliance.
+         Full responsibility to assess them belongs to the local system
+         administrator.
+        Original-Maintainer: Julien Cristau <jcristau@debian.org>
+    stdout_lines: <omitted>
+ok: [Host34_1] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm; do
+          if ! dpkg -s "$pkg" &>/dev/null; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.035857'
+    end: '2026-06-06 11:25:45.680884'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 11:25:45.645027'
+    stderr: |-
+        dpkg-query: package 'apt-transport-https' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'socat' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipvsadm' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'ipset' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+        dpkg-query: package 'conntrack' is not installed and no information is available
+        Use dpkg --info (= dpkg-deb --info) to examine archive files.
+    stderr_lines: <omitted>
+    stdout: |4-
+         apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm
+        Package: ca-certificates
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 386
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Version: 20240203
+        Depends: openssl (>= 1.1.1), debconf (>= 0.5) | debconf-2.0
+        Breaks: ca-certificates-java (<< 20121112+nmu1)
+        Enhances: openssl
+        Description: Common CA certificates
+         Contains the certificate authorities shipped with Mozilla's browser to allow
+         SSL-based applications to check for the authenticity of SSL connections.
+         .
+         Please note that Debian can neither confirm nor deny whether the
+         certificate authorities whose certificates are included in this package
+         have in any way been audited for trustworthiness or RFC 3647 compliance.
+         Full responsibility to assess them belongs to the local system
+         administrator.
+        Original-Maintainer: Julien Cristau <jcristau@debian.org>
+        Package: curl
+        Status: install ok installed
+        Priority: optional
+        Section: web
+        Installed-Size: 522
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: amd64
+        Multi-Arch: foreign
+        Version: 8.5.0-2ubuntu10.9
+        Depends: libc6 (>= 2.34), libcurl4t64 (= 8.5.0-2ubuntu10.9), zlib1g (>= 1:1.1.4)
+        Description: command line tool for transferring data with URL syntax
+         curl is a command line tool for transferring data with URL syntax, supporting
+         DICT, FILE, FTP, FTPS, GOPHER, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS, POP3,
+         POP3S, RTMP, RTSP, SCP, SFTP, SMTP, SMTPS, TELNET and TFTP.
+         .
+         curl supports SSL certificates, HTTP POST, HTTP PUT, FTP uploading, HTTP form
+         based upload, proxies, cookies, user+password authentication (Basic, Digest,
+         NTLM, Negotiate, kerberos...), file transfer resume, proxy tunneling and a
+         busload of other useful tricks.
+        Homepage: https://curl.se/
+        Original-Maintainer: Debian Curl Maintainers <team+curl@tracker.debian.org>
+        Package: lsb-release
+        Status: install ok installed
+        Priority: important
+        Section: misc
+        Installed-Size: 17
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: lsb-release-minimal
+        Version: 12.0-2
+        Description: Linux Standard Base version reporting utility (minimal implementation)
+         The Linux Standard Base (http://www.linuxbase.org/) is a standard
+         core system that third-party applications written for Linux can
+         depend upon.
+         .
+         The lsb_release command is a simple tool to help identify the Linux
+         distribution being used and its compliance with the Linux Standard Base.
+         .
+         This package contains a bare-bones implementation that uses the
+         information in /etc/os-release instead of relying on LSB packages.
+        Original-Maintainer: Gioele Barabucci <gioele@svario.it>
+        Homepage: https://gioele.io/lsb-release-minimal
+        Package: gnupg
+        Status: install ok installed
+        Priority: optional
+        Section: utils
+        Installed-Size: 509
+        Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+        Architecture: all
+        Multi-Arch: foreign
+        Source: gnupg2
+        Version: 2.4.4-2ubuntu17.4
+        Depends: dirmngr (<< 2.4.4-2ubuntu17.4.1~), dirmngr (>= 2.4.4-2ubuntu17.4), gnupg-utils (<< 2.4.4-2ubuntu17.4.1~), gnupg-utils (>= 2.4.4-2ubuntu17.4), gpg (<< 2.4.4-2ubuntu17.4.1~), gpg (>= 2.4.4-2ubuntu17.4), gpg-agent (<< 2.4.4-2ubuntu17.4.1~), gpg-agent (>= 2.4.4-2ubuntu17.4), gpgsm (<< 2.4.4-2ubuntu17.4.1~), gpgsm (>= 2.4.4-2ubuntu17.4), gpgv (<< 2.4.4-2ubuntu17.4.1~), gpgv (>= 2.4.4-2ubuntu17.4), keyboxd (<< 2.4.4-2ubuntu17.4.1~), keyboxd (>= 2.4.4-2ubuntu17.4)
+        Recommends: gnupg-l10n (= 2.4.4-2ubuntu17.4), gpg-wks-client (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-client (>= 2.4.4-2ubuntu17.4)
+        Suggests: parcimonie, xloadimage, gpg-wks-server (<< 2.4.4-2ubuntu17.4.1~), gpg-wks-server (>= 2.4.4-2ubuntu17.4)
+        Breaks: debsig-verify (<< 0.15), dirmngr (<< 2.4.4-2ubuntu17.4), libgnupg-interface-perl (<< 0.52-3), libgnupg-perl (<= 0.19-1), libmail-gnupg-perl (<= 0.22-1), monkeysphere (<< 0.38~), php-crypt-gpg (<= 1.4.1-1), python-apt (<= 1.1.0~beta4), python-gnupg (<< 0.3.8-3), python3-apt (<= 1.1.0~beta4)
+        Description: GNU privacy guard - a free PGP replacement
+         GnuPG is GNU's tool for secure communication and data storage.
+         It can be used to encrypt data and to create digital signatures.
+         It includes an advanced key management facility and is compliant
+         with the proposed OpenPGP Internet standard as described in RFC4880.
+         .
+         This package contains the full suite of GnuPG tools for cryptographic
+         communications and data storage.
+        Homepage: https://www.gnupg.org/
+        Original-Maintainer: Debian GnuPG Maintainers <pkg-gnupg-maint@lists.alioth.debian.org>
+    stdout_lines: <omitted>
+
+TASK [Install prerequisite packages (no cache update - air-gapped)] *********************************************************************************************************************************************
+ok: [Host34_1] =>
+    changed: false
+    failed_when_result: false
+    failed_when_suppressed_exception: (traceback unavailable)
+    msg: No package matching 'Package:' is available
+ok: [Host12_1] =>
+    changed: false
+    failed_when_result: false
+    failed_when_suppressed_exception: (traceback unavailable)
+    msg: No package matching 'Package:' is available
+ok: [Host12_3] =>
+    changed: false
+    failed_when_result: false
+    failed_when_suppressed_exception: (traceback unavailable)
+    msg: No package matching 'Package:' is available
+ok: [Host12_2] =>
+    changed: false
+    failed_when_result: false
+    failed_when_suppressed_exception: (traceback unavailable)
+    msg: No package matching 'Package:' is available
+ok: [Host34_2] =>
+    changed: false
+    failed_when_result: false
+    failed_when_suppressed_exception: (traceback unavailable)
+    msg: No package matching 'Package:' is available
+
+TASK [Find matching .deb files in preflight cache] **************************************************************************************************************************************************************
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Create temp deb staging directory on nodes] ***************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Push .deb packages to nodes] ******************************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Install .deb packages via dpkg] ***************************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Verify packages after dpkg install] ***********************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Warn if packages still missing after dpkg fallback] *******************************************************************************************************************************************************
+skipping: [Host34_1] =>
+    false_condition: _apt_prereq is failed
+skipping: [Host12_1] =>
+    false_condition: _apt_prereq is failed
+skipping: [Host12_2] =>
+    false_condition: _apt_prereq is failed
+skipping: [Host12_3] =>
+    false_condition: _apt_prereq is failed
+skipping: [Host34_2] =>
+    false_condition: _apt_prereq is failed
+
+TASK [Clean up temp deb staging] ********************************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: _apt_prereq is failed
+    skip_reason: Conditional result was False
+
+TASK [Set hostname to kube_node_name] ***************************************************************************************************************************************************************************
+ok: [Host34_2] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host34-2
+        ansible_hostname: host34-2
+        ansible_nodename: host34-2
+    changed: false
+    name: host34-2
+ok: [Host12_3] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-3
+        ansible_hostname: host12-3
+        ansible_nodename: host12-3
+    changed: false
+    name: host12-3
+ok: [Host34_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host34-1
+        ansible_hostname: host34-1
+        ansible_nodename: host34-1
+    changed: false
+    name: host34-1
+ok: [Host12_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-1
+        ansible_hostname: host12-1
+        ansible_nodename: host12-1
+    changed: false
+    name: host12-1
+ok: [Host12_2] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-2
+        ansible_hostname: host12-2
+        ansible_nodename: host12-2
+    changed: false
+    name: host12-2
+
+TASK [preflight_hw | Check disk write latency for etcd (real hardware)] *****************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+
+TASK [preflight_hw | Report disk IOPS result] *******************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host34_1] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host12_2] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host12_3] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host34_2] =>
+    false_condition: automation_profile == 'real_hardware'
+
+PLAY [Phase 4: Execute KubeSpray cluster.yml] *******************************************************************************************************************************************************************
+
+TASK [Display deployment plan] **********************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        Deploying Kubernetes cluster via KubeSpray
+        Profile: ubuntu_r810_kvm
+        Timeout: 180s
+        SSH user: ubuntu
+        ProxyJump: nh1221@R810
+        Inventory: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
+
+TASK [Clear stale SSH ControlMaster sockets] ********************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd: rm -f ~/.ansible/cp/* /tmp/ansible-ssh-* 2>/dev/null || true
+    delta: '0:00:00.018819'
+    end: '2026-06-06 06:26:10.598589'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 06:26:10.579770'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Write ProxyCommand wrapper script for R810 hop] ***********************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: 08ab1d209dd412967f74bc7606419b7529ab1fb5
+    dest: /tmp/kube-proxy-jump.sh
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/kube-proxy-jump.sh
+    size: 360
+    state: file
+    uid: 0
+
+TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Patch kubespray ansible.cfg — SSH args via ProxyCommand script] *******************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Patch kubespray ansible.cfg — SSH args (no proxy)] ********************************************************************************************************************************************************
+skipping: [localhost] =>
+    changed: false
+    false_condition: proxy_jump_resolved | default('') | length == 0
+    skip_reason: Conditional result was False
+
+TASK [Patch kubespray ansible.cfg — disable pipelining] *********************************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
+
