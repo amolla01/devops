@@ -61,3 +61,42 @@ Quick diagnosis — SSH into one KVM node and test:
 export https_proxy=http://172.16.2.1:8888
 curl -v https://registry.k8s.io/v2/
 If that returns 403 or hangs, the proxy is the bottleneck. Fix the tinyproxy Allow rule on R810 and restart it, then kill and re-run the playbook.
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+The apt proxy file IS being deployed correctly (KubeSpray even detected it: Check http::proxy in apt configuration files → ok), but apt-get update still fails after 61 minutes with "unknown reason". This means the proxy config is correct but tinyproxy on R810 can't actually forward apt traffic to Ubuntu repos.
+
+The playbook fix worked — the issue is now at the R810/network layer. You need to diagnose from a node:
+
+# SSH into one node and test manually:
+ssh ubuntu@172.16.2.40   # Host12_1
+
+# 1. Verify proxy file is there
+cat /etc/apt/apt.conf.d/90proxy
+
+# 2. Run apt-get update manually to see the REAL error
+sudo apt-get update 2>&1 | head -30
+
+# 3. Test proxy connectivity to Ubuntu repos specifically
+curl -v -x http://172.16.2.1:8888 http://archive.ubuntu.com/ubuntu/dists/noble/Release 2>&1 | head -20
+
+# 4. Test HTTPS (Ubuntu 24.04 may use https sources)
+curl -v -x http://172.16.2.1:8888 https://archive.ubuntu.com/ubuntu/dists/noble/Release 2>&1 | head -20
+
+Then on R810 itself:
+
+# 5. Check if R810 can reach Ubuntu repos directly
+curl -I http://archive.ubuntu.com/ubuntu/dists/noble/Release
+
+# 6. Check tinyproxy logs for errors
+sudo tail -50 /var/log/tinyproxy/tinyproxy.log
+
+# 7. Check ConnectPort config (must allow 443 for HTTPS)
+grep -i connectport /etc/tinyproxy/tinyproxy.conf
+
+Most likely causes:
+
+R810 itself has no internet (can't forward to Ubuntu repos)
+Ubuntu 24.04 sources use HTTPS but tinyproxy ConnectPort doesn't allow 443
+DNS resolution fails on R810 for archive.ubuntu.com
+If R810 has no real internet, you could add Ubuntu mirror sources pointing to a local cache, or skip apt-get update entirely by patching KubeSpray's preinstall. Want me to prepare a workaround that skips KubeSpray's apt cache update since all packages are already installed via our Phase 3 dpkg fallback?
