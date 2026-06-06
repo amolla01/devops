@@ -1,0 +1,259 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
+Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
+
+PLAY [Phase 1: Prepare Deployer Machine for KubeSpray] *************************************************************************************************************************************
+
+TASK [Gathering Facts] *********************************************************************************************************************************************************************
+ok: [localhost]
+
+TASK [Check if preflight cache already has KubeSpray] **************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    stat:
+        atime: 1780702676.2516725
+        attr_flags: e
+        attributes:
+        - extents
+        block_size: 4096
+        blocks: 8
+        charset: us-ascii
+        checksum: 839788fd9abeb621a45d90f4402e50452d2c5fae
+        ctime: 1780348752.9773448
+        dev: 2096
+        device_type: 0
+        executable: false
+        exists: true
+        gid: 0
+        gr_name: root
+        inode: 215624
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mimetype: text/plain
+        mode: '0644'
+        mtime: 1780348752.9773448
+        nlink: 1
+        path: /opt/fabric-cache/kubespray/src/cluster.yml
+        pw_name: root
+        readable: true
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 88
+        uid: 0
+        version: '1215577206'
+        wgrp: false
+        woth: false
+        writeable: true
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+
+TASK [Display automation profile] **********************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        Automation Profile: ubuntu_r810_kvm
+        KubeSpray dir: /opt/fabric-cache/kubespray/src (already cached)
+        Controllers: Host12_1, Host34_1, HostB12_1
+        Workers: Host12_2, Host12_3, Host34_2
+        All kube_nodes: Host12_1, Host34_1, HostB12_1, Host12_2, Host12_3, Host34_2
+
+TASK [Install system packages for KubeSpray] ***********************************************************************************************************************************************
+ok: [localhost] =>
+    cache_update_time: 1780713988
+    cache_updated: false
+    changed: false
+
+TASK [Clone KubeSpray repository (skipped if preflight cache available)] *******************************************************************************************************************
+skipping: [localhost] =>
+    changed: false
+    false_condition: not _cache_stat.stat.exists
+    skip_reason: Conditional result was False
+
+TASK [Create Python virtual environment] ***************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - python3
+    - -m
+    - venv
+    - /opt/fabric-cache/kubespray/venv
+    delta: null
+    end: null
+    msg: Did not run command since '/opt/fabric-cache/kubespray/venv/bin/activate' exists
+    rc: 0
+    start: null
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: skipped, since /opt/fabric-cache/kubespray/venv/bin/activate exists
+    stdout_lines: <omitted>
+
+TASK [Install KubeSpray requirements in venv] **********************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd:
+    - /opt/fabric-cache/kubespray/venv/bin/pip3
+    - install
+    - -r
+    - /opt/fabric-cache/kubespray/src/requirements.txt
+    name: null
+    requirements: /opt/fabric-cache/kubespray/src/requirements.txt
+    state: present
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Requirement already satisfied: ansible==9.5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (9.5.1)
+        Requirement already satisfied: cryptography==42.0.7 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (42.0.7)
+        Requirement already satisfied: jinja2==3.1.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 3)) (3.1.4)
+        Requirement already satisfied: jmespath==1.0.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 4)) (1.0.1)
+        Requirement already satisfied: MarkupSafe==2.1.5 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 5)) (2.1.5)
+        Requirement already satisfied: netaddr==1.2.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 6)) (1.2.1)
+        Requirement already satisfied: pbr==6.0.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 7)) (6.0.0)
+        Requirement already satisfied: ruamel.yaml==0.18.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 8)) (0.18.6)
+        Requirement already satisfied: ruamel.yaml.clib==0.2.8 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 9)) (0.2.8)
+        Requirement already satisfied: jsonschema==4.22.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from -r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.22.0)
+        Requirement already satisfied: ansible-core~=2.16.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (2.16.18)
+        Requirement already satisfied: cffi>=1.12 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (2.0.0)
+        Requirement already satisfied: attrs>=22.2.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (26.1.0)
+        Requirement already satisfied: jsonschema-specifications>=2023.03.6 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2025.9.1)
+        Requirement already satisfied: referencing>=0.28.4 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (0.37.0)
+        Requirement already satisfied: rpds-py>=0.7.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (2026.5.1)
+        Requirement already satisfied: PyYAML>=5.1 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (6.0.3)
+        Requirement already satisfied: packaging in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (26.2)
+        Requirement already satisfied: resolvelib<1.1.0,>=0.5.3 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from ansible-core~=2.16.6->ansible==9.5.1->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 1)) (1.0.1)
+        Requirement already satisfied: pycparser in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from cffi>=1.12->cryptography==42.0.7->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 2)) (3.0)
+        Requirement already satisfied: typing-extensions>=4.4.0 in /opt/fabric-cache/kubespray/venv/lib/python3.12/site-packages (from referencing>=0.28.4->jsonschema==4.22.0->-r /opt/fabric-cache/kubespray/src/requirements.txt (line 10)) (4.15.0)
+    stdout_lines: <omitted>
+    version: null
+    virtualenv: /opt/fabric-cache/kubespray/venv
+
+TASK [Ensure KubeSpray download cache directory exists] ************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /opt/fabric-cache/kubespray/download-cache
+    size: 4096
+    state: directory
+    uid: 0
+
+TASK [Install and configure tinyproxy on R810 hypervisor for air-gapped nodes] *************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:93:7
+
+91       become: true
+92
+93     - name: Install and configure tinyproxy on R810 hypervisor for air-gapped nodes
+         ^ column 7
+
+fatal: [localhost]: FAILED! =>
+    changed: false
+    cmd: |-
+        ssh -o StrictHostKeyChecking=no nh1221@R810 bash -s <<'EOF'
+        if ! command -v tinyproxy &>/dev/null; then
+          sudo apt-get install -y tinyproxy
+        fi
+        # Allow all KVM hosts on 172.16.2.0/24 to use this proxy
+        sudo grep -q 'Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf ||  sudo sed -i '/^Allow 127.0.0.1/a Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf
+        # Bind to all interfaces so VMs can reach it
+        sudo sed -i 's/^#\?Listen .*/Listen 0.0.0.0/' /etc/tinyproxy/tinyproxy.conf
+        sudo systemctl restart tinyproxy
+        sudo systemctl enable tinyproxy
+        echo "tinyproxy configured and running on R810"
+        EOF
+    delta: '0:00:00.229708'
+    end: '2026-06-06 04:57:04.458961'
+    msg: non-zero return code
+    rc: 255
+    start: '2026-06-06 04:57:04.229253'
+    stderr: |-
+        Warning: Permanently added 'r810' (ED25519) to the list of known hosts.
+        ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+        Permission denied, please try again.
+        ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+        Permission denied, please try again.
+        ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+        nh1221@r810: Permission denied (publickey,password).
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+PLAY RECAP *********************************************************************************************************************************************************************************
+localhost                  : ok=7    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ssh nh1221@R810
+Warning: Permanently added '192.168.9.198' (ED25519) to the list of known hosts.
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-22-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+Expanded Security Maintenance for Applications is not enabled.
+
+16 updates can be applied immediately.
+1 of these updates is a standard security update.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+Last login: Sat Jun  6 04:59:00 2026 from 192.168.9.199
+nh1221@PowerEdge-R810:~$ sudo apt install -y tinyproxy
+[sudo: authenticate] Password:
+Installing:
+  tinyproxy
+
+Installing dependencies:
+  tinyproxy-bin
+
+Summary:
+  Upgrading: 0, Installing: 2, Removing: 0, Not Upgrading: 16
+  Download size: 62.2 kB
+  Space needed: 195 kB / 389 GB available
+
+Get:1 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 tinyproxy-bin amd64 1.11.3-1 [43.4 kB]
+Get:2 http://us.archive.ubuntu.com/ubuntu resolute/universe amd64 tinyproxy all 1.11.3-1 [18.8 kB]
+Fetched 62.2 kB in 0s (149 kB/s)
+Selecting previously unselected package tinyproxy-bin.
+(Reading database… 218050 files and directories currently installed.)
+Preparing to unpack …/tinyproxy-bin_1.11.3-1_amd64.deb…
+Unpacking tinyproxy-bin (1.11.3-1)…
+Selecting previously unselected package tinyproxy.
+Preparing to unpack …/tinyproxy_1.11.3-1_all.deb…
+Unpacking tinyproxy (1.11.3-1)…
+Setting up tinyproxy-bin (1.11.3-1)…
+Setting up tinyproxy (1.11.3-1)…
+Created symlink '/etc/systemd/system/multi-user.target.wants/tinyproxy.service' → '/usr/lib/systemd/system/tinyproxy.service'.
+Processing triggers for man-db (2.13.1-1build1)…
+nh1221@PowerEdge-R810:~$ sudo sed -i '/^Allow 127.0.0.1/a Allow 172.16.2.0/24' /etc/tinyproxy/tinyproxy.conf
+nh1221@PowerEdge-R810:~$ sudo sed -i 's/^#\?Listen .*/Listen 0.0.0.0/' /etc/tinyproxy/tinyproxy.conf
+nh1221@PowerEdge-R810:~$ sudo systemctl restart tinyproxy && sudo systemctl enable tinyproxy
+Synchronizing state of tinyproxy.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable tinyproxy
+nh1221@PowerEdge-R810:~$ sudo systemctl status tinyproxy
+● tinyproxy.service - Tinyproxy lightweight HTTP Proxy
+     Loaded: loaded (/usr/lib/systemd/system/tinyproxy.service; enabled; preset: enabled)
+     Active: active (running) since Sat 2026-06-06 05:01:07 CDT; 26s ago
+ Invocation: 144bf64d998d4b2da7626f34b094d19a
+       Docs: man:tinyproxy(8)
+             man:tinyproxy.conf(5)
+   Main PID: 568892 (tinyproxy)
+      Tasks: 1 (limit: 272644)
+     Memory: 1.6M (peak: 2.2M)
+        CPU: 47ms
+     CGroup: /system.slice/tinyproxy.service
+             └─568892 /usr/bin/tinyproxy -d
+
+Jun 06 05:01:07 PowerEdge-R810 systemd[1]: Started tinyproxy.service - Tinyproxy lightweight HTTP Proxy.
+Jun 06 05:01:07 PowerEdge-R810 (tinyproxy)[568892]: tinyproxy.service: Referenced but unset environment variable evaluates to an empty string: FLAGS
+nh1221@PowerEdge-R810:~$
