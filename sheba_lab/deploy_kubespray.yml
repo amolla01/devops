@@ -34,7 +34,7 @@
   tags: [prereqs]
   vars:
     ansible_become_pass: "{{ vault_ansible_password | default('amolla01') }}"
-    kubespray_version: "{{ kubespray_release | default('v2.24.1') }}"
+    kubespray_version: "{{ kubespray_release | default('v2.25.0') }}"
     kubespray_dir: "{{ kubespray_base_dir | default('/opt/fabric-cache/kubespray/src') }}"
     venv_dir: "/opt/fabric-cache/kubespray/venv"
   tasks:
@@ -113,10 +113,17 @@
         - automation_profile in ['ubuntu_r620_kvm', 'ubuntu_r810_kvm']
         - _proxy_check is failed or (_proxy_check.status | default(-1)) == -1
 
-    - name: Install Helm binary on deployer
+    - name: Install Helm binary on deployer (cache-first)
       ansible.builtin.shell: |
-        if ! command -v helm &>/dev/null; then
+        if command -v helm &>/dev/null; then
+          echo "already installed"
+        elif [ -f /opt/fabric-cache/binaries/helm ]; then
+          cp /opt/fabric-cache/binaries/helm /usr/local/bin/helm
+          chmod 0755 /usr/local/bin/helm
+          echo "installed from cache"
+        else
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          echo "installed from internet"
         fi
         helm version --short
       register: helm_installed
@@ -138,7 +145,7 @@
   become: false
   tags: [generate]
   vars:
-    kubespray_version: "{{ kubespray_release | default('v2.24.1') }}"
+    kubespray_version: "{{ kubespray_release | default('v2.25.0') }}"
     kubespray_dir: "{{ kubespray_base_dir | default('/opt/fabric-cache/kubespray/src') }}"
     kubespray_inventory_dir: "{{ kubespray_dir }}/inventory/dc-lab"
     kube_version: "v1.29.4"
@@ -284,20 +291,96 @@
         - { key: "net.ipv4.ip_forward", value: "1" }
         - { key: "net.ipv6.conf.all.forwarding", value: "1" }
 
-    - name: Configure apt to use R810 proxy (air-gapped nodes need this for apt-get update)
-      ansible.builtin.copy:
-        content: |
-          Acquire::http::Proxy "http://{{ hypervisor_proxy_ip | default('172.16.2.1') }}:8888";
-          Acquire::https::Proxy "http://{{ hypervisor_proxy_ip | default('172.16.2.1') }}:8888";
-        dest: /etc/apt/apt.conf.d/90proxy
-        mode: "0644"
+    - name: Ensure default gateway is set (KVM nodes have no gateway by default)
+      ansible.builtin.shell: |
+        GATEWAY="{{ hypervisor_proxy_ip | default('172.16.2.1') }}"
+        IFACE=$(ip -o -4 route show to "${GATEWAY%.*}.0/24" 2>/dev/null | awk '{print $3}' | head -1)
+        if [ -z "$IFACE" ]; then
+          IFACE=$(ip -o link show up | grep -v lo | awk -F': ' '{print $2}' | head -1)
+        fi
+        # Check if default route already exists
+        if ip route show default | grep -q "via $GATEWAY"; then
+          echo "OK: default route already set via $GATEWAY"
+          exit 0
+        fi
+        # Add temporary default route
+        ip route add default via "$GATEWAY" dev "$IFACE" 2>/dev/null || \
+          ip route replace default via "$GATEWAY" dev "$IFACE"
+        echo "ADDED: default via $GATEWAY dev $IFACE"
+      register: _gw_result
+      changed_when: "'ADDED' in _gw_result.stdout"
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+
+    - name: Make default gateway permanent via netplan
+      ansible.builtin.shell: |
+        GATEWAY="{{ hypervisor_proxy_ip | default('172.16.2.1') }}"
+        NETPLAN_FILE=$(ls /etc/netplan/*.yaml 2>/dev/null | head -1)
+        if [ -z "$NETPLAN_FILE" ]; then
+          echo "SKIP: no netplan file found"
+          exit 0
+        fi
+        if grep -q "via: *${GATEWAY}" "$NETPLAN_FILE" 2>/dev/null; then
+          echo "OK: gateway already in netplan"
+          exit 0
+        fi
+        # Get the primary interface and its IP
+        IFACE=$(ip -o -4 route show to "${GATEWAY%.*}.0/24" 2>/dev/null | awk '{print $3}' | head -1)
+        IP=$(ip -o -4 addr show dev "$IFACE" 2>/dev/null | awk '{print $4}' | head -1)
+        if [ -z "$IFACE" ] || [ -z "$IP" ]; then
+          echo "SKIP: could not determine interface or IP"
+          exit 0
+        fi
+        # Write a clean netplan config with gateway and DNS
+        cat > "$NETPLAN_FILE" <<EOF
+        network:
+          version: 2
+          ethernets:
+            ${IFACE}:
+              addresses:
+                - ${IP}
+              routes:
+                - to: default
+                  via: ${GATEWAY}
+              nameservers:
+                addresses:
+                  - 8.8.8.8
+                  - 1.1.1.1
+        EOF
+        # Fix indentation (remove leading 8 spaces from heredoc)
+        sed -i 's/^        //' "$NETPLAN_FILE"
+        chmod 600 "$NETPLAN_FILE"
+        netplan apply 2>/dev/null || true
+        echo "DONE: netplan updated with gateway $GATEWAY on $IFACE ($IP)"
+      register: _netplan_result
+      changed_when: "'DONE' in _netplan_result.stdout"
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+
+    - name: Verify internet connectivity from nodes
+      ansible.builtin.shell: |
+        if ping -c 1 -W 3 8.8.8.8 >/dev/null 2>&1; then
+          echo "OK: internet reachable"
+        else
+          echo "FAIL: cannot reach 8.8.8.8"
+          exit 1
+        fi
+      register: _inet_check
+      changed_when: false
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+
+    - name: Remove stale apt proxy config (nodes now have direct internet via default route)
+      ansible.builtin.file:
+        path: /etc/apt/apt.conf.d/90proxy
+        state: absent
       when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
 
     - name: Identify missing prerequisite packages
       ansible.builtin.shell:
         cmd: |
           missing=""
-          for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          for pkg in apt-transport-https ca-certificates curl gnupg lsb-release \
+                     conntrack socat ipset libipset13 ipvsadm ebtables unzip \
+                     apparmor bash-completion e2fsprogs iptables libseccomp2 \
+                     openssl python3-apt rsync software-properties-common tar xfsprogs; do
             if ! dpkg -s "$pkg" >/dev/null 2>&1; then
               missing="$missing $pkg"
             fi
@@ -432,7 +515,7 @@
   become: false
   tags: [deploy]
   vars:
-    kubespray_version: "{{ kubespray_release | default('v2.24.1') }}"
+    kubespray_version: "{{ kubespray_release | default('v2.25.0') }}"
     kubespray_dir: "{{ kubespray_base_dir | default('/opt/fabric-cache/kubespray/src') }}"
     kubespray_inventory_dir: "{{ kubespray_dir }}/inventory/dc-lab"
     venv_dir: "/opt/fabric-cache/kubespray/venv"
@@ -517,6 +600,104 @@
         regexp: '^pipelining\s*='
         line: "pipelining = False"
         insertafter: '^\[ssh_connection\]'
+
+    - name: "Patch KubeSpray: Skip apt cache update (packages pre-installed in Phase 3)"
+      ansible.builtin.shell: |
+        set -e
+        TARGET=$(grep -rl "Update package management cache (APT)" \
+          {{ kubespray_dir }}/roles/kubernetes/preinstall/tasks/ 2>/dev/null | head -1)
+        if [ -z "$TARGET" ]; then
+          echo "SKIP: task file not found"
+          exit 0
+        fi
+        if grep -q "PATCHED_SKIP_APT_UPDATE" "$TARGET"; then
+          echo "SKIP: already patched"
+          exit 0
+        fi
+        # The actual kubespray task looks like:
+        #   - name: Update package management cache (APT)
+        #     apt:
+        #       update_cache: yes
+        #       cache_valid_time: 3600
+        #     when: ansible_os_family == "Debian"
+        #
+        # Replace the existing 'when:' line with 'when: false'
+        python3 -c "
+        import re, sys
+        target = sys.argv[1]
+        with open(target, 'r') as f:
+            content = f.read()
+        patched = re.sub(
+            r'(- name: Update package management cache \(APT\)\n'
+            r'  apt:\n'
+            r'    update_cache: (?:yes|true)\n'
+            r'    cache_valid_time: \d+\n)'
+            r'  when: .*',
+            r'\g<1>  when: false  # PATCHED_SKIP_APT_UPDATE — air-gapped, packages pre-installed',
+            content
+        )
+        if patched != content:
+            with open(target, 'w') as f:
+                f.write(patched)
+            print('DONE: patched ' + target)
+        else:
+            print('SKIP: pattern not matched in ' + target)
+        " "$TARGET"
+      args:
+        executable: /bin/bash
+      register: _apt_patch
+      changed_when: "'DONE' in _apt_patch.stdout"
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+
+    - name: "Patch KubeSpray: Skip 'Install packages requirements' (packages pre-installed in Phase 3)"
+      ansible.builtin.shell: |
+        set -e
+        TARGET={{ kubespray_dir }}/roles/kubernetes/preinstall/tasks/0070-system-packages.yml
+        if [ ! -f "$TARGET" ]; then
+          echo "SKIP: task file not found"
+          exit 0
+        fi
+        if grep -q "PATCHED_SKIP_PKG_INSTALL" "$TARGET"; then
+          echo "SKIP: already patched"
+          exit 0
+        fi
+        python3 -c "
+        import re, sys
+        target = sys.argv[1]
+        with open(target, 'r') as f:
+            content = f.read()
+        # The task uses 'package:' module with retries. Inject 'when: false' to replace its existing when clause.
+        patched = re.sub(
+            r'(- name: Install packages requirements\n(?:  \w[^\n]*\n)*?)  (register:)',
+            r'\g<1>  when: false  # PATCHED_SKIP_PKG_INSTALL — air-gapped, packages pre-installed in Phase 3\n  \g<2>',
+            content
+        )
+        if patched == content:
+            # Fallback: simpler pattern — just add when: false after the name line
+            patched = re.sub(
+                r'(- name: Install packages requirements\n)',
+                r'\g<1>  when: false  # PATCHED_SKIP_PKG_INSTALL — air-gapped, packages pre-installed in Phase 3\n',
+                content
+            )
+        if patched != content:
+            with open(target, 'w') as f:
+                f.write(patched)
+            print('DONE: patched ' + target)
+        else:
+            print('SKIP: pattern not matched in ' + target)
+        " "$TARGET"
+      args:
+        executable: /bin/bash
+      register: _pkg_patch
+      changed_when: "'DONE' in _pkg_patch.stdout"
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
+
+    - name: Display patch results
+      ansible.builtin.debug:
+        msg: |
+          apt-update patch: {{ _apt_patch.stdout | default('skipped') }}
+          pkg-install patch: {{ _pkg_patch.stdout | default('skipped') }}
+      when: automation_profile in ['ubuntu_r810_kvm', 'ubuntu_r620_kvm', 'win11_kvm']
 
     - name: Run KubeSpray cluster.yml
       ansible.builtin.shell: |

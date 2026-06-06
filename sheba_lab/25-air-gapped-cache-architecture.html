@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>25 — Air-Gapped Cache Architecture</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#c9d1d9;--heading:#f0f6fc;--accent:#58a6ff;--success:#3fb950;--warn:#d29922;--danger:#f85149;--code-bg:#1c2128;--table-alt:#1c2128}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding:2rem;max-width:1200px;margin:0 auto}
+h1{color:var(--heading);font-size:2rem;border-bottom:2px solid var(--accent);padding-bottom:.5rem;margin-bottom:1.5rem}
+h2{color:var(--accent);font-size:1.4rem;margin-top:2.5rem;margin-bottom:.8rem;border-left:4px solid var(--accent);padding-left:.8rem}
+h3{color:var(--heading);font-size:1.1rem;margin-top:1.5rem;margin-bottom:.5rem}
+h4{color:var(--text);font-size:1rem;margin-top:1.2rem;margin-bottom:.4rem}
+p{margin-bottom:.8rem}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+th{background:var(--surface);color:var(--accent);text-align:left;padding:.6rem .8rem;border:1px solid var(--border)}
+td{padding:.5rem .8rem;border:1px solid var(--border)}
+tr:nth-child(even){background:var(--table-alt)}
+code{background:var(--code-bg);padding:.15rem .4rem;border-radius:3px;font-size:.85rem;color:var(--success)}
+pre{background:var(--code-bg);padding:1rem;border-radius:6px;overflow-x:auto;margin:1rem 0;border:1px solid var(--border);color:var(--text)}
+pre code{padding:0;background:none;color:var(--text)}
+.warn{background:#d299221a;border:1px solid var(--warn);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.warn::before{content:"⚠ ";color:var(--warn);font-weight:bold}
+.success{background:#3fb9501a;border:1px solid var(--success);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.success::before{content:"✓ ";color:var(--success);font-weight:bold}
+.info{background:#58a6ff1a;border:1px solid var(--accent);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.info::before{content:"ℹ ";color:var(--accent);font-weight:bold}
+.danger{background:#f851491a;border:1px solid var(--danger);border-radius:6px;padding:.8rem 1rem;margin:1rem 0}
+.danger::before{content:"✗ ";color:var(--danger);font-weight:bold}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:12px;font-size:.75rem;font-weight:600}
+.badge-kvm{background:#3fb95033;color:var(--success)}
+.badge-hw{background:#58a6ff33;color:var(--accent)}
+.badge-both{background:#d299221a;color:var(--warn)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+ul,ol{margin:.5rem 0 1rem 1.5rem}
+li{margin-bottom:.3rem}
+</style>
+</head>
+<body>
+<h1>25 — Air-Gapped Cache Architecture</h1>
+
+<h2>Overview</h2>
+<p>Documents how the <code>/opt/fabric-cache/</code> directory (populated by <code>preflight_download.yml</code>) is consumed by every subsequent playbook in the deployment chain. All playbooks use a <strong>cache-first</strong> pattern: check for local artifacts before attempting internet downloads.</p>
+
+<table>
+<tr><th>Attribute</th><th>Value</th></tr>
+<tr><td>Scope</td><td>All deployment playbooks</td></tr>
+<tr><td>Category</td><td>Infrastructure Build</td></tr>
+<tr><td>Profiles</td><td><span class="badge badge-both">KVM + Real Hardware</span></td></tr>
+<tr><td>Prerequisites</td><td><code>preflight_download.yml</code> has been run with internet access</td></tr>
+<tr><td>Design Principle</td><td><strong>Never hit the internet if the cache has the artifact</strong></td></tr>
+</table>
+
+<hr>
+<h2>Architecture Diagram</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│  DEPLOYER (Lab-ControlNode / WSL2)                                   │
+│  /opt/fabric-cache/                                                  │
+│  ├── binaries/       helm, kubectl, cephadm, yq, k9s, argocd        │
+│  ├── helm-charts/    38+ .tgz chart tarballs                         │
+│  ├── images/         cirros, ubuntu cloud images                     │
+│  ├── apt-packages/   .deb files for offline apt                      │
+│  ├── pip-packages/   .whl files for offline pip                      │
+│  └── kubespray/                                                      │
+│      ├── src/        kubespray v2.25.0 git clone                     │
+│      ├── venv/       python venv with all deps                       │
+│      └── download-cache/  container images for download_localhost     │
+└──────────────┬──────────────────────────────────────────────────────┘
+               │  ansible.builtin.copy / scp / piped transfer
+               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  R810 HYPERVISOR (172.16.2.1)                                        │
+│  ├── NAT gateway for 172.16.2.0/24 → internet                       │
+│  ├── ip_forward=1 + iptables MASQUERADE                              │
+│  └── tinyproxy @ :8888 (available but NOT required)                  │
+└──────────────┬──────────────────────────────────────────────────────┘
+               │  default via 172.16.2.1 (set by Phase 3 netplan)
+               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  TARGET NODES (KVM VMs on R810)                                      │
+│  172.16.2.0/24 — Internet via R810 NAT + default gateway             │
+│                                                                      │
+│  Default route: via 172.16.2.1 dev enp1s0 (set by deploy_kubespray) │
+│  DNS: 8.8.8.8, 1.1.1.1 (set via netplan)                            │
+│  /tmp/infra-charts/*.tgz      ──→ helm install source                │
+│  /tmp/sdlc-charts/*.tgz       ──→ helm install source                │
+│  /tmp/monitoring-charts/*.tgz ──→ helm install source                │
+│  /usr/local/bin/helm          ──→ from /opt/fabric-cache/binaries/   │
+│  /usr/local/bin/cephadm       ──→ from /opt/fabric-cache/binaries/   │
+└─────────────────────────────────────────────────────────────────────┘</code></pre>
+
+<hr>
+<h2>Network Connectivity for KVM Nodes</h2>
+
+<h3>The Default Gateway Problem (Critical)</h3>
+<div class="danger">KVM guest VMs are provisioned <strong>without a default gateway</strong>. Without <code>default via 172.16.2.1</code>, nodes cannot reach any IP outside 172.16.2.0/24, cannot resolve DNS, and apt-get fails.</div>
+
+<p>The routing table on a freshly provisioned KVM node shows only:</p>
+<pre><code>172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.40</code></pre>
+
+<p>Without <code>default via 172.16.2.1</code>, the nodes:</p>
+<ul>
+<li>❌ Cannot reach ANY IP outside 172.16.2.0/24</li>
+<li>❌ Cannot ping 8.8.8.8 ("Network is unreachable")</li>
+<li>❌ Cannot resolve DNS (systemd-resolved can't reach upstream forwarders)</li>
+<li>❌ apt-get fails with "Temporary failure resolving archive.ubuntu.com"</li>
+<li>✅ CAN reach 172.16.2.1 (R810 hypervisor) on the local subnet</li>
+</ul>
+
+<h3>Why Tinyproxy Alone Didn't Work</h3>
+<div class="warn">Even though tinyproxy at 172.16.2.1:8888 is reachable from the local subnet, apt still fails because it requires working DNS BEFORE connecting to the proxy.</div>
+
+<p>We originally tried using tinyproxy on R810 (172.16.2.1:8888) as the sole internet path. This was configured via <code>/etc/apt/apt.conf.d/90proxy</code>:</p>
+<pre><code>Acquire::http::Proxy "http://172.16.2.1:8888";
+Acquire::https::Proxy "http://172.16.2.1:8888";</code></pre>
+
+<p><strong>This failed despite the proxy being reachable on the local subnet.</strong> Root cause:</p>
+<ol>
+<li><strong>apt's HTTP method still performs DNS resolution</strong> — Even with <code>Acquire::http::Proxy</code> configured, apt's internal HTTP client attempts to resolve the target hostname (<code>archive.ubuntu.com</code>) via the system DNS before initiating the proxy connection. This is a known behavior in apt's acquire subsystem.</li>
+<li><strong>systemd-resolved has no path to upstream DNS</strong> — The nodes' systemd-resolved service needs to reach an upstream DNS server (like 8.8.8.8). Without a default gateway, it cannot forward DNS queries.</li>
+<li><strong>apt aborts before reaching the proxy</strong> — When hostname resolution fails, apt reports "Temporary failure resolving" and never actually sends the request through the proxy.</li>
+<li><strong>KubeSpray's package module amplifies the problem</strong> — KubeSpray retries 4 times with random delays, turning a simple failure into a 47-minute hang.</li>
+</ol>
+
+<div class="info"><strong>TL;DR</strong>: A tinyproxy cannot substitute for a default gateway. apt requires working DNS even when a proxy is configured. DNS requires network reachability to upstream resolvers. Reachability requires a default route.</div>
+
+<h3>The Correct Fix: Default Gateway via R810</h3>
+<p>R810 already performs NAT for 172.16.2.0/24. Adding <code>default via 172.16.2.1</code> on any node immediately gives it full internet. Phase 3 of <code>deploy_kubespray.yml</code> now automates this:</p>
+<pre><code># 1. Add temporary default route (immediate effect)
+sudo ip route add default via 172.16.2.1 dev enp1s0
+
+# 2. Make permanent via netplan (survives reboot)
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+        - 172.16.2.40/24
+      routes:
+        - to: default
+          via: 172.16.2.1
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 1.1.1.1
+
+# 3. Verify connectivity
+ping -c 1 -W 3 8.8.8.8  # Must succeed before proceeding</code></pre>
+
+<h3>When Is Tinyproxy Still Useful?</h3>
+<ul>
+<li><strong>Environments where NAT is not available</strong> on the hypervisor (strict corporate firewalls)</li>
+<li><strong>Selective access control</strong> (Allow/Deny lists for specific subnets)</li>
+<li><strong>Traffic auditing</strong> (tinyproxy logs all proxied requests)</li>
+</ul>
+<p>But it is <strong>NOT a replacement for basic L3 connectivity</strong>. Nodes need either a default gateway (preferred) or a SOCKS5 proxy + DNS proxy (complex, fragile).</p>
+
+<hr>
+<h2>KubeSpray Patches (Air-Gapped Safety)</h2>
+<p>Even with internet access via the default gateway, we patch KubeSpray to skip apt operations as a safety net:</p>
+<pre><code># Patched in Phase 4 of deploy_kubespray.yml:
+- name: Update package management cache (APT)
+  when: false  # PATCHED_SKIP_APT_UPDATE — packages pre-installed in Phase 3
+
+- name: Install packages requirements
+  when: false  # PATCHED_SKIP_PKG_INSTALL — packages pre-installed in Phase 3</code></pre>
+<p>Phase 3 pre-installs ALL packages KubeSpray needs (from <code>roles/kubernetes/preinstall/vars/main.yml</code>), making KubeSpray's own package installation redundant.</p>
+
+<hr>
+<h2>Cache-First Pattern</h2>
+
+<h3>Helm Chart Install Pattern</h3>
+<p>Every helm install task follows this shell pattern:</p>
+<pre><code>CHART_SRC=$(ls /tmp/&lt;stage&gt;-charts/&lt;chartname&gt;-*.tgz 2&gt;/dev/null | head -1)
+if [ -z "$CHART_SRC" ]; then
+  CHART_SRC="&lt;repo&gt;/&lt;chart&gt;"     # online fallback
+fi
+helm upgrade --install &lt;release&gt; "$CHART_SRC" \
+  --namespace &lt;ns&gt; --values &lt;values&gt; --wait</code></pre>
+
+<h3>Binary Install Pattern</h3>
+<pre><code>if [ -f /opt/fabric-cache/binaries/&lt;binary&gt; ]; then
+  cp /opt/fabric-cache/binaries/&lt;binary&gt; /usr/local/bin/&lt;binary&gt;
+  chmod 0755 /usr/local/bin/&lt;binary&gt;
+elif &lt;fallback-curl&gt;; then
+  ...  # internet fallback
+fi</code></pre>
+
+<hr>
+<h2>Proxy Configuration (KVM Profiles) — DEPRECATED</h2>
+
+<div class="danger"><strong>SUPERSEDED</strong>: The tinyproxy approach has been replaced by the default gateway fix. See "Network Connectivity for KVM Nodes" above. The <code>90proxy</code> file is now <strong>removed</strong> by Phase 3 since nodes have direct internet via R810 NAT.</div>
+
+<p><del>For KVM-based air-gapped nodes, apt proxy was configured before any <code>apt-get update</code>:</del></p>
+<pre><code># /etc/apt/apt.conf.d/90proxy (NO LONGER USED)
+Acquire::http::Proxy "http://172.16.2.1:8888";
+Acquire::https::Proxy "http://172.16.2.1:8888";</code></pre>
+
+<p><strong>Why it failed</strong>: See "Why Tinyproxy Alone Didn't Work" section above.</p>
+
+<hr>
+<h2>Playbook-by-Playbook Cache Usage</h2>
+
+<table>
+<tr><th>#</th><th>Playbook</th><th>Helm Charts</th><th>Binaries</th><th>Network</th></tr>
+<tr><td>01</td><td><code>preflight_download.yml</code></td><td>Downloads all → cache</td><td>Downloads all → cache</td><td>N/A (deployer)</td></tr>
+<tr><td>12</td><td><code>deploy_kubespray.yml</code></td><td>via KubeSpray download_localhost</td><td>helm from cache</td><td>✅ default gw + netplan</td></tr>
+<tr><td>12b</td><td>MetalLB (role)</td><td><code>metallb-*.tgz</code> from cache</td><td>—</td><td>—</td></tr>
+<tr><td>13</td><td><code>deploy_ceph_rook.yml</code></td><td>rook-ceph from cache</td><td>cephadm from cache</td><td>—</td></tr>
+<tr><td>14</td><td><code>deploy_postgresql.yml</code></td><td>postgresql from cache</td><td>helm from cache</td><td>—</td></tr>
+<tr><td>15</td><td>OpenStack Helm (role)</td><td>All OSH charts → <code>/tmp/osh-charts/</code></td><td>helm-diff from cache</td><td>—</td></tr>
+<tr><td>16</td><td><code>extend_topology.yml</code></td><td>—</td><td>cephadm from cache</td><td>✅ default gw</td></tr>
+<tr><td>—</td><td><code>deploy_maas.yml</code></td><td>maas chart from cache</td><td>—</td><td>—</td></tr>
+<tr><td>—</td><td><code>deploy_sheba_infra_services.yml</code></td><td>6 charts → <code>/tmp/infra-charts/</code></td><td>—</td><td>—</td></tr>
+<tr><td>—</td><td><code>deploy_sheba_sdlc_services.yml</code></td><td>7 charts → <code>/tmp/sdlc-charts/</code></td><td>—</td><td>—</td></tr>
+<tr><td>—</td><td>Monitoring (role)</td><td>prometheus-stack → <code>/tmp/monitoring-charts/</code></td><td>—</td><td>—</td></tr>
+</table>
+
+<div class="success">All playbooks now check the local cache before attempting any internet download. The deployment can run fully offline once preflight_download.yml has been completed.</div>
+
+<hr>
+<h2>Preflight Download — Complete Artifact Inventory</h2>
+
+<h3>Binaries (<code>/opt/fabric-cache/binaries/</code>)</h3>
+<table>
+<tr><th>Binary</th><th>Version</th><th>Used By</th></tr>
+<tr><td><code>helm</code></td><td>latest</td><td>deploy_kubespray, deploy_postgresql, all helm playbooks</td></tr>
+<tr><td><code>kubectl</code></td><td>matches kubespray</td><td>deploy_kubespray</td></tr>
+<tr><td><code>cephadm</code></td><td>reef</td><td>deploy_ceph_rook, extend_topology</td></tr>
+<tr><td><code>yq</code></td><td>v4.x</td><td>inventory generation</td></tr>
+<tr><td><code>k9s</code></td><td>latest</td><td>operator tooling</td></tr>
+<tr><td><code>argocd</code></td><td>latest</td><td>argocd CLI</td></tr>
+<tr><td><code>packer</code></td><td>latest</td><td>build_packer_images</td></tr>
+<tr><td><code>node_exporter</code></td><td>latest</td><td>monitoring</td></tr>
+<tr><td><code>prometheus</code></td><td>latest</td><td>monitoring</td></tr>
+<tr><td><code>alertmanager</code></td><td>latest</td><td>monitoring</td></tr>
+</table>
+
+<h3>Helm Charts (<code>/opt/fabric-cache/helm-charts/</code>)</h3>
+<table>
+<tr><th>Chart</th><th>Consumer Playbook</th></tr>
+<tr><td><code>postgresql-*.tgz</code></td><td>deploy_postgresql, deploy_sheba_infra_services</td></tr>
+<tr><td><code>postgresql-ha-*.tgz</code></td><td>HA PostgreSQL deployments</td></tr>
+<tr><td><code>redis-*.tgz</code></td><td>deploy_sheba_infra_services</td></tr>
+<tr><td><code>metallb-*.tgz</code></td><td>roles/metallb</td></tr>
+<tr><td><code>rook-ceph-*.tgz</code></td><td>deploy_ceph_rook</td></tr>
+<tr><td><code>kube-prometheus-stack-*.tgz</code></td><td>roles/monitoring</td></tr>
+<tr><td><code>grafana-*.tgz</code></td><td>deploy_sheba_sdlc_services, roles/monitoring</td></tr>
+<tr><td><code>loki-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>tempo-*.tgz</code></td><td>roles/monitoring</td></tr>
+<tr><td><code>promtail-*.tgz</code></td><td>roles/monitoring</td></tr>
+<tr><td><code>ingress-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>mariadb-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>rabbitmq-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>memcached-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>keystone-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>glance-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>cinder-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>placement-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>nova-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>neutron-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>horizon-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>heat-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>openvswitch-*.tgz</code></td><td>roles/openstack_helm</td></tr>
+<tr><td><code>cert-manager-*.tgz</code></td><td>cert management</td></tr>
+<tr><td><code>gitea-*.tgz</code></td><td>deploy_sheba_infra_services</td></tr>
+<tr><td><code>harbor-*.tgz</code></td><td>deploy_sheba_infra_services</td></tr>
+<tr><td><code>openbao-*.tgz</code></td><td>deploy_sheba_infra_services</td></tr>
+<tr><td><code>minio-*.tgz</code></td><td>deploy_sheba_infra_services</td></tr>
+<tr><td><code>plane-ce-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>argo-cd-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>sonarqube-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>mattermost-team-edition-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>jaeger-*.tgz</code></td><td>deploy_sheba_sdlc_services</td></tr>
+<tr><td><code>maas-*.tgz</code></td><td>deploy_maas</td></tr>
+</table>
+
+<h3>APT Packages (<code>/opt/fabric-cache/apt-packages/</code>)</h3>
+<ul>
+<li><code>conntrack</code>, <code>socat</code>, <code>ipset</code>, <code>ipvsadm</code>, <code>libipset13</code></li>
+<li><code>openvswitch-switch</code>, <code>frr</code>, <code>frr-pythontools</code>, <code>lldpd</code></li>
+<li><code>qemu-kvm</code>, <code>libvirt-daemon-system</code>, <code>chrony</code></li>
+<li><code>apt-transport-https</code>, <code>ca-certificates</code>, <code>curl</code></li>
+<li><code>lvm2</code>, <code>gdisk</code> (Ceph OSD prerequisites)</li>
+</ul>
+
+<h3>Pip Packages (<code>/opt/fabric-cache/pip-packages/</code>)</h3>
+<ul>
+<li><code>kolla-ansible</code>, <code>python-openstackclient</code>, <code>python-heatclient</code></li>
+<li><code>docker</code>, <code>ansible-core</code>, <code>netaddr</code>, <code>jinja2</code></li>
+</ul>
+
+<hr>
+<h2>KubeSpray Offline Mode</h2>
+
+<p>KubeSpray uses a special mechanism configured via <code>kubespray_all.yml.j2</code>:</p>
+<pre><code>download_localhost: true          # Download images ON deployer
+download_cache_dir: /opt/fabric-cache/kubespray/download-cache
+download_force_cache: true        # Always prefer cache over pull
+
+# Proxy for nodes (containerd pulls, etc.)
+http_proxy: "http://172.16.2.1:8888"
+https_proxy: "http://172.16.2.1:8888"</code></pre>
+
+<div class="info"><strong>Key Insight:</strong> The <code>http_proxy</code> env vars in KubeSpray's all.yml work for container runtime (containerd/docker) but <em>NOT</em> for Ansible's <code>apt</code> module. That's why we additionally write <code>/etc/apt/apt.conf.d/90proxy</code> on all nodes in Phase 3.</div>
+
+<hr>
+<h2>Troubleshooting</h2>
+
+<h3><code>apt-get update</code> hangs for 60+ minutes / "Temporary failure resolving"</h3>
+<div class="danger">KVM nodes have no default gateway → no DNS → no internet. Tinyproxy alone is NOT sufficient.</div>
+<p><strong>Cause:</strong> Nodes can't reach ANY IP outside 172.16.2.0/24 — no default route configured.</p>
+<p><strong>Fix:</strong> Ensure the "Ensure default gateway is set" and "Make default gateway permanent via netplan" tasks run in Phase 3. Verify: <code>ssh &lt;node&gt; "ping -c 1 8.8.8.8"</code></p>
+
+<h3>KubeSpray's "Install packages requirements" fails with DNS errors</h3>
+<div class="warn">Same root cause — no default gateway. Even with <code>Acquire::http::Proxy</code> configured, apt still needs working DNS.</div>
+<p><strong>Fix:</strong> Default gateway fix (above). Phase 3 now pre-installs all KubeSpray-required packages and Phase 4 patches KubeSpray to skip its own package installation.</p>
+
+<h3>Helm chart not found in cache</h3>
+<p><strong>Cause:</strong> <code>preflight_download.yml</code> was run without the relevant tag, or chart name doesn't match the glob pattern.</p>
+<p><strong>Fix:</strong> Re-run preflight with the specific tag:</p>
+<pre><code>ansible-playbook preflight_download.yml --tags helm_charts -v
+# Verify:
+ls /opt/fabric-cache/helm-charts/&lt;name&gt;-*.tgz</code></pre>
+
+<h3>Binary not in <code>/opt/fabric-cache/binaries/</code></h3>
+<p><strong>Cause:</strong> Preflight skipped binary download or version mismatch.</p>
+<p><strong>Fix:</strong></p>
+<pre><code>ansible-playbook preflight_download.yml --tags binaries -v</code></pre>
+
+<h3><code>helm repo add</code> still runs despite cache being present</h3>
+<p><strong>Cause:</strong> The <code>delegate_to: localhost</code> find task can't see <code>/opt/fabric-cache/helm-charts/</code> (wrong path or permissions).</p>
+<p><strong>Fix:</strong></p>
+<pre><code>ls /opt/fabric-cache/helm-charts/*.tgz | wc -l
+# Should return > 0</code></pre>
+
+<hr>
+<h2>Design Decisions</h2>
+
+<table>
+<tr><th>#</th><th>Decision</th><th>Rationale</th></tr>
+<tr><td>1</td><td>Cache on deployer, copy to nodes</td><td>Avoids needing shared NFS or direct internet from nodes</td></tr>
+<tr><td>2</td><td><code>delegate_to: localhost</code> for discovery</td><td>The deployer always has the cache; nodes may not</td></tr>
+<tr><td>3</td><td>Glob matching for chart versions</td><td><code>postgresql-*.tgz</code> allows version bumps without playbook edits</td></tr>
+<tr><td>4</td><td>Conditional <code>helm repo add</code></td><td>Only hits internet if no cache found (graceful degradation)</td></tr>
+<tr><td>5</td><td>Separate staging dirs per playbook</td><td><code>/tmp/infra-charts/</code>, <code>/tmp/sdlc-charts/</code>, <code>/tmp/monitoring-charts/</code>, <code>/tmp/osh-charts/</code> prevent collisions</td></tr>
+<tr><td>6</td><td>apt proxy via file, not env var</td><td>Ansible's <code>apt</code> module respects <code>/etc/apt/apt.conf.d/</code> but ignores <code>http_proxy</code></td></tr>
+</table>
+
+</body>
+</html>
