@@ -1,230 +1,3 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ sudo apt update
-[sudo] password for nh1221:
-Get:1 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
-Hit:2 http://archive.ubuntu.com/ubuntu noble InRelease
-Get:3 http://security.ubuntu.com/ubuntu noble-security/main amd64 Components [42.4 kB]
-Get:4 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
-Get:5 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Components [74.2 kB]
-Get:6 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
-Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [2064 kB]
-Get:8 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [177 kB]
-Get:9 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Components [386 kB]
-Get:10 http://archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Components [940 B]
-Get:11 http://archive.ubuntu.com/ubuntu noble-backports/main amd64 Components [5764 B]
-Get:12 http://archive.ubuntu.com/ubuntu noble-backports/universe amd64 Components [10.5 kB]
-Fetched 3140 kB in 3s (939 kB/s)
-Reading package lists... Done
-Building dependency tree... Done
-Reading state information... Done
-63 packages can be upgraded. Run 'apt list --upgradable' to see them.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ sudo mkdir -p /opt/fabric-cache/apt-packages
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ls -al /opt/fabric-cache/apt-packages
-total 145744
-drwxr-xr-x  2 root root      4096 May 31 18:52 .
-drwxr-xr-x 10 root root      4096 May 31 18:22 ..
--rw-r--r--  1 root root     19566 Jun  5  2022 cloud-image-utils_0.33-1_all.deb
--rw-r--r--  1 root root    226530 May  4 06:42 curl_8.5.0-2ubuntu10.9_amd64.deb
--rw-r--r--  1 root root    705428 Apr  8  2024 freeipmi-tools_1.6.13-3_amd64.deb
--rw-r--r--  1 root root    377720 Apr  3  2024 genisoimage_9%3a1.1.11-3.5_amd64.deb
--rw-r--r--  1 root root 114840406 May 31 18:52 grafana_11.0.0_amd64.deb
--rw-r--r--  1 root root   2030482 Jun 13  2025 ipmitool_1.8.19-7ubuntu0.24.04.3_amd64.deb
--rw-r--r--  1 root root     65694 Apr 23 00:54 jq_1.7.1-3ubuntu0.24.04.2_amd64.deb
--rw-r--r--  1 root root    152208 May 21 15:33 libpq-dev_16.14-0ubuntu0.24.04.1_amd64.deb
--rw-r--r--  1 root root    438346 Mar 19 12:25 libvirt-clients_10.0.0-2ubuntu8.13_amd64.deb
--rw-r--r--  1 root root  15587994 May 21 15:33 postgresql-16_16.14-0ubuntu0.24.04.1_amd64.deb
--rw-r--r--  1 root root   1299716 May 21 15:33 postgresql-client-16_16.14-0ubuntu0.24.04.1_amd64.deb
--rw-r--r--  1 root root  11222394 Apr  9 13:11 qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.16_amd64.deb
--rw-r--r--  1 root root   2221912 Apr  9 13:11 qemu-utils_1%3a8.2.2+ds-0ubuntu1.16_amd64.deb
--rw-r--r--  1 root root      9292 Jan  1  2021 wakeonlan_0.41-12.1_all.deb
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cd /opt/fabric-cache/apt-packages
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ sudo apt-get download conntrack socat ipset ipvsadm lsb-release apt-transport-https ca-certificates curl gnupg
-Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 ca-certificates all 20240203 [159 kB]
-Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1 [37.9 kB]
-Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2 [32.6 kB]
-Get:4 http://archive.ubuntu.com/ubuntu noble/main amd64 lsb-release all 12.0-2 [6564 B]
-Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3 [374 kB]
-Get:6 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 gnupg all 2.4.4-2ubuntu17.4 [359 kB]
-Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1 [40.3 kB]
-Get:8 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3 [3970 B]
-Fetched 1013 kB in 1s (1071 kB/s)
-W: Download is performed unsandboxed as root as file '/opt/fabric-cache/apt-packages/ca-certificates_20240203_all.deb' couldn't be accessed by user '_apt'. - pkgAcquire::Run (13: Permission denied)
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ apt-cache depends --recurse --no-recommends --no-suggests \
-  --no-conflicts --no-breaks --no-replaces --no-enhances \
-  conntrack socat ipset ipvsadm | \
-  grep "^\w" | sort -u | \
-  xargs sudo apt-get download -o Dir::Cache::archives=/opt/fabric-cache/apt-packages/ 2>/dev/null || true
-Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2 [61.5 kB]
-Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 libmnl0 amd64 1.0.5-2build1 [12.3 kB]
-Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libnetfilter-conntrack3 amd64 1.0.9-6build1 [45.2 kB]
-Get:4 http://archive.ubuntu.com/ubuntu noble/main amd64 libnfnetlink0 amd64 1.0.2-2build1 [14.8 kB]
-Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 libpopt0 amd64 1.19+dfsg-1build1 [28.6 kB]
-Get:6 http://archive.ubuntu.com/ubuntu noble/main amd64 libwrap0 amd64 7.6.q-33 [47.9 kB]
-Get:7 http://archive.ubuntu.com/ubuntu noble/main amd64 lsb-base all 11.6 [4606 B]
-Get:8 http://archive.ubuntu.com/ubuntu noble/main amd64 sysvinit-utils amd64 3.08-6ubuntu3 [34.2 kB]
-Get:9 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 gcc-14-base amd64 14.2.0-4ubuntu2~24.04.1 [51.0 kB]
-Get:10 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libc6 amd64 2.39-0ubuntu8.7 [3263 kB]
-Get:11 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libgcc-s1 amd64 14.2.0-4ubuntu2~24.04.1 [78.4 kB]
-Get:12 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnl-3-200 amd64 3.7.0-0.3build1.1 [55.7 kB]
-Get:13 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnl-genl-3-200 amd64 3.7.0-0.3build1.1 [12.2 kB]
-Get:14 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libssl3t64 amd64 3.0.13-0ubuntu3.9 [1941 kB]
-Fetched 5651 kB in 4s (1339 kB/s)
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ ls /opt/fabric-cache/apt-packages/*.deb | wc -l
-36
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ sudo apt install -y conntrack socat ipset ipvsadm
-Reading package lists... Done
-Building dependency tree... Done
-Reading state information... Done
-The following package was automatically installed and is no longer required:
-  libllvm19
-Use 'sudo apt autoremove' to remove it.
-The following additional packages will be installed:
-  libipset13 libnl-3-200 libnl-genl-3-200 libwrap0
-Suggested packages:
-  heartbeat keepalived ldirectord
-The following NEW packages will be installed:
-  conntrack ipset ipvsadm libipset13 libnl-3-200 libnl-genl-3-200 libwrap0 socat
-0 upgraded, 8 newly installed, 0 to remove and 63 not upgraded.
-Need to get 662 kB of archives.
-After this operation, 2607 kB of additional disk space will be used.
-Get:1 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnl-3-200 amd64 3.7.0-0.3build1.1 [55.7 kB]
-Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1 [37.9 kB]
-Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2 [61.5 kB]
-Get:4 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 libnl-genl-3-200 amd64 3.7.0-0.3build1.1 [12.2 kB]
-Get:5 http://archive.ubuntu.com/ubuntu noble/main amd64 libwrap0 amd64 7.6.q-33 [47.9 kB]
-Get:6 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2 [32.6 kB]
-Get:7 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1 [40.3 kB]
-Get:8 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3 [374 kB]
-Fetched 662 kB in 1s (774 kB/s)
-Selecting previously unselected package libnl-3-200:amd64.
-(Reading database ... 48186 files and directories currently installed.)
-Preparing to unpack .../0-libnl-3-200_3.7.0-0.3build1.1_amd64.deb ...
-Unpacking libnl-3-200:amd64 (3.7.0-0.3build1.1) ...
-Selecting previously unselected package conntrack.
-Preparing to unpack .../1-conntrack_1%3a1.4.8-1ubuntu1_amd64.deb ...
-Unpacking conntrack (1:1.4.8-1ubuntu1) ...
-Selecting previously unselected package libipset13:amd64.
-Preparing to unpack .../2-libipset13_7.19-1ubuntu2_amd64.deb ...
-Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
-Selecting previously unselected package libnl-genl-3-200:amd64.
-Preparing to unpack .../3-libnl-genl-3-200_3.7.0-0.3build1.1_amd64.deb ...
-Unpacking libnl-genl-3-200:amd64 (3.7.0-0.3build1.1) ...
-Selecting previously unselected package libwrap0:amd64.
-Preparing to unpack .../4-libwrap0_7.6.q-33_amd64.deb ...
-Unpacking libwrap0:amd64 (7.6.q-33) ...
-Selecting previously unselected package ipset.
-Preparing to unpack .../5-ipset_7.19-1ubuntu2_amd64.deb ...
-Unpacking ipset (7.19-1ubuntu2) ...
-Selecting previously unselected package ipvsadm.
-Preparing to unpack .../6-ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb ...
-Unpacking ipvsadm (1:1.31-1ubuntu0.1) ...
-Selecting previously unselected package socat.
-Preparing to unpack .../7-socat_1.8.0.0-4build3_amd64.deb ...
-Unpacking socat (1.8.0.0-4build3) ...
-Setting up conntrack (1:1.4.8-1ubuntu1) ...
-Setting up libwrap0:amd64 (7.6.q-33) ...
-Setting up socat (1.8.0.0-4build3) ...
-Setting up libipset13:amd64 (7.19-1ubuntu2) ...
-Setting up libnl-3-200:amd64 (3.7.0-0.3build1.1) ...
-Setting up ipset (7.19-1ubuntu2) ...
-Setting up libnl-genl-3-200:amd64 (3.7.0-0.3build1.1) ...
-Setting up ipvsadm (1:1.31-1ubuntu0.1) ...
-Processing triggers for man-db (2.12.0-4build2) ...
-Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ sudo cp /var/cache/apt/archives/{conntrack,socat,ipset,ipvsadm,libipset*,libnetfilter*}*.deb \
-  /opt/fabric-cache/apt-packages/ 2>/dev/null || true
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ ls /opt/fabric-cache/apt-packages/
-apt-transport-https_2.8.3_all.deb              grafana_11.0.0_amd64.deb                     libnetfilter-conntrack3_1.0.9-6build1_amd64.deb  lsb-base_11.6_all.deb
-ca-certificates_20240203_all.deb               ipmitool_1.8.19-7ubuntu0.24.04.3_amd64.deb   libnfnetlink0_1.0.2-2build1_amd64.deb            lsb-release_12.0-2_all.deb
-cloud-image-utils_0.33-1_all.deb               ipset_7.19-1ubuntu2_amd64.deb                libnl-3-200_3.7.0-0.3build1.1_amd64.deb          postgresql-16_16.14-0ubuntu0.24.04.1_amd64.deb
-conntrack_1%3a1.4.8-1ubuntu1_amd64.deb         ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb        libnl-genl-3-200_3.7.0-0.3build1.1_amd64.deb     postgresql-client-16_16.14-0ubuntu0.24.04.1_amd64.deb
-curl_8.5.0-2ubuntu10.9_amd64.deb               jq_1.7.1-3ubuntu0.24.04.2_amd64.deb          libpopt0_1.19+dfsg-1build1_amd64.deb             qemu-system-x86_1%3a8.2.2+ds-0ubuntu1.16_amd64.deb
-freeipmi-tools_1.6.13-3_amd64.deb              libc6_2.39-0ubuntu8.7_amd64.deb              libpq-dev_16.14-0ubuntu0.24.04.1_amd64.deb       qemu-utils_1%3a8.2.2+ds-0ubuntu1.16_amd64.deb
-gcc-14-base_14.2.0-4ubuntu2~24.04.1_amd64.deb  libgcc-s1_14.2.0-4ubuntu2~24.04.1_amd64.deb  libssl3t64_3.0.13-0ubuntu3.9_amd64.deb           socat_1.8.0.0-4build3_amd64.deb
-genisoimage_9%3a1.1.11-3.5_amd64.deb           libipset13_7.19-1ubuntu2_amd64.deb           libvirt-clients_10.0.0-2ubuntu8.13_amd64.deb     sysvinit-utils_3.08-6ubuntu3_amd64.deb
-gnupg_2.4.4-2ubuntu17.4_all.deb                libmnl0_1.0.5-2build1_amd64.deb              libwrap0_7.6.q-33_amd64.deb                      wakeonlan_0.41-12.1_all.deb
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$
-(venv) nh1221@Lab-ControlNode:/opt/fabric-cache/apt-packages$ cd /mnt/c/Users/nh1221/data-center/_v3
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/preflight_download.yml --tags apt_cache
-
-PLAY [Preflight Download: Stage all deployment artifacts to /opt/fabric-cache/] *********************************************************************************************************************************
-
-TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [Create cache directories] *********************************************************************************************************************************************************************************
-ok: [localhost] => (item=/opt/fabric-cache/binaries)
-ok: [localhost] => (item=/opt/fabric-cache/images)
-ok: [localhost] => (item=/opt/fabric-cache/kubespray)
-ok: [localhost] => (item=/opt/fabric-cache/kubespray/src)
-ok: [localhost] => (item=/opt/fabric-cache/kubespray/venv)
-ok: [localhost] => (item=/opt/fabric-cache/kubespray/download-cache)
-ok: [localhost] => (item=/opt/fabric-cache/maas)
-ok: [localhost] => (item=/opt/fabric-cache/helm-charts)
-ok: [localhost] => (item=/opt/fabric-cache/apt-packages)
-ok: [localhost] => (item=/opt/fabric-cache/pip-packages)
-
-TASK [apt | Download .deb packages to cache (requires apt on deployer)] *****************************************************************************************************************************************
-ok: [localhost]
-
-TASK [summary | Report cache contents] **************************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [summary | Display] ****************************************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg:
-    - === /opt/fabric-cache/ contents ===
-    - ''
-    - '--- binaries/ ---'
-    - total 492M
-    - -rw-r--r-- 1 root root  30M May 31 18:52 alertmanager-0.27.0.linux-amd64.tar.gz
-    - -rwxr-xr-x 1 root root 155M May 31 18:22 argocd-v2.11.3
-    - -rwxr-xr-x 1 root root 208K May 31 18:32 cephadm-18.2.2
-    - -rwxr-xr-x 1 1001  127  49M Apr 10  2024 helm
-    - -rw-r--r-- 1 root root  29M May 31 18:22 k9s-v0.32.4.tar.gz
-    - -rwxr-xr-x 1 root root  48M May 31 18:22 kubectl-v1.29.4
-    - -rw-r--r-- 1 root root  22M May 31 18:52 loki-3.0.0-linux-amd64.zip
-    - -rw-r--r-- 1 root root  11M May 31 18:52 node_exporter-1.8.1.linux-amd64.tar.gz
-    - -rw-r--r-- 1 root root  16M May 31 18:50 packer_1.10.3_linux_amd64.zip
-    - -rw-r--r-- 1 root root 100M May 31 18:52 prometheus-2.52.0.linux-amd64.tar.gz
-    - -rw-r--r-- 1 root root  27M May 31 18:53 promtail-3.0.0-linux-amd64.zip
-    - -rwxr-xr-x 1 root root 9.6M May 31 18:22 yq-v4.44.1
-    - ''
-    - '--- images/ ---'
-    - total 1.3G
-    - -rw-r--r-- 1 root root    0 May 31 18:22 cirros-0.6.2-x86_64-disk.img
-    - -rw-r--r-- 1 root root 663M May 31 18:33 ubuntu-22.04-server-cloudimg-amd64.img
-    - -rw-r--r-- 1 root root 599M May 31 18:50 ubuntu-24.04-server-cloudimg-amd64.img
-    - ''
-    - '--- kubespray/ ---'
-    - "1.1G\t/opt/fabric-cache/kubespray/"
-    - ''
-    - '--- helm-charts/ ---'
-    - 27 charts cached
-    - ''
-    - '--- apt-packages/ ---'
-    - 36 .deb files cached
-    - ''
-    - '--- pip-packages/ ---'
-    - 84 pip wheels cached
-    - ''
-    - 'Total cache size: 3.8G'
-
-TASK [summary | Collect failed downloads] ***********************************************************************************************************************************************************************
-ok: [localhost]
-
-TASK [summary | Report failed downloads (if any)] ***************************************************************************************************************************************************************
-skipping: [localhost]
-
-TASK [summary | All downloads succeeded] ************************************************************************************************************************************************************************
-ok: [localhost] =>
-    msg: ✅ All preflight downloads completed successfully.
-
-PLAY RECAP ******************************************************************************************************************************************************************************************************
-localhost                  : ok=7    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml -v
 Using /mnt/c/Users/nh1221/data-center/_v3/ansible.cfg as config file
 
@@ -373,6 +146,48 @@ ok: [localhost] =>
     state: directory
     uid: 0
 
+TASK [Verify tinyproxy is reachable on R810 hypervisor (air-gapped proxy)] **************************************************************************************************************************************
+ok: [localhost] =>
+    body: |-
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+        <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+
+        <head>
+        <title>403 Access denied</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        </head>
+
+        <body>
+
+        <h1>Access denied</h1>
+
+        <p>The administrator of this proxy has not configured it to service requests from your host.</p>
+
+        <hr />
+
+        <p><em>Generated by <a href="https://tinyproxy.github.io/">tinyproxy</a>.</em></p>
+
+        </body>
+
+        </html>
+    changed: false
+    connection: close
+    content_type: text/html
+    elapsed: 0
+    failed_when_result: false
+    msg: 'HTTP Error 403: Access denied'
+    redirected: false
+    server: tinyproxy
+    status: 403
+    url: http://R810:8888
+
+TASK [Warn if tinyproxy not reachable on R810] ******************************************************************************************************************************************************************
+skipping: [localhost] =>
+    false_condition: _proxy_check is failed or (_proxy_check.status | default(-1)) ==
+        -1
+
 TASK [Install Helm binary on deployer] **************************************************************************************************************************************************************************
 ok: [localhost] =>
     changed: false
@@ -381,11 +196,11 @@ ok: [localhost] =>
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
         fi
         helm version --short
-    delta: '0:00:00.630356'
-    end: '2026-06-05 21:59:31.767817'
+    delta: '0:00:00.480945'
+    end: '2026-06-06 08:51:43.762782'
     msg: ''
     rc: 0
-    start: '2026-06-05 21:59:31.137461'
+    start: '2026-06-06 08:51:43.281837'
     stderr: ''
     stderr_lines: <omitted>
     stdout: |-
@@ -451,16 +266,17 @@ ok: [localhost] =>
     uid: 0
 
 TASK [Generate KubeSpray all.yml vars] **************************************************************************************************************************************************************************
-ok: [localhost] =>
-    changed: false
-    checksum: c057a87e8e907a75a6d57a79aaf7bdc9f5deb112
+changed: [localhost] =>
+    changed: true
+    checksum: 4c35870794841bffe3872530a5a6d4fe164d2d86
     dest: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
     gid: 0
     group: root
+    md5sum: 79b3611295dc3ae55b01c428a5c1190b
     mode: '0644'
     owner: root
-    path: /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml
-    size: 2180
+    size: 2448
+    src: /home/nh1221/.ansible/tmp/ansible-tmp-1780753907.301742-480342-191880843335141/.source.yml
     state: file
     uid: 0
 
@@ -503,24 +319,24 @@ ok: [localhost] =>
 PLAY [Phase 3: Prepare All Kubernetes Nodes] ********************************************************************************************************************************************************************
 
 TASK [Gathering Facts] ******************************************************************************************************************************************************************************************
-ok: [HostB12_1]
 ok: [Host12_1]
-ok: [Host12_3]
 ok: [Host34_1]
+ok: [HostB12_1]
 ok: [Host12_2]
+ok: [Host12_3]
 ok: [Host34_2]
 
 TASK [Disable swap (required by kubelet)] ***********************************************************************************************************************************************************************
-changed: [Host12_2] =>
+changed: [Host12_1] =>
     changed: true
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.011730'
-    end: '2026-06-06 02:59:51.062395'
+    delta: '0:00:00.013452'
+    end: '2026-06-06 13:52:03.220958'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:51.050665'
+    start: '2026-06-06 13:52:03.207506'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -530,11 +346,11 @@ changed: [Host34_1] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.014466'
-    end: '2026-06-06 02:59:51.166934'
+    delta: '0:00:00.015556'
+    end: '2026-06-06 13:52:03.325652'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:51.152468'
+    start: '2026-06-06 13:52:03.310096'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -544,25 +360,25 @@ changed: [HostB12_1] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.014259'
-    end: '2026-06-06 02:59:51.286734'
+    delta: '0:00:00.013383'
+    end: '2026-06-06 13:52:03.692862'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:51.272475'
+    start: '2026-06-06 13:52:03.679479'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
-changed: [Host12_1] =>
+changed: [Host12_2] =>
     changed: true
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013151'
-    end: '2026-06-06 02:59:51.295582'
+    delta: '0:00:00.014259'
+    end: '2026-06-06 13:52:03.644376'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:51.282431'
+    start: '2026-06-06 13:52:03.630117'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -572,11 +388,11 @@ changed: [Host12_3] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013172'
-    end: '2026-06-06 02:59:51.366774'
+    delta: '0:00:00.017138'
+    end: '2026-06-06 13:52:03.931452'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:51.353602'
+    start: '2026-06-06 13:52:03.914314'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
@@ -586,18 +402,241 @@ changed: [Host34_2] =>
     cmd: |-
         swapoff -a
         sed -i '/\sswap\s/d' /etc/fstab
-    delta: '0:00:00.013408'
-    end: '2026-06-06 02:59:53.217655'
+    delta: '0:00:00.013108'
+    end: '2026-06-06 13:52:05.448918'
     msg: ''
     rc: 0
-    start: '2026-06-06 02:59:53.204247'
+    start: '2026-06-06 13:52:05.435810'
     stderr: ''
     stderr_lines: <omitted>
     stdout: ''
     stdout_lines: <omitted>
 
+TASK [Stop and disable unattended-upgrades and apt-daily (prevents apt lock)] ***********************************************************************************************************************************
+changed: [Host12_1] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:02.644286'
+    end: '2026-06-06 13:52:10.360742'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:07.716456'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host34_1] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:02.645019'
+    end: '2026-06-06 13:52:10.570382'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:07.925363'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_2] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:02.533987'
+    end: '2026-06-06 13:52:10.671812'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:08.137825'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host12_3] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:02.663957'
+    end: '2026-06-06 13:52:10.858240'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:08.194283'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [HostB12_1] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:00:03.251970'
+    end: '2026-06-06 13:52:11.268259'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:08.016289'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+changed: [Host34_2] =>
+    changed: true
+    cmd: |-
+        systemctl stop unattended-upgrades.service 2>/dev/null || true
+        systemctl disable unattended-upgrades.service 2>/dev/null || true
+        systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl disable apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+        systemctl kill --signal=SIGTERM apt-daily.service 2>/dev/null || true
+        # Wait for any running apt/dpkg process to finish (max 60s)
+        for i in $(seq 1 60); do
+          if fuser /var/lib/apt/lists/lock /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock 2>/dev/null; then
+            sleep 1
+          else
+            break
+          fi
+        done
+        # Remove stale lock files only if no process holds them
+        if ! fuser /var/lib/apt/lists/lock 2>/dev/null; then
+          rm -f /var/lib/apt/lists/lock
+        fi
+        if ! fuser /var/lib/dpkg/lock-frontend 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock-frontend
+        fi
+        if ! fuser /var/lib/dpkg/lock 2>/dev/null; then
+          rm -f /var/lib/dpkg/lock
+        fi
+    delta: '0:01:05.266935'
+    end: '2026-06-06 13:53:18.053721'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:52:12.786786'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ' 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273
+        112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273
+        112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273
+        112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273
+        112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273 112273
+        112273 112273'
+    stdout_lines: <omitted>
+
 TASK [Load required kernel modules] *****************************************************************************************************************************************************************************
-ok: [Host12_2] => (item=br_netfilter) =>
+ok: [Host12_1] => (item=br_netfilter) =>
     ansible_loop_var: item
     changed: false
     item: br_netfilter
@@ -618,13 +657,6 @@ ok: [Host34_1] => (item=br_netfilter) =>
     name: br_netfilter
     params: ''
     state: present
-ok: [Host12_1] => (item=br_netfilter) =>
-    ansible_loop_var: item
-    changed: false
-    item: br_netfilter
-    name: br_netfilter
-    params: ''
-    state: present
 ok: [HostB12_1] => (item=br_netfilter) =>
     ansible_loop_var: item
     changed: false
@@ -632,14 +664,14 @@ ok: [HostB12_1] => (item=br_netfilter) =>
     name: br_netfilter
     params: ''
     state: present
-ok: [Host12_2] => (item=overlay) =>
+ok: [Host12_2] => (item=br_netfilter) =>
     ansible_loop_var: item
     changed: false
-    item: overlay
-    name: overlay
+    item: br_netfilter
+    name: br_netfilter
     params: ''
     state: present
-ok: [Host12_3] => (item=overlay) =>
+ok: [Host12_1] => (item=overlay) =>
     ansible_loop_var: item
     changed: false
     item: overlay
@@ -653,6 +685,20 @@ ok: [Host34_1] => (item=overlay) =>
     name: overlay
     params: ''
     state: present
+ok: [Host12_3] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
+ok: [Host12_2] => (item=overlay) =>
+    ansible_loop_var: item
+    changed: false
+    item: overlay
+    name: overlay
+    params: ''
+    state: present
 ok: [HostB12_1] => (item=overlay) =>
     ansible_loop_var: item
     changed: false
@@ -660,28 +706,7 @@ ok: [HostB12_1] => (item=overlay) =>
     name: overlay
     params: ''
     state: present
-ok: [Host12_1] => (item=overlay) =>
-    ansible_loop_var: item
-    changed: false
-    item: overlay
-    name: overlay
-    params: ''
-    state: present
-ok: [Host12_2] => (item=ip_vs) =>
-    ansible_loop_var: item
-    changed: false
-    item: ip_vs
-    name: ip_vs
-    params: ''
-    state: present
-ok: [Host12_3] => (item=ip_vs) =>
-    ansible_loop_var: item
-    changed: false
-    item: ip_vs
-    name: ip_vs
-    params: ''
-    state: present
-ok: [HostB12_1] => (item=ip_vs) =>
+ok: [Host12_1] => (item=ip_vs) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs
@@ -695,28 +720,28 @@ ok: [Host34_1] => (item=ip_vs) =>
     name: ip_vs
     params: ''
     state: present
-ok: [Host12_1] => (item=ip_vs) =>
+ok: [Host12_3] => (item=ip_vs) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs
     name: ip_vs
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_rr) =>
+ok: [Host12_2] => (item=ip_vs) =>
     ansible_loop_var: item
     changed: false
-    item: ip_vs_rr
-    name: ip_vs_rr
+    item: ip_vs
+    name: ip_vs
     params: ''
     state: present
-ok: [Host12_3] => (item=ip_vs_rr) =>
+ok: [HostB12_1] => (item=ip_vs) =>
     ansible_loop_var: item
     changed: false
-    item: ip_vs_rr
-    name: ip_vs_rr
+    item: ip_vs
+    name: ip_vs
     params: ''
     state: present
-ok: [HostB12_1] => (item=ip_vs_rr) =>
+ok: [Host12_1] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_rr
@@ -730,28 +755,28 @@ ok: [Host34_1] => (item=ip_vs_rr) =>
     name: ip_vs_rr
     params: ''
     state: present
-ok: [Host12_1] => (item=ip_vs_rr) =>
+ok: [Host12_3] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_rr
     name: ip_vs_rr
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_wrr) =>
+ok: [Host12_2] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
-    item: ip_vs_wrr
-    name: ip_vs_wrr
+    item: ip_vs_rr
+    name: ip_vs_rr
     params: ''
     state: present
-ok: [Host12_3] => (item=ip_vs_wrr) =>
+ok: [HostB12_1] => (item=ip_vs_rr) =>
     ansible_loop_var: item
     changed: false
-    item: ip_vs_wrr
-    name: ip_vs_wrr
+    item: ip_vs_rr
+    name: ip_vs_rr
     params: ''
     state: present
-ok: [HostB12_1] => (item=ip_vs_wrr) =>
+ok: [Host12_1] => (item=ip_vs_wrr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_wrr
@@ -765,21 +790,28 @@ ok: [Host34_1] => (item=ip_vs_wrr) =>
     name: ip_vs_wrr
     params: ''
     state: present
-ok: [Host12_1] => (item=ip_vs_wrr) =>
+ok: [Host12_3] => (item=ip_vs_wrr) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_wrr
     name: ip_vs_wrr
     params: ''
     state: present
-ok: [Host12_2] => (item=ip_vs_sh) =>
+ok: [Host12_2] => (item=ip_vs_wrr) =>
     ansible_loop_var: item
     changed: false
-    item: ip_vs_sh
-    name: ip_vs_sh
+    item: ip_vs_wrr
+    name: ip_vs_wrr
     params: ''
     state: present
-ok: [HostB12_1] => (item=ip_vs_sh) =>
+ok: [HostB12_1] => (item=ip_vs_wrr) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_wrr
+    name: ip_vs_wrr
+    params: ''
+    state: present
+ok: [Host12_1] => (item=ip_vs_sh) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_sh
@@ -793,6 +825,13 @@ ok: [Host34_1] => (item=ip_vs_sh) =>
     name: ip_vs_sh
     params: ''
     state: present
+ok: [Host12_2] => (item=ip_vs_sh) =>
+    ansible_loop_var: item
+    changed: false
+    item: ip_vs_sh
+    name: ip_vs_sh
+    params: ''
+    state: present
 ok: [Host12_3] => (item=ip_vs_sh) =>
     ansible_loop_var: item
     changed: false
@@ -800,7 +839,7 @@ ok: [Host12_3] => (item=ip_vs_sh) =>
     name: ip_vs_sh
     params: ''
     state: present
-ok: [Host12_1] => (item=ip_vs_sh) =>
+ok: [HostB12_1] => (item=ip_vs_sh) =>
     ansible_loop_var: item
     changed: false
     item: ip_vs_sh
@@ -851,18 +890,6 @@ ok: [Host34_2] => (item=ip_vs_sh) =>
     state: present
 
 TASK [Persist kernel modules] ***********************************************************************************************************************************************************************************
-ok: [Host34_1] =>
-    changed: false
-    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
-    dest: /etc/modules-load.d/k8s.conf
-    gid: 0
-    group: root
-    mode: '0644'
-    owner: root
-    path: /etc/modules-load.d/k8s.conf
-    size: 55
-    state: file
-    uid: 0
 ok: [HostB12_1] =>
     changed: false
     checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
@@ -911,6 +938,18 @@ ok: [Host12_3] =>
     size: 55
     state: file
     uid: 0
+ok: [Host34_1] =>
+    changed: false
+    checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
+    dest: /etc/modules-load.d/k8s.conf
+    gid: 0
+    group: root
+    mode: '0644'
+    owner: root
+    path: /etc/modules-load.d/k8s.conf
+    size: 55
+    state: file
+    uid: 0
 ok: [Host34_2] =>
     changed: false
     checksum: 8b5cfdb1c25aa2f17b8c7fdc34af47a30030e535
@@ -925,25 +964,25 @@ ok: [Host34_2] =>
     uid: 0
 
 TASK [Set sysctl parameters for Kubernetes] *********************************************************************************************************************************************************************
-ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.bridge.bridge-nf-call-iptables
-        value: '1'
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.bridge.bridge-nf-call-iptables
-        value: '1'
 ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
         key: net.bridge.bridge-nf-call-iptables
         value: '1'
+ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
 ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.bridge.bridge-nf-call-iptables
+        value: '1'
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -961,18 +1000,6 @@ ok: [HostB12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value':
     item:
         key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
-ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.bridge.bridge-nf-call-ip6tables
-        value: '1'
-ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.bridge.bridge-nf-call-ip6tables
-        value: '1'
 ok: [Host12_3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
@@ -985,25 +1012,25 @@ ok: [Host12_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 
     item:
         key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
-ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+ok: [Host12_2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
-        key: net.ipv4.ip_forward
+        key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
-ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+ok: [Host34_1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
-        key: net.ipv4.ip_forward
-        value: '1'
-ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.ipv4.ip_forward
+        key: net.bridge.bridge-nf-call-ip6tables
         value: '1'
 ok: [Host12_3] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [HostB12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1015,13 +1042,31 @@ ok: [Host12_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
     item:
         key: net.ipv4.ip_forward
         value: '1'
+ok: [Host12_2] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host34_1] => (item={'key': 'net.ipv4.ip_forward', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv4.ip_forward
+        value: '1'
+ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+    ansible_loop_var: item
+    changed: false
+    item:
+        key: net.ipv6.conf.all.forwarding
+        value: '1'
 ok: [HostB12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
         key: net.ipv6.conf.all.forwarding
         value: '1'
-ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1033,13 +1078,7 @@ ok: [Host12_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =
     item:
         key: net.ipv6.conf.all.forwarding
         value: '1'
-ok: [Host12_3] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
-    ansible_loop_var: item
-    changed: false
-    item:
-        key: net.ipv6.conf.all.forwarding
-        value: '1'
-ok: [Host12_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
+ok: [Host34_1] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =>
     ansible_loop_var: item
     changed: false
     item:
@@ -1070,127 +1109,2891 @@ ok: [Host34_2] => (item={'key': 'net.ipv6.conf.all.forwarding', 'value': '1'}) =
         key: net.ipv6.conf.all.forwarding
         value: '1'
 
-TASK [Check if prerequisite packages are already installed] *****************************************************************************************************************************************************
-ok: [HostB12_1] =>
+TASK [Identify missing prerequisite packages] *******************************************************************************************************************************************************************
+ok: [Host12_1] =>
     changed: false
     cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.028732'
-    end: '2026-06-06 03:00:51.907364'
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.177395'
+    end: '2026-06-06 13:54:20.557761'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 03:00:51.878632'
+    start: '2026-06-06 13:54:20.380366'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: '4'
+    stdout: ' libipset13'
+    stdout_lines: <omitted>
+ok: [HostB12_1] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.189569'
+    end: '2026-06-06 13:54:21.130309'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:54:20.940740'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ' libipset13'
     stdout_lines: <omitted>
 ok: [Host12_3] =>
     changed: false
     cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.025258'
-    end: '2026-06-06 03:00:52.065734'
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.198497'
+    end: '2026-06-06 13:54:21.176429'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 03:00:52.040476'
+    start: '2026-06-06 13:54:20.977932'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: '4'
-    stdout_lines: <omitted>
-ok: [Host12_1] =>
-    changed: false
-    cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.025648'
-    end: '2026-06-06 03:00:52.128892'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-06 03:00:52.103244'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: '4'
-    stdout_lines: <omitted>
-ok: [Host12_2] =>
-    changed: false
-    cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.026375'
-    end: '2026-06-06 03:00:52.267081'
-    failed_when_result: false
-    msg: ''
-    rc: 0
-    start: '2026-06-06 03:00:52.240706'
-    stderr: ''
-    stderr_lines: <omitted>
-    stdout: '4'
+    stdout: ' apt-transport-https conntrack socat ipset libipset13 ipvsadm'
     stdout_lines: <omitted>
 ok: [Host34_1] =>
     changed: false
     cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.026110'
-    end: '2026-06-06 03:00:52.366306'
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.209184'
+    end: '2026-06-06 13:54:21.201978'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 03:00:52.340196'
+    start: '2026-06-06 13:54:20.992794'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: '4'
+    stdout: ' libipset13'
+    stdout_lines: <omitted>
+ok: [Host12_2] =>
+    changed: false
+    cmd: |-
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.212923'
+    end: '2026-06-06 13:54:21.193257'
+    failed_when_result: false
+    msg: ''
+    rc: 0
+    start: '2026-06-06 13:54:20.980334'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ' libipset13'
     stdout_lines: <omitted>
 ok: [Host34_2] =>
     changed: false
     cmd: |-
-        dpkg -s apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset ipvsadm 2>&1 | grep -c "^Status: install ok installed" || true
-    delta: '0:00:00.025915'
-    end: '2026-06-06 03:00:54.364374'
+        missing=""
+        for pkg in apt-transport-https ca-certificates curl gnupg lsb-release conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            missing="$missing $pkg"
+          fi
+        done
+        echo "$missing"
+    delta: '0:00:00.274551'
+    end: '2026-06-06 13:54:23.045754'
     failed_when_result: false
     msg: ''
     rc: 0
-    start: '2026-06-06 03:00:54.338459'
+    start: '2026-06-06 13:54:22.771203'
     stderr: ''
     stderr_lines: <omitted>
-    stdout: '4'
+    stdout: ' libipset13'
     stdout_lines: <omitted>
 
-TASK [Install prerequisite packages] ****************************************************************************************************************************************************************************
-[WARNING]: Failed to update cache after 1 retries due to , retrying
-[WARNING]: Sleeping for 1 seconds, before attempting to refresh the cache again
-[WARNING]: Failed to update cache after 2 retries due to , retrying
-[WARNING]: Sleeping for 2 seconds, before attempting to refresh the cache again
-[WARNING]: Failed to update cache after 3 retries due to , retrying
-[WARNING]: Sleeping for 4 seconds, before attempting to refresh the cache again
-[WARNING]: Failed to update cache after 4 retries due to , retrying
-[WARNING]: Sleeping for 8 seconds, before attempting to refresh the cache again
-[WARNING]: Failed to update cache after 5 retries due to , retrying
-[WARNING]: Sleeping for 12 seconds, before attempting to refresh the cache again
-[ERROR]: Task failed: Module failed: Failed to update apt cache after 5 retries:
-Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:240:7
+TASK [Install prerequisite packages (no cache update - air-gapped)] *********************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
 
-238       failed_when: false
-239
-240     - name: Install prerequisite packages
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:302:7
+
+300       failed_when: false
+301
+302     - name: Install prerequisite packages (no cache update - air-gapped)
           ^ column 7
 
 fatal: [Host34_1]: FAILED! =>
+    cache_update_time: 1780687020
+    cache_updated: false
     changed: false
-    msg: 'Failed to update apt cache after 5 retries: '
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following NEW packages will be installed:
+          libipset13
+        0 upgraded, 1 newly installed, 0 to remove and 27 not upgraded.
+        1 not fully installed or removed.
+        Need to get 61.5 kB of archives.
+        After this operation, 253 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
 fatal: [HostB12_1]: FAILED! =>
+    cache_update_time: 1780687106
+    cache_updated: false
     changed: false
-    msg: 'Failed to update apt cache after 5 retries: '
-[WARNING]: Sleeping for 3 seconds, before attempting to refresh the cache again
-[WARNING]: Sleeping for 5 seconds, before attempting to refresh the cache again
-[WARNING]: Sleeping for 9 seconds, before attempting to refresh the cache again
-[WARNING]: Sleeping for 13 seconds, before attempting to refresh the cache again
-fatal: [Host12_3]: FAILED! =>
-    changed: false
-    msg: 'Failed to update apt cache after 5 retries: '
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following NEW packages will be installed:
+          libipset13
+        0 upgraded, 1 newly installed, 0 to remove and 27 not upgraded.
+        1 not fully installed or removed.
+        Need to get 61.5 kB of archives.
+        After this operation, 253 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
 fatal: [Host12_2]: FAILED! =>
+    cache_update_time: 1780687022
+    cache_updated: false
     changed: false
-    msg: 'Failed to update apt cache after 5 retries: '
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following NEW packages will be installed:
+          libipset13
+        0 upgraded, 1 newly installed, 0 to remove and 27 not upgraded.
+        1 not fully installed or removed.
+        Need to get 61.5 kB of archives.
+        After this operation, 253 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
 fatal: [Host12_1]: FAILED! =>
+    cache_update_time: 1780687194
+    cache_updated: false
     changed: false
-    msg: 'Failed to update apt cache after 5 retries: '
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following NEW packages will be installed:
+          libipset13
+        0 upgraded, 1 newly installed, 0 to remove and 27 not upgraded.
+        1 not fully installed or removed.
+        Need to get 61.5 kB of archives.
+        After this operation, 253 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
+fatal: [Host34_2]: FAILED! =>
+    cache_update_time: 1780687020
+    cache_updated: false
+    changed: false
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'libipset13=7.19-1ubuntu2'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        The following NEW packages will be installed:
+          libipset13
+        0 upgraded, 1 newly installed, 0 to remove and 27 not upgraded.
+        1 not fully installed or removed.
+        Need to get 61.5 kB of archives.
+        After this operation, 253 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Err:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
+[ERROR]: Task failed: Module failed: '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'apt-transport-https=2.8.3' 'conntrack=1:1.4.8-1ubuntu1' 'socat=1.8.0.0-4build3' 'ipset=7.19-1ubuntu2' 'libipset13=7.19-1ubuntu2' 'ipvsadm=1:1.31-1ubuntu0.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/universe/a/apt/apt-transport-https_2.8.3_all.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/conntrack-tools/conntrack_1.4.8-1ubuntu1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/ipset_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipvsadm/ipvsadm_1.31-1ubuntu0.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/s/socat/socat_1.8.0.0-4build3_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:302:7
+
+300       failed_when: false
+301
+302     - name: Install prerequisite packages (no cache update - air-gapped)
+          ^ column 7
+
+fatal: [Host12_3]: FAILED! =>
+    cache_update_time: 1780687020
+    cache_updated: false
+    changed: false
+    msg: |-
+        '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'apt-transport-https=2.8.3' 'conntrack=1:1.4.8-1ubuntu1' 'socat=1.8.0.0-4build3' 'ipset=7.19-1ubuntu2' 'libipset13=7.19-1ubuntu2' 'ipvsadm=1:1.31-1ubuntu0.1'' failed: E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/universe/a/apt/apt-transport-https_2.8.3_all.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/conntrack-tools/conntrack_1.4.8-1ubuntu1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/ipset_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipvsadm/ipvsadm_1.31-1ubuntu0.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/s/socat/socat_1.8.0.0-4build3_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    rc: 100
+    stderr: |-
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/universe/a/apt/apt-transport-https_2.8.3_all.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/c/conntrack-tools/conntrack_1.4.8-1ubuntu1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/libipset13_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipset/ipset_7.19-1ubuntu2_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/i/ipvsadm/ipvsadm_1.31-1ubuntu0.1_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/s/socat/socat_1.8.0.0-4build3_amd64.deb  Temporary failure resolving 'archive.ubuntu.com'
+        E: Unable to fetch some archives, maybe run apt-get update or try with --fix-missing?
+    stderr_lines: <omitted>
+    stdout: |-
+        Reading package lists...
+        Building dependency tree...
+        Reading state information...
+        Suggested packages:
+          heartbeat keepalived ldirectord
+        The following NEW packages will be installed:
+          apt-transport-https conntrack ipset ipvsadm libipset13 socat
+        0 upgraded, 6 newly installed, 0 to remove and 27 not upgraded.
+        Need to get 550 kB of archives.
+        After this operation, 2304 kB of additional disk space will be used.
+        Ign:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3
+        Ign:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:4 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2
+        Ign:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1
+        Ign:6 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3
+        Ign:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3
+        Ign:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:4 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2
+        Ign:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1
+        Ign:6 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3
+        Ign:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3
+        Ign:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1
+        Ign:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+        Ign:4 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2
+        Ign:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1
+        Ign:6 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3
+        Err:1 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 apt-transport-https all 2.8.3
+          Temporary failure resolving 'archive.ubuntu.com'
+        Err:2 http://archive.ubuntu.com/ubuntu noble/main amd64 conntrack amd64 1:1.4.8-1ubuntu1
+          Temporary failure resolving 'archive.ubuntu.com'
+        Err:3 http://archive.ubuntu.com/ubuntu noble/main amd64 libipset13 amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+        Err:4 http://archive.ubuntu.com/ubuntu noble/main amd64 ipset amd64 7.19-1ubuntu2
+          Temporary failure resolving 'archive.ubuntu.com'
+        Err:5 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 ipvsadm amd64 1:1.31-1ubuntu0.1
+          Temporary failure resolving 'archive.ubuntu.com'
+        Err:6 http://archive.ubuntu.com/ubuntu noble/main amd64 socat amd64 1.8.0.0-4build3
+          Temporary failure resolving 'archive.ubuntu.com'
+    stdout_lines: <omitted>
+...ignoring
+
+TASK [Find matching .deb files in preflight cache] **************************************************************************************************************************************************************
+ok: [Host12_2 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 1
+    msg: All paths examined
+    skipped_paths: {}
+ok: [HostB12_1 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 1
+    msg: All paths examined
+    skipped_paths: {}
+ok: [Host12_3 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    -   atime: 1780748597.6862004
+        ctime: 1780714129.1054614
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10713
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1723802238.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 40290
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    -   atime: 1780748597.698202
+        ctime: 1780714128.8116148
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10708
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712589645.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/socat_1.8.0.0-4build3_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 373594
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    -   atime: 1780748633.093992
+        ctime: 1780714129.1054614
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10714
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1743198754.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/apt-transport-https_2.8.3_all.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 3970
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    -   atime: 1780748663.779439
+        ctime: 1780714128.4264133
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 2954
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712258168.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/conntrack_1%3a1.4.8-1ubuntu1_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 37856
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    -   atime: 1780748698.7623367
+        ctime: 1780714128.4502401
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10700
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/ipset_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 32618
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 6
+    msg: All paths examined
+    skipped_paths: {}
+ok: [Host12_1 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 1
+    msg: All paths examined
+    skipped_paths: {}
+ok: [Host34_1 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 1
+    msg: All paths examined
+    skipped_paths: {}
+ok: [Host34_2 -> localhost] =>
+    changed: false
+    examined: 258
+    files:
+    -   atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    matched: 1
+    msg: All paths examined
+    skipped_paths: {}
+
+TASK [Create temp deb staging directory on nodes] ***************************************************************************************************************************************************************
+ok: [Host12_3] =>
+    changed: false
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+changed: [Host12_1] =>
+    changed: true
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+changed: [HostB12_1] =>
+    changed: true
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+changed: [Host34_1] =>
+    changed: true
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+changed: [Host12_2] =>
+    changed: true
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+changed: [Host34_2] =>
+    changed: true
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/preflight-debs
+    size: 4096
+    state: directory
+    uid: 0
+
+TASK [Push .deb packages to nodes] ******************************************************************************************************************************************************************************
+changed: [HostB12_1] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754802.0889282-481386-28471103448034/.source.deb
+    state: file
+    uid: 0
+changed: [Host34_1] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754802.1088028-481385-266775707105647/.source.deb
+    state: file
+    uid: 0
+changed: [Host12_3] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754802.2395806-481388-166003192703086/.source.deb
+    state: file
+    uid: 0
+changed: [Host12_2] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754802.1448805-481387-75806838773/.source.deb
+    state: file
+    uid: 0
+changed: [Host12_1] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754802.166187-481384-150019159346359/.source.deb
+    state: file
+    uid: 0
+changed: [Host12_3] => (item=ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: cb1472bcd6d417b534234d95c316d58a01dfe2a3
+    dest: /tmp/preflight-debs/ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1780748597.6862004
+        ctime: 1780714129.1054614
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10713
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1723802238.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 40290
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: bd4f0c865dfad5b94a30f44fc50bc242
+    mode: '0644'
+    owner: root
+    size: 40290
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754811.6313603-481388-33089549489036/.source.deb
+    state: file
+    uid: 0
+changed: [Host34_2] => (item=libipset13_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: true
+    checksum: 9c28d9c6ac99bcc6c7943dc83b0fbac967ef8d90
+    dest: /tmp/preflight-debs/libipset13_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1712595803.0
+        ctime: 1780714186.1014242
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10717
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/libipset13_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 61496
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    md5sum: 5dcbf0b1634d9197df36bbee455977fc
+    mode: '0644'
+    owner: root
+    size: 61496
+    src: /home/ubuntu/.ansible/tmp/ansible-tmp-1780754812.2538962-481571-228104819291416/.source.deb
+    state: file
+    uid: 0
+ok: [Host12_3] => (item=socat_1.8.0.0-4build3_amd64.deb) =>
+    ansible_loop_var: item
+    changed: false
+    checksum: 36e4f68b64fdf984aae9257252f130972497fe3b
+    dest: /tmp/preflight-debs/socat_1.8.0.0-4build3_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1780748597.698202
+        ctime: 1780714128.8116148
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10708
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712589645.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/socat_1.8.0.0-4build3_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 373594
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    mode: '0644'
+    owner: root
+    path: /tmp/preflight-debs/socat_1.8.0.0-4build3_amd64.deb
+    size: 373594
+    state: file
+    uid: 0
+ok: [Host12_3] => (item=apt-transport-https_2.8.3_all.deb) =>
+    ansible_loop_var: item
+    changed: false
+    checksum: 3a09824ebc894a1223bb1e6b8fdf1b5453123f8c
+    dest: /tmp/preflight-debs/apt-transport-https_2.8.3_all.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1780748633.093992
+        ctime: 1780714129.1054614
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10714
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1743198754.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/apt-transport-https_2.8.3_all.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 3970
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    mode: '0644'
+    owner: root
+    path: /tmp/preflight-debs/apt-transport-https_2.8.3_all.deb
+    size: 3970
+    state: file
+    uid: 0
+ok: [Host12_3] => (item=conntrack_1%3a1.4.8-1ubuntu1_amd64.deb) =>
+    ansible_loop_var: item
+    changed: false
+    checksum: 1732351d9d6b5364529af9f1c7bdb06346116e0e
+    dest: /tmp/preflight-debs/conntrack_1%3a1.4.8-1ubuntu1_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1780748663.779439
+        ctime: 1780714128.4264133
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 2954
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712258168.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/conntrack_1%3a1.4.8-1ubuntu1_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 37856
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    mode: '0644'
+    owner: root
+    path: /tmp/preflight-debs/conntrack_1%3a1.4.8-1ubuntu1_amd64.deb
+    size: 37856
+    state: file
+    uid: 0
+ok: [Host12_3] => (item=ipset_7.19-1ubuntu2_amd64.deb) =>
+    ansible_loop_var: item
+    changed: false
+    checksum: 63a4d18fbcdd6f6496b524ada414b7082883b40d
+    dest: /tmp/preflight-debs/ipset_7.19-1ubuntu2_amd64.deb
+    gid: 0
+    group: root
+    item:
+        atime: 1780748698.7623367
+        ctime: 1780714128.4502401
+        dev: 2096
+        gid: 0
+        gr_name: root
+        inode: 10700
+        isblk: false
+        ischr: false
+        isdir: false
+        isfifo: false
+        isgid: false
+        islnk: false
+        isreg: true
+        issock: false
+        isuid: false
+        mode: '0644'
+        mtime: 1712595803.0
+        nlink: 1
+        path: /opt/fabric-cache/apt-packages/ipset_7.19-1ubuntu2_amd64.deb
+        pw_name: root
+        rgrp: true
+        roth: true
+        rusr: true
+        size: 32618
+        uid: 0
+        wgrp: false
+        woth: false
+        wusr: true
+        xgrp: false
+        xoth: false
+        xusr: false
+    mode: '0644'
+    owner: root
+    path: /tmp/preflight-debs/ipset_7.19-1ubuntu2_amd64.deb
+    size: 32618
+    state: file
+    uid: 0
+
+TASK [Install .deb packages via dpkg] ***************************************************************************************************************************************************************************
+changed: [HostB12_1] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:01.976818'
+    end: '2026-06-06 14:07:30.770702'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:28.793884'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package libipset13:amd64.
+        (Reading database ... 82640 files and directories currently installed.)
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+changed: [Host34_1] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:02.157445'
+    end: '2026-06-06 14:07:30.768305'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:28.610860'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package libipset13:amd64.
+        (Reading database ... 82640 files and directories currently installed.)
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+changed: [Host12_1] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:02.550198'
+    end: '2026-06-06 14:07:30.746745'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:28.196547'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package libipset13:amd64.
+        (Reading database ... 82640 files and directories currently installed.)
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+changed: [Host12_2] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:01.822567'
+    end: '2026-06-06 14:07:30.727658'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:28.905091'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package libipset13:amd64.
+        (Reading database ... 82640 files and directories currently installed.)
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+changed: [Host34_2] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:00.957164'
+    end: '2026-06-06 14:07:34.576856'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:33.619692'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package libipset13:amd64.
+        (Reading database ... 82640 files and directories currently installed.)
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+changed: [Host12_3] =>
+    changed: true
+    cmd: |-
+        dpkg -i /tmp/preflight-debs/*.deb 2>&1 || true
+    delta: '0:00:06.322803'
+    end: '2026-06-06 14:07:34.645895'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:28.323092'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        Selecting previously unselected package apt-transport-https.
+        (Reading database ... 82564 files and directories currently installed.)
+        Preparing to unpack .../apt-transport-https_2.8.3_all.deb ...
+        Unpacking apt-transport-https (2.8.3) ...
+        Selecting previously unselected package conntrack.
+        Preparing to unpack .../conntrack_1%3a1.4.8-1ubuntu1_amd64.deb ...
+        Unpacking conntrack (1:1.4.8-1ubuntu1) ...
+        Selecting previously unselected package ipset.
+        Preparing to unpack .../ipset_7.19-1ubuntu2_amd64.deb ...
+        Unpacking ipset (7.19-1ubuntu2) ...
+        Selecting previously unselected package ipvsadm.
+        Preparing to unpack .../ipvsadm_1%3a1.31-1ubuntu0.1_amd64.deb ...
+        Unpacking ipvsadm (1:1.31-1ubuntu0.1) ...
+        Selecting previously unselected package libipset13:amd64.
+        Preparing to unpack .../libipset13_7.19-1ubuntu2_amd64.deb ...
+        Unpacking libipset13:amd64 (7.19-1ubuntu2) ...
+        Selecting previously unselected package socat.
+        Preparing to unpack .../socat_1.8.0.0-4build3_amd64.deb ...
+        Unpacking socat (1.8.0.0-4build3) ...
+        Setting up apt-transport-https (2.8.3) ...
+        Setting up conntrack (1:1.4.8-1ubuntu1) ...
+        Setting up ipvsadm (1:1.31-1ubuntu0.1) ...
+        Setting up libipset13:amd64 (7.19-1ubuntu2) ...
+        Setting up socat (1.8.0.0-4build3) ...
+        Setting up ipset (7.19-1ubuntu2) ...
+        Processing triggers for man-db (2.12.0-4build2) ...
+        Processing triggers for libc-bin (2.39-0ubuntu8.7) ...
+    stdout_lines: <omitted>
+
+TASK [Verify packages after dpkg install] ***********************************************************************************************************************************************************************
+ok: [Host34_1] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  libipset13; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.039417'
+    end: '2026-06-06 14:07:36.993619'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:36.954202'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host12_1] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  libipset13; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.027426'
+    end: '2026-06-06 14:07:37.221613'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:37.194187'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [HostB12_1] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  libipset13; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.028743'
+    end: '2026-06-06 14:07:37.574917'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:37.546174'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host12_2] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  libipset13; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.030699'
+    end: '2026-06-06 14:07:37.551936'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:37.521237'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host12_3] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  apt-transport-https conntrack socat ipset libipset13 ipvsadm; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.116585'
+    end: '2026-06-06 14:07:38.050225'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:37.933640'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+ok: [Host34_2] =>
+    changed: false
+    cmd: |-
+        still_missing=""
+        for pkg in  libipset13; do
+          if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+            still_missing="$still_missing $pkg"
+          fi
+        done
+        echo "$still_missing"
+    delta: '0:00:00.027902'
+    end: '2026-06-06 14:07:39.851190'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 14:07:39.823288'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Warn if packages still missing after dpkg fallback] *******************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+skipping: [Host34_1] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+skipping: [HostB12_1] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+skipping: [Host12_2] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+skipping: [Host12_3] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+skipping: [Host34_2] =>
+    false_condition: _still_missing.stdout | trim | length > 0
+
+TASK [Clean up temp deb staging] ********************************************************************************************************************************************************************************
+changed: [Host12_3] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+changed: [Host34_1] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+changed: [Host12_1] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+changed: [HostB12_1] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+changed: [Host12_2] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+changed: [Host34_2] =>
+    changed: true
+    path: /tmp/preflight-debs
+    state: absent
+
+TASK [Set hostname to kube_node_name] ***************************************************************************************************************************************************************************
+ok: [Host12_2] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-2
+        ansible_hostname: host12-2
+        ansible_nodename: host12-2
+    changed: false
+    name: host12-2
+ok: [HostB12_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: hostb12-1
+        ansible_hostname: hostb12-1
+        ansible_nodename: hostb12-1
+    changed: false
+    name: hostb12-1
+ok: [Host34_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host34-1
+        ansible_hostname: host34-1
+        ansible_nodename: host34-1
+    changed: false
+    name: host34-1
+ok: [Host12_1] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-1
+        ansible_hostname: host12-1
+        ansible_nodename: host12-1
+    changed: false
+    name: host12-1
+ok: [Host12_3] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host12-3
+        ansible_hostname: host12-3
+        ansible_nodename: host12-3
+    changed: false
+    name: host12-3
+ok: [Host34_2] =>
+    ansible_facts:
+        ansible_domain: ''
+        ansible_fqdn: host34-2
+        ansible_hostname: host34-2
+        ansible_nodename: host34-2
+    changed: false
+    name: host34-2
+
+TASK [preflight_hw | Check disk write latency for etcd (real hardware)] *****************************************************************************************************************************************
+skipping: [Host12_1] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host34_1] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [HostB12_1] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host12_2] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host12_3] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+skipping: [Host34_2] =>
+    changed: false
+    false_condition: automation_profile == 'real_hardware'
+    skip_reason: Conditional result was False
+
+TASK [preflight_hw | Report disk IOPS result] *******************************************************************************************************************************************************************
+skipping: [Host12_1] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host34_1] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [HostB12_1] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host12_2] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host12_3] =>
+    false_condition: automation_profile == 'real_hardware'
+skipping: [Host34_2] =>
+    false_condition: automation_profile == 'real_hardware'
+
+PLAY [Phase 4: Execute KubeSpray cluster.yml] *******************************************************************************************************************************************************************
+
+TASK [Display deployment plan] **********************************************************************************************************************************************************************************
+ok: [localhost] =>
+    msg: |-
+        Deploying Kubernetes cluster via KubeSpray
+        Profile: ubuntu_r810_kvm
+        Timeout: 180s
+        SSH user: ubuntu
+        ProxyJump: nh1221@R810
+        Inventory: /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml
+
+TASK [Clear stale SSH ControlMaster sockets] ********************************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    cmd: rm -f ~/.ansible/cp/* /tmp/ansible-ssh-* 2>/dev/null || true
+    delta: '0:00:00.007236'
+    end: '2026-06-06 09:08:01.031975'
+    msg: ''
+    rc: 0
+    start: '2026-06-06 09:08:01.024739'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: ''
+    stdout_lines: <omitted>
+
+TASK [Write ProxyCommand wrapper script for R810 hop] ***********************************************************************************************************************************************************
+ok: [localhost] =>
+    changed: false
+    checksum: 08ab1d209dd412967f74bc7606419b7529ab1fb5
+    dest: /tmp/kube-proxy-jump.sh
+    gid: 0
+    group: root
+    mode: '0755'
+    owner: root
+    path: /tmp/kube-proxy-jump.sh
+    size: 360
+    state: file
+    uid: 0
+
+TASK [Patch kubespray ansible.cfg — disable host key checking] **************************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Patch kubespray ansible.cfg — SSH args via ProxyCommand script] *******************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Patch kubespray ansible.cfg — SSH args (no proxy)] ********************************************************************************************************************************************************
+skipping: [localhost] =>
+    changed: false
+    false_condition: proxy_jump_resolved | default('') | length == 0
+    skip_reason: Conditional result was False
+
+TASK [Patch kubespray ansible.cfg — disable pipelining] *********************************************************************************************************************************************************
+ok: [localhost] =>
+    backup: ''
+    changed: false
+    msg: ''
+
+TASK [Run KubeSpray cluster.yml] ********************************************************************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/data-center/_v3/playbooks/reused/deploy_kubespray.yml:512:7
+
+510         insertafter: '^\[ssh_connection\]'
+511
+512     - name: Run KubeSpray cluster.yml
+          ^ column 7
+
+fatal: [localhost]: FAILED! =>
+    changed: false
+    cmd: |-
+        set -o pipefail
+        source /opt/fabric-cache/kubespray/venv/bin/activate
+        cd /opt/fabric-cache/kubespray/src
+        ansible-playbook -i /opt/fabric-cache/kubespray/src/inventory/dc-lab/hosts.yml  cluster.yml  --become --become-user=root  -e "ansible_user=ubuntu"  -e "ansible_ssh_pass=amolla01"  -e "ansible_become_pass=amolla01"  --timeout=180  2>&1 | tee /tmp/kubespray_deploy.log
+    delta: '1:09:44.025087'
+    end: '2026-06-06 10:17:52.781639'
+    msg: non-zero return code
+    rc: 2
+    start: '2026-06-06 09:08:08.756552'
+    stderr: ''
+    stderr_lines: <omitted>
+    stdout: |-
+        [WARNING]: While constructing a mapping from /opt/fabric-
+        cache/kubespray/src/roles/bootstrap-os/tasks/main.yml, line 29, column 7, found
+        a duplicate dict key (paths). Using last defined value only.
+        [WARNING]: Skipping callback plugin 'ara_default', unable to load
+
+        PLAY [Check Ansible version] ***************************************************
+        Saturday 06 June 2026  09:08:10 -0500 (0:00:00.021)       0:00:00.021 *********
+
+        TASK [Check 2.16.4 <= Ansible version < 2.17.0] ********************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:08:10 -0500 (0:00:00.040)       0:00:00.061 *********
+
+        TASK [Check that python netaddr is installed] **********************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.093)       0:00:00.155 *********
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-master
+        [WARNING]: Could not match supplied host pattern, ignoring: kube-node
+        [WARNING]: Could not match supplied host pattern, ignoring: k8s-cluster
+        [WARNING]: Could not match supplied host pattern, ignoring: calico-rr
+        [WARNING]: Could not match supplied host pattern, ignoring: no-floating
+        [WARNING]: Could not match supplied host pattern, ignoring: bastion
+
+        TASK [Check that jinja is not too old (install via pip)] ***********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+
+        PLAY [Add kube-master nodes to kube_control_plane] *****************************
+        skipping: no hosts matched
+
+        PLAY [Add kube-node nodes to kube_node] ****************************************
+        skipping: no hosts matched
+
+        PLAY [Add k8s-cluster nodes to k8s_cluster] ************************************
+        skipping: no hosts matched
+
+        PLAY [Add calico-rr nodes to calico_rr] ****************************************
+        skipping: no hosts matched
+
+        PLAY [Add no-floating nodes to no_floating] ************************************
+        skipping: no hosts matched
+
+        PLAY [Install bastion ssh config] **********************************************
+        skipping: no hosts matched
+
+        PLAY [Bootstrap hosts for Ansible] *********************************************
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.028)       0:00:00.183 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.064)       0:00:00.248 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.028)       0:00:00.276 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.077)       0:00:00.354 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.029)       0:00:00.383 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.075)       0:00:00.459 *********
+        Saturday 06 June 2026  09:08:11 -0500 (0:00:00.075)       0:00:00.535 *********
+        [WARNING]: raw module does not support the environment keyword
+
+        TASK [bootstrap-os : Fetch /etc/os-release] ************************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:13 -0500 (0:00:02.350)       0:00:02.885 *********
+        Saturday 06 June 2026  09:08:13 -0500 (0:00:00.097)       0:00:02.983 *********
+
+        TASK [bootstrap-os : Include tasks] ********************************************
+        included: /opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml for host12-1, host34-1, hostb12-1, host12-3, host12-2, host34-2 => (item=/opt/fabric-cache/kubespray/src/roles/bootstrap-os/tasks/ubuntu.yml)
+        Saturday 06 June 2026  09:08:14 -0500 (0:00:00.219)       0:00:03.203 *********
+
+        TASK [bootstrap-os : Check if bootstrap is needed] *****************************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:16 -0500 (0:00:01.954)       0:00:05.157 *********
+
+        TASK [bootstrap-os : Check http::proxy in apt configuration files] *************
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:17 -0500 (0:00:01.826)       0:00:06.983 *********
+        Saturday 06 June 2026  09:08:17 -0500 (0:00:00.065)       0:00:07.049 *********
+
+        TASK [bootstrap-os : Check https::proxy in apt configuration files] ************
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:19 -0500 (0:00:02.056)       0:00:09.105 *********
+        Saturday 06 June 2026  09:08:20 -0500 (0:00:00.071)       0:00:09.176 *********
+        Saturday 06 June 2026  09:08:20 -0500 (0:00:00.067)       0:00:09.243 *********
+        Saturday 06 June 2026  09:08:20 -0500 (0:00:00.095)       0:00:09.338 *********
+
+        TASK [bootstrap-os : Create remote_tmp for it is used by another module] *******
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:33 -0500 (0:00:13.164)       0:00:22.503 *********
+
+        TASK [bootstrap-os : Gather facts] *********************************************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:08:47 -0500 (0:00:14.071)       0:00:36.574 *********
+
+        TASK [bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora)] ***
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:09:01 -0500 (0:00:13.724)       0:00:50.299 *********
+        Saturday 06 June 2026  09:09:01 -0500 (0:00:00.092)       0:00:50.391 *********
+
+        TASK [bootstrap-os : Ensure bash_completion.d folder exists] *******************
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+
+        PLAY [Gather facts] ************************************************************
+        Saturday 06 June 2026  09:09:12 -0500 (0:00:11.602)       0:01:01.993 *********
+
+        TASK [Gather minimal facts] ****************************************************
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:09:25 -0500 (0:00:13.102)       0:01:15.096 *********
+
+        TASK [Gather necessary facts (network)] ****************************************
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:09:39 -0500 (0:00:13.683)       0:01:28.779 *********
+
+        TASK [Gather necessary facts (hardware)] ***************************************
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+
+        PLAY [Prepare for etcd install] ************************************************
+        Saturday 06 June 2026  09:09:54 -0500 (0:00:15.252)       0:01:44.032 *********
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.104)       0:01:44.137 *********
+
+        TASK [kubespray-defaults : Create fallback_ips_base] ***************************
+        ok: [host12-1 -> localhost]
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.047)       0:01:44.184 *********
+
+        TASK [kubespray-defaults : Set fallback_ips] ***********************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.085)       0:01:44.270 *********
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.040)       0:01:44.310 *********
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.095)       0:01:44.406 *********
+        Saturday 06 June 2026  09:09:55 -0500 (0:00:00.079)       0:01:44.485 *********
+
+        TASK [adduser : User | Create User Group] **************************************
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:10:07 -0500 (0:00:11.917)       0:01:56.402 *********
+
+        TASK [adduser : User | Create User] ********************************************
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:10:19 -0500 (0:00:12.600)       0:02:09.003 *********
+
+        TASK [kubernetes/preinstall : Check if /etc/fstab exists] **********************
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-3]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:10:31 -0500 (0:00:11.677)       0:02:20.680 *********
+
+        TASK [kubernetes/preinstall : Remove swapfile from /etc/fstab] *****************
+        ok: [host12-2] => (item=swap)
+        ok: [hostb12-1] => (item=swap)
+        ok: [host12-3] => (item=swap)
+        ok: [host34-1] => (item=swap)
+        ok: [host12-1] => (item=swap)
+        ok: [host12-2] => (item=none)
+        ok: [hostb12-1] => (item=none)
+        ok: [host34-1] => (item=none)
+        ok: [host12-1] => (item=none)
+        ok: [host12-3] => (item=none)
+        ok: [host34-2] => (item=swap)
+        ok: [host34-2] => (item=none)
+        Saturday 06 June 2026  09:10:56 -0500 (0:00:24.602)       0:02:45.282 *********
+
+        TASK [kubernetes/preinstall : Mask swap.target (persist swapoff)] **************
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:11:09 -0500 (0:00:13.220)       0:02:58.503 *********
+
+        TASK [kubernetes/preinstall : Disable swap] ************************************
+        changed: [host12-3]
+        changed: [host12-2]
+        changed: [hostb12-1]
+        changed: [host34-1]
+        changed: [host12-1]
+        changed: [host34-2]
+        Saturday 06 June 2026  09:11:21 -0500 (0:00:11.655)       0:03:10.159 *********
+        Saturday 06 June 2026  09:11:21 -0500 (0:00:00.066)       0:03:10.226 *********
+
+        TASK [kubernetes/preinstall : Check resolvconf] ********************************
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:11:32 -0500 (0:00:11.704)       0:03:21.930 *********
+
+        TASK [kubernetes/preinstall : Check existence of /etc/resolvconf/resolv.conf.d] ***
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:11:44 -0500 (0:00:11.919)       0:03:33.850 *********
+
+        TASK [kubernetes/preinstall : Check status of /etc/resolv.conf] ****************
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:11:57 -0500 (0:00:12.957)       0:03:46.807 *********
+
+        TASK [kubernetes/preinstall : Get content of /etc/resolv.conf] *****************
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:09 -0500 (0:00:12.000)       0:03:58.807 *********
+
+        TASK [kubernetes/preinstall : Get currently configured nameservers] ************
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:09 -0500 (0:00:00.141)       0:03:58.949 *********
+        Saturday 06 June 2026  09:12:09 -0500 (0:00:00.076)       0:03:59.025 *********
+
+        TASK [kubernetes/preinstall : NetworkManager | Check if host has NetworkManager] ***
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:21 -0500 (0:00:11.728)       0:04:10.753 *********
+
+        TASK [kubernetes/preinstall : Check systemd-resolved] **************************
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:33 -0500 (0:00:12.260)       0:04:23.013 *********
+
+        TASK [kubernetes/preinstall : Set default dns if remove_default_searchdomains is false] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:33 -0500 (0:00:00.081)       0:04:23.095 *********
+
+        TASK [kubernetes/preinstall : Set dns facts] ***********************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:34 -0500 (0:00:00.086)       0:04:23.182 *********
+
+        TASK [kubernetes/preinstall : Check if kubelet is configured] ******************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:45 -0500 (0:00:11.915)       0:04:35.098 *********
+
+        TASK [kubernetes/preinstall : Check if early DNS configuration stage] **********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:46 -0500 (0:00:00.076)       0:04:35.174 *********
+
+        TASK [kubernetes/preinstall : Target resolv.conf files] ************************
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:46 -0500 (0:00:00.096)       0:04:35.271 *********
+        Saturday 06 June 2026  09:12:46 -0500 (0:00:00.076)       0:04:35.348 *********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhclient.conf exists] **************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:12:59 -0500 (0:00:12.859)       0:04:48.207 *********
+        Saturday 06 June 2026  09:12:59 -0500 (0:00:00.076)       0:04:48.283 *********
+
+        TASK [kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists] *********
+        ok: [host12-3]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:12.308)       0:05:00.592 *********
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.058)       0:05:00.650 *********
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.057)       0:05:00.708 *********
+
+        TASK [kubernetes/preinstall : Target dhclient hook file for Debian family] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.077)       0:05:00.786 *********
+
+        TASK [kubernetes/preinstall : Generate search domains to resolvconf] ***********
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.083)       0:05:00.869 *********
+
+        TASK [kubernetes/preinstall : Pick coredns cluster IP or default resolver] *****
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.168)       0:05:01.038 *********
+        Saturday 06 June 2026  09:13:11 -0500 (0:00:00.070)       0:05:01.108 *********
+
+        TASK [kubernetes/preinstall : Generate nameservers for resolvconf, not including cluster DNS] ***
+        ok: [host12-1]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:12 -0500 (0:00:00.113)       0:05:01.222 *********
+        Saturday 06 June 2026  09:13:12 -0500 (0:00:00.064)       0:05:01.286 *********
+
+        TASK [kubernetes/preinstall : Check /usr readonly] *****************************
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:23 -0500 (0:00:11.610)       0:05:12.897 *********
+        Saturday 06 June 2026  09:13:23 -0500 (0:00:00.058)       0:05:12.956 *********
+
+        TASK [kubernetes/preinstall : Stop if either kube_control_plane or kube_node group is empty] ***
+        ok: [host12-1] => (item=kube_control_plane) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_control_plane",
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item=kube_node) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": "kube_node",
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:23 -0500 (0:00:00.039)       0:05:12.996 *********
+
+        TASK [kubernetes/preinstall : Stop if etcd group is empty in external etcd mode] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:23 -0500 (0:00:00.031)       0:05:13.028 *********
+
+        TASK [kubernetes/preinstall : Stop if non systemd OS type] *********************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:23 -0500 (0:00:00.080)       0:05:13.108 *********
+
+        TASK [kubernetes/preinstall : Stop if the os does not support] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.084)       0:05:13.193 *********
+
+        TASK [kubernetes/preinstall : Stop if unknown network plugin] ******************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.087)       0:05:13.280 *********
+
+        TASK [kubernetes/preinstall : Stop if unsupported version of Kubernetes] *******
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.086)       0:05:13.367 *********
+
+        TASK [kubernetes/preinstall : Stop if known booleans are set as strings (Use JSON format on CLI: -e "{'key': true }")] ***
+        ok: [host12-1] => (item={'name': 'download_run_once', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_run_once",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'deploy_netchecker', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "deploy_netchecker",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'download_always_pull', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "download_always_pull",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'helm_enabled', 'value': True}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "helm_enabled",
+                "value": true
+            },
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => (item={'name': 'openstack_lbaas_enabled', 'value': False}) => {
+            "ansible_loop_var": "item",
+            "changed": false,
+            "item": {
+                "name": "openstack_lbaas_enabled",
+                "value": false
+            },
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.061)       0:05:13.429 *********
+
+        TASK [kubernetes/preinstall : Stop if even number of etcd hosts] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.078)       0:05:13.507 *********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for masters] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.063)       0:05:13.571 *********
+
+        TASK [kubernetes/preinstall : Stop if memory is too small for nodes] ***********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:24 -0500 (0:00:00.081)       0:05:13.653 *********
+
+        TASK [kubernetes/preinstall : Stop if cgroups are not enabled on nodes] ********
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:36 -0500 (0:00:11.693)       0:05:25.346 *********
+        Saturday 06 June 2026  09:13:36 -0500 (0:00:00.068)       0:05:25.415 *********
+
+        TASK [kubernetes/preinstall : Stop if ip var does not match local ips] *********
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:13:36 -0500 (0:00:00.083)       0:05:25.499 *********
+
+        TASK [kubernetes/preinstall : Ensure ping package] *****************************
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-2]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:13:52 -0500 (0:00:15.923)       0:05:41.422 *********
+
+        TASK [kubernetes/preinstall : Stop if access_ip is not pingable] ***************
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:11.829)       0:05:53.252 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.059)       0:05:53.312 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.065)       0:05:53.377 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.077)       0:05:53.455 *********
+
+        TASK [kubernetes/preinstall : Stop if bad hostname] ****************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.085)       0:05:53.541 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.068)       0:05:53.609 *********
+
+        TASK [kubernetes/preinstall : Check that kube_service_addresses is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.054)       0:05:53.664 *********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet is a network range] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.054)       0:05:53.719 *********
+
+        TASK [kubernetes/preinstall : Check that kube_pods_subnet does not collide with kube_service_addresses] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.058)       0:05:53.777 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.014)       0:05:53.792 *********
+
+        TASK [kubernetes/preinstall : Stop if unknown dns mode] ************************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.032)       0:05:53.824 *********
+
+        TASK [kubernetes/preinstall : Stop if unknown kube proxy mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.034)       0:05:53.858 *********
+
+        TASK [kubernetes/preinstall : Stop if unknown cert_management] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.030)       0:05:53.888 *********
+
+        TASK [kubernetes/preinstall : Stop if unknown resolvconf_mode] *****************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.035)       0:05:53.924 *********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host, docker or kubeadm] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.066)       0:05:53.990 *********
+
+        TASK [kubernetes/preinstall : Stop if container manager is not docker, crio or containerd] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.027)       0:05:54.018 *********
+
+        TASK [kubernetes/preinstall : Stop if etcd deployment type is not host or kubeadm when container_manager != docker] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.063)       0:05:54.082 *********
+        Saturday 06 June 2026  09:14:04 -0500 (0:00:00.019)       0:05:54.101 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.019)       0:05:54.121 *********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled but download_run_once is not] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.080)       0:05:54.201 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.062)       0:05:54.263 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.062)       0:05:54.326 *********
+
+        TASK [kubernetes/preinstall : Stop if download_localhost is enabled for Flatcar Container Linux] ***
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.076)       0:05:54.402 *********
+
+        TASK [kubernetes/preinstall : Ensure minimum containerd version] ***************
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.033)       0:05:54.436 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.066)       0:05:54.503 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.061)       0:05:54.564 *********
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.076)       0:05:54.641 *********
+
+        TASK [kubernetes/preinstall : Verify that the packages list structure is valid] ***
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.262)       0:05:54.904 *********
+
+        TASK [kubernetes/preinstall : Verify that the packages list is sorted] *********
+        ok: [host34-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [hostb12-1] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host12-3] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        ok: [host34-2] => {
+            "changed": false,
+            "msg": "All assertions passed"
+        }
+        Saturday 06 June 2026  09:14:05 -0500 (0:00:00.143)       0:05:55.048 *********
+
+        TASK [kubernetes/preinstall : Create kubernetes directories] *******************
+        ok: [hostb12-1] => (item=/etc/kubernetes)
+        ok: [host34-1] => (item=/etc/kubernetes)
+        ok: [host12-2] => (item=/etc/kubernetes)
+        ok: [host12-1] => (item=/etc/kubernetes)
+        ok: [host12-3] => (item=/etc/kubernetes)
+        ok: [hostb12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-2] => (item=/etc/kubernetes/manifests)
+        ok: [host34-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-1] => (item=/etc/kubernetes/manifests)
+        ok: [host12-3] => (item=/etc/kubernetes/manifests)
+        ok: [hostb12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host34-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-2] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-1] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host12-3] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [hostb12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host34-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-1] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host12-3] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        ok: [host34-2] => (item=/etc/kubernetes)
+        ok: [host34-2] => (item=/etc/kubernetes/manifests)
+        ok: [host34-2] => (item=/usr/local/bin/kubernetes-scripts)
+        ok: [host34-2] => (item=/usr/libexec/kubernetes/kubelet-plugins/volume/exec)
+        Saturday 06 June 2026  09:14:52 -0500 (0:00:46.697)       0:06:41.745 *********
+
+        TASK [kubernetes/preinstall : Create other directories of root owner] **********
+        ok: [hostb12-1] => (item=/etc/kubernetes/ssl)
+        ok: [host34-1] => (item=/etc/kubernetes/ssl)
+        ok: [host12-1] => (item=/etc/kubernetes/ssl)
+        ok: [host12-2] => (item=/etc/kubernetes/ssl)
+        ok: [host12-3] => (item=/etc/kubernetes/ssl)
+        ok: [hostb12-1] => (item=/usr/local/bin)
+        ok: [host12-2] => (item=/usr/local/bin)
+        ok: [host34-1] => (item=/usr/local/bin)
+        ok: [host12-1] => (item=/usr/local/bin)
+        ok: [host12-3] => (item=/usr/local/bin)
+        ok: [host34-2] => (item=/etc/kubernetes/ssl)
+        ok: [host34-2] => (item=/usr/local/bin)
+        Saturday 06 June 2026  09:15:16 -0500 (0:00:24.236)       0:07:05.982 *********
+
+        TASK [kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists] ***
+        ok: [host12-1]
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [host34-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:15:29 -0500 (0:00:12.436)       0:07:18.419 *********
+        Saturday 06 June 2026  09:15:29 -0500 (0:00:00.071)       0:07:18.490 *********
+
+        TASK [kubernetes/preinstall : Create cni directories] **************************
+        ok: [host34-1] => (item=/etc/cni/net.d)
+        ok: [host12-2] => (item=/etc/cni/net.d)
+        ok: [hostb12-1] => (item=/etc/cni/net.d)
+        ok: [host12-3] => (item=/etc/cni/net.d)
+        ok: [host12-1] => (item=/etc/cni/net.d)
+        ok: [host34-1] => (item=/opt/cni/bin)
+        ok: [host12-2] => (item=/opt/cni/bin)
+        ok: [hostb12-1] => (item=/opt/cni/bin)
+        ok: [host12-3] => (item=/opt/cni/bin)
+        ok: [host12-1] => (item=/opt/cni/bin)
+        ok: [host34-2] => (item=/etc/cni/net.d)
+        ok: [host34-2] => (item=/opt/cni/bin)
+        Saturday 06 June 2026  09:15:52 -0500 (0:00:23.272)       0:07:41.763 *********
+
+        TASK [kubernetes/preinstall : Create calico cni directories] *******************
+        ok: [host12-2] => (item=/var/lib/calico)
+        ok: [host12-1] => (item=/var/lib/calico)
+        ok: [host34-1] => (item=/var/lib/calico)
+        ok: [hostb12-1] => (item=/var/lib/calico)
+        ok: [host12-3] => (item=/var/lib/calico)
+        ok: [host34-2] => (item=/var/lib/calico)
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:11.651)       0:07:53.415 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.091)       0:07:53.506 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.085)       0:07:53.591 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.078)       0:07:53.670 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.118)       0:07:53.789 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.102)       0:07:53.891 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.064)       0:07:53.956 *********
+        Saturday 06 June 2026  09:16:04 -0500 (0:00:00.062)       0:07:54.018 *********
+
+        TASK [kubernetes/preinstall : Create systemd-resolved drop-in directory] *******
+        ok: [host12-2]
+        ok: [host12-3]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [hostb12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:16:17 -0500 (0:00:12.234)       0:08:06.253 *********
+
+        TASK [kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved] ***
+        ok: [host12-3]
+        ok: [host12-2]
+        ok: [hostb12-1]
+        ok: [host34-1]
+        ok: [host12-1]
+        ok: [host34-2]
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:17.453)       0:08:23.707 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.058)       0:08:23.765 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.059)       0:08:23.824 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.057)       0:08:23.882 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.065)       0:08:23.947 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.060)       0:08:24.008 *********
+        Saturday 06 June 2026  09:16:34 -0500 (0:00:00.063)       0:08:24.072 *********
+        Saturday 06 June 2026  09:16:35 -0500 (0:00:00.063)       0:08:24.135 *********
+        Saturday 06 June 2026  09:16:35 -0500 (0:00:00.060)       0:08:24.196 *********
+        Saturday 06 June 2026  09:16:35 -0500 (0:00:00.063)       0:08:24.260 *********
+        Saturday 06 June 2026  09:16:35 -0500 (0:00:00.061)       0:08:24.321 *********
+
+        TASK [kubernetes/preinstall : Update package management cache (APT)] ***********
+        fatal: [host34-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        fatal: [host12-3]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        fatal: [hostb12-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        fatal: [host12-2]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        fatal: [host12-1]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+        fatal: [host34-2]: FAILED! => {"changed": false, "msg": "Failed to update apt cache: unknown reason"}
+
+        NO MORE HOSTS LEFT *************************************************************
+
+        PLAY RECAP *********************************************************************
+        host12-1                   : ok=79   changed=1    unreachable=0    failed=1    skipped=56   rescued=0    ignored=0
+        host12-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
+        host12-3                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
+        host34-1                   : ok=63   changed=1    unreachable=0    failed=1    skipped=48   rescued=0    ignored=0
+        host34-2                   : ok=59   changed=1    unreachable=0    failed=1    skipped=52   rescued=0    ignored=0
+        hostb12-1                  : ok=63   changed=1    unreachable=0    failed=1    skipped=48   rescued=0    ignored=0
+
+        Saturday 06 June 2026  10:17:52 -0500 (1:01:16.902)       1:09:41.224 *********
+        ===============================================================================
+        kubernetes/preinstall : Update package management cache (APT) -------- 3676.90s
+        kubernetes/preinstall : Create kubernetes directories ------------------ 46.70s
+        kubernetes/preinstall : Remove swapfile from /etc/fstab ---------------- 24.60s
+        kubernetes/preinstall : Create other directories of root owner --------- 24.24s
+        kubernetes/preinstall : Create cni directories ------------------------- 23.27s
+        kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved -- 17.45s
+        kubernetes/preinstall : Ensure ping package ---------------------------- 15.92s
+        Gather necessary facts (hardware) -------------------------------------- 15.25s
+        bootstrap-os : Gather facts -------------------------------------------- 14.07s
+        bootstrap-os : Assign inventory name to unconfigured hostnames (non-CoreOS, non-Flatcar, Suse and ClearLinux, non-Fedora) -- 13.72s
+        Gather necessary facts (network) --------------------------------------- 13.68s
+        kubernetes/preinstall : Mask swap.target (persist swapoff) ------------- 13.22s
+        bootstrap-os : Create remote_tmp for it is used by another module ------ 13.16s
+        Gather minimal facts --------------------------------------------------- 13.10s
+        kubernetes/preinstall : Check status of /etc/resolv.conf --------------- 12.96s
+        kubernetes/preinstall : Check if /etc/dhclient.conf exists ------------- 12.86s
+        adduser : User | Create User ------------------------------------------- 12.60s
+        kubernetes/preinstall : Check if kubernetes kubeadm compat cert dir exists -- 12.44s
+        kubernetes/preinstall : Check if /etc/dhcp/dhclient.conf exists -------- 12.31s
+        kubernetes/preinstall : Check systemd-resolved ------------------------- 12.26s
+    stdout_lines: <omitted>
+
+PLAY RECAP ******************************************************************************************************************************************************************************************************
+Host12_1                   : ok=15   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+Host12_2                   : ok=15   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+Host12_3                   : ok=15   changed=5    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+Host34_1                   : ok=15   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+Host34_2                   : ok=15   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+HostB12_1                  : ok=15   changed=6    unreachable=0    failed=0    skipped=3    rescued=0    ignored=1
+localhost                  : ok=24   changed=1    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
