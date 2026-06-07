@@ -65,3 +65,32 @@ KubeSpray is idempotent — it will skip all 360 completed tasks and resume at t
 
 Alternative (if you don't want containerd on the deployer): Update your all.yml to set download_localhost: false 
 - so host12-1 itself pulls images directly rather than delegating to localhost. Based on your repo memory, this was already the intended production fix.
+
+
+ccccCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+
+The failure is a proxy timeout on localhost. The ctr on Lab-ControlNode is trying to pull quay.io/calico/cni:v3.27.3 through 172.16.2.1:8888 (the R810 tinyproxy), which is timing out.
+
+Your Lab-ControlNode has direct internet (all binary downloads from GitHub succeeded), but the local containerd is inheriting proxy env vars. Fix:
+
+# 1. Check what's setting the proxy
+env | grep -i proxy
+
+# 2. Unset proxy for this session (Lab-ControlNode doesn't need it)
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy no_proxy NO_PROXY
+
+# 3. Kill and restart containerd without proxy
+sudo kill $(pgrep containerd) 2>/dev/null; sleep 1
+sudo containerd > /tmp/containerd.log 2>&1 &
+
+# 4. Verify direct pull works
+sudo ctr -n k8s.io images pull --hosts-dir /etc/containerd/certs.d quay.io/calico/cni:v3.27.3
+
+# 5. If pull works, re-run the playbook (it's idempotent, will resume at calico_cni)
+ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml
+
+Root cause: download_run_once: true delegates container pulls to localhost (host12-1 -> localhost). The ctr binary picks up HTTPS_PROXY=172.16.2.1:8888 from your shell environment (or /etc/environment), but that proxy isn't reachable from WSL's network namespace. Since your deployer already has direct internet access to registries, just unsetting the proxy variables fixes it.
+
+If the proxy is set in /etc/environment or ~/.bashrc, also remove it there so it doesn't come back on the next run.
+
