@@ -93,4 +93,44 @@ ansible-playbook -i inventory/hosts.yml playbooks/reused/deploy_kubespray.yml
 Root cause: download_run_once: true delegates container pulls to localhost (host12-1 -> localhost). The ctr binary picks up HTTPS_PROXY=172.16.2.1:8888 from your shell environment (or /etc/environment), but that proxy isn't reachable from WSL's network namespace. Since your deployer already has direct internet access to registries, just unsetting the proxy variables fixes it.
 
 If the proxy is set in /etc/environment or ~/.bashrc, also remove it there so it doesn't come back on the next run.
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Same proxy issue as before. The key detail from the error:
+proxyconnect tcp: dial tcp 172.16.2.1:8888: i/o timeout
+Why it still fails despite the image existing locally: 
+Kubespray's download_run_once doesn't check the local containerd store 
+— it checks its cache directory for a tar file. Since no tar exists at /tmp/kubespray_cache/..., 
+it tries ctr pull which inherits HTTPS_PROXY from the shell environment and times out.
+
+Fix (run on Lab-ControlNode before re-running the playbook):
+
+# 1. Unset proxy for this shell session
+unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy
+
+# 2. Also remove it from the containerd systemd drop-in (written by previous run)
+sudo rm -f /etc/systemd/system/containerd.service.d/http-proxy.conf
+sudo systemctl daemon-reload
+sudo systemctl restart containerd
+
+# 3. Verify direct pull works without proxy
+sudo /usr/local/bin/ctr -n k8s.io images pull --hosts-dir /etc/containerd/certs.d quay.io/calico/cni:v3.27.3
+
+# 4. Re-run the playbook (it's idempotent, will resume at calico_cni download)
+source /opt/fabric-cache/kubespray/venv/bin/activate
+cd /opt/fabric-cache/kubespray/src
+ansible-playbook -i inventory/dc-lab/hosts.yml cluster.yml \
+  --become --become-user=root \
+  -e "ansible_user=ubuntu" \
+  -e "ansible_ssh_pass=amolla01" \
+  -e "ansible_become_pass=amolla01" \
+  --timeout=180
+
+
+Also confirm in /opt/fabric-cache/kubespray/src/inventory/dc-lab/group_vars/all/all.yml that you've either removed or commented out:
+
+# http_proxy: "http://172.16.2.1:8888"
+# https_proxy: "http://172.16.2.1:8888"
+
+And check /etc/environment on Lab-ControlNode — if the proxy is set there, remove it too. 
+That's what's poisoning the ctr environment when Ansible delegates the pull to localhost.
 
