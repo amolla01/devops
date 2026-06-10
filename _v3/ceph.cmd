@@ -707,3 +707,53 @@ pvremove -ff in disk wipe (strips LVM PV labels that blocked OSD discovery)
 Discovery daemon enabled (enableDiscoveryDaemon=true)
 deviceFilter only rendered when non-empty
 The previous 2-MON situation was the root cause of the HEALTH_ERR spiral — it was auto-scaled from 1 and created an unstable even-numbered quorum.
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+nh1221@PowerEdge-R810:~$ for vm in Host12_1 Host12_2 Host12-_3 Host34_1 Host34_2 HostB12_1; do echo "=== $vm ==="; virsh domblklist $vm; done
+=== Host12_1 ===
+ Target   Source
+--------------------------------------------------------------
+ vda      /home/nh1221/dc_lab/disks/Host12_1.qcow2
+ vdb      /home/nh1221/dc_lab/disks/Host12_1-osd1.qcow2
+ vdc      /home/nh1221/dc_lab/disks/Host12_1-osd2.qcow2
+ sda      /home/nh1221/dc_lab/cloud-init/Host12_1-cidata.iso
+
+=== Host12_2 ===
+ Target   Source
+--------------------------------------------------------------
+ vda      /home/nh1221/dc_lab/disks/Host12_2.qcow2
+ vdb      /home/nh1221/dc_lab/disks/Host12_2-osd1.qcow2
+ vdc      /home/nh1221/dc_lab/disks/Host12_2-osd2.qcow2
+ sda      /home/nh1221/dc_lab/cloud-init/Host12_2-cidata.iso
+
+=== Host12-_3 ===
+error: failed to get domain 'Host12-_3'
+
+=== Host34_1 ===
+ Target   Source
+--------------------------------------------------------------
+ vda      /home/nh1221/dc_lab/disks/Host34_1.qcow2
+ vdb      /home/nh1221/dc_lab/disks/Host34_1-osd1.qcow2
+ vdc      /home/nh1221/dc_lab/disks/Host34_1-osd2.qcow2
+ sda      /home/nh1221/dc_lab/cloud-init/Host34_1-cidata.iso
+
+=== Host34_2 ===
+ Target   Source
+--------------------------------------------------------------
+ vda      /home/nh1221/dc_lab/disks/Host34_2.qcow2
+ vdb      /home/nh1221/dc_lab/disks/Host34_2-osd1.qcow2
+ vdc      /home/nh1221/dc_lab/disks/Host34_2-osd2.qcow2
+ sda      /home/nh1221/dc_lab/cloud-init/Host34_2-cidata.iso
+
+=== HostB12_1 ===
+ Target   Source
+---------------------------------------------------------------
+ vda      /home/nh1221/dc_lab/disks/HostB12_1.qcow2
+ vdb      /home/nh1221/dc_lab/disks/HostB12_1-osd1.qcow2
+ vdc      /home/nh1221/dc_lab/disks/HostB12_1-osd2.qcow2
+ sda      /home/nh1221/dc_lab/cloud-init/HostB12_1-cidata.iso
+
+nh1221@PowerEdge-R810:~$
