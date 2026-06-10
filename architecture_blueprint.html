@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infrastructure Architecture Blueprint</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 40px 20px; background-color: #f8f9fa; }
+        h1 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; font-size: 2.2em; }
+        h2 { color: #1e293b; margin-top: 35px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; font-size: 1.6em; }
+        h3 { color: #334155; margin-top: 25px; font-size: 1.2em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 6px; overflow: hidden; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #edf2f7; }
+        th { background-color: #f1f5f9; color: #475569; font-weight: 600; }
+        tr:hover { background-color: #f8fafc; }
+        pre { background: #1e293b; color: #f8fafc; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; }
+        code { background: #e2e8f0; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.95em; }
+        pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+        .meta-box { background: #f1f5f9; border-left: 4px solid #475569; padding: 15px; margin: 20px 0; border-radius: 0 6px 6px 0; }
+        .architecture-diagram { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; font-family: monospace; white-space: pre; overflow-x: auto; color: #334155; line-height: 1.2; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Infrastructure Architecture Blueprint & Comparative Analysis</h1>
+    <div class="meta-box">
+        <strong>Project Strategy:</strong> Multi-Tenant OpenStack on Core Kubernetes (Nesting Architecture)<br>
+        <strong>Deployment Phases:</strong> Phase 1: Dallas (Primary Compute Core with Global Edge Acceleration) | Phase 2: Dhaka (Localized Regional Extension)
+    </div>
+
+    <h2>1. Executive Cost & Feasibility Study: Dallas vs. Bangladesh</h2>
+    <p>To maintain an objective, equitable comparison, this financial model assumes a standard <strong>42U rack drawing 5 kW of usable power</strong> paired with a <strong>10Gbps unmetered (flat rate) network blend</strong>.</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Cost Element (Monthly Recurring)</th>
+                <th>Dallas, TX, USA (e.g., Infomart Hub)</th>
+                <th>Dhaka, Bangladesh (e.g., Local Tier III)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>42U Rack Space & 5 kW Power</strong></td>
+                <td>$1,000 – $2,100</td>
+                <td>$1,800 – $2,500</td>
+            </tr>
+            <tr>
+                <td><strong>10Gbps Unmetered Bandwidth</strong></td>
+                <td>$500 – $1,000</td>
+                <td>$2,500 – $4,000+</td>
+            </tr>
+            <tr>
+                <td><strong>Setup & Provisioning (One-time)</strong></td>
+                <td>$500 – $1,500</td>
+                <td>$1,000 – $2,500</td>
+            </tr>
+            <tr>
+                <td><strong>Total Estimated Monthly OPEX</strong></td>
+                <td><strong>$1,500 – $3,100</strong></td>
+                <td><strong>$4,300 – $6,500+</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>1.2 Core Cost Drivers & Structural Reality</h3>
+    <ul>
+        <li><strong>The Bandwidth Bottleneck:</strong> In Dallas hubs like the Infomart, hundreds of Tier-1 carriers interconnect, making a dedicated 10Gbps flat-rate IP transit port highly commoditized. In Bangladesh, bandwidth is strictly divided between local internet exchange routing (<strong>BDIX</strong>) and international transit via submarine cables (<strong>IIG</strong>). Standard bundles include very low international bandwidth caps; scaling to a dedicated 10Gbps unmetered international pipe requires custom pricing and special regulatory approvals.</li>
+        <li><strong>Power and Infrastructure Overhead:</strong> Texas features an independent electric grid with highly competitive commercial electricity rates (~10.2¢ per kWh) and lower Power Usage Effectiveness (PUE) ratings. While utility rates in Bangladesh seem lower on paper, grid instability forces local data centers to heavily invest in massive generator banks, UPS backups, and heavy-duty cooling units to combat ambient humidity. These capital costs are passed directly to consumers through strict per-amp pricing models.</li>
+        <li><strong>Tier Densities:</strong> Dallas features an abundance of certified Tier III and Tier IV facilities. In Bangladesh, certified commercial Tier III facilities are scarce and space is tightly constrained, putting a luxury price premium on full 42U cabinets.</li>
+    </ul>
+
+    <h2>2. Core Target Architecture & Technology Stack</h2>
+    <p>The platform utilizes a structured "nesting" design to isolate infrastructure operations from automated, self-service tenant environments.</p>
+
+    <div class="architecture-diagram">
+┌────────────────────────────────────────────────────────┐
+│     Tenant Layer: Self-Service Tenant K8s Clusters     │
+│       (Provisioned automatically via OpenStack Magnum)  │
+├────────────────────────────────────────────────────────┤
+│     Infrastructure Cloud Layer: OpenStack Services      │
+│       (Compute, Network, Storage running as Pods)      │
+├────────────────────────────────────────────────────────┤
+│   Platform Management & Foundation Layer: Rancher UI   │
+│       (Manages Core K8s Cluster & Imports Tenant K8s)  │
+├────────────────────────────────────────────────────────┤
+│   Foundational Infrastructure Layer: Kubespray K8s     │
+│       (The bare-metal/VM bootstrap Kubernetes cluster) │
+└────────────────────────────────────────────────────────┘</div>
+
+    <h3>2.1 Component Breakdown</h3>
+    <ul>
+        <li><strong>Foundational Infrastructure (Kubespray):</strong> An Ansible-driven deployment engine used to build the initial production-ready baseline Kubernetes cluster on physical hardware nodes.</li>
+        <li><strong>Platform Management Layer (Rancher):</strong> Sits on top of the baseline cluster. It introduces an intuitive web UI to monitor, secure, and troubleshoot clusters, replacing complex command-line administration.</li>
+        <li><strong>Distributed Storage Engine (Rook-Ceph):</strong> Orchestrates Ceph directly inside the core Kubernetes layer, turning raw local NVMe/SSD drives into high-performance, resilient block and file storage for OpenStack instances.</li>
+        <li><strong>Infrastructure Cloud Layer (OpenStack-Helm):</strong> Containers and deploys core OpenStack components (Nova, Neutron, Keystone, Glance) as native Kubernetes applications. This simplifies upgrades into standard Helm operations and leverages Kubernetes to auto-heal failed cloud controllers.</li>
+        <li><strong>Self-Service Automation (OpenStack Magnum):</strong> An built-in orchestration service that allows multi-tenant users to provision their own independent Kubernetes clusters via the OpenStack API or Horizon panel without manual engineering support.</li>
+    </ul>
+
+    <h2>3. High-Performance Hardware Customization (SR-IOV & DPDK)</h2>
+    <p>To offer premium, low-latency network performance as a tiered service, specialized compute nodes must be isolated and tuned at the kernel level.</p>
+
+    <h3>3.1 Kernel Configuration Pre-Requisites</h3>
+    <p>On host machines designated as premium nodes, the Linux bootloader must be configured to pass hardware isolation parameters.</p>
+    <ul>
+        <li><strong>IOMMU Activation:</strong> <code>intel_iommu=on</code> or <code>amd_iommu=on</code> enabled in GRUB to support direct virtual function allocation.</li>
+        <li><strong>Hugepages Reservation:</strong> Allocate dedicated system memory for DPDK packet processing (e.g., <code>default_hugepagesz=1G hugepages=16</code>).</li>
+        <li><strong>CPU Core Isolation:</strong> Use <code>isolcpus=</code> to prevent the standard OS scheduler from utilizing processing cores reserved exclusively for high-speed DPDK routing.</li>
+    </ul>
+
+    <h3>3.2 Scheduling & Traffic Separation</h3>
+    <ol>
+        <li><strong>Kubernetes Node Labeling:</strong> Apply precise metadata tags (e.g., <code>hardware-tier=premium-sriov</code>) during the Kubespray installation phase.</li>
+        <li><strong>OpenStack Flavor Mapping:</strong> Build specific OpenStack Flavors mapping to these labels. When tenants build a premium VM instance, OpenStack uses node affinity rules to schedule the workload onto the tuned hardware.</li>
+    </ol>
+
+    <h2>4. Phased Deployment Blueprint & Deployment Ordering</h2>
+    <p>Because the round-trip latency between Dallas and Bangladesh is <strong>>150ms</strong>, you must never span a single Kubernetes or Ceph cluster across both locations. The sites must run as completely separate environments.</p>
+
+    <h3>4.1 Deployment Sequence (Identical for Both Sites)</h3>
+    
+    <h4>Step 1: Initialize Bare-Metal Infrastructure</h4>
+    <p>Execute Kubespray playbooks across the physical hardware inventory, ensuring that premium and standard nodes are correctly distinguished via Node Labels.</p>
+
+    <h4>Step 2: Provision Distributed Storage</h4>
+    <p>Deploy <strong>Rook-Ceph</strong> onto the baseline cluster to bind the raw local drives into an active cluster storage mesh.</p>
+
+    <h4>Step 3: Install Cert-Manager via Helm</h4>
+    <pre><code>helm repo add jetstack https://jetstack.io --force-update
