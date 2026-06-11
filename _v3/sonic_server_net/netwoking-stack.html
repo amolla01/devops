@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenStack on K8s Networking Architecture</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #f8f9fa;
+        }
+        h1 {
+            color: #003366;
+            border-bottom: 3px solid #003366;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+        h2 {
+            color: #0056b3;
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+        .subtitle {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        code {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #212529;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85em;
+            line-height: 1.4;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #003366;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .pro-list { color: #28a745; font-weight: bold; }
+        .con-list { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>OpenStack on Kubernetes Architecture Blueprint</h1>
+    <div class="subtitle">Integration Analysis: Kubespray (Calico) + OpenStack (OVN / ovn-bgp-agent / FRR) on Ubuntu via eBGP</div>
+
+    <h2>1. Core Architectural Overview</h2>
+    <p>When running OpenStack containerized on top of a Kubespray-deployed Kubernetes cluster, the foundational networking assumptions flip. Kubernetes handles the bare-metal host interfaces, and OpenStack acts as the tenant orchestration framework. By running <code>ovn-bgp-agent</code> alongside FRR to peer natively with an eBGP CLOS fabric, you build a <strong>Co-existing Routing Architecture</strong>.</p>
+    
+    <div class="warning">
+        <strong>Critical System Conflict:</strong> Both Calico (via its native BIRD daemon) and host-level FRR will attempt to bind to the default BGP port (<strong>TCP 179</strong>) on the physical or loopback host interfaces. The engine that registers second will crash, destabilizing cluster-wide ingress/egress mapping.
+    </div>
+
+    <h2>2. Technical Solution: FRR as the Sole BGP Speaker</h2>
+    <p>To eliminate interface contention, you must completely disable Calico's internal BGP engine and pass the task of advertising all local prefixes (Pods, Services, and Virtual Machine FIPs) exclusively to <strong>FRR</strong>.</p>
+
+    <h3>Kubespray Calico Configuration Override</h3>
+    <p>Apply these values inside your Kubespray configuration deployment to disable local BIRD instances and stop Calico's Felix agent from conflicting with OVN interfaces:</p>
+    <pre><code># group_vars/k8s_cluster/k8s_net_calico.yml
+calico_no_global_bgp_peers: true
+calico_network_backend: "none"
+calico_felix_interface_exclusion: "br-int,br-ex,bgp-nic,ovn-*"</code></pre>
+
+    <h3>Host System FRR Engine Matrix</h3>
+    <p>Update your Ubuntu host <code>/etc/frr/frr.conf</code> layout to aggregate routes out of both ecosystem environments seamlessly:</p>
+    <pre><code>router bgp 65001
+ bgp router-id 192.168.10.11
+ no bgp ebgp-requires-policy
+ 
+ neighbor 10.0.0.1 remote-as 65100
+ neighbor 10.0.0.1 description Leaf-Switch-A
+ 
+ address-family ipv4 unicast
+  redistribute kernel route-map FILTER-TO-FABRIC
+  redistribute connected route-map FILTER-TO-FABRIC
+  neighbor 10.0.0.1 activate
+ exit-address-family
+
+ip prefix-list ALLOWED-PREFIXES seq 10 permit 10.233.0.0/18 le 32
+ip prefix-list ALLOWED-PREFIXES seq 20 permit 10.233.64.0/18 le 32
+ip prefix-list ALLOWED-PREFIXES seq 30 permit 203.0.113.0/24 le 32
+
+route-map FILTER-TO-FABRIC permit 10
+ match ip address prefix-list ALLOWED-PREFIXES</code></pre>
+
+    <h2>3. Strict Multi-Tenancy & Security Isolation</h2>
+    <p>To prevent address overlapping conflicts across isolated account environments, private tenant allocations are containerized inside OVN software-defined **Geneve overlay tunnels**. The host's public edge interfaces handle outer encapsulation headers only.</p>
+    <ul>
+        <li><code>expose_tenant_networks = False</code> inside <code>ovn-bgp-agent.conf</code> to enforce encapsulation boundaries.</li>
+        <li><code>expose_floating_ip = True</code> to strictly permit public endpoint routing visibility via host FRR.</li>
+        <li>Isolate external provider lanes by pinning host-level FRR configurations into an independent network <strong>VRF</strong> namespace on Ubuntu.</li>
+    </ul>
+
+    <h2>4. Cross-Account Interconnect Matrix</h2>
+    <p>When a tenant sets up resources over independent accounts and requires cross-boundary links, evaluate the following platform configuration options:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Connectivity Model</th>
+                <th>Architectural Method</th>
+                <th>Trade-Off Advantages</th>
+                <th>System Constraints</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Option 1: OVN Router Peering</strong></td>
+                <td>Direct internal software bridging via tenant RBAC tokens inside the OVN layer.</td>
+                <td><span class="pro-list">[+]</span> Maximum line-rate routing processing speed.<br><span class="pro-list">[+]</span> Consumes no Floating IPs.</td>
+                <td><span class="con-list">[-]</span> Overlapping private IP subnets are strictly blocked.</td>
+            </tr>
+            <tr>
+                <td><strong>Option 2: External Floating IPs</strong></td>
+                <td>Traffic routes outward across the eBGP fabric and hairpins back via dual NAT translation.</td>
+                <td><span class="pro-list">[+]</span> Absolute data isolation.<br><span class="pro-list">[+]</span> Allows completely overlapping tenant CIDRs.</td>
+                <td><span class="con-list">[-]</span> Noticeable dual-NAT latency penalty.<br><span class="con-list">[-]</span> Heavy external IP pool allocation overhead.</td>
+            </tr>
+            <tr>
+                <td><strong>Option 3: Address Scopes</strong></td>
+                <td>Pre-mapped global address definitions route directly via host Provider Networks.</td>
+                <td><span class="pro-list">[+]</span> Bypasses all processing overhead associated with NAT.</td>
+                <td><span class="con-list">[-]</span> Imposes continuous up-front routing setup coordination.</td>
+            </tr>
+            <tr>
+                <td><strong>Option 4: Tenant VPN Overlay</strong></td>
+                <td>Crypto gateway appliances (WireGuard/IPsec) running straight inside the tenant VMs.</td>
+                <td><span class="pro-list">[+]</span> Completely decoupled; zero administrative overhead.</td>
+                <td><span class="con-list">[-]</span> Triple-encapsulation layers cripple MTU efficiency.</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>
