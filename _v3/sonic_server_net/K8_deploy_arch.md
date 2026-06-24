@@ -1433,3 +1433,377 @@ ceph_osd_devices:
 By ensuring your physical disk boundaries are clearly drawn, your local OpenStack databases will run with ultra-low latency on their local mounted filesystems, while your scalable tenant data plane remains safe and isolated on your raw Ceph block fabric.
 Do you currently have a mix of high-speed NVMe and larger capacity SATA/SAS drives available on these Dell backplanes, or are you working with a uniform pool of identical drives across all your nodes?
 
+
+
+## Two dedicated baremetal of type R630/R720 is going to used for Exit_Router1/2 which will run CHR for wireguard vpn solution.. What else we can run here as infrastructure software without violating Data Center L3 CLOS Topology norm. e.g. using them as Syslog server, Ranche, log monitoring system etc??
+
+Using your two dedicated Exit_Router servers (the R630s/R720s) to host critical administrative infrastructure is a highly efficient design choice.
+Since these boxes sit on your isolated Layer 2 Out-of-Band (OOB) Management network via enp1s0, you can safely run global management tools here. Doing so does not violate L3 CLOS topology norms, because these services will communicate strictly over the administrative plane, completely bypassing your high-speed SONiC data fabric.
+However, to maintain strict architectural compliance and prevent system stability issues, you must divide these tools based on their performance characteristics.
+------------------------------
+## 🟢 1. Excellent Choices for the Exit Routers
+These services are perfect fit for your Exit Router servers because they are lightweight, rarely spike the CPU, and need to stay online even if your core Kubernetes cluster crashes:
+
+* Centralized Syslog Server (rsyslog / Vector / FluentBit):
+* Why: Your SONiC switches, physical servers, and MikroTik CHRs all need to stream their hardware logs somewhere. Putting a syslog collector here ensures you can diagnose network issues even if the main compute leaves drop offline.
+* Network Monitoring Tools (LibreNMS / Prometheus / Snmpd):
+* Why: Perfect for running SNMP polling or Prometheus scraping targets that monitor your SONiC switch ports, transceivers, fan speeds, and temperatures.
+* Infrastructure DNS / NTP / DHCP (Dnsmasq / Bind9 / Chrony):
+* Why: Provides the local network clock synchronization (NTP) and local name resolution (DNS) required for BGP timers and cluster authentication to bootstrap seamlessly.
+* Ansible Automation Engine / Git Runner:
+* Why: Acts as your secure deployment launchpad. You can store your Kubespray playbooks, SONiC switch templates, and Helm charts directly on this machine.
+
+------------------------------
+## 🟡 2. Use with Caution (Must be Isolated)
+
+* Rancher (Rancher Manager Container):
+* Why: You can run the Rancher dashboard container on these servers to view and manage your Kubespray cluster. However, do not make these servers worker nodes inside the cluster Rancher is managing. Run Rancher as a standalone Docker container on the host OS. Keep its memory limits constrained so it never starves your WireGuard encryption.
+
+------------------------------
+## 🔴 3. Violates Topology Norms (Do NOT Run Here)
+You must never run heavy, disk-intensive, data-plane storage systems on your Exit Routers.
+
+* Heavy Log Processing Storage (Elasticsearch / OpenSearch Cluster):
+* Why: While collecting raw logs (Syslog) is fine, indexing and parsing them via Elasticsearch requires massive CPU and memory indexing pools. A sudden heavy log surge will spike the CPU to 100%, causing your WireGuard packets to drop and your eBGP sessions to your SONiC Border Leafs to time out.
+* Ceph Monitors / OSDs:
+* Why: Ceph requires intense disk I/O and low-latency network access. Keep Ceph strictly pinned to your dedicated backend compute nodes.
+
+------------------------------
+## 🏗️ The Best Software Layout for your Exit Nodes
+To keep these hosts perfectly clean and predictable, do not install software packages directly onto the bare-metal Ubuntu host. Instead, install Docker/Podman on the raw Ubuntu OS and run your management utilities as standalone containers:
+
+[ Dell R630 Bare-Metal Host OS: Ubuntu ]
+  ├── [ KVM Hypervisor ] ──► MikroTik CHR VM (eBGP Core + WireGuard VPN)
+  │
+  └── [ Standalone Docker Engine ]
+        ├── Container: Vector / Rsyslog (Writes raw text logs to local disk)
+        ├── Container: Dnsmasq (Local DNS / NTP for the rack)
+        └── Container: Standalone Rancher Manager (To view the K8s cluster)
+
+By confining your infrastructure software inside standard Docker containers on the host, you can easily set strict CPU/Memory resource limits (e.g., limiting Rancher or Syslog to a maximum of 2 CPU cores and 4GB of RAM). This guarantees that your host server will always have plenty of processing power left over to handle multi-gigabit WireGuard encryption and background BGP route calculations.
+How do you plan to handle backing up the configuration files and raw system logs stored on these Exit Router local disks?
+
+
+
+## What about MaaS Server and Core services: PostgreSQL, Redis, Gitea, Harbor, OpenBao, MinIO && SDLC Tools(Platform Softwares): Plane, Tekton, ArgoCD, SonarQube??
+
+To maintain the architectural integrity of your L3 CLOS design and ensure the absolute stability of your network edge, you must separate these applications into two distinct categories: Infra-Bootstrap Systems and Platform/Tenant Applications.
+Your Exit Routers represent the physical and logical gatekeepers of your entire data center. If they crash or run out of memory, your network fabric drops. Therefore, running resource-heavy SDLC tools and massive databases directly on them breaks data center design norms.
+Here is exactly how and where these components should be deployed to comply with enterprise architecture standards.
+------------------------------
+## 1. What SHOULD Run on the Exit Routers (Infra-Bootstrap Only)
+Only software required to physically bootstrap your bare-metal hardware or manage network state from a dead-stop should run here. These belong strictly inside your isolated OOB Management VRF:
+
+* MaaS (Metal as a Service) Server:
+* 🟢 YES. MaaS handles physical PXE booting, DHCP allocation, and IPMI/iDRAC power management for your entire rack. It must live on your OOB management tier to provision your Kubespray nodes when they are completely blank.
+* OpenBao (Security Vault):
+* 🟢 YES. OpenBao (the community fork of Vault) [1] handles your cluster's root secrets, wireguard certificates, and encryption keys. Because it is highly secure and requires very little CPU/RAM, running it here keeps your root secrets independent of the Kubernetes cluster.
+* PostgreSQL (As an embedded MaaS/Bao backend only):
+* 🟢 YES, but limited. Run a dedicated, lightweight Postgres instance only to store the local database tables for MaaS and OpenBao.
+
+------------------------------
+## 2. What belongs inside the Kubespray K8s Cluster (Platform/SDLC)
+These applications represent heavy, data-intensive workloads. They should be deployed as standard scalable pods inside your main Kubespray Kubernetes cluster, utilizing your high-speed 100G SONiC network fabric and local/Ceph storage pools:
+
+* Harbor (Container Registry) & MinIO (Object Storage):
+* 🔴 Move to K8s. Harbor processes compressed image layers and MinIO handles heavy S3 data blocks. They require high-speed disk I/O and massive network throughput. Putting them on your routers will choke your network cards.
+* ArgoCD, Tekton, Plane, & SonarQube (SDLC Pipeline Tools):
+* 🔴 Move to K8s. Java-based applications like SonarQube and orchestration engines like Tekton/ArgoCD can trigger massive, unpredictable spikes in memory and CPU during code compilation and deployment synchronization.
+* Global Redis & Enterprise PostgreSQL:
+* 🔴 Move to K8s. High-throughput application databases belong on your dedicated compute workers where resource isolation is managed by the Kubernetes scheduler.
+* Gitea (Git Server):
+* 🔴 Move to K8s. While Gitea is incredibly lightweight, it belongs in your cluster alongside your CI/CD runners (Tekton/ArgoCD) for low-latency code fetching.
+
+------------------------------
+## 🏗️ The Clean Architectural Mapping
+To visualize how this looks, your software assets are mapped across your two physical server tiers like this:
+
+┌────────────────────────────────────────────────────────┐
+│  EXIT ROUTER TIER (Two Dell R630 Nodes)                │
+│  - Isolated OOB Network                                │
+├────────────────────────────────────────────────────────┤
+│  ► OS: Ubuntu + Standalone Docker Engine               │
+│  ► Net Plane: KVM -> MikroTik CHR (WireGuard + eBGP)  │
+│  ► Apps: MaaS (PXE Boot)                               │
+│  ► Security: OpenBao (Secrets Storage)                 │
+│  ► Storage: Local SSD for System Configurations        │
+└─────────────────────────┬──────────────────────────────┘
+                          │ (Provisions & Directs Network)
+                          ▼
+┌────────────────────────────────────────────────────────┐
+│  KUBESPRAY / OPENSTACK COMPUTE TIER (Baremetal Nodes)  │
+│  - 100G SONiC Fabric / Unencapsulated Calico           │
+├────────────────────────────────────────────────────────┤
+│  ► Core Services: PostgreSQL, Redis, Gitea             │
+│  ► Storage Engines: MinIO, Ceph OSDs                   │
+│  ► Registry: Harbor Registry                           │
+│  ► DevOps SDLC: ArgoCD, Tekton, Plane, SonarQube       │
+└────────────────────────────────────────────────────────┘
+
+## 💡 Why this is Mandatory for BGP/WireGuard Performance
+The MikroTik CHR VM on your R630 expects a highly predictable environment. If an automated ArgoCD sync pulls down 50 containers, SonarQube runs a heavy code scan, and Harbor starts pulling gigabytes of images all at the exact same time, your Linux kernel will trigger its OOM (Out Of Memory) Killer. If it kills your local FRR daemon or chokes the CPU, your eBGP sessions to your SONiC Border Leafs will drop, knocking your entire cloud platform offline.
+By keeping your Exit Routers lean and mean (only MaaS, OpenBao, and the routing logic), you guarantee 100% uptime for your data center entry gate.
+Are you planning to deploy MaaS using its standard multi-node High Availability mode across both of your R630 routers, or will one host act as the primary deployer?
+
+
+
+## Let's say each server has 10G two port NIC and 1G 4 Port NIC, since ISP speed is 1 G Upload/Download, we can use TWO NIC ports to connect to two Border_Leaf1/2 for each server and One 1G port to a single ISP assuming there is two ISP , so, two Server 1G ports connects to the Two ISP's routers/router-modems??
+
+Yes, this physical cabling plan is highly efficient and perfectly aligns with enterprise high-availability standards. By utilizing the different speeds of your network interface cards (NICs) exactly where they make the most sense, you eliminate any physical bottlenecks.
+Your 10G links handle the massive throughput of your internal SONiC fabric, while your 1G links perfectly match your 1G external internet pipe without wasting expensive 10G ports.
+Here is exactly how to distribute your ports and configure the routing logic to support your dual-ISP setup across both servers.
+------------------------------
+## 🔌 The Physical Cabling Map per Server
+To avoid any single point of failure, you will mirror this physical cabling across both of your Dell Exit Router servers (R630/R720 #1 and #2):
+## 1. The Internal Fabric Plane (10G Dual-Port NIC)
+
+* Port 1 (10G): Connects directly to SONiC Border_Leaf 1
+* Port 2 (10G): Connects directly to SONiC Border_Leaf 2
+* Routing Logic: These interfaces run your internal eBGP sessions to distribute default routes down into the CLOS fabric and pull up your OpenStack tenant subnets.
+
+## 2. The External Internet Plane (1G Quad-Port NIC)
+
+* Port 1 (1G): Connects directly to ISP 1 Router
+* Port 2 (1G): Connects directly to ISP 2 Router
+* Port 3 (1G): Connects directly to your physical CRS125-24G OOB Management Switch
+* Port 4 (1G): Left empty as a spare/maintenance port
+
+------------------------------
+## 🗺️ The Global Network Architecture
+When both servers are cabled up, your dual-homed internet edge looks like this:
+
+    [ ISP 1 Router ]               [ ISP 2 Router ]
+       /        \                     /        \
+ (1G) /          \ (1G)         (1G) /          \ (1G)
+     ▼            ▼                 ▼            ▼
+┌──────────────┐                 ┌──────────────┐
+│ Exit_Router 1│                 │ Exit_Router 2│
+│ (Server #1)  │                 │ (Server #2)  │
+└──────┬───────┘                 └──────┬───────┘
+ (10G)/ \ (10G)                   (10G)/ \ (10G)
+     /   \                            /   \
+    ▼     ▼                          ▼     ▼
+┌──────────────┐                 ┌──────────────┐
+│ Border_Leaf 1│                 │ Border_Leaf 2│
+└──────┬───────┘                 └──────┬───────┘
+        \                               /
+         ▼                             ▼
+       [   100G SONiC Spine Fabric   ]
+
+------------------------------
+## 🧠 How to Configure the Routing Logic inside the CHR VMs
+Because you have two separate ISPs providing a 1G connection, you must manage how traffic exits your data center so you don't cause asymmetric routing or routing loops. Inside your MikroTik CHR VMs, implement the following configuration strategies:
+## A. Inbound Traffic Redundancy (For OpenStack Tenants & WireGuard)
+To allow external users to reach your OpenStack services or your WireGuard endpoints through either ISP seamlessly, you have two choices depending on what your ISPs support:
+
+* The BGP Choice (Best): If both ISPs support external BGP peering, you will advertise your own public IP block (e.g., a /24) to both ISPs from both CHR VMs. If ISP 1 goes completely dark, the global internet routing table automatically shifts all incoming traffic to ISP 2. [1] 
+* The NAT/DNS Choice: If these are standard commercial internet lines where the ISPs give you static IPs, you will configure standard Source-NAT (Masquerade) out of both 1G WAN interfaces. You then map your external OpenStack domain names using Round-Robin DNS across all 4 WAN IPs (Server 1 ISP 1, Server 1 ISP 2, Server 2 ISP 1, Server 2 ISP 2).
+
+## B. Outbound Traffic Balancing (ECMP Default Routes)
+Inside the main routing table of both CHR VMs, you will create a single default route that references both ISPs simultaneously.
+
+* MikroTik RouterOS v7 Command:
+
+/ip/route/add dst-address=0.0.0.0/0 gateway=ISP1_Gateway_IP,ISP2_Gateway_IP
+
+* How it works: The CHR VM will automatically use ECMP to balance outbound packets across both 1G lines. This effectively splits your tenant workloads across both links, giving you an aggregated outbound capacity of 2 Gbps.
+
+## C. Preventing the OOB Management Conflict
+Because Port 3 (1G) connects to your isolated CRS125 switch for MaaS, OpenBao, and Kubespray orchestration, it must be strictly locked into its own VRF (OOB-Mgmt) inside the CHR VM. This ensures that the default gateways of your two internet ISPs never accidentally bleed into your internal management switch, keeping your air-gapped security model structurally intact.
+Do your two ISPs provide static IPv4 addresses with BGP peering capabilities, or are they standard static IP connections where you will be using Gateway tracking/NAT?
+
+[1] [https://www.experts-exchange.com](https://www.experts-exchange.com/questions/27386694/full-redundant-wan-design-Multiple-ISP-with-failover-in-asa.html)
+
+
+## So, these Exit Routers (Server 630) will be hosting CHR container that supports eBGP+wireguard, which will connect to Burder_Leaf1/2 running SONiC. It won't require to run FRR since CHR can handle interfacing with SONiC. For outbound ISP router-modem home connection, is there any explicit configuration
+
+To clear up a technical naming detail first: MikroTik CHR (Cloud Hosted Router) cannot run inside a Docker/Podman container. CHR is a full operating system packaged as a Virtual Machine disk image (.qcow2 or .vmdk). [1, 2, 3] 
+Because you are using Ubuntu with Linux KVM on your Dell R630 servers, you will deploy MikroTik CHR as a KVM Virtual Machine (VM), not a container. This is ideal because a KVM VM grants CHR direct kernel-level access to your 10G and 1G physical network interfaces via low-latency Linux network bridges (br-wan, br-fabric). [3] 
+You are completely correct that you do not need to run FRR on the Exit Router hosts. The CHR VM will talk natively directly to your SONiC switches over eBGP. [4, 5] 
+------------------------------
+## The Outbound ISP Router-Modem Home Connection Challenge
+When connecting an enterprise L3 CLOS datacenter to standard home or commercial ISP router-modems/gateways, you encounter two immediate real-world network challenges:
+
+   1. Double-NAT / Triple-NAT Conflict: Your ISP modems usually handout private IP addresses (like 192.168.1.X or 10.0.0.X) on their LAN side and perform standard Source-NAT (Masquerading) out to the internet. [6, 7] 
+   2. BGP Isolation: Standard consumer or basic commercial ISP modems cannot speak BGP. They rely entirely on static routing or DHCP default gateways. [8] 
+
+To bridge your high-speed SONiC datacenter fabric to these ISP modems efficiently, you must configure explicit settings inside your CHR VMs and on the ISP modems themselves.
+------------------------------
+## 🛠️ Step 1: Explicit ISP Router-Modem Configurations
+To allow your operations staff to establish a WireGuard VPN handshake from the outside world into a CHR VM that sits behind an ISP modem, you must bypass the modem's built-in firewall. You have two options: [6, 9] 
+## Option A: Bridge Mode / IP Passthrough (Highly Recommended)
+Log into the web management portal of both your ISP router-modems and enable Bridge Mode (sometimes called IP Passthrough or Modem-Only Mode).
+
+* What it does: This disables the routing, DHCP, and NAT engines inside the ISP modem entirely.
+* The Result: The public IP address owned by the ISP is passed directly down the 1G wire to your CHR VM's WAN interface. This completely eliminates Double-NAT and lets WireGuard handle incoming handshakes with maximum efficiency. [6] 
+
+## Option B: Port Forwarding / DMZ (If Bridge Mode is unavailable)
+If your ISP locks their modems and forces routing, you must configure DMZ or Port Forwarding on the modem:
+
+   1. Identify the local WAN IP address that the ISP modem assigned to your CHR VM (e.g., 192.168.1.50).
+   2. Inside the ISP modem's settings, forward UDP Port 51820 (or your custom WireGuard port) directly to 192.168.1.50.
+   3. Alternatively, place 192.168.1.50 into the ISP modem's DMZ (Demilitarized Zone) so all inbound internet traffic automatically bypasses the modem and hits the CHR. [6, 9] 
+
+------------------------------
+## ⚙️ Step 2: Explicit Configurations Inside the MikroTik CHR VMs
+Because your ISP modems do not speak BGP, your CHR must act as a translator—translating internal enterprise dynamic routing profiles into standard static internet configurations.
+## 1. Outbound WAN Masquerading (NAT)
+Since your OpenStack tenant workloads use private IP addresses allocated by OVN/Neutron, you must instruct the CHR to mask those IPs using the ISP interface before sending them out to the web: [10, 11] 
+
+/ip/firewall/nat/add chain=srcnat out-interface=br-isp1 action=masquerade comment="NAT Tenant Data out to ISP 1"
+/ip/firewall/nat/add chain=srcnat out-interface=br-isp2 action=masquerade comment="NAT Tenant Data out to ISP 2"
+
+## 2. Static Default Outbound Routes
+Since the ISP modems won't send the CHR a default route over BGP, you must explicitly write a dual-gateway static default route inside the CHR's main routing table to balance traffic across both modems: [10] 
+
+/ip/route/add dst-address=0.0.0.0/0 gateway=192.168.1.1,192.168.2.1 check-gateway=ping
+
+(Where 192.168.1.1 and 192.168.2.1 are the local LAN gateway IPs of your two separate ISP modems).
+## 3. Conditional BGP Default Route Advertisement to SONiC
+Your SONiC Border Leafs need to know that the CHR VM is their exit gate. You must tell the CHR's BGP instance to originate and advertise a default route (0.0.0.0/0) down into the SONiC fabric—but only if the internet is actually working. [12] 
+Inside the MikroTik CHR BGP outbound templates, you enable default-originate=if-installed: [12] 
+
+* How it works: The CHR will actively advertise 0.0.0.0/0 via eBGP to your SONiC Border Leafs. If both of your physical ISP lines get physically cut, the static routes in the CHR break. The CHR instantly withdraws the default route from SONiC, causing the fabric to cleanly stop trying to route dead internet traffic to the edge. [12] 
+
+This complete mapping ensures a smooth transition from a residential/commercial ISP connection to your enterprise-grade internal network fabric.
+Would you like assistance generating the script to configure the BGP template and connection string inside RouterOS v7 to pair directly with your SONiC switches? [4, 12] 
+
+[1] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/real-docker-images-for-chr-to-run-in-containerlalb/181934)
+[2] [https://aws.amazon.com](https://aws.amazon.com/marketplace/pp/prodview-sf5gn6js6av54)
+[3] [https://www.youtube.com](https://www.youtube.com/watch?v=NRyGPpnQGp8)
+[4] [https://help.mikrotik.com](https://help.mikrotik.com/docs/spaces/ROS/pages/328220/BGP)
+[5] [https://www.youtube.com](https://www.youtube.com/watch?v=Bmq_ZqRlAls)
+[6] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/chr-behind-nat-as-wg-server/170066)
+[7] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/wireguard-access-from-vrf/178150)
+[8] [https://www.youtube.com](https://www.youtube.com/watch?v=M5UypwXmIFQ&t=12)
+[9] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/wireguard-server-behind-different-router-gateway/152154)
+[10] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/wireguard-dynamic-routes/183132)
+[11] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/configuration-issue-between-fritz-box-wireguard-server-and-mikrotik-client/175777)
+[12] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-20-mikrotik-bgp-ipv4/view)
+
+
+## Please do.
+
+Here is the complete configuration script for your MikroTik CHR VM (RouterOS v7) to establish the eBGP Unnumbered cross-connects down to your SONiC Border Leafs, handle the outbound home-ISP static default routing, and cleanly isolate your WireGuard management traffic into your Out-of-Band (OOB) VRF.
+This script uses the modern RouterOS v7 syntax (which has completely redesigned the routing and BGP engine compared to older v6).
+------------------------------
+## 📋 Prerequisites (What to configure first in Ubuntu/KVM)
+Ensure your Ubuntu KVM host passes through your physical interfaces to the CHR VM using these consistent Linux Bridge names:
+
+* br-fabric-l1: Connected to 10G Port 1 (Goes to SONiC Border Leaf 1)
+* br-fabric-l2: Connected to 10G Port 2 (Goes to SONiC Border Leaf 2)
+* br-isp1: Connected to 1G Port 1 (Goes to ISP 1 Modem)
+* br-isp2: Connected to 1G Port 2 (Goes to ISP 2 Modem)
+* br-oob: Connected to 1G Port 3 (Goes to CRS125 OOB Switch)
+
+------------------------------
+## 🛠️ MikroTik CHR v7 Configuration Script
+Open the terminal inside your MikroTik CHR and paste the following commands. Adjust the IP blocks to match your specific network worksheet.
+
+# =====================================================================
+# 1. INTERFACE & IP ADDRESS SETUP
+# =====================================================================
+# Rename system interfaces for clarity to match your bridge mappings
+/interface/set [find name=ether1] name=br-fabric-l1
+/interface/set [find name=ether2] name=br-fabric-l2
+/interface/set [find name=ether3] name=br-isp1
+/interface/set [find name=ether4] name=br-isp2
+/interface/set [find name=ether5] name=br-oob
+
+# Create the critical Loopback Anchor interface for BGP ID
+/interface/loopback/add name=lo-bgp-id
+
+# Assign IPv4 addresses for the WAN interfaces (Assuming Static IPs from ISP Modems)
+/ip/address/add address=192.168.1.50/24 interface=br-isp1 comment="IP assigned by ISP 1 Modem"
+/ip/address/add address=192.168.2.50/24 interface=br-isp2 comment="IP assigned by ISP 2 Modem"
+
+# Assign your unique router identification IP to the loopback interface
+/ip/address/add address=192.168.254.1/32 interface=lo-bgp-id comment="Exit Router 1 Anchor ID"
+
+
+# =====================================================================
+# 2. OUT-OF-BAND MANAGEMENT VRF & WIREGUARD SEPARATION
+# =====================================================================
+# Create the secure administrative isolation table
+/ip/vrf/add name=OOB-Mgmt interfaces=br-oob
+
+# Assign the local OOB management interface IP inside that VRF
+/ip/address/add address=10.10.10.2/24 interface=br-oob comment="Local OOB Switch Interface"
+
+# Create the WireGuard Server interface in the MAIN table (so it's reachable via ISPs)
+/interface/wireguard/add name=wg-remote-ops listen-port=51820
+
+# Assign the private transit pool for your connected remote administrators
+/ip/address/add address=192.168.99.1/24 interface=wg-remote-ops comment="WireGuard Transit IP"
+
+# CRITICAL LEAKING RULE: Push traffic originating from WireGuard into the OOB VRF
+/routing/rule/add src-address=192.168.99.0/24 action=lookup-only-in-table table=OOB-Mgmt comment="Force ops traffic to OOB network"
+
+
+# =====================================================================
+# 3. INTERNET EDGE ROUTING (ECMP NAT & WAN FAILOVER)
+# =====================================================================
+# Enable Source-NAT (Masquerading) so internal tenant data is translated into valid WAN IPs
+/ip/firewall/nat/add chain=srcnat out-interface=br-isp1 action=masquerade comment="NAT Tenant Data out to ISP 1"
+/ip/firewall/nat/add chain=srcnat out-interface=br-isp2 action=masquerade comment="NAT Tenant Data out to ISP 2"
+
+# Create an ECMP Outbound Default Route targeting both home ISP modems
+# This checks connectivity via ping. If one modem drops, traffic dynamically shifts to the other.
+/ip/route/add dst-address=0.0.0.0/0 gateway=192.168.1.1,192.168.2.1 check-gateway=ping comment="Active-Active Outbound Internet"
+
+
+# =====================================================================
+# 4. MODERN ROUTEROS V7 BGP ROUTING LAYER (To SONiC Fabric)
+# =====================================================================
+# Step A: Define the global BGP instance for this Exit Router
+/routing/bgp/instance/add name=bgp-sonic-edge as=4200000000 router-id=192.168.254.1 comment="Shared Edge AS for Exit Routers"
+
+# Step B: Create a BGP Connection Template to enforce loop-free conditions and route propagation
+/routing/bgp/template/add name=tmpl-sonic-fabric instance=bgp-sonic-edge \
+    as-path-relax=yes \
+    multihop=yes \
+    connect=yes \
+    hold-time=9s \
+    keepalive-time=3s \
+    default-originate=if-installed \
+    comment="Template to originate 0.0.0.0/0 into SONiC only if WAN routes are active"
+
+# Step C: Establish the eBGP Unnumbered Peer sessions using IPv6 Link-Local auto-discovery
+# SONiC uses IPv6 Link-Local neighbor discovery to pass IPv4 routing payloads natively.
+/routing/bgp/connection/add name=peer-border-leaf1 template=tmpl-sonic-fabric \
+    local.role=ebgp \
+    remote.as=4200000001 \
+    remote.interface=br-fabric-l1 \
+    connect-to=fe80::1%br-fabric-l1 \
+    comment="eBGP Link to SONiC Border Leaf 1"
+
+/routing/bgp/connection/add name=peer-border-leaf2 template=tmpl-sonic-fabric \
+    local.role=ebgp \
+    remote.as=4200000002 \
+    remote.interface=br-fabric-l2 \
+    connect-to=fe80::2%br-fabric-l2 \
+    comment="eBGP Link to SONiC Border Leaf 2"
+
+------------------------------
+## 📊 Configuration Verification Checkpoints
+Once you run this script, you can execute these commands in your CHR terminal to verify the health of your infrastructure stack:
+
+   1. Verify the BGP Handshake with SONiC:
+   
+   /routing/bgp/session/print
+   
+   Look for state=established. If it says connect, check your IPv6 Link-Local endpoints or VLAN configurations on your SONiC interfaces.
+   2. Verify External Route Processing:
+   
+   /ip/route/print where bgp=yes
+   
+   You should see your Kubespray Pod subnets and OpenStack tenant IP spaces flowing up from the SONiC switches directly into your CHR route cache.
+   3. Verify the VRF Isolation:
+   
+   /ip/route/print vrf=OOB-Mgmt
+   
+   Ensure that the only routes present are your local 10.10.10.0/24 records. Your internet gateways (192.168.1.1 / 192.168.2.1) must remain completely invisible here to enforce your data center air-gap.
+
+If you are setting up the second physical R630 (Exit_Router 2), you can use this exact same script, but you will need to change the loopback anchor IP from 192.168.254.1 to 192.168.254.2 so it has a unique identification key across the BGP topology.
+Would you like the corresponding FRR (FRRouting) configuration block for your SONiC Border Leafs to cleanly accept this incoming link-local connection pattern?
+
