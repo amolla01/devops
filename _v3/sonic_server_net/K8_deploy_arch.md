@@ -1807,3 +1807,235 @@ Once you run this script, you can execute these commands in your CHR terminal to
 If you are setting up the second physical R630 (Exit_Router 2), you can use this exact same script, but you will need to change the loopback anchor IP from 192.168.254.1 to 192.168.254.2 so it has a unique identification key across the BGP topology.
 Would you like the corresponding FRR (FRRouting) configuration block for your SONiC Border Leafs to cleanly accept this incoming link-local connection pattern?
 
+## I have complete L3 Routed to Host Architecture is following BGP Unnumbered. How to do that between Border_Leaf1/2 and Exit_Router1/2(CHR VM)??
+
+
+To implement pure BGP Unnumbered (RFC 5549) between your SONiC Border Leafs and your MikroTik CHR VMs, you must configure the interfaces to peer dynamically using IPv6 Link-Local (FE80::/10) addresses to carry IPv4 routing payloads (Extended Next-Hop Encoding). [1, 2] 
+This approach completely eliminates the need to assign or manage point-to-point transit IPv4 addresses between your Exit Routers and your Border Leafs.
+------------------------------
+## 1. MikroTik CHR v7 Configuration Script (Exit_Router 1)
+In RouterOS v7, BGP Unnumbered is achieved by creating a BGP connection that explicitly defines an interface rather than a remote IPv4 address, and setting the address-families to negotiate IPv4 routes over an IPv6 transport. [3, 4] 
+Run the following commands in the terminal of Exit_Router 1:
+
+# =====================================================================
+# 1. LOOPBACK & SYSTEM IDENTITY SETUP
+# =====================================================================
+/interface/loopback/add name=lo0
+/ip/address/add address=192.168.254.1/32 interface=lo0 comment="Router ID & VTEP Anchor"
+
+# =====================================================================
+# 2. ENABLING IPV6 LINK-LOCAL ON FABRIC INTERFACES
+# =====================================================================
+# Ensure IPv6 is enabled on your 10G interfaces so they generate link-local addresses
+/ipv6/interface/add interface=br-fabric-l1 accept-router-advertisements=yes
+/ipv6/interface/add interface=br-fabric-l2 accept-router-advertisements=yes
+
+# =====================================================================
+# 3. BGP UNNUMBERED INSTANCE & TEMPLATE
+# =====================================================================
+/routing/bgp/instance/add name=bgp-edge as=4200000000 router-id=192.168.254.1
+
+/routing/bgp/template/add name=tmpl-sonic-unnumbered instance=bgp-edge \
+    as-path-relax=yes \
+    multihop=no \
+    connect=yes \
+    hold-time=9s \
+    keepalive-time=3s \
+    address-families=ip \
+    default-originate=if-installed \
+    comment="RFC 5549: Exchange IPv4 NLRI over IPv6 Link-Local peerings"
+
+# =====================================================================
+# 4. DYNAMIC PEER CONNECTIONS VIA INTERFACE
+# =====================================================================
+# Instead of a remote IPv4 target, we bind explicitly to the link interface
+/routing/bgp/connection/add name=to-border-leaf1 template=tmpl-sonic-unnumbered \
+    local.role=ebgp \
+    remote.as=4200000001 \
+    remote.interface=br-fabric-l1 \
+    comment="BGP Unnumbered to Border Leaf 1"
+
+/routing/bgp/connection/add name=to-border-leaf2 template=tmpl-sonic-unnumbered \
+    local.role=ebgp \
+    remote.as=4200000002 \
+    remote.interface=br-fabric-l2 \
+    comment="BGP Unnumbered to Border Leaf 2"
+
+(For Exit_Router 2, mirror this configuration exactly but change the loopback address to 192.168.254.2/32 and change the router-id inside the instance block).
+------------------------------
+## 2. SONiC Border Leaf Configuration (frr.conf)
+On your SONiC switches, the underlying routing agent is FRRouting (FRR). To pair with the MikroTik CHR setup, your FRR configuration must explicitly enable capability extended-nexthop to handle the IPv4-over-IPv6 transport. [5, 6] 
+## 🍃 Border_Leaf 1 Configuration (/etc/frr/frr.conf):
+
+frr version 8.x
+!
+interface Ethernet0
+ description TO_EXIT_ROUTER_1
+ ipv6 nd ra-interval 3
+ no ipv6 nd suppress-ra
+!
+interface Ethernet4
+ description TO_EXIT_ROUTER_2
+ ipv6 nd ra-interval 3
+ no ipv6 nd suppress-ra
+!
+router bgp 4200000001
+ bgp router-id 192.168.254.101
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ ! Peer with Exit Routers using their physical interfaces (Unnumbered)
+ neighbor Ethernet0 interface remote-as 4200000000
+ neighbor Ethernet4 interface remote-as 4200000000
+ !
+ address-family ipv4 unicast
+  neighbor Ethernet0 activate
+  neighbor Ethernet0 capability extended-nexthop
+  neighbor Ethernet4 activate
+  neighbor Ethernet4 capability extended-nexthop
+  !
+  ! Maximum paths tells SONiC to use ECMP across both active exit nodes
+  maximum-paths 64
+ exit-address-family
+!
+
+## 🍃 Border_Leaf 2 Configuration (/etc/frr/frr.conf):
+
+frr version 8.x
+!
+interface Ethernet0
+ description TO_EXIT_ROUTER_1
+ ipv6 nd ra-interval 3
+ no ipv6 nd suppress-ra
+!
+interface Ethernet4
+ description TO_EXIT_ROUTER_2
+ ipv6 nd ra-interval 3
+ no ipv6 nd suppress-ra
+!
+router bgp 4200000002
+ bgp router-id 192.168.254.102
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ neighbor Ethernet0 interface remote-as 4200000000
+ neighbor Ethernet4 interface remote-as 4200000000
+ !
+ address-family ipv4 unicast
+  neighbor Ethernet0 activate
+  neighbor Ethernet0 capability extended-nexthop
+  neighbor Ethernet4 activate
+  neighbor Ethernet4 capability extended-nexthop
+  maximum-paths 64
+ exit-address-family
+!
+
+------------------------------
+## 🔍 Crucial Execution Notes for this Setup
+
+* The IPv6 Router Advertisement (ipv6 nd) requirement: For BGP Unnumbered to form a session across the physical link, FRR on the SONiC switches must actively blast IPv6 Router Advertisements (no ipv6 nd suppress-ra). This behavior allows the MikroTik CHR to instantly discover the Link-Local MAC and interface endpoint of the switch automatically. [7] 
+* Extended Next-Hop Capabilities: The line neighbor EthernetX capability extended-nexthop in SONiC instructs the switch to modify its outbound routing advertisements. It says: "I am going to send you an IPv4 network route prefix, but your packet path next-hop to reach it is my IPv6 Link-Local address." [8, 9, 10] 
+
+## 📋 Operational Verification Commands
+Once configured, verify that the dynamic paths are established correctly without any static mapping configurations: [11, 12] 
+
+* On MikroTik CHR: Run /routing/bgp/session/print. The remote-address field will display an automatically discovered IPv6 link-local block string (e.g., fe80::...%br-fabric-l1) and state should show established. [13] 
+* On SONiC (FRR): Type vtysh into the switch terminal and run show ip bgp summary. The neighbor interfaces Ethernet0 and Ethernet4 should show an active state counting upwards for received prefixes. [14] 
+
+Would you like to examine how to verify that ECMP (Equal-Cost Multi-Pathing) is active across your switches so you can prove data plane traffic is balancing correctly across both R630 hosts?
+
+[1] [https://www.informit.com](https://www.informit.com/articles/article.aspx?p=3197429&seqNum=3)
+[2] [https://blog.cloudmylab.com](https://blog.cloudmylab.com/what-is-a-routing-table)
+[3] [https://arubanetworking.hpe.com](https://arubanetworking.hpe.com/techdocs/AOS-CX/10.16/HTML/ip_route_6300-6400-8100-83xx-93xx-100xx/Content/Chp_BGP/bgp-unu.htm)
+[4] [https://help.mikrotik.com](https://help.mikrotik.com/docs/spaces/ROS/pages/328220/BGP)
+[5] [https://github.com](https://github.com/advisories/GHSA-546m-4w73-87m7)
+[6] [https://netbergtw.com](https://netbergtw.com/top-support/netberg-sonic/frrouting-initialization-and-configuration/)
+[7] [https://github.com](https://github.com/FRRouting/frr/issues/16581)
+[8] [https://docs.nvidia.com](https://docs.nvidia.com/networking-ethernet-software/cumulus-linux-44/Layer-3/Border-Gateway-Protocol-BGP/)
+[9] [https://support.huawei.com](https://support.huawei.com/enterprise/en/doc/EDOC1100279002/1568f196/evpn-configuration)
+[10] [https://networkop.co.uk](https://networkop.co.uk/blog/2016/09/09/os-lab-p2/)
+[11] [https://quizlet.com](https://quizlet.com/554661277/ccna-test-005-flash-cards/)
+[12] [https://avd.arista.com](https://avd.arista.com/devel/ansible_collections/arista/avd/roles/eos_designs/docs/how-to/wan.html)
+[13] [https://blog.xga.ie](https://blog.xga.ie/bgp-route48-with-bgp-on-mikrotik/)
+[14] [https://docs.equinix.com](https://docs.equinix.com/metal/guides/configuring-bgp-with-frr/)
+
+
+## 
+## Yes, like to examine ECMP across switches...
+
+
+To verify that ECMP (Equal-Cost Multi-Pathing) is active and working correctly across your SONiC fabric, you need to check two layers: the Control Plane (to see if BGP is installing multiple valid paths for a route) and the Data Plane (to confirm the hardware ASIC is actively balancing the traffic across the physical ASIC ports).
+Since SONiC is built on top of the FRRouting (FRR) routing stack and uses the SAI (Switch Abstraction Interface) to program the underlying hardware ASIC, you will use specific validation utilities at each tier. [1] 
+------------------------------
+## 1. Control Plane Validation (Inside FRR)
+First, verify that your BGP routing table is actively computing and storing multiple concurrent next-hops for external routes. Log into your SONiC Spines or Compute Leafs, drop into the FRR shell (vtysh), and run the following inspection steps. [2] 
+## Step A: Verify Global Multi-Path Flags
+Ensure your BGP configuration is actually allowing multiple paths to be evaluated:
+
+sonic# show ip bgp summary
+
+Look for lines confirming your maximum-paths 64 and bestpath as-path multipath-relax settings are parsed.
+## Step B: Check a Specific Route Prefix [3] 
+Pick an external route or look at the default route (0.0.0.0/0) pushed down by your R630 Exit Routers. Run:
+
+sonic# show ip bgp 0.0.0.0/0
+
+What you want to see (Multipath Active):
+
+BGP routing table entry for 0.0.0.0/0, version 12
+Paths: (2 available, best #1, table default)
+  Multipath: eBGP
+  4200000000
+    fe80::1%Ethernet0 from Ethernet0 (192.168.254.1)
+  4200000000
+    fe80::2%Ethernet4 from Ethernet4 (192.168.254.2)
+
+Notice the word Multipath: eBGP or a star (*) symbol next to both entries. This proves FRR has accepted both paths as equal-cost.
+## Step C: Check the Linux Kernel Route Cache
+Exit the FRR shell back to standard SONiC bash and check if FRR successfully programmed those multi-paths into the underlying Linux kernel namespace:
+
+admin@sonic:~$ ip route show 0.0.0.0/0
+
+Expected Output:
+
+default proto bgp metric 20 
+	nexthop via inet6 fe80::1 dev Ethernet0 weight 1
+	nexthop via inet6 fe80::2 dev Ethernet4 weight 1
+
+The multiple nexthop blocks listed under a single route destination prove that the Linux kernel recognizes this as an active ECMP route.
+------------------------------
+## 2. Data Plane Validation (Hardware ASIC Verification)
+Just because the control plane knows about ECMP doesn't automatically mean the hardware chip is executing it. In SONiC, you can verify how the hardware ASIC is distributing packets using the built-in bcmcmd tool (if running Broadcom chips) or SONiC's abstraction diagnostic commands.
+## Step A: Check Hardware Next-Hop Groups
+SONiC aggregates ECMP paths into hardware groupings called Next Hop Groups (NHG). Check if your platform has provisioned them:
+
+admin@sonic:~$ sonic-db-cli APPL_DB keys "NEXT_HOP_GROUP_TABLE*"
+
+This should return a list of active hardware ECMP groups programmed into the ASIC chip memory.
+## Step B: Live Traffic Distribution Tracking
+To prove that traffic isn't just favoring a single link (polarization), you can inspect live physical port counters while running an app test or network benchmark tool (like iperf3) from an OpenStack tenant VM out to the web.
+Run the native SONiC port monitor tool to view real-time port utilization:
+
+admin@sonic:~$ portstat -p -r 1
+
+(The -r 1 flag refreshes the statistics on your terminal every 1 second).
+How to read the port matrix:
+
+* Find your fabric uplink ports (e.g., Ethernet0 and Ethernet4).
+* Look at the RX_DRP / TX_DRP columns (for packet integrity) and the TX_BPS (Transmit Bits Per Second) column.
+* If ECMP hashing is working correctly, as traffic flows to the internet, you will see TX_BPS climbing proportionately across both interfaces rather than one spiking to 9 Gbps while the other rests at 0 bps. [4] 
+
+------------------------------
+## 💡 Why Traffic Might Lean to One Side (ECMP Hashing Notes)
+If you notice that individual test streams always favor one specific R630 server, do not panic. This is normal behavior for flow-based ECMP hashing.
+To prevent out-of-order packets (which breaks TCP performance), the SONiC ASIC uses a 5-Tuple Hash calculation (Source IP, Destination IP, Source Port, Destination Port, Protocol) to ensure that a single, specific app stream always stays on the exact same physical link path. [5, 6, 7] 
+To see true, balanced multi-path load distribution across both R630 hosts, you must test with multiple simultaneous tenant streams using different external destination IPs or different port markers. This forces the hashing engine to distribute the different connections evenly across both exit nodes.
+To help you finalize this verification setup, what hardware platform or ASIC manufacturer (such as Broadcom, Mellanox/Nvidia, or Barefoot) are your 100G SONiC Spine and Border Leaf switches built on?
+
+[1] [https://www.naddod.com](https://www.naddod.com/ai-insights/detailed-explanation-of-white-box-switches)
+[2] [https://ftp.arcchurches.com](https://ftp.arcchurches.com/Download_PDFS/mL5G01/602856/Cisco%20Packet%20Tracer%20Eigrp%20Lab%20Answers.pdf)
+[3] [https://blog.j2sw.com](https://blog.j2sw.com/inetarch/cisco-bgp-troubleshooting-essential-commands-every-network-engineer-should-know/)
+[4] [https://www.cisco.com](https://www.cisco.com/en/US/docs/switches/datacenter/nexus5500/sw/san_switching/7x/b_5500_SAN_Switching_Config_7x_chapter_010.pdf)
+[5] [https://www.cisco.com](https://www.cisco.com/c/en/us/solutions/collateral/data-center-virtualization/application-centric-infrastructure/manage-ecmp-scale-aci-wp.html)
+[6] [https://medium.com](https://medium.com/@cyberengage.org/azure-compute-and-networking-what-incident-responders-actually-need-to-know-0a080d88adf0)
+[7] [https://www.sonicwall.com](https://www.sonicwall.com/blog/strategic-re-routing-equal-cost-multi-path-ecmp-new-sonicos-6-5-firewalls)
