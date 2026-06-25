@@ -2039,3 +2039,202 @@ To help you finalize this verification setup, what hardware platform or ASIC man
 [5] [https://www.cisco.com](https://www.cisco.com/c/en/us/solutions/collateral/data-center-virtualization/application-centric-infrastructure/manage-ecmp-scale-aci-wp.html)
 [6] [https://medium.com](https://medium.com/@cyberengage.org/azure-compute-and-networking-what-incident-responders-actually-need-to-know-0a080d88adf0)
 [7] [https://www.sonicwall.com](https://www.sonicwall.com/blog/strategic-re-routing-equal-cost-multi-path-ecmp-new-sonicos-6-5-firewalls)
+
+
+# if I provide kube_network_plugin: calico, what will be calico_network_backend?? Is it FRR when I go with calico_ipip-mode: "Never", calico_vxlan_mode: "Never"
+
+No, the value will not be FRR. When you set both encapsulations to "Never", calico_network_backend must be set to "bird" to enable unencapsulated BGP routing. [1, 2, 3, 4] 
+In [Kubespray](https://github.com/kubernetes-sigs/kubespray), the choices for calico_network_backend are strictly limited to vxlan, bird, or none. [5] 
+## How Calico Handles Your Configuration
+When you completely disable overlays using calico_ipip_mode: "Never" and calico_vxlan_mode: "Never", Calico relies on pure Layer-3 routing. Here is how the network backends function under this logic: [1] 
+
+* calico_network_backend: "bird": This is the correct setting for your use case. Calico will run [BIRD (BGP Internet Routing Daemon)](https://bird.network.cz/) internally inside the calico-node pods to advertise unencapsulated routes directly between your cluster nodes or to upstream top-of-rack switches. [1, 6] 
+* calico_network_backend: "none": This completely disables Calico's built-in BGP routing engine. You would only use this option if you are running an external routing daemon on the host OS itself (such as a standalone FRR or BIRD service) or when utilizing Calico's native eBPF data plane without BGP. [7, 8] 
+* calico_network_backend: "vxlan": This is the Kubespray default but it cannot be used here because it forces VXLAN overlays. [5, 9, 10, 11] 
+
+## Where does FRR fit in?
+While FRR (FRRouting) is a popular open-source internet routing suite, Calico does not use FRR as a backend choice in Kubespray. Calico natively packages BIRD for its legacy standard routing. If you require FRR for advanced data center fabric integrations, it must be managed as an external application operating outside of Calico's core container configuration. [5, 8, 12, 13] 
+If you are setting up this configuration to peer with upstream hardware routers, I can help you format the calico_advertise_cluster_ips or global AS number variables. Do you plan on setting up Full-Mesh BGP among your nodes, or are you peering directly with ToR (Top-of-Rack) switches? [4, 14] 
+
+[1] [https://docs.opencenter.dev](https://docs.opencenter.dev/docs/platform-services/svc-calico/)
+[2] [https://gitlab.cern.ch](https://gitlab.cern.ch/strigazi-groups/github.com/kubernetes-sigs/kubespray/-/blob/master/docs/ansible/vars.md)
+[3] [https://gitlab.cern.ch](https://gitlab.cern.ch/strigazi-groups/github.com/kubernetes-sigs/kubespray/-/blob/master/docs/ansible/vars.md)
+[4] [https://github.com](https://github.com/oracle/kubernetes-kubespray/blob/master/docs/calico.md)
+[5] [https://github.com](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/ansible/vars.md)
+[6] [https://www.cyberark.com](https://www.cyberark.com/resources/threat-research-blog/attacking-kubernetes-clusters-through-your-network-plumbing-part-2)
+[7] [https://www.reddit.com](https://www.reddit.com/r/kubernetes/comments/1ctsu74/deploy_calico_cni_with_ebpf_and_bgp/)
+[8] [https://github.com](https://github.com/kubernetes-sigs/kubespray/issues/7707)
+[9] [https://tbotech.sk](https://tbotech.sk/2023/10/05/baremetal-kubernetes-installation-with-kubespray/)
+[10] [https://github.com](https://github.com/projectcalico/calico/issues/10692)
+[11] [https://docs.k0sproject.io](https://docs.k0sproject.io/v1.25.16+k0s.0/configuration/)
+[12] [https://github.com](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/CNI/calico.md)
+[13] [https://tasrieit.com](https://tasrieit.com/blog/cilium-vs-calico-cni-comparison-2026)
+[14] [https://www.tigera.io](https://www.tigera.io/blog/experiment-with-calico-bgp-in-the-comfort-of-your-own-laptop/)
+
+
+# I will be using FRR on Ubuntu for Host to Leaves communication. If I run FRR and also Bird isn't there be port conflict?
+
+Yes, there will be a severe port conflict if you run both by default. Both FRR on the host OS and the BIRD daemon inside Calico’s container will attempt to bind to TCP port 179 (the standard BGP port). [1, 2, 3] 
+Whichever service starts first will claim the port, causing the second service to crash or fail to peer. [1] 
+To successfully run Host-to-Leaf routing via FRR alongside a standard Calico setup, you must resolve this conflict using one of the three architectural approaches detailed below.
+------------------------------
+## Option 1: Peer Calico BIRD with Host FRR (Recommended)
+Instead of forcing Calico to talk directly to your Leaf switches, change Calico's default BGP port to bypass the conflict. Calico's internal BIRD will then peer locally with your Ubuntu host's FRR daemon. FRR will act as the single control plane to handle the Leaf switches. [1] 
+
+   1. Change Calico's BGP Port: Update the global BGPConfiguration resource to shift Calico's internal listening port to an alternate port, such as 178:
+   
+   apiVersion: projectcalico.org/v3kind: BGPConfigurationmetadata:
+     name: defaultspec:
+     listenPort: 178
+   
+   2. Peer Locally: Configure Calico to establish a BGP neighbor relationship with 127.0.0.1 (or the host's primary interface IP) on port 179.
+   3. Configure FRR: Update your host's /etc/frr/frr.conf to accept the incoming BGP connection from Calico on port 178, and configure FRR to redistribute those learned pod routes up to your leaf switches. [1] 
+
+------------------------------
+## Option 2: Disable Calico's Routing Engine Completely (backend: none)
+If you want FRR on the host to handle all BGP communication to the Leaf switches directly, you can stop Calico from running BIRD altogether.
+
+   1. Set calico_network_backend: "none" in your Kubespray configuration.
+   2. Calico will still assign IPs to pods and set up local host routing tables, but it will completely strip out the BIRD container.
+   3. To announce pod routes to the leaves, you must configure FRR on the host to dynamically watch the Linux kernel routing table and redistribute Calico's local network interfaces (e.g., cali+ interfaces) into your Leaf BGP sessions.
+
+------------------------------
+## Option 3: Use Calico eBPF Mode
+If your underlying Linux kernel supports it, you can bypass BGP conflicts entirely by switching Calico from the standard IPTables data plane to the eBPF data plane.
+
+* In eBPF mode, Calico natively routes traffic without requiring the BIRD mesh or standard TCP port 179 utilities.
+* This leaves TCP port 179 entirely free on the host OS for your Ubuntu FRR implementation.
+
+------------------------------
+Which approach aligns better with your network architecture: changing Calico's port to let BIRD and FRR talk to each other locally (Option 1), or disabling BIRD entirely to let FRR manage the routes alone (Option 2)? [4] 
+
+[1] [https://github.com](https://github.com/projectcalico/calico/issues/7893)
+[2] [https://medium.com](https://medium.com/@ukatanetech/calico-bgp-resolving-bird-not-ready-and-node-readiness-failures-e582ab2dca3c)
+[3] [https://docs.redhat.com](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html-single/configuring_firewalls_and_packet_filters/index)
+[4] [https://www.reddit.com](https://www.reddit.com/r/networking/comments/qgytna/issues_using_frr_to_handle_ip_addressing/)
+
+# So, kube_network_plugin: calico and calico_network_backend: "none" can go together?
+
+Yes, kube_network_plugin: calico and calico_network_backend: "none" work together perfectly.
+This is a fully supported production pattern in Kubespray. It is specifically designed for scenarios exactly like yours where you want an external routing daemon (like FRR) on the host OS to manage all BGP peering.
+## What Happens in This Architecture?
+
+* Calico IPAM and Data Plane remain active: Calico still handles IP Address Management (IPAM) for your pods and configures the host's Linux networking stack (e.g., cali+ interfaces, iptables, or routing tables) to send traffic out of the node. [1, 2] 
+* Calico BIRD is completely removed: The BIRD routing engine inside the calico-node daemon is disabled. No container will attempt to grab TCP port 179, entirely eliminating your port conflict. [3] 
+* Host FRR handles the network fabric: FRR on your Ubuntu host becomes the sole BGP speaker responsible for announcing your pod CIDR blocks to your Leaf switches.
+
+## Critical Requirement: Kernel Route Redistribution
+Because Calico's BIRD is disabled, Calico will not automatically tell your upstream fabric where pods are located. To make this setup work, you must instruct FRR on the host to look at the local Linux routing table and advertise those routes to the Leaf switches. [4] 
+Add the following logic to your host's /etc/frr/frr.conf file:
+
+router bgp <YOUR_LOCAL_ASN>
+  bgp log-neighbor-changes
+  no bgp ebgp-requires-policy
+  neighbor <LEAF_SWITCH_IP> remote-as <LEAF_ASN>
+  !
+  address-family ipv4 unicast
+    neighbor <LEAF_SWITCH_IP> activate
+    redistribute kernel  <-- CRITICAL: This tells FRR to grab Calico's pod routes from the OS and send them to the Leaf
+  exit-address-family
+
+Would you like assistance crafting the Kubespray inventory variables for this backend: "none" configuration, or do you need help mapping out the automated FRR route filtering so your host only advertises the pod networks?
+
+[1] [https://sigridjin.medium.com](https://sigridjin.medium.com/building-a-kubernetes-cluster-from-scratch-setting-up-etcd-and-control-plane-0719698f0182)
+[2] [https://medium.com](https://medium.com/@buraktahtacioglu/project-calico-part-i-cncf-roadmap-fd6a40740c73)
+[3] [https://github.com](https://github.com/kubernetes-sigs/kubespray/issues/8691)
+[4] [https://github.com](https://github.com/canonical/microk8s/issues/3043)
+
+# OVN-bgp-agent with OpenStack will run on K8/calico+FRR/Ubuntu, so the separation of management subnet(L2 + OOB), workload subnet, ceph replication subnet, bgp unnumbered for fabric topology with loopback subnet for fabric and openstack tenant separation, go with example subnet how all these works together with kubespray var setup needed for this to work.
+
+This is an advanced, high-performance telecom/enterprise-grade architecture. By using BGP Unnumbered for the underlay fabric, you remove the need to manage thousands of tiny /30 or /31 subnets between your compute nodes and leaf switches. [1, 2] 
+Instead, the nodes use their Loopback IP as their primary L3 identifier, and FRR handles all control plane route redistribution for both Kubernetes (Calico) and OpenStack (via ovn-bgp-agent) into the physical leaf switches. [3, 4, 5] 
+------------------------------
+## 1. Example Subnet Architecture Map
+To make these components work together seamlessly without overlapping, we isolate the components into distinct layers:
+
+| Subnet Purpose [6, 7, 8] | Example CIDR Range | Scope / Type | How it maps to the Host OS & Fabric |
+|---|---|---|---|
+| Fabric Loopback | 10.254.0.0/24 | L3 Routed | Each node gets a /32 (e.g., 10.254.0.11) on its lo interface. Used as the BGP Router ID and endpoint. |
+| Management + OOB | 10.10.10.0/24 | Standard L2 | Bound to enp1s0 or an untagged bond. Used for SSH, Ansible (Kubespray), IPMI, and API endpoints. |
+| Ceph Replication | 10.20.20.0/24 | Isolated L2 | Bound to a separate high-speed NIC or dedicated VLAN interface. Strictly for storage backend traffic. |
+| K8s Pod Workloads | 172.16.0.0/16 | Calico IPAM | Calico handles this. Subnet never touches the physical switch configuration directly; it is injected dynamically. |
+| K8s Cluster Services | 172.19.0.0/16 | K8s Virtual | Purely internal cluster IP addresses. |
+| OpenStack Workloads | 192.168.100.0/22 | OpenStack Tenant | Handled via OVN overlay (ovn-bgp-agent / EVPN or BGP mode). |
+
+------------------------------
+## 2. How the Components Work Together
+
+   1. The Underlay (BGP Unnumbered): Your Ubuntu physical interfaces connected to the Leaf switches do not have IP addresses assigned. FRR sends BGP peer discovery messages using IPv6 Link-Local addresses (fe80::) across those interfaces. It then exchanges IPv4 routing profiles over that link using the node's Loopback /32 as the next-hop target.
+   2. Kubernetes Layer (Calico backend: none): Kubespray provisions Calico to manage pod lifecycles, but completely disables BIRD. When a pod spins up, Calico adds a local kernel route pointing to the cali+ interface.
+   3. OpenStack Layer (ovn-bgp-agent): The Python-based ovn-bgp-agent monitors the OVN Southbound database. When an OpenStack VM or Floating IP (FIP) boots up, the agent creates a dummy IP rule inside a dedicated Linux Virtual Routing and Forwarding (VRF) device (typically named bgp_vrf). [3, 9] 
+   4. The Routing Hub (Host FRR): FRR stands alone on the Ubuntu host OS. It reads the routes generated by both Calico (from the Linux main kernel table) and OVN (from bgp_vrf), and dynamically pushes them up to the Leaf switches. [3, 4, 9, 10] 
+
+------------------------------
+## 3. Kubespray Variable Setup (group_vars/k8s_cluster/k8s_cluster.yml)
+Configure Kubespray to use Calico, fully strip out BIRD, and assign the host's loopback IP as the primary identifier for Kubernetes cluster communication:
+
+# Core Network Plugin Selectorkube_network_plugin: calico
+# Disable Calico's internal BIRD daemon entirely to avoid port 179 conflictcalico_network_backend: "none"
+# Disable encapsulation completely to enforce pure Layer-3 routingcalico_ipip_mode: "Never"calico_vxlan_mode: "Never"
+# Match the IPAM block allocation to your planned Pod Workload Subnetkube_pods_subnet: 172.16.0.0/16kube_service_addresses: 172.19.0.0/16
+# Advanced: Tell Kubernetes components to communicate via the Node's Loopback IP# (This ensures K8s management works reliably over BGP Unnumbered topology)kube_override_hostname: "{{ ans_loopback_id }}" # Ensure this resolves to your loopback per node
+
+------------------------------
+## 4. Host OS Configuration (/etc/frr/frr.conf)
+Because you are using BGP Unnumbered and multi-tenant isolation, your host's FRR daemon must be configured to merge your core routing tables. Below is the configuration required on a node (assuming its loopback is 10.254.0.11 and physical interfaces connected to the leaves are enp2s0f0 and enp2s0f1):
+
+!
+frr version 10.x
+frr defaults traditional
+!
+hostname compute-node-01
+log syslog informational
+!
+# Enable the VRF device created by ovn-bgp-agent for tenant isolation
+vrf bgp_vrf
+ vni 100
+exit-vrf
+!
+router bgp 65001
+ bgp router-id 10.254.0.11
+ no bgp ebgp-requires-policy
+ !
+ # Peer with Leaf Switches over physical links using BGP Unnumbered
+ neighbor enp2s0f0 interface remote-as external
+ neighbor enp2s0f1 interface remote-as external
+ !
+ address-family ipv4 unicast
+  # 1. Advertise the host loopback identity
+  network 10.254.0.11/32
+  
+  # 2. REDISTRIBUTE KUBERNETES PODS:
+  # This grabs the local pod routes Calico injected into the kernel and sends them to the Leaves
+  redistribute kernel
+  
+  neighbor enp2s0f0 activate
+  neighbor enp2s0f1 activate
+ exit-address-family
+!
+# 3. REDISTRIBUTE OPENSTACK TENANT WORKLOADS:
+# This handles route maps originating inside the OVN-BGP VRF container 
+router bgp 65001 vrf bgp_vrf
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  # Grabs local tenant/FIP IPs managed by ovn-bgp-agent and advertises them via VRF leak or EVPN
+  redistribute connected
+ exit-address-family
+!
+
+To complete your system design, do you need help writing the Ansible tasks to configure the Ubuntu loopback interfaces before Kubespray runs, or do you need the configuration details for the ovn-bgp-agent.conf file itself? [7] 
+
+[1] [https://indico.cern.ch](https://indico.cern.ch/event/1376907/contributions/5870857/attachments/2882835/5026344/Introduction%20to%20OVN%20BGP%20agent.pdf)
+[2] [https://www.youtube.com](https://www.youtube.com/watch?v=KE-CF8bD1CU)
+[3] [https://www.youtube.com](https://www.youtube.com/watch?v=eKH14UN856o&t=2)
+[4] [https://docs.openstack.org](https://docs.openstack.org/neutron/latest/admin/ovn/bgp.html)
+[5] [https://github.com](https://github.com/openstack/ovn-bgp-agent)
+[6] [https://developers.redhat.com](https://developers.redhat.com/articles/2025/07/09/how-deploy-evpn-openstack-services-openshift)
+[7] [https://ltomasbo.wordpress.com](https://ltomasbo.wordpress.com/2021/06/25/openstack-networking-with-evpn/)
+[8] [https://www.dclessons.com](https://www.dclessons.com/building-redundant-vpc-over-vxlan)
+[9] [https://docs.redhat.com](https://docs.redhat.com/it/documentation/red_hat_openstack_platform/17.1/pdf/configuring_dynamic_routing_in_red_hat_openstack_platform/red_hat_openstack_platform-17.1-configuring_dynamic_routing_in_red_hat_openstack_platform-en-us.pdf)
+[10] [https://blog.epheo.eu](https://blog.epheo.eu/articles/openstack-bgp/index.html)
