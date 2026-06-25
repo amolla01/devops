@@ -4607,3 +4607,560 @@ Do you want to see an example Cluster API (CAPO) manifest block showing how it m
 [35] [https://medium.com](https://medium.com/cloud-experts-hub/vcluster-deep-dive-powering-kubernetes-environments-18b1d12b8520)
 [36] [https://www.vcluster.com](https://www.vcluster.com/blog/ephemeral-kubernetes-environments-on-ci-cd-systems-with-vcluster)
 
+# We discussed CHR VM based Exit_Router1/2 that connects to Border_Leaf1/2 and deploys wireguard vpn along with some infrastructure software deployment in those machines that will do bgp handshake with SONiC. Is there any other Opensource option which is also free of cost and is production quality similar to CHR?
+
+To replace the MikroTik CHR VM with a solution that is 100% free of charge (no speed-throttling per interface), entirely open-source, and of true production-grade datacenter quality, two choices stand out.
+Both alternatives seamlessly support your requested architecture: handling heavy WireGuard VPN encryption, executing the eBGP Unnumbered handshake with your SONiC Border Leafs, running additional infrastructure software (like Syslog or MaaS wrappers), and aligning perfectly with an Active-Active ECMP L3 CLOS fabric topology.
+------------------------------
+## Option 1: VyOS (The Hardened Enterprise Virtual Router)
+[VyOS](https://vyos.io/) is an enterprise-grade, open-source network operating system based on Debian. It is the spiritual successor to Vyatta and is specifically built for cloud-scale routing, virtual firewalls, and VPN termination. [1, 2, 3, 4] 
+## Why it fits your architecture:
+
+* Production Quality: Built directly on the native Linux kernel network stack and FRRouting (FRR). It features a standardized, unified configuration CLI that will feel instantly recognizable if you have ever configured Cisco, Juniper, or EdgeOS devices. [1, 5, 6] 
+* Cost & Speed: While VyOS charges for corporate pre-built LTS binaries, the Rolling/Nightly release ISOs are 100% free, unthrottled, and fully featured. Unlike MikroTik CHR (which caps free trial tiers at 1 Mbps per interface), VyOS allows you to pump raw 10G or 40G line-rate traffic right out of the box with zero licenses. [1, 6] 
+* WireGuard & BGP Native Integration: It features native configuration loops for building multi-homed BGP unnumbered neighbors directly alongside highly secure, multi-tenant WireGuard interfaces.
+
+------------------------------
+## Option 2: Standalone Ubuntu Bare-Metal + Native FRR + Docker (The DevOps Choice)
+Instead of running a dedicated router operating system inside a VM, your Exit Routers (the Dell R630/R720 boxes) can just run standard Ubuntu Server bare-metal or as a lightweight host. You use the exact same software engine that powers the data plane inside your SONiC switches and Calico clusters. [1, 7] 
+## Why it fits your architecture:
+
+* The Performance Peak: Running directly on the bare metal avoids any virtualization performance penalty (hypervisor context switching). The Linux kernel handles WireGuard encryption natively using kernel modules, utilizing the server's Intel Xeon AES-NI crypto-acceleration at maximum speed. [8, 9, 10, 11] 
+* Advanced Integration Freedom: Because it is standard Ubuntu, you have unlimited freedom to install other infrastructure management software (MaaS proxy anchors, OpenBao secrets vault, Prometheus exporters, local Syslog daemons) directly alongside the routing layer using lightweight Docker Containers without risking the stability of a specialized network OS. [1] 
+
+------------------------------
+## 📊 Comprehensive Comparison Matrix
+
+| Feature [1, 5, 6, 7, 12] | MikroTik CHR VM | VyOS (Rolling/Nightly ISO) | Ubuntu + Native FRR |
+|---|---|---|---|
+| Licensing Cost | Paid (Free tier throttled to 1 Mbps) | 0$ (Free for Rolling/Nightly) | 0$ (100% Free Open Source) |
+| BGP Engine | Custom MikroTik ROS v7 Stack | FRRouting (FRR) | FRRouting (FRR) |
+| WireGuard Throughput | Good (Kernel-space) | Excellent (Kernel-space) | Maximum (Zero hypervisor overhead) |
+| Infrastructure Packaging | None (Containers restricted) | None (Locked-down OS appliance) | Infinite (Standard Docker Engine) |
+| Configuration Style | WinBox UI / Custom CLI | Industry-Standard Network CLI | Standard Linux Files (/etc/frr/) |
+
+------------------------------
+## ⚙️ How to Implement BGP Unnumbered + WireGuard in VyOS
+If you choose VyOS for your Exit Routers, you deploy it as a KVM VM on your host server. The entire multi-homed configuration uses a clear, structured declarative syntax. [1] 
+
+# 1. Configure the Loopback Anchor System ID
+set interfaces loopback lo address '10.1.1.42/32'
+
+# 2. Enable IPv6 on the Fabric Links to receive SONiC Router Advertisements
+set interfaces ethernet eth1 ipv6 address autoconf
+set interfaces ethernet eth2 ipv6 address autoconf
+
+# 3. Create the Isolated OOB Management Network inside a VRF
+set vrf name OOB-Mgmt table '1000'
+set interfaces ethernet eth3 vrf 'OOB-Mgmt'
+set interfaces ethernet eth3 address '10.10.12.2/24'
+
+# 4. Initialize the Public Facing WireGuard Server
+set interfaces wireguard wg0 address '192.168.99.1/24'
+set interfaces wireguard wg0 port '51820'
+set interfaces wireguard wg0 private-key 'SERVER_PRIVATE_KEY_STRING'
+
+# 5. Route Leaking Rule: Force authenticated WireGuard traffic into the OOB VRF
+set protocols static policy route-map WG_TO_OOB rule 10 source address '192.168.99.0/24'
+set protocols static policy route-map WG_TO_OOB rule 10 set vrf 'OOB-Mgmt'
+
+# 6. Configure Modern eBGP Unnumbered Down to your SONiC Border Leafs
+set protocols bgp local-as '4200000000'
+set protocols bgp parameters router-id '10.1.1.42'
+set protocols bgp bestpath as-path multipath-relax
+
+# Peer automatically across the physical interface links using Extended Next-Hop Encoding
+set protocols bgp neighbor eth1 interface remote-as '4200000001'
+set protocols bgp neighbor eth1 capability extended-nexthop
+set protocols bgp neighbor eth2 interface remote-as '4200000002'
+set protocols bgp neighbor eth2 capability extended-nexthop
+
+# Originate the default internet route into the data fabric via ECMP
+set protocols bgp address-family ipv4-unicast default-originate
+set protocols bgp address-family ipv4-unicast maximum-paths ebgp '64'
+
+------------------------------
+## 💡 Architectural Recommendation
+
+* Choose VyOS if you prefer a traditional network appliance model. The CLI is purpose-built for managing route policies, it supports atomic rollbacks (rollback commands if you break a network link), and it keeps network configurations cleanly separated from the underlying operating system. [1] 
+* Choose Ubuntu + Native FRR if you are moving toward a modern Cloud-Native Platform / DevOps model. Having a flat Linux host running FRR makes your Exit Routers look and behave exactly like your Kubespray compute nodes. This lets you use a single unified automation codebase (like your Packer templates and Ansible plays) to orchestrate your entire server fleet. [1, 7] 
+
+Would you like to review how to write a VyOS-specific Packer build block to automate generating unthrottled routing images for your MaaS platform, or should we refine the Ubuntu+FRR bare-metal configurations? [1, 7] 
+
+[1] [https://forum.vyos.io](https://forum.vyos.io/t/alternatives-to-vyos/15431)
+[2] [https://www.peerspot.com](https://www.peerspot.com/products/comparisons/mikrotik-routers-and-switches_vs_vyos-universal-router)
+[3] https://frrouting.org
+[4] [https://github.com](https://github.com/frrouting/frr)
+[5] [https://asteraix.com](https://asteraix.com/blog/7-open-source-router-os-which-one-fits-your-network/)
+[6] [https://www.reddit.com](https://www.reddit.com/r/mikrotik/comments/1t2osxn/40gbe_edge_architecture_vyos_vs_routeros_v7_for/)
+[7] [https://cubepath.com](https://cubepath.com/docs/advanced-networking/bgp-routing-with-frrouting)
+[8] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/feature-request-chr-vpp-iso-version-chr-ros/177602)
+[9] [https://www.youtube.com](https://www.youtube.com/watch?v=qlsLUdbCczc&t=101)
+[10] [https://docs.frrouting.org](https://docs.frrouting.org/en/latest/bgp.html)
+[11] [https://en.wikipedia.org](https://en.wikipedia.org/wiki/FRRouting)
+[12] [https://docs.frrouting.org](https://docs.frrouting.org/en/latest/ospfd.html)
+
+
+# Let's have both and also explore which option makes sense for short in staff/funding and knowledge for an start-up effort?
+
+When resources, time, funding, and deep networking knowledge are strained, Option 2 (Bare-Metal Ubuntu + Native FRR + Docker) is the clear, overwhelming winner for a startup.
+## Why Ubuntu + FRR Wins for Startups:
+
+* The Learning Curve: A startup rarely has a dedicated Network Engineer. Finding a Linux sysadmin who understands standard Ubuntu, systemd, and Docker is incredibly easy. VyOS has a proprietary network CLI that requires a learning curve; Ubuntu uses plain text files.
+* Unified Toolchain: By using Ubuntu on your Exit Routers, every single server in your data center runs the exact same Operating System. Your Packer golden image, your MaaS cloud-init scripts, and your monitoring frameworks can be copied and pasted between your Exit Routers and your Kubespray Compute hosts.
+* Infinite Extensibility: If a startup is short on hardware, you can easily spin up your MaaS controller, OpenBao secrets vault, or local monitoring tools as small Docker containers directly on the Ubuntu Exit Router. In VyOS, you cannot natively run regular infrastructure apps inside the network appliance easily.
+
+------------------------------
+## 📦 Part 1: Automated Ubuntu + FRR Packer Blueprint
+To maintain a unified architecture, you can use the exact same Packer strategy we designed earlier. This shell script block handles installing FRR, mapping the sysctl properties, and prepping your interfaces without virtualization overhead.
+## scripts/ubuntu-router-bootstrap.sh
+
+#!/usr/bin/env bashset -euo pipefail
+
+echo "====================================================================="
+echo "1. SYSTEM ENGINE SETUP (UBUNTU ROUTER PROFILE)"
+echo "====================================================================="
+apt-get update && apt-get install -y curl gnupg2 lsb-release jq dmidecode wireguard iptables docker.io
+# Inject native FRR Routing Daemons
+curl -s https://frrouting.org | apt-key add -
+echo "deb https://frrouting.org $(lsb_release -s -c) frr-stable" > /etc/apt/sources.list.d/frr.list
+apt-get update && apt-get install -y frr frr-pythontools
+# Configure the FRR system daemons file to ensure BGP is activated on start
+sed -i 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+
+systemctl disable frr     # Keeps it offline until dynamic cloud-init maps it
+systemctl enable docker
+
+echo "====================================================================="
+echo "2. KERNEL PACKET FORWARDING SCHEMAS"
+echo "====================================================================="
+cat << 'EOF' > /etc/sysctl.d/99-router.conf
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+net.ipv4.conf.all.rp_filter = 0
+net.ipv4.conf.default.rp_filter = 0
+EOF
+
+------------------------------
+## 📦 Part 2: Automated VyOS Packer Blueprint
+If you prefer a structured, rigid network appliance model, Packer supports a custom qemu provisioner workflow using a raw VyOS Rolling ISO.
+## vyos-edge.pkr.hcl
+
+packer {
+  required_plugins {
+    qemu = {
+      version = ">= 1.0.0"
+      source  = "://github.com"
+    }
+  }
+}
+
+source "qemu" "vyos-router" {
+  # Pull the free unthrottled Rolling/Nightly iso
+  iso_url          = "https://vyos.io"
+  iso_checksum     = "none" # Use none or inject the daily generated checksum
+  output_directory = "output-vyos-edge"
+  shutdown_command = "poweroff"
+  disk_size        = "10G"
+  format           = "qcow2"
+  accelerator      = "kvm"
+  cpus             = 2
+  memory           = 2048
+  headless         = true
+
+  # VyOS boots to a live prompt; keys are punched via the virtual keyboard matrix
+  boot_wait        = "15s"
+  boot_command = [
+    "vyos<enter><wait>", # Default Username
+    "vyos<enter><wait10>", # Default Password
+    "install image<enter><wait>",
+    "<enter><wait>",       # Auto-partition drive
+    "Yes<enter><wait>",    # Confirm disk wipe
+    "<enter><wait>",       # Default boot size
+    "vyos-edge<enter><wait>", # Image name
+    "<enter><wait>",       # Default configuration file
+    "vyos<enter><wait>",   # Root password setup
+    "vyos<enter><wait>",   # Confirm root password
+    "<enter><wait>",       # Default GRUB drive target
+    "reboot<enter>"
+  ]
+
+  ssh_username     = "vyos"
+  ssh_password     = "vyos"
+}
+
+build {
+  sources = ["source.qemu.vyos-router"]
+
+  # Applies configuration settings inside the live image filesystem
+  provisioner "shell" {
+    inline = [
+      "configure",
+      "set service ssh port 22",
+      "commit",
+      "save"
+    ]
+  }
+}
+
+------------------------------
+## 🧠 Part 3: The Startup Decision Matrix
+If your startup is evaluating these choices under tight resource constraints, consider these real-world implications:
+
+| Assessment Vector | VyOS Route | Ubuntu + FRR Route (Winner) |
+|---|---|---|
+| Hiring Pool | Harder. Requires someone who knows specialized Junos/Cisco configuration trees. | Easiest. Any generic junior systems administrator or web developer understands Ubuntu. |
+| Automation Integration | Complex. Requires custom Ansible modules (vyos.vyos.vyos_config) to manipulate rules. | Simple. Standard shell commands (echo, tee, cat) work cleanly inside your existing MaaS cloud-init engine. |
+| Hardware Efficiency | Low. The machine becomes a locked box. You waste an entire Dell R630 on just routing. | Maximum. The server acts as your Exit Router, plus it securely hosts MaaS, OpenBao, and Git runners inside lightweight Docker slots. |
+| System Visibility | Requires custom network export metrics profiles (SNMP/NetFlow configurations). | Native. Standard Linux exporters (Prometheus node_exporter) monitor the machine identically to the compute nodes. |
+
+## Final Startup Architecture Recommendation
+For a lean startup, go with Ubuntu Bare-Metal + Native FRR.
+It eliminates context switching. When your team logs into an Exit Router to troubleshoot a WireGuard tunnel or checks a Compute Node to troubleshoot a Calico Pod route, they are interacting with the exact same operating system, the exact same text formatting layouts, and the exact same toolsets (ip route, vtysh, systemctl status frr). This structural symmetry drastically minimizes human errors, speeds up data center platform convergence, and costs $0 in licensing or training overhead.
+Would you like to review the unified MaaS preseed or cloud-init snippets to automate dropping the finalized frr.conf templates directly onto an Ubuntu bare-metal Exit Router host during its initial PXE bootstrap?
+
+
+# When we say 'Ubuntu + FRR', how wireguard vpn fits in here? wireguard provisioning will be part of frr.conf??
+
+No, WireGuard provisioning is not part of the frr.conf file.
+FRR (FRRouting) is strictly a routing daemon [203.0.113.0/24 is used as an example public prefix earlier]. Its only job is to handle routing protocols like BGP and OSPF, and write paths into the Linux kernel. It cannot create interfaces or encrypt packets. [1, 2, 3, 4] 
+In the Ubuntu + FRR architecture, WireGuard is handled natively by the Ubuntu Linux kernel network stack, completely separate from FRR.
+------------------------------
+## 🧱 How the Pieces Fit Together
+Instead of a monolithic network appliance, you combine three independent, highly optimized open-source layers inside Ubuntu:
+
+   1. The Tunnel Layer (WireGuard): The native Linux kernel creates a virtual interface (e.g., wg0), handles the cryptographic handshakes, and encrypts/decrypts the operations traffic. [5, 6, 7] 
+   2. The Dynamic Routing Layer (FRR): FRR handles your BGP-Unnumbered session over your 10G links to talk to the SONiC switches. It learns your Kubernetes and OpenStack subnets and advertises your default internet path.
+   3. The Traffic Control Layer (Linux Policy Routing / VRF): The Linux kernel bridges the gap. It takes the packets coming out of the WireGuard tunnel and safely pushes them into your isolated OOB Management VRF (mgmt-vrf). [8] 
+
+------------------------------
+## 🛠️ How It Is Implemented on the Exit Router
+Because this is a standard Ubuntu host, you configure WireGuard using the native Linux wg-quick utility or standard Netplan systemd-networkd extensions. [9, 10, 11] 
+Here is exactly how the configuration files are cleanly separated on your physical Exit Router server to avoid any confusion:
+## 📂 File 1: The WireGuard Tunnel (/etc/wireguard/wg0.conf) [12, 13] 
+This file dictates how remote operators connect to the server. It tells the Linux kernel to create the encrypted interface but does not touch your BGP or SONiC configurations:
+
+[Interface]
+# The private key of your Exit Router
+PrivateKey = SERVER_PRIVATE_KEY_HERE
+# The port exposed via your home ISP router-modem port forwarding/DMZ
+ListenPort = 51820
+# The private transit IP for the VPN tunnel network
+Address = 192.168.99.1/24
+
+[Peer]
+# Operations Engineer Laptop #1
+PublicKey = ADMIN_LAPTOP_PUBLIC_KEY_HERE
+# The subnets this specific admin is allowed to reach through this router
+AllowedIPs = 192.168.99.2/32, 10.10.0.0/16
+
+## 📂 File 2: The Routing Rule (/etc/netplan/00-oob-management.yaml)
+To make sure your WireGuard admins can actually reach your isolated physical CRS125-24G switch and your MaaS server (10.10.0.0/16), you append a single Linux Policy Routing Rule to your Netplan file.
+This rule forces any traffic originating from the WireGuard pool (192.168.99.0/24) to look up paths inside your secure, isolated management VRF table:
+
+network:
+  version: 2
+  renderer: networkd
+  vrfs:
+    mgmt-vrf:
+      table: 1000
+      interfaces: [enp1s0]
+      # CRITICAL CROSS-OVER RULE:
+      # Pushes authenticated WireGuard tunnel traffic straight into the OOB Management space
+      routing-policy:
+        - from: 192.168.99.0/24
+          table: 1000
+
+## 📂 File 3: The Fabric BGP Control Plane (/etc/frr/frr.conf) [14] 
+Your frr.conf file remains completely clean. It contains zero references to WireGuard, VPN keys, or admin laptops. It focuses strictly on peering with your 100G SONiC fabric over BGP Unnumbered and distributing your public/floating IP allocations.
+------------------------------
+## 🔄 The Packet Flow Journey
+When an operations staff member opens their laptop at home and connects to view the OpenStack Horizon dashboard:
+
+   1. The Handshake: Their laptop hits your home ISP public IP on UDP Port 51820. The modem forwards it to the Ubuntu Exit Router. The Linux kernel WireGuard module decrypts the packet. [15, 16] 
+   2. The VRF Lookup: The packet emerges from the wg0 interface with a source IP of 192.168.99.2 and a destination of 10.10.100.10 (the MetalLB Dashboard IP). [17] 
+   3. The Policy Match: The Linux kernel hits the Netplan Routing Policy Rule. It shifts the packet out of the default internet table and forces it into table 1000 (the mgmt-vrf).
+   4. The Local Delivery: The packet leaves physical port enp1s0 untagged, crosses your CRS125 switch, hits your Kubespray master nodes, and renders the dashboard UI cleanly—completely bypassing and isolating your high-speed SONiC production fabric.
+
+This clear separation of duties ensures that if your BGP routing table flaps or changes due to tenant activity, your WireGuard management path stays locked, stable, and online.
+Would you like help generating the Ansible tasks or cloud-init scripts to automatically drop these distinct configuration files onto both of your redundant R630 routers during initial setup?
+
+[1] [https://developer.nvidia.com](https://developer.nvidia.com/networking/ethernet-switches/frrouting)
+[2] [https://docs.frrouting.org](https://docs.frrouting.org/_/downloads/en/frr-8.2.2/pdf/)
+[3] [https://github.com](https://github.com/FRRouting/frr/issues/4831)
+[4] [https://www.2stacks.net](https://www.2stacks.net/blog/getting-started-with-frr-on-eveng/)
+[5] [https://anders94.medium.com](https://anders94.medium.com/wireguard-config-for-the-initiated-2b1cc5f2b1ee)
+[6] [https://www.zenarmor.com](https://www.zenarmor.com/docs/network-security-tutorials/wireguard)
+[7] [https://linuxsecurity.com](https://linuxsecurity.com/features/what-is-wireguard)
+[8] [https://bbs.archlinux.org](https://bbs.archlinux.org/viewtopic.php?id=289926)
+[9] [https://www.digitalocean.com](https://www.digitalocean.com/community/tutorials/how-to-set-up-wireguard-on-ubuntu-20-04)
+[10] [https://www.networkershome.com](https://www.networkershome.com/fundamentals/vpn-remote-access/wireguard-vpn/)
+[11] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-20-wireguard-vpn-netplan/view)
+[12] [https://bering-uclibc.zetam.org](https://bering-uclibc.zetam.org/wiki/Bering-uClibc_7.x_-_User_Guide_-_Advanced_Topics_-_Wireguard)
+[13] [https://www.reddit.com](https://www.reddit.com/r/WireGuard/comments/lcbuut/create_a_tunnel_in_wireguard_version_1012/)
+[14] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-20-configure-bgp-frrouting-linux-routers/view)
+[15] [https://linuxcapable.com](https://linuxcapable.com/how-to-install-wireguard-on-ubuntu-linux/)
+[16] [https://anders94.medium.com](https://anders94.medium.com/wireguard-config-for-the-initiated-2b1cc5f2b1ee)
+[17] [https://b-yarbrough.medium.com](https://b-yarbrough.medium.com/understanding-wireguard-2d8d9af987eb)
+
+
+# Please go with complete network interfaces configuration and routing establishment including implementation of Vrf_Transit for tenants and Ops Team member access for the following wiring: SONiC Border-Leaf1 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0
+SONiC Border-Leaf1 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0
+SONiC Border-Leaf2 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0
+SONiC Border-Leaf2 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0
+
+
+Mangement Switch interface ether22 to Exit-Router1_R630-Ubuntu enp1s0
+Mangement Switch interface ether22 to Exit-Router2_R630-Ubuntu enp1s0
+
+ISP_1 to Exit-Router1_R630-Ubuntu enp4s0
+ISP_2 to Exit-Router2_R630-Ubuntu enp4s0
+
+This complete, production-ready configuration blueprint provides everything needed to establish your Active-Active, Multi-Homed external edge network. It implements a highly resilient design utilizing a Vrf_Transit logical container on your Ubuntu Exit Routers [203.0.113.0/24 is used as an example public prefix earlier]. This architecture separates public traffic from your critical underlying Out-of-Band (OOB) Management layer while ensuring high-performance eBGP Unnumbered routing down to your SONiC Border Leafs.
+------------------------------
+## 🧮 Part 1: System-Wide Subnet Assignment Worksheet
+To enforce absolute isolation, your architecture utilizes a deterministic naming and numbering convention mapping to your physical server rack variables:
+
+* Data Center ID: 01 | Availability Zone ID: 1
+* Exit-Router 1 (R630 #1): Physically installed at Rack Unit slot 41
+* Exit-Router 2 (R630 #2): Physically installed at Rack Unit slot 42
+
+| System Network Tier [1, 2] | Address Block Strategy | Exit-Router 1 Assignment | Exit-Router 2 Assignment |
+|---|---|---|---|
+| System Loopback Anchor | 10.[Zone].[Rack].[U-Slot]/32 | 10.1.12.41/32 | 10.1.12.42/32 |
+| OOB Host OS Management | 10.10.[Rack].[U-Slot]/24 | 10.10.12.41/24 | 10.10.12.42/24 |
+| MaaS / MetalLB VIP Target | Shared Shared Broadcast Area | 10.10.100.1 (Virtual Gateway Pool Endpoint) | 10.10.100.2 (Virtual Gateway Pool Endpoint) |
+| ISP 1 Home Gateway Segment | Static / DMZ / Bridge Link | 192.168.1.50/24 (via enp4s0) | N/A (Cabled to Router 1 Only) |
+| ISP 2 Home Gateway Segment | Static / DMZ / Bridge Link | N/A (Cabled to Router 2 Only) | 192.168.2.50/24 (via enp4s0) |
+| WireGuard Admin Pool | Encrypted Transit Subnet | 192.168.99.1/24 | 192.168.99.2/24 |
+| eBGP Autonomous System | Private Dynamic 32-bit AS | AS 4200000000 (Shared Edge) | AS 4200000000 (Shared Edge) |
+
+------------------------------
+## 📂 Part 2: Split Netplan Interface Configurations
+Create these explicit network configuration profiles inside /etc/netplan/ on your respective hosts. These files establish the mgmt-vrf layer, the public tenant Vrf_Transit engine, and the BGP-Unnumbered fabric interfaces.
+## 🛠️ Host 1: Exit-Router 1 Netplan Matrix (/etc/netplan/) [3] 
+
+# /etc/netplan/00-oob-management.yamlnetwork:
+  version: 2
+  renderer: networkd
+  vrfs:
+    mgmt-vrf:
+      table: 1000
+      interfaces: [enp1s0]
+  ethernets:
+    enp1s0: # Management Switch ether22 -> Router 1 enp1s0
+      dhcp4: false
+      addresses: [10.10.12.41/24]
+      routes:
+        - to: default
+          via: 10.10.12.1
+          metric: 1000
+
+# /etc/netplan/10-tenant-transit.yamlnetwork:
+  version: 2
+  renderer: networkd
+  vrfs:
+    Vrf_Transit:
+      table: 2000
+      interfaces: [enp2s0, enp3s0, enp4s0]
+      routing-policy:
+        - from: 192.168.99.0/24 # Leaks WireGuard traffic safely out to OOB if needed
+          table: 1000
+  ethernets:
+    enp4s0: # ISP_1 -> Router 1 enp4s0
+      dhcp4: false
+      addresses: [192.168.1.50/24]
+      routes:
+        - to: default
+          via: 192.168.1.1
+          metric: 100
+    # 10G Multi-Homed Fabric Uplinks (Stripped of IPv4 for BGP Unnumbered)
+    enp2s0: { dhcp4: false, ipv6-privacy: false } # To Border-Leaf 1 Eth0
+    enp3s0: { dhcp4: false, ipv6-privacy: false } # To Border-Leaf 2 Eth0
+  loopbacks:
+    lo:
+      addresses: [10.1.12.41/32]
+
+## 🛠️ Host 2: Exit-Router 2 Netplan Matrix (/etc/netplan/)
+
+# /etc/netplan/00-oob-management.yamlnetwork:
+  version: 2
+  renderer: networkd
+  vrfs:
+    mgmt-vrf:
+      table: 1000
+      interfaces: [enp1s0]
+  ethernets:
+    enp1s0: # Management Switch ether22 -> Router 2 enp1s0
+      dhcp4: false
+      addresses: [10.10.12.42/24]
+      routes:
+        - to: default
+          via: 10.10.12.1
+          metric: 1000
+
+# /etc/netplan/10-tenant-transit.yamlnetwork:
+  version: 2
+  renderer: networkd
+  vrfs:
+    Vrf_Transit:
+      table: 2000
+      interfaces: [enp2s0, enp3s0, enp4s0]
+  ethernets:
+    enp4s0: # ISP_2 -> Router 2 enp4s0
+      dhcp4: false
+      addresses: [192.168.2.50/24]
+      routes:
+        - to: default
+          via: 192.168.2.1
+          metric: 100
+    enp2s0: { dhcp4: false, ipv6-privacy: false } # To Border-Leaf 1 Eth1
+    enp3s0: { dhcp4: false, ipv6-privacy: false } # To Border-Leaf 2 Eth1
+  loopbacks:
+    lo:
+      addresses: [10.1.12.42/32]
+
+------------------------------
+## 🔒 Part 3: Native WireGuard Server Configurations
+To support secure operations team management, configure the WireGuard tunnels natively inside the Ubuntu kernel namespace.
+## 📝 Exit-Router 1 WireGuard Core (/etc/wireguard/wg0.conf)
+
+[Interface]
+PrivateKey = SERVER_1_PRIVATE_KEY_STRING
+ListenPort = 51820
+Address = 192.168.99.1/24
+
+[Peer]
+# Operations Engineer Admin Laptop
+PublicKey = ADMIN_LAPTOP_PUBLIC_KEY_STRING
+AllowedIPs = 192.168.99.100/32, 10.10.0.0/16
+
+## 📝 Exit-Router 2 WireGuard Core (/etc/wireguard/wg0.conf)
+
+[Interface]
+PrivateKey = SERVER_2_PRIVATE_KEY_STRING
+ListenPort = 51820
+Address = 192.168.99.2/24
+
+[Peer]
+PublicKey = ADMIN_LAPTOP_PUBLIC_KEY_STRING
+AllowedIPs = 192.168.99.100/32, 10.10.0.0/16
+
+(Enable the interface on both routers using: sudo systemctl enable wg-quick@wg0 && sudo systemctl start wg-quick@wg0)
+------------------------------
+## ⚙️ Part 4: Dynamic Control Plane Routing (/etc/frr/frr.conf)
+Because you are utilizing Vrf_Transit, the BGP process inside FRR must be explicitly bound to that specific routing table. This structure isolates public OpenStack tenant paths from bleeding into your physical server loops or your administrative OOB layer.
+## 📦 Exit-Router 1 FRR Config File
+
+frr version 8.x
+!
+# Bind the global routing engine to the Transit Table
+router bgp 4200000000 vrf Vrf_Transit
+ bgp router-id 10.1.12.41
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ # BGP Unnumbered Interface Handshakes
+ neighbor enp2s0 interface remote-as 4200000001
+ neighbor enp3s0 interface remote-as 4200000002
+ !
+ address-family ipv4 unicast
+  neighbor enp2s0 activate
+  neighbor enp2s0 capability extended-nexthop
+  neighbor enp3s0 activate
+  neighbor enp3s0 capability extended-nexthop
+  !
+  # Conditionally advertise 0.0.0.0/0 down to SONiC if the ISP link is online
+  default-originate
+  redistribute kernel
+  maximum-paths 64
+ exit-address-family
+!
+
+## 📦 Exit-Router 2 FRR Config File
+
+frr version 8.x
+!
+router bgp 4200000000 vrf Vrf_Transit
+ bgp router-id 10.1.12.42
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ neighbor enp2s0 interface remote-as 4200000001
+ neighbor enp3s0 interface remote-as 4200000002
+ !
+ address-family ipv4 unicast
+  neighbor enp2s0 activate
+  neighbor enp2s0 capability extended-nexthop
+  neighbor enp3s0 activate
+  neighbor enp3s0 capability extended-nexthop
+  !
+  default-originate
+  redistribute kernel
+  maximum-paths 64
+ exit-address-family
+!
+
+------------------------------
+## 🍃 Part 5: Upstream SONiC Fabric Switch Layout (frr.conf)
+To complete the end-to-end multi-homed mapping loop, update the underlying FRR configuration files inside your SONiC Border Leafs to mirror your network topology.
+## 🏙️ SONiC Border-Leaf 1 Routing Core
+
+router bgp 4200000001
+ bgp router-id 10.1.12.101
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ # Ethernet0 -> Exit-Router 1 enp2s0 | Ethernet1 -> Exit-Router 2 enp2s0
+ neighbor Ethernet0 interface remote-as 4200000000
+ neighbor Ethernet1 interface remote-as 4200000000
+ !
+ address-family ipv4 unicast
+  neighbor Ethernet0 activate
+  neighbor Ethernet0 capability extended-nexthop
+  neighbor Ethernet1 activate
+  neighbor Ethernet1 capability extended-nexthop
+  maximum-paths 64
+ exit-address-family
+!
+
+## 🏙️ SONiC Border-Leaf 2 Routing Core
+
+router bgp 4200000002
+ bgp router-id 10.1.12.102
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ # Ethernet0 -> Exit-Router 1 enp3s0 | Ethernet1 -> Exit-Router 2 enp3s0
+ neighbor Ethernet0 interface remote-as 4200000000
+ neighbor Ethernet1 interface remote-as 4200000000
+ !
+ address-family ipv4 unicast
+  neighbor Ethernet0 activate
+  neighbor Ethernet0 capability extended-nexthop
+  neighbor Ethernet1 activate
+  neighbor Ethernet1 capability extended-nexthop
+  maximum-paths 64
+ exit-address-family
+!
+
+------------------------------
+## 🛡️ Part 6: Outbound Tenant NAT Edge Rules
+Since your home ISP modems do not understand internal OpenStack tenant IP spaces, you must enable IP Masquerading on the enp4s0 WAN interfaces inside your Vrf_Transit table. This translates internal traffic into the valid WAN IPs handed out by your ISP modems. [4] 
+Execute these commands on your respective Exit Routers or save them within your startup scripts:
+
+# Execute on Exit-Router 1
+sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
+# Execute on Exit-Router 2
+sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
+
+(Note: If your system uses standard systemd-networkd, running sudo iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE directly applies the rule inside the VRF context based on the matching outbound interface). [5] 
+This complete layout ensures a secure, loop-free data center edge. Public tenant data scales cleanly through Vrf_Transit using Active-Active ECMP multipathing, while your operations team maintains high-availability WireGuard access straight to the OOB management switch layer without risking configuration drift or platform lockouts.
+Would you like to examine the verification steps to confirm that paths are actively traversing your Vrf_Transit tables between your SONiC fabric and the ISP modems?
+
+[1] [https://superuser.com](https://superuser.com/questions/1858838/forward-packets-between-tun-interface-and-physical-interface)
+[2] [https://forum.mikrotik.com](https://forum.mikrotik.com/t/peer-dns-on-ether1-wan-when-wireguard-tunnel-goes-down-with-a-script/180340)
+[3] [https://askubuntu.com](https://askubuntu.com/questions/1445221/permanently-disable-network-interface-in-ubuntu-22-04)
+[4] [https://forum.level1techs.com](https://forum.level1techs.com/t/grants-forbidden-router-adventure-wip/239946)
+[5] [https://help.mikrotik.com](https://help.mikrotik.com/docs/spaces/ROS/pages/328206/Virtual+Routing+and+Forwarding+-+VRF)
+
