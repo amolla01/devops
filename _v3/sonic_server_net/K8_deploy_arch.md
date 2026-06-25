@@ -2238,3 +2238,473 @@ To complete your system design, do you need help writing the Ansible tasks to co
 [8] [https://www.dclessons.com](https://www.dclessons.com/building-redundant-vpc-over-vxlan)
 [9] [https://docs.redhat.com](https://docs.redhat.com/it/documentation/red_hat_openstack_platform/17.1/pdf/configuring_dynamic_routing_in_red_hat_openstack_platform/red_hat_openstack_platform-17.1-configuring_dynamic_routing_in_red_hat_openstack_platform-en-us.pdf)
 [10] [https://blog.epheo.eu](https://blog.epheo.eu/articles/openstack-bgp/index.html)
+
+# Ceph OSDs replication will be routed from routed-to-host bgp architecture and NO L2/VLAN. What IP blocks to offer to openstack tenants, Should there be any  restriction while maintaining complete tenant security separation??
+
+Operating an end-to-end Layer 3 Routed-to-Host architecture—where even Ceph storage replication traffic is routed via BGP rather than a traditional L2 VLAN—is the gold standard for massive scalability, predictability, and fault isolation. [1] 
+Because you do not have Layer 2 broadcast domains, you cannot rely on traditional VLAN tagging to secure tenant traffic. Security separation must be handled entirely at Layer 3 using VRFs (Virtual Routing and Forwarding) and BGP EVPN / Multi-Protocol BGP.
+------------------------------
+## 1. Recommended IP Blocks for OpenStack Tenants
+Since you are running a fully routed Layer 3 network, you should assign Private RFC 1918 blocks that are explicitly separated from your infrastructure underlay (Management, Loopbacks, and Ceph).
+
+| Subnet Component [2] | Recommended Allocation Range | Details |
+|---|---|---|
+| Tenant Internal (Overlay) | 10.100.0.0/14 (or any 10.x block) | Distributed to tenants for private instance networks. |
+| Provider / Floating IPs (FIP) | 192.168.100.0/22 (or a block of Public IPs) | Used for external access. ovn-bgp-agent will advertise these as /32 host routes to the leaves. |
+
+Because traffic is isolated using network virtualization headers (VXLAN/Geneve inside OVN), tenants can use completely overlapping IP blocks (e.g., Tenant A and Tenant B can both use 10.0.0.0/24) without any conflict. [3] 
+------------------------------
+## 2. Maintaining Complete Tenant Security Separation
+In an L3 routed-to-host setup, infrastructure multi-tenancy is maintained by ensuring that your underlay (Ceph & Management) and overlays (Tenants) live in entirely distinct routing tables.
+## Restriction 1: Isolate the Ceph Replication Network in its Own VRF
+Because Ceph traffic is now routed, your Leaf switches and host FRR daemons must prevent tenant VMs from ever discovering or sending packets to the Ceph backend.
+
+* The Fix: Create a dedicated VRF (e.g., vrf_storage) on your host Ubuntu systems and Leaf switches.
+* The Impact: The BGP Unnumbered sessions routing your Ceph replication traffic will only exchange routes inside vrf_storage. Tenant networks will have no routes to this VRF, making it mathematically impossible for a tenant VM to attack or probe a Ceph OSD. [4] 
+
+## Restriction 2: Enforce Strict Route Leaking Limits on the Host
+Your host FRR instance is running two distinct BGP structures: the default routing table (handling K8s pods and node management) and bgp_vrf (handling ovn-bgp-agent OpenStack tenants). [5] 
+
+* The Restriction: You must never use a catch-all redistribute kernel or redistribute connected globally without tight filtering.
+* The Fix: Use explicit prefix-lists or BGP communities in your FRR configuration to ensure that bgp_vrf only advertises OpenStack Floating IPs to the Leaf switches, and never leaks host internal loopbacks or Ceph IPs into tenant spaces. [6] 
+
+## Restriction 3: Leverage OVN Distributed Virtual Routing (DVR)
+Ensure OpenStack OVN is configured for distributed routing. When an instance talks to another instance on a different compute node, the traffic must be encapsulated in Geneve or VXLAN tunnels by the OVN Layer before it hits the host's physical network adapter.
+
+* The Impact: To the physical leaf switches, tenant traffic just looks like UDP-encapsulated underlay packets flowing between host loopback IPs (10.254.0.x). The switches never see or route raw tenant IPs directly.
+
+------------------------------
+## 3. Updated Host FRR Logic for Ceph + OpenStack Isolation
+To implement this layout securely, your /etc/frr/frr.conf file must map both the storage isolation VRF and the OpenStack tenant VRF separately:
+
+! --- UNDERLAY & K8S CONTROL PLANE (DEFAULT VRF) ---
+router bgp 65001
+ bgp router-id 10.254.0.11
+ neighbor enp2s0f0 interface remote-as external
+ neighbor enp2s0f1 interface remote-as external
+ !
+ address-family ipv4 unicast
+  network 10.254.0.11/32
+  redistribute kernel route-map K8S_PODS_ONLY  <-- Restricted to prevent leaking Ceph
+  neighbor enp2s0f0 activate
+  neighbor enp2s0f1 activate
+ exit-address-family
+!
+! --- CEPH REPLICATION ISOLATION VRF ---
+router bgp 65001 vrf vrf_storage
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  redistribute connected                     <-- Only redistributes local OSD IPs
+ exit-address-family
+!
+! --- OPENSTACK TENANT ISOLATION VRF ---
+router bgp 65001 vrf bgp_vrf
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  redistribute connected                     <-- Only redistributes OVN FIP / Tenant IPs
+ exit-address-family
+!
+! --- ROUTE MAP SAFETY FILTER ---
+ip prefix-list PL_K8S_PODS permit 172.16.0.0/16 ge 24
+!
+route-map K8S_PODS_ONLY permit 10
+ match ip address prefix-list PL_K8S_PODS
+!
+
+Would you like to review how to write the FRR route-maps to completely block communication between the K8s pod network and the Ceph storage VRF on the same host, or do you need help designing the MTU size strategy to handle the OVN network encapsulation over your L3 leaf fabric?
+
+[1] [https://www.linkedin.com](https://www.linkedin.com/pulse/deploying-ceph-storage-bgp-l3-network-satish-patel-gycne)
+[2] [https://firstcloud.pl](https://firstcloud.pl/blog/openstack-network-types-tenant-vs-provider/)
+[3] [https://docs.ovn.org](https://docs.ovn.org/en/latest/topics/high-availability.html)
+[4] [https://www.cisco.com](https://www.cisco.com/c/en/us/td/docs/dcn/whitepapers/cisco-vxlan-multi-site-and-service-node-integration.html)
+[5] [https://www.reddit.com](https://www.reddit.com/r/kubernetes/comments/1iy411r/talos_with_redundant_routed_networks_via_bgp/)
+[6] [https://networkjourney.com](https://networkjourney.com/ticket24-routing-table-blackhole-route-redistribution-loop-detected-between-ospf-and-bgp-ccnp-enterprise/)
+
+
+# Assuming I have a dummy interface at the linux level with jumbo frame MTU setup which is associated to a replication-subnet for ceph, why would I require any vrf-storage?? Let's explore more on that
+
+You need a vrf_storage because a dummy interface and a Jumbo Frame MTU only solve your Layer 1 and Layer 2 link characteristics (data layout and packet size). They do not solve your Layer 3 routing path isolation and security boundaries. [1] 
+Without a VRF, your host has a single, global routing table. This introduces severe routing loops, security holes, and structural problems in an all-L3 routed-to-host network. [2] 
+Here is exactly why a dedicated VRF is mandatory for your Ceph replication subnet:
+------------------------------
+## 1. The "Any-to-Any" Security Leak (The Biggest Risk)
+In Linux, if you do not use VRFs, all network interfaces belong to the default standard routing table. [3] 
+
+* The Problem: If an OpenStack tenant VM compromises an OpenStack network node or bypasses encapsulation, it can inject traffic targeting your Ceph replication IP range (10.20.20.0/24).
+* The Linux Behavior: Because the host's default routing table knows exactly where 10.20.20.0/24 is (via your dummy interface), the host Linux kernel will happily route that tenant's traffic straight into your storage network.
+* The VRF Solution: Putting the Ceph dummy interface inside vrf_storage locks its routes into a separate routing table. The tenant data path cannot see, resolve, or hop into this table. It creates a mathematical wall at the kernel level.
+
+------------------------------
+## 2. Multi-Path Asymmetry and "Next-Hop" Confusion
+Your Ceph OSD nodes need to talk to other Ceph OSD nodes on other compute hosts using BGP Unnumbered over your physical leaf links (enp2s0f0, enp2s0f1). [4] 
+
+* Without a VRF: Your default routing table has two destinations using the exact same physical upstream paths: K8s pod routes, OpenStack API routes, and Ceph storage routes. If a Leaf switch experiences high load, your standard Linux kernel traffic might mix these up, causing Ceph storage synchronization traffic to compete directly with bursty Kubernetes network traffic over the same internal Linux packet queues.
+* With a VRF: vrf_storage forces the Linux kernel to handle Ceph packet lookup completely independently of standard system network structures. This allows you to apply distinct Linux Traffic Control (tc) policies or strict Quality of Service (QoS) values exclusively to the storage table.
+
+------------------------------
+## 3. Preventing BGP Route Contamination
+You mentioned using FRR to announce your networks up to your Leaf switches.
+
+* The Default FRR Trap: If your dummy interface is in the global routing table, and you execute a standard redistribute connected or redistribute kernel command in FRR to announce your Kubernetes pods, FRR will automatically grab your Ceph dummy interface subnet and announce it to the rest of the world over your core BGP sessions.
+* The Explosion: Your Leaf switches will now see your highly confidential storage replication subnet intermingled with your public and workload routes.
+* The VRF Solution: By isolating Ceph into vrf_storage, you create a dedicated router bgp 65001 vrf vrf_storage block in FRR. This ensures that Ceph routes are only announced to specialized storage BGP peers or specific VRFs on your Leaf switches, keeping them out of the public cloud network fabric entirely.
+
+------------------------------
+## What it looks like at the Linux Level
+If you rely only on a dummy interface without a VRF, your Linux system sees this:
+
+# ip route show
+default dev enp2s0f0 proto bgp172.16.0.0/16 dev cali1234  (Kubernetes Pods)10.20.20.0/24 dev dummy_ceph proto kernel scope link src 10.20.20.11 (Ceph - Exposed!)
+
+When you add the VRF, the security boundaries are cleanly split into two isolated domains:
+
+# ip route show (Standard Traffic & K8s)
+default dev enp2s0f0 proto bgp172.16.0.0/16 dev cali1234
+# ip route show vrf vrf_storage (Ceph Only)10.20.20.0/24 dev dummy_ceph proto kernel scope link src 10.20.20.11
+
+Would you like to look at the Netplan or systemd-networkd configuration to see how to bind your jumbo-frame dummy interface to a VRF at boot, or should we map out the Leaf switch VRF configuration required to match this setup?
+
+[1] [https://www.reddit.com](https://www.reddit.com/r/networking/comments/mywpby/best_practice_for_jumbo_frames_switching/)
+[2] [https://ipcisco.com](https://ipcisco.com/lesson/cisco-virtual-routing-and-forwarding-vrf/)
+[3] [https://www.telecomtech.io](https://www.telecomtech.io/how-vrfs-work-in-an-mpls-network/)
+[4] [https://forum.proxmox.com](https://forum.proxmox.com/threads/something-about-ceph-and-vmbrx-is-not-clear-for-me.144086/)
+
+# Since I will  have a specific subnet attached to ceph-dummy interface which will not be shared or leaked as a dedicated block just for ceph -replication only for ceph internal use, in the main routing table its bgp advertisement will follow that path for other ceph nodes to communicate. Let's explore more on the downside of this idea.
+
+If you place your Ceph replication subnet directly into the host's main routing table and advertise it globally across your leaf-spine fabric, the architecture will function from a pure connectivity standpoint. Ceph nodes will successfully discover each other and replicate data.
+However, running a high-throughput storage backend in the global routing table of an all-L3 routed-to-host architecture introduces severe operational, performance, and security downsides.
+------------------------------
+## 1. Fate Sharing during Network "Flapping" and Convergence
+In a standard routing table, all routes compete for the CPU cycles of the host’s FRR daemon and the Linux kernel routing state machine.
+
+* The Downside: If a Kubernetes node crashes or thousands of short-lived OpenStack pods/VMs cycle rapidly, FRR and your Leaf switches must process a massive wave of BGP routing updates (withdrawals and advertisements). [1, 2] 
+* The Impact on Ceph: Because Ceph is in the same routing table, its path calculations share the same queue. A massive churn in your Kubernetes or OpenStack workload layer can cause CPU spikes in FRR, slightly delaying a Ceph routing update. In storage, even a few seconds of routing convergence delay or dropped packets can cause Ceph OSDs to mark each other as down and out, triggering an accidental, high-I/O cluster rebalance that degrades overall cloud performance.
+
+------------------------------
+## 2. Bypass of OpenStack Tenant Security (No Defense-in-Depth)
+You are relying on the assumption that because you do not intentionally share or leak the Ceph subnet block to tenants, they cannot access it. However, in an all-L3 host, this configuration provides security through obscurity rather than infrastructure isolation.
+
+* The Downside: If an attacker exploits a zero-day vulnerability in the Linux kernel or the OVN/OpenStack hypervisor layer on a compute node, they can gain raw access to the host's networking stack or escape their overlay encapsulation.
+* The Impact on Ceph: Once inside the global space, the host's main routing table will explicitly show them the path to the Ceph replication network (10.20.20.0/24). Because Ceph authentication (cephx) assumes the replication network is physically secure and unexposed, an attacker with access to this subnet could maliciously inject or alter raw storage blocks.
+
+------------------------------
+## 3. Complete Loss of Quality of Service (QoS) and Bandwidth Starvation
+Ceph replication traffic is incredibly aggressive. When a disk fails, Ceph will saturate every bit of available network bandwidth to replicate placement groups to other nodes.
+
+* The Downside: In a single global routing table, the Linux kernel treats standard packets equally unless highly complex Traffic Control (tc) rules are maintained.
+* The Impact on Ceph: During a Ceph recovery phase, storage traffic can easily starve the Linux network queues (txqueuelen) of your Kubernetes API, OpenStack management plane, and live VM traffic. This can cause nodes to be marked as unhealthy by the Kubernetes control plane simply because the management heartbeat packets couldn't clear the egress queues fast enough.
+
+------------------------------
+## 4. Blast Radius of BGP Route Poisoning
+Because the Ceph routes are distributed in the main table across the entire data center network fabric, any configuration error on any device can break your storage layer.
+
+* The Downside: If an engineer accidentally misconfigures a prefix-list on a new edge switch, an artificial routing loop can be introduced into the main table.
+* The Impact on Ceph: A typo intended to fix a public application route could inadvertently overwrite or intercept the path to 10.20.20.0/24. If Ceph were isolated inside a storage VRF, it would use an entirely separate routing database instance, making it completely immune to configuration mistakes made in the standard tenant or public network tiers.
+
+------------------------------
+## How to Achieve the Same Simplicity Without the Risks
+If your goal is to avoid the complexity of managing complex route-maps and prefix-lists to prevent leaks, using a VRF actually simplifies your configuration rather than complicating it.
+Instead of writing complex rules to filter Ceph out of your main table, a VRF naturally isolates it. The configuration in FRR is highly contained:
+
+! Standard workloads only see standard routes
+router bgp 65001
+ bgp router-id 10.254.0.11
+ address-family ipv4 unicast
+  redistribute kernel  <-- Only grabs K8s/Standard, automatically ignores Ceph
+ exit-address-family
+
+! Ceph lives in its own dedicated, safe world
+router bgp 65001 vrf vrf_storage
+ bgp router-id 10.254.0.11
+ address-family ipv4 unicast
+  redistribute connected <-- Only grabs the local dummy interface, safely isolated
+ exit-address-family
+
+Given these operational risks to Ceph, would you like to explore how to implement a minimalist VRF configuration using systemd-networkd/Netplan to see how clean the setup looks, or should we look at how to tune Linux sysctl kernel parameters if you still prefer to keep everything in the main table?
+
+[1] [https://community.cisco.com](https://community.cisco.com/t5/routing/advertise-loopback-ip-and-lan-networks-via-bgp-neighbor/td-p/3774852)
+[2] [https://www.cisco.com](https://www.cisco.com/c/en/us/td/docs/iosxr/cisco8000/bgp/b-bgp-config-cisco8000/m-understanding-bgp-and-prerequisites.pdf)
+
+
+# I am exploring my options. I know that I will have HTB setup for traffic control over the subnet and associated interface block. Not sure if that is good enough?
+
+Using an HTB (Hierarchical Token Bucket) queueing discipline (qdisc) over your dedicated interface is an excellent, industry-standard way to manage bandwidth. It directly solves the problem of bandwidth starvation, ensuring that an aggressive Ceph rebalance cannot choke out your Kubernetes or OpenStack management traffic. [1, 2] 
+However, from an architecture standpoint, it is critical to separate what HTB can do from what it cannot do. HTB operates at Layer 2 (scheduling packets on an interface egress queue). It does not change Layer 3 logic (how the Linux kernel handles routing table lookups and security boundaries).
+If you combine your single global routing table with a well-configured HTB setup, here is how your operational risks shake out.
+------------------------------
+## What HTB Successfully Solves (The Good)
+
+* Guaranteed Minima / Hard Maxima: You can create an HTB class for Ceph that guarantees it, for example, 40 Gbps of a 100 Gbps link, but caps it strictly at 70 Gbps during a rebalance. This keeps 30 Gbps completely free and open for K8s pods and OpenStack traffic. [3, 4] 
+* No Management Dropouts: By placing your host's management and SSH traffic into a higher-priority HTB class, those critical packets will skip ahead of massive Ceph replication blocks in the network card’s ring buffers, preventing node isolation false alarms.
+
+------------------------------
+## What HTB Cannot Solve (The Remaining Downsides)
+Even with a flawless HTB setup, keeping Ceph in the main routing table leaves three critical architectural vulnerabilities open:
+## 1. Zero Layer 3 Security Isolation (The "Unrestricted Hop")
+HTB only controls how fast a packet leaves an interface; it does not control who can send a packet to that interface.
+
+* The Vulnerability: If a tenant VM escapes its OVN encapsulation or container namespace, the Linux kernel's main routing table tells it exactly how to reach the Ceph dummy interface.
+* The Result: The kernel will allow the tenant's packet to pass directly into the Ceph network. HTB will shape that packet's speed, but it will not block it. Security is still broken.
+
+## 2. The Linux Kernel "Input Queue" Bottleneck
+HTB is an egress-only shaper. It controls packets leaving the host. It cannot control packets entering the host. [5] 
+
+* The Vulnerability: If your leaf switches or other nodes flood a compute host with incoming Ceph traffic, those packets hit the physical network card's RX (receive) queues and the Linux kernel's generic network input path (netdev_max_backlog) simultaneously. [6, 7] 
+* The Result: The kernel's CPU core handlers must parse all incoming packets in the main routing table before handing them off. A massive surge of incoming storage data can cause high soft-interrupt (softirq) CPU utilization, delaying the processing of incoming Kubernetes API heartbeats before HTB ever gets a chance to look at them.
+
+## 3. Complete Exposure to BGP Route Churn (Fate Sharing)
+Because FRR handles everything in the default BGP instance, your storage paths and your transient workload paths still share the same control plane thread state machine. [8] 
+
+* The Vulnerability: If thousands of Kubernetes pods scale up and down quickly, FRR is flooded with standard routing updates.
+* The Result: A CPU spike in FRR caused by Kubernetes API churn can stall the processing of a BGP keepalive or route withdrawal for the Ceph network, potentially causing a brief routing flap that breaks a Ceph OSD peering connection.
+
+------------------------------
+## The Verdict: Is HTB Good Enough?
+If your environment is trusted and private (e.g., you do not host untrusted third-party tenants), and your workload scaling is predictable (low BGP route churn), then yes, an HTB setup over the main table is operationally good enough to keep the cluster stable.
+However, if you are running multi-tenant OpenStack where tenant isolation is a hard requirement, HTB must be paired with either Linux iptables/nftables firewall rules to block tenant-to-Ceph traffic, or a VRF.
+Given that you are setting up HTB, would you like to look at the tc command syntax to properly map your K8s/OpenStack priorities alongside Ceph, or should we map out the kernel sysctl settings (like net.core.netdev_max_backlog) needed to handle these massive routed traffic loads? [9] 
+
+[1] [https://infosecmonkey.com](https://infosecmonkey.com/traffic-shaping-with-fortigate-firewalls/)
+[2] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-04-shape-outbound-traffic-tc-htb-rhel-9/view)
+[3] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-02-how-to-set-up-traffic-shaping-with-htb-on-ubuntu/view)
+[4] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-04-shape-outbound-traffic-tc-htb-rhel-9/view)
+[5] [https://www.cisco.com](https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/interface/command/ir-cr-book/ir-t2.html)
+[6] [https://durgicharan81.medium.com](https://durgicharan81.medium.com/from-packets-to-protocols-a-deep-dive-into-networking-for-system-design-0f836f998be9)
+[7] [https://www.opensourceforu.com](https://www.opensourceforu.com/2016/10/network-performance-monitoring/)
+[8] [https://www.redhat.com](https://www.redhat.com/en/blog/deploying-a-high-availability-fault-tolerant-kubernetes-service-on-baremetal-clusters-with-metallb-bgp)
+[9] [https://www.opensourceforu.com](https://www.opensourceforu.com/2016/10/network-performance-monitoring/)
+
+
+# I see the points of using storage-vrf, specially when I will be using tenant-vrf for their isolation, no point not to implement another vrf for storage-replication. No only that there will also be required one Transit-2-internet vrf for the tenants. so, after all it would be part of the fabric.
+
+
+That is a phenomenal architectural decision. Embracing a Multi-VRF Design (Storage, Tenant, and Internet Transit) aligns your host OS perfectly with the best practices of modern, highly scalable spine-leaf datacenter fabrics.
+By treating the host as a true Layer 3 router, you achieve absolute security isolation, deterministic routing paths, and eliminate single points of failure. [1] 
+Here is how your comprehensive Multi-VRF architecture maps together across your Ubuntu hosts and the physical network fabric:
+------------------------------
+## 1. The Multi-VRF Host Architecture Map
+Every compute node will maintain four distinct, isolated routing domains inside the Linux kernel:
+
+| VRF Name [2, 3] | Traffic Type | Purpose | Upstream Fabric Integration |
+|---|---|---|---|
+| Default VRF | Underlay / Infrastructure | Host management, SSH, Ansible, Host Loopbacks (/32), and Kubernetes Control Plane (Kubespray/Calico). | Peered via BGP Unnumbered over physical links (enp2s0f0/1). |
+| vrf_storage | Ceph Replication | Dedicated East-West storage synchronization and heartbeats. No external exposure. | Isolated L3 VNI / VRF on Leaf switches. |
+| bgp_vrf (Tenant) | OpenStack Internal | East-West tenant-to-tenant isolation. Supports overlapping IP blocks via Geneve/VXLAN overlay. | Handled via EVPN VXLAN or localized host overlay routing. |
+| vrf_transit | Internet / North-South | Public Floating IPs (FIP), NAT gateways, and public edge connectivity. | Peered with the Leaf switches’ Border/Internet VRF. |
+
+------------------------------
+## 2. How the Transit-to-Internet VRF Works for Tenants
+Your vrf_transit creates a secure, controlled bridge between the private tenant world and the outside internet:
+
+   1. The Isolation Barrier: An OpenStack instance in bgp_vrf cannot talk directly to the internet. To go outside, its traffic must hit an OpenStack Virtual Router (managed by OVN).
+   2. The Floating IP / NAT Leak: When a tenant assigns a Floating IP (Public IP), ovn-bgp-agent injects that specific IP address as a /32 host route into vrf_transit.
+   3. The Egress Route: FRR grabs that /32 route out of vrf_transit and advertises it to the Leaf switches. The outside world now knows exactly which compute host is currently running that specific tenant's VM.
+
+------------------------------
+## 3. Complete FRR Configuration for the Fabric (/etc/frr/frr.conf)
+This configuration brings all your domains together under a single, unified FRR routing daemon, fully isolating your paths while utilizing the same underlying physical leaf links:
+
+! --- CORE UNDERLAY & KUBERNETES ---
+router bgp 65001
+ bgp router-id 10.254.0.11
+ no bgp ebgp-requires-policy
+ ! Peer with Leaf switches using BGP Unnumbered over raw interfaces
+ neighbor enp2s0f0 interface remote-as external
+ neighbor enp2s0f1 interface remote-as external
+ !
+ address-family ipv4 unicast
+  network 10.254.0.11/32
+  redistribute kernel route-map K8S_PODS_ONLY  <-- Only sends K8s Pods to the main fabric
+  neighbor enp2s0f0 activate
+  neighbor enp2s0f1 activate
+ exit-address-family
+!
+! --- CEPH STORAGE VRF (Absolute Isolation) ---
+router bgp 65001 vrf vrf_storage
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  redistribute connected                     <-- Only shares local dummy Ceph IPs with Storage Leaf Fabric
+ exit-address-family
+!
+! --- OPENSTACK TENANT INTERNAL VRF ---
+router bgp 65001 vrf bgp_vrf
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  redistribute connected                     <-- Isolated internal tenant East-West routing
+ exit-address-family
+!
+! --- TRANSIT-TO-INTERNET VRF (North-South Edge) ---
+router bgp 65001 vrf vrf_transit
+ bgp router-id 10.254.0.11
+ !
+ address-family ipv4 unicast
+  redistribute connected                     <-- Advertises active Public Floating IPs up to Border Leaves
+ exit-address-family
+!
+! --- ROUTE FILTER SAFETY POLICY ---
+ip prefix-list PL_K8S_PODS permit 172.16.0.0/16 ge 24
+route-map K8S_PODS_ONLY permit 10
+ match ip address prefix-list PL_K8S_PODS
+!
+
+## 4. Operational Advantages of This Complete Setup
+
+* Independent Scale: If your internet transit links suffer a DDoS attack or a massive wave of public route updates, the vrf_transit state table may churn, but your vrf_storage and Kubernetes networks will remain untouched and highly stable.
+* Simplified Troubleshooting: You can isolate network tracking using standard Linux tools by appending the VRF flags (e.g., ip route show vrf vrf_storage or ping -I vrf_transit 8.8.8.8). [4] 
+* Zero Hairpinning: OVN-BGP-Agent paired with this multi-VRF topology ensures Distributed Virtual Routing (DVR). Traffic destined for the internet leaves the compute node immediately through vrf_transit, rather than traversing an centralized network node.
+
+Now that your routing control plane is mapped out, would you like to explore the Linux system configuration (such as Netplan definitions) to instantiate these VRFs at boot, or do you want to look at the ovn-bgp-agent configuration to see how it binds to bgp_vrf and vrf_transit dynamically?
+
+[1] [https://synchronet.net](https://synchronet.net/cisco-vrf-configuration/)
+[2] [https://forum.vyos.io](https://forum.vyos.io/t/vrf-aware-gre-tunnels/12673)
+[3] [https://synchronet.net](https://synchronet.net/what-is-vrf/)
+[4] [https://documentation.extremenetworks.com](https://documentation.extremenetworks.com/slxos/sw/20xx/20.3.2/l3config/GUID-5E5BA29C-C2CB-4C40-BD87-859AD4B0A40E.shtml)
+
+
+# Going above and beyond, the servers will be multi-homed with bfd/ecmp activated. Now provide the all the lists of subnets we explored so far needed and tie it with vrf/interface and suggest anything that improves.
+
+To implement Multi-Homed BGP with ECMP (Equal-Cost Multi-Path) and BFD (Bidirectional Forwarding Detection) directly to the host, you are building an elite, sub-second failover architecture. BFD ensures that if a physical link or an upstream Leaf switch port dies, FRR drops the path in milliseconds rather than waiting for standard BGP hold timers. [1, 2] 
+Here is the complete blueprint tying your subnets, VRFs, and interfaces together, along with critical optimizations for this specific design.
+------------------------------
+## 1. Unified Subnet, VRF, and Interface Architecture
+Because you are using BGP Unnumbered, your physical interfaces (enp2s0f0 and enp2s0f1) do not carry IPv4 addresses. Instead, they handle Sub-Interface/VLAN tagging or Multi-VRF leaking to carry the different routing tables to your leaf switches over the same physical wires.
+
+| Subnet / CIDR Block | Network Layer Purpose | Target Linux VRF | Bound Interface | BGP Role & ECMP Profile |
+|---|---|---|---|---|
+| 10.254.0.0/24 (e.g., 10.254.0.11/32) | Fabric Identity (Loopback) | default | lo | Primary BGP Router-ID. Next-hop for K8s pod routes. |
+| 10.10.10.0/24 (e.g., 10.10.10.11/24) | Out-of-Band Management | default | enp1s0 | No BGP. Ansible, SSH, IPMI/iDRAC only. |
+| 172.16.0.0/16 | Kubernetes Pod Network | default | cali+ (Virtual) | Local kernel routes redistributed via BGP into the default table. |
+| 172.19.0.0/16 | Kubernetes Services | default | Internal K8s | Local virtual IP space. No fabric advertisement needed. |
+| 10.20.20.0/24 (e.g., 10.20.20.11/32) | Ceph Storage Replication | vrf_storage | dummy_ceph | Redistributed to Storage Leaf VRF. Uses Jumbo Frames (MTU 9000). |
+| 10.100.0.0/14 | OpenStack Internal Tenant | bgp_vrf | ovn-chassis | Internal East-West traffic encapsulated via Geneve/VXLAN tunnels. |
+| 192.168.100.0/22 | OpenStack Internet Transit (FIP) | vrf_transit | OVN Virtual Ports | Dynamic /32 injection by ovn-bgp-agent. Advertised to Internet/Border Leaf. |
+
+------------------------------
+## 2. Multi-Homed FRR Setup with BFD and ECMP (/etc/frr/frr.conf)
+This configuration turns on global ECMP (allowing up to 2 parallel paths for load sharing) and attaches a high-frequency BFD profile to the unnumbered physical interfaces.
+
+!
+frr version 10.x
+frr defaults traditional
+!
+# 1. DEFINE GLOBAL BFD PARAMETERS (Sub-second failure detection)
+bfd
+ peer-window 50
+!
+# Enable BFD on your unnumbered physical fabric links
+interface enp2s0f0
+ bfd
+exit
+!
+interface enp2s0f1
+ bfd
+exit
+!
+! --- DEFAULT VRF (UNDERLAY & KUBERNETES) ---
+router bgp 65001
+ bgp router-id 10.254.0.11
+ no bgp ebgp-requires-policy
+ !
+ # CRITICAL: Enable ECMP Load Balancing across both physical paths
+ maximum-paths 2
+ !
+ # BGP Unnumbered Peering to Leaf A and Leaf B
+ neighbor enp2s0f0 interface remote-as external
+ neighbor enp2s0f1 interface remote-as external
+ !
+ address-family ipv4 unicast
+  network 10.254.0.11/32
+  redistribute kernel route-map K8S_PODS_ONLY
+  neighbor enp2s0f0 activate
+  neighbor enp2s0f1 activate
+ exit-address-family
+!
+! --- CEPH STORAGE VRF (With ECMP) ---
+router bgp 65001 vrf vrf_storage
+ bgp router-id 10.254.0.11
+ maximum-paths 2
+ !
+ address-family ipv4 unicast
+  redistribute connected
+ exit-address-family
+!
+! --- OPENSTACK TENANT INTERNAL VRF ---
+router bgp 65001 vrf bgp_vrf
+ bgp router-id 10.254.0.11
+ maximum-paths 2
+ !
+ address-family ipv4 unicast
+  redistribute connected
+ exit-address-family
+!
+! --- TRANSIT-TO-INTERNET VRF ---
+router bgp 65001 vrf vrf_transit
+ bgp router-id 10.254.0.11
+ maximum-paths 2
+ !
+ address-family ipv4 unicast
+  redistribute connected
+ exit-address-family
+!
+# Safety Route Map
+ip prefix-list PL_K8S_PODS permit 172.16.0.0/16 ge 24
+route-map K8S_PODS_ONLY permit 10
+ match ip address prefix-list PL_K8S_PODS
+!
+
+------------------------------
+## 3. Highly Recommended System Optimizations
+To handle the immense data throughput of an ECMP multi-homed Ceph and OpenStack cluster without network starvation, apply these four host optimizations:
+## A. Optimize Linux Kernel Packet Hashing for ECMP
+By default, Linux hashes ECMP paths using Layer 3 fields (Source/Destination IP). For OpenStack and Ceph, this can cause uneven link utilization if a few heavy VMs dominate the traffic. [3] 
+
+* Suggestion: Force Linux to use Layer 4 hashing (IP + TCP/UDP Ports) so that individual TCP streams inside a single VM are spread across both Leaf links.
+* The Fix: Add this to /etc/sysctl.conf:
+
+net.ipv4.fib_multipath_hash_policy = 1
+
+[4, 5] 
+
+## B. Set Strict Reverse Path Filtering (rp_filter) to Multipath Mode
+Because your host has multiple active ECMP paths to the Leaf switches, incoming packets for a single session might arrive on enp2s0f0 but leave via enp2s0f1. Strict reverse path filtering will drop these packets, thinking they are spoofed. [6, 7] 
+
+* Suggestion: Switch the kernel's RP filter to "Loose" mode (2), which is specifically required for multi-path asymmetric routing.
+* The Fix: Add this to /etc/sysctl.conf:
+
+net.ipv4.conf.all.rp_filter = 2
+net.ipv4.conf.default.rp_filter = 2
+
+[8] 
+
+## C. Align BFD Timers with Ceph OSD Heartbeats
+BFD can detect a link failure in less than 100 milliseconds. However, if your BFD timers are too aggressive, a tiny spike in host CPU usage could delay a BFD heartbeat packet, causing an accidental routing flap. [9, 10] 
+
+* Suggestion: Use a balanced BFD profile: Detect Multiplier: 3, Receive Interval: 100ms, Transmit Interval: 100ms. This gives you a highly stable 300ms failure domain, which safely intercepts Ceph's default osd_heartbeat_grace (usually 20 seconds) long before storage corruption or false rebalances can trigger. [11, 12, 13] 
+
+## D. Isolate the HTB Queueing Hierarchy per VRF
+Since you are using HTB for Traffic Control (tc), do not apply a single blanket HTB shaper to the root physical interfaces.
+
+* Suggestion: Implement VRF-aware Traffic Control by matching the sub-interfaces or using cgroups/iptables to mark packets based on their originating VRF. This ensures that vrf_storage traffic is explicitly clamped to your high-speed Jumbo-Frame allocations, leaving the standard default queues fully open for the Kubernetes control plane.
+
+Would you like assistance generating the Ansible configuration templates to deploy these specific sysctl and FRR configurations across your Kubespray inventory, or should we look into the upstream Leaf switch BGP configurations required to pair with this host setup?
+
+[1] [https://community.fortinet.com](https://community.fortinet.com/fortigate-3/technical-tip-using-multihop-bidirectional-forwarding-detection-bfd-183417)
+[2] [https://study-ccna.com](https://study-ccna.com/ecmp-equal-cost-multi-path/)
+[3] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-20-ipv6-ecmp-routing/view)
+[4] [https://www.youstable.com](https://www.youstable.com/blog/how-to-setup-load-balancer-on-linux-server/)
+[5] [https://www.juniper.net](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/task/crpd-linux-server-docker-routing-mode.html)
+[6] [https://iosonounrouter.wordpress.com](https://iosonounrouter.wordpress.com/2020/02/13/to-have-fast-convergence-inside-a-dc-you-need-a-fast-ip-fabric/)
+[7] [https://docs.redhat.com](https://docs.redhat.com/es/documentation/red_hat_enterprise_linux/6/html-single/6.4_technical_notes/index)
+[8] [https://access.redhat.com](https://access.redhat.com/solutions/53031)
+[9] [https://blog.apnic.net](https://blog.apnic.net/2018/11/06/bgp-llgr-robust-and-reactive-bgp-sessions/)
+[10] [https://community.cisco.com](https://community.cisco.com/t5/service-providers-documents/bfd-support-on-cisco-asr9000/tac-p/3175287)
+[11] [https://knowledge.broadcom.com](https://knowledge.broadcom.com/external/article/369183/bfd-session-on-the-external-interface-is.html)
+[12] [https://www.redhat.com](https://www.redhat.com/en/blog/a-guide-to-etcd)
+[13] [https://www.cisco.com](https://www.cisco.com/c/en/us/support/docs/cloud-systems-management/virtualized-infrastructure-manager/215969-ceph-outage-impact-analysis-for-staros-v.html)
+
+
+
