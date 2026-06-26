@@ -5467,5 +5467,9 @@ Would you like to examine how to structure the matching OpenStack Nova configura
 [8] [https://www.youtube.com](https://www.youtube.com/watch?v=iE_z6Fv6-PI&t=1)
 [9] [https://www.youtube.com](https://www.youtube.com/watch?v=iE_z6Fv6-PI&t=1)
 
+# Let us modify the script with some changes. Exit_Router1/2 now will not be a CHR vm anymore. It will simply be Two Ubuntu VM. As from the above context, we will configure wireguard in it. However, role of this two vm is to act as Exit_Router. Following is the port and interface configuration: SONiC Border-Leaf1 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0SONiC Border-Leaf1 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0SONiC Border-Leaf2 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0SONiC Border-Leaf2 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0Mangement Switch interface ether22 to Exit-Router1_R630-Ubuntu enp1s0Mangement Switch interface ether22 to Exit-Router2_R630-Ubuntu enp1s0Exit-Router1_R630-Ubuntu enp4s0 to ISP_1 Modem/Router_1 PortExit-Router2_R630-Ubuntu enp4s0 to ISP_2 Modem/Router_2 Port
+
+
+
 
 
