@@ -6860,6 +6860,1862 @@ This clean layout completes the modifications needed for your lab configuration 
 Would you like to examine how to structure your Kubespray all.yml global variables file to ensure its internal variables point straight to these self-discovered 10.1.1.x fabric anchor endpoints?
 
 
+# Need an deep Analysis. When an Ubuntu Server with FRR installed can provide Exit Router Service along with a vpn server functionality to terminate vpn access, and possibly the efficiency can be achieved from sizable RAM and CPU core availability on that server, then what are the real benefits to use high end Router?? Such as what we have discussed above, suggest some names of Routers that can provide similar performance and functionalities of enterprise routers.
+
+To understand why enterprises still buy expensive, dedicated hardware routers when a high-spec Ubuntu server running FRR and WireGuard can deliver massive throughput, we have to look past raw CPU gigahertz and inspect silicon architecture, electrical bus design, and operating system kernels.
+For your startup, an Ubuntu server is an excellent, cost-effective choice. However, as infrastructure scales to handle massive carrier-grade traffic, dedicated enterprise hardware becomes necessary.
+Here is a deep analysis of the differences between an entry-level "white-box" server and high-end enterprise routers, along with real-world hardware recommendations.
+------------------------------
+## 🧠 Part 1: Architectural Deep Analysis
+
+┌─────────────────────────────────────────────────────────┐
+│        COORDINATED LINUX GENERAL PURPOSE SERVER        │
+├─────────────────────────────────────────────────────────┤
+│ [NIC Interface] ──► [PCIe Bus] ──► [CPU Cache / RAM]    │
+│                            │                            │
+│                            ▼                            │
+│             [Linux Kernel Interrupt Loop]               │
+│                            │                            │
+│                            ▼                            │
+│                  [FRR / Software Table]                 │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│              DEDICATED ENTERPRISE ROUTER                │
+├─────────────────────────────────────────────────────────┤
+│ [Physical Port] ──► [ASIC Layer (Hardware Forwarding)]  │
+│                            │                            │
+│                            ▼                            │
+│         [Line Card Bus] ──► [Switching Fabric]          │
+└─────────────────────────────────────────────────────────┘
+
+## 1. ASICs vs. General-Purpose CPUs (Hardware vs. Software Forwarding)
+
+* The Ubuntu Server: When a packet hits an interface card on an Ubuntu server, it triggers a hardware interrupt. The CPU must stop what it is doing, copy the packet from the network card over the PCIe bus into the system RAM, read the packet header using the Linux kernel network stack, consult the routing table, and push it back out of a network interface card. This is Software-Based Forwarding. No matter how many CPU cores you have, the system is bottlenecked by RAM latency and CPU interrupt processing. [1] 
+* The High-End Router: Dedicated routers use specialized chips called ASICs (Application-Specific Integrated Circuits) or Custom Network Processors. The routing table is baked directly into ultra-fast, hardware-level memory called TCAM (Ternary Content-Addressable Memory). When a packet enters the router, the ASIC reads the header and forwards it across the backplane in nanoseconds. The main CPU is completely bypassed; it is only used to run routing protocols like BGP. This is Hardware-Based Forwarding. [2] 
+
+## 2. Deterministic Performance Under Stress
+
+* The Ubuntu Server: If your network experiences a massive DDoS attack or a spike in tiny 64-byte packets, an Ubuntu server's CPU will spike to 100% processing interrupts. This causes packet loss, jitter, and can crash adjacent applications (like your WireGuard tunnels or Syslog services).
+* The High-End Router: Routers are rated in PPS (Packets Per Second) at line-rate. Because the ASICs handle forwarding electronically, a high-end router can process maximum traffic across all ports simultaneously—even if the packets are tiny—with zero impact on CPU performance. [3] 
+
+## 3. Advanced Carrier-Grade Features
+A general-purpose Linux kernel cannot naturally perform complex carrier-scale tasks without third-party tools, whereas enterprise hardware natively supports:
+
+* Hardware-Accelerated Hierarchical QoS (HQoS): Rate-limiting traffic down to the kilobit level across thousands of individual tenant subnets simultaneously without dropping system performance.
+* Deep Packet Buffering: Large, specialized memory buffers designed to absorb micro-bursts of traffic when data transitions from a high-speed 100G internal fabric down to a slower 10G or 1G external WAN connection.
+
+------------------------------
+## 🏁 Part 2: Enterprise Routers to Replace Your Ubuntu VM
+If your platform grows, your funding increases, and you need to replace your virtualized or bare-metal Ubuntu Exit Routers with dedicated hardware that handles BGP-Unnumbered, WireGuard VPNs, and high-performance routing, consider these production-grade options:
+## 1. Juniper Networks MX Series (e.g., MX150 / MX204)
+The MX series runs the Junos OS and uses custom Trio silicon ASICs. It is widely considered the gold standard for enterprise edge routing.
+
+* Why it fits your layout: Juniper features exceptional support for logical routing isolation via Routing Instances (VRFs). It supports native BGP Unnumbered configurations and can terminate thousands of encrypted VPN lines cleanly.
+* The Enterprise Edge: The MX204 delivers 400 Gbps of full line-rate throughput in a compact 1U form factor while drawing very little power.
+
+## 2. Cisco Systems ASR 1000 Series (e.g., ASR 1001-X / ASR 1001-HX) [4] 
+The ASR (Aggregation Services Router) series runs Cisco IOS-XE and is built around the custom Cisco Quantum Flow Processor (QFP). [5] 
+
+* Why it fits your layout: The ASR series is specifically designed for enterprise edge boundaries where you need to combine heavy crypto encryption (IPsec/WireGuard/DMVPN) alongside massive BGP tables. [6] 
+* The Enterprise Edge: The QFP chip features a dedicated hardware processing engine built specifically for cryptography. It can encrypt gigabytes of VPN traffic without adding latency or taxing the core routing processor.
+
+## 3. Edgecore / FS.com + SONiC (The Open-Compute White-Box Option)
+If you want to keep using an open-source model but need true hardware-accelerated speeds, you can buy bare-metal White-Box Switch-Routers powered by Broadcom Trident or Tomahawk ASICs and install SONiC on them directly.
+
+* Why it fits your layout: This matches your existing infrastructure. By running a SONiC Border Leaf or SONiC Exit Router, you use the exact same operating system on your switches as your edge boundaries.
+* The Enterprise Edge: You get raw 3.2 Tbps or 6.4 Tbps hardware-forwarding ASIC performance for a fraction of the cost of traditional vendor hardware.
+
+------------------------------
+## 📊 Summary Strategy for Startups
+For a startup operating under tight resource and budget constraints, stick with the Ubuntu + FRR + WireGuard architecture on your Dell R630/R720 servers.
+
+       [ Startup / Lean Phase ]              [ Scaling / Growth Phase ]
+  Ubuntu Server + FRR + WireGuard         Dedicated Enterprise Hardware
+──────────────────────────────────────► ──────────────────────────────────
+  • Cost: $0 (Uses spare servers)         • Cost: High ($10k - $50k+)
+  • Knowledge: Standard Linux Sysadmin     • Knowledge: Specialized Network Engineer
+  • Performance: Up to 10-20 Gbps         • Performance: 100 Gbps - Terabit Line-rate
+
+Your physical Dell servers possess more than enough RAM and CPU compute cycles to push 10 to 20 Gbps of software-forwarded traffic without breaking a sweat. This approach saves thousands of dollars in upfront capital expenses and avoids vendor lock-in, allowing your startup to focus its engineering efforts on building your core Kubernetes and OpenStack tenant cloud services.
+Would you like to examine how to structure your Prometheus alert expressions to monitor your Ubuntu Exit Router's software packet processing metrics and catch any potential performance bottlenecks before they affect your users?
+
+[1] [https://www.doit.com](https://www.doit.com/blog/advanced-networking-performance-on-a-ec2-linux-achieving-high-throughput-and-low-latency)
+[2] [https://www.techtarget.com](https://www.techtarget.com/searchnetworking/tip/Existing-branch-routers-could-be-replaced-as-SD-WAN-matures)
+[3] [https://www.reddit.com](https://www.reddit.com/r/networking/comments/6upchy/can_a_bsd_system_replicate_the_performance_of/)
+[4] [https://info.pivitglobal.com](https://info.pivitglobal.com/resources/cisco-asr-9000-large-networks)
+[5] [https://blogs.cisco.com](https://blogs.cisco.com/networking/redefining-branch-networking-cisco-secure-routers-and-unified-branch)
+[6] [https://community.cisco.com](https://community.cisco.com/t5/networking-knowledge-base/how-the-secure-networking-processor-is-benefiting-customers/ta-p/5302580)
+
+
+# So, SR_IOV or SR IOV with DPDK, doesn't that help in this case??
+
+Yes, absolutely. You have hit on the exact software-defined networking (SDN) technologies that public cloud giants use to solve this exact problem.
+By implementing SR-IOV (Single Root I/O Virtualization) or DPDK (Data Plane Development Kit) on your Ubuntu + FRR Exit Routers, you can bypass the traditional Linux kernel bottlenecks [203.0.113.0/24 is used as an example public prefix earlier]. This elevates an ordinary x86 Dell server into a high-performance router capable of pushing line-rate 40G/100G traffic, rivaling the performance of expensive, proprietary hardware from Cisco or Juniper. [1, 2] 
+Here is a deep analysis of how these technologies work and how they fix the server architecture weaknesses we just discussed.
+------------------------------
+## 🧱 How SR-IOV and DPDK Rewrite Server Routing## 1. SR-IOV: Hardware Splitting and Hypervisor Bypass [3] 
+In a standard virtualized lab or cloud platform, network packets must cross multiple software bridges (like libvirt or Open vSwitch) before they reach your Exit Router VM. This consumes massive amounts of CPU cycles. [4] 
+
+[ Standard Virtualization ]
+Physical NIC ──► Host Kernel ──► OVS Bridge ──► QEMU VirtIO Driver ──► Router VM (Slow)
+
+[ SR-IOV Virtualization ]
+Physical NIC ──► Virtual Function (VF) ASIC Chip Layer ────────────────► Router VM (Nanoseconds)
+
+
+* How it works: SR-IOV allows a physical PCIe network card (like an Intel XL710 40G card) to split itself at the hardware ASIC level into multiple independent virtual network cards, called Virtual Functions (VFs). [5, 6, 7] 
+* The Benefit: You assign a hardware VF directly to your Ubuntu Exit Router VM using PCIe pass-through. The host operating system's kernel is completely bypassed. When a packet hits the physical wire, the network card's internal ASIC drops the packet straight into your Exit Router VM's RAM in nanoseconds. [8] 
+
+## 2. DPDK: Eradicating Kernel Interrupts (Poll Mode Drivers) [9] 
+Even with SR-IOV, an ordinary Ubuntu operating system will still experience CPU bottlenecks because the standard Linux kernel relies on Interrupt-Driven Networking. Every time a batch of packets arrives, the CPU must stop execution to handle the network interrupt.
+
+[ Standard Linux Kernel ]
+Packet Arrives ──► CPU Interrupted ──► Context Switch ──► Process Packet ──► Resume Apps (High CPU)
+
+[ DPDK User-Space Engine ]
+CPU Core 0/1 Locked ──► Continuously Loops & Pulls Packets Directly From Ring Buffer (0% Interrupts)
+
+
+* How it works: DPDK unbinds the network card from the Linux kernel completely and hands it to a dedicated application running in User Space. It introduces a Poll Mode Driver (PMD). [10, 11, 12, 13] 
+* The Benefit: Instead of waiting to be interrupted by incoming packets, you lock one or two CPU cores to permanently stare at the network card's memory ring buffer, pulling packets out continuously. Context switching, CPU interrupts, and kernel networking code are 100% eliminated.
+
+------------------------------
+## 📊 The Performance Transformation Matrix
+If you supercharge your Ubuntu + FRR Exit Routers using these acceleration techniques, your performance profile scales cleanly:
+
+| Performance Metric [14] | Standard Ubuntu + FRR | Ubuntu + DPDK / SR-IOV | High-End ASIC Hardware |
+|---|---|---|---|
+| Forwarding Type | Software (Kernel Interrupted) | Software (Kernel Bypassed) | Hardware (Pure Silicon Memory) |
+| Max Throughput | ~10-15 Gbps | 40 - 100+ Gbps (Line Rate) | 400 Gbps - Terabits |
+| Small Packet Handling | Poor (CPU chokes on 64-byte blocks) | Excellent (Millions of PPS handled) | Maximum |
+| CPU Utilization | High under network stress | Fixed (Locked cores run at 100% polling) | Near 0% |
+| Relative Cost | $0 | $0 (Open Source) | $10,000 - $50,000+ |
+
+------------------------------
+## ⚠️ The Hardware Catch for Startups
+While SR-IOV and DPDK give you enterprise-grade performance for free, they introduce strict hardware constraints that a lean startup must plan for:
+## 1. WireGuard Support Limitations
+WireGuard is built natively into the standard Linux kernel network stack. Because DPDK bypasses the kernel completely, a standard kernel WireGuard interface (wg0) cannot read packets directly out of a DPDK interface without using specialized user-space translation tools (like VPP - Vector Packet Processing). [15] 
+## 2. Fixed CPU Core Sacrifice
+When you assign CPU cores to DPDK polling, those cores are permanently locked at 100% utilization, even if zero network packets are flowing. If your Dell R630 has 12 cores, and you assign 2 cores to DPDK on your Exit Router, you have permanently sacrificed that processing capacity for other general infrastructure applications on that instance.
+------------------------------
+## 💡 The Ultimate Architecture Path for Your Startup
+For your current infrastructure scale, use a tiered progression model to optimize your budget and execution speeds:
+
+* Phase 1 (Your Current Setup): Stick with Standard Ubuntu + FRR inside your virtual lab script, using your 10.10.1.x and 10.1.1.x network layers. It is easy to configure, handles up to 10 Gbps easily, and supports WireGuard out of the box with zero specialized knowledge.
+* Phase 2 (Growth Spark): When production tenant traffic begins to saturate your links, transition your physical Dell R630 Exit Routers from standard kernel interfaces to SR-IOV Pass-Through. This strips away the virtualization hypervisor overhead while keeping the friendly Linux configuration syntax.
+* Phase 3 (Hyper-Scale): If you scale to thousands of active tenant workloads, upgrade your edge nodes to use an open-source data plane engine like FD.io VPP (Vector Packet Processing) with DPDK. This configuration delivers true carrier-grade routing performance over standard x86 servers, completely eliminating the need to purchase proprietary Cisco or Juniper platforms.
+
+Would you like to examine how to verify if your current Dell R630 motherboard BIOS settings have Intel VT-d and SR-IOV hardware virtualization extensions enabled and ready for production?
+
+[1] [https://blog-us.kioxia.com](https://blog-us.kioxia.com/post/2023/03/31/why-sr-iov-is-the-solution-to-help-efficiently-scale-your-data-center)
+[2] [https://forum.suricata.io](https://forum.suricata.io/t/can-suricata-version-7-0-0-rc2-receive-packets-from-memif-via-dpdk/3610)
+[3] [https://www.sealingtech.com](https://www.sealingtech.com/2018/07/30/sr-iov-and-promiscuous-mode/)
+[4] [https://pantheon.tech](https://pantheon.tech/blog-news/lighty-io-ovsdb-openflow/)
+[5] [https://www.lynx.com](https://www.lynx.com/blog/what-is-sr-iov-and-why-is-it-important-for-embedded-devices)
+[6] [https://community.cisco.com](https://community.cisco.com/t5/networking-blogs/how-trex-sr-iov-support-can-help-you/ba-p/3660251)
+[7] [https://sumble.com](https://sumble.com/tech/sriov)
+[8] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-02-configure-sr-iov-vm-network-performance-ubuntu/view)
+[9] [https://telcocloudbridge.com](https://telcocloudbridge.com/blog/dpdk-vs-sr-iov-for-nfv-why-a-wrong-decision-can-impact-performance/)
+[10] [https://nanocorp.ai](https://nanocorp.ai/blog/some-of-the-limitations-we-hit-with-dpdk)
+[11] [https://thamizhelango.medium.com](https://thamizhelango.medium.com/openvswitch-dpdk-unleashing-high-performance-networking-50570c201b33)
+[12] [https://medium.com](https://medium.com/swlh/enhanced-platform-awareness-epa-in-openshift-part-iv-sr-iov-dpdk-and-rdma-1cc894c4b7d0)
+[13] [https://www.juniper.net](https://www.juniper.net/documentation/us/en/software/cn-cloud-native22/cn-cloud-native-feature-guide/cn-cloud-native-network-feature/topics/concept/dpdk-vrouter.html)
+[14] [https://www.redhat.com](https://www.redhat.com/en/blog/how-vdpa-can-help-network-service-providers-simplify-cnfvnf-certification)
+[15] [https://nanocorp.ai](https://nanocorp.ai/blog/some-of-the-limitations-we-hit-with-dpdk)
+
+
+# Love to examine how to structure Prometheus alert expressions to monitor our topology switches/Routers(Leaves & Spines) including Ubuntu Exit Router's software packet processing metrics and catch any potential performance bottlenecks. Any Opensource DPDK Software??
+
+To monitor your high-performance L3 CLOS fabric and spot performance bottlenecks before they cause downtime, you can leverage the Prometheus + Grafana ecosystem. [1] 
+Because your topology blends ASIC-based SONiC switches (Spines & Leafs) with software-forwarding Ubuntu Exit Routers, you must track metrics from two distinct perspectives: hardware interface saturation and Linux kernel packet processing bottlenecks.
+------------------------------
+## 📦 Part 1: Open-Source DPDK Router Software
+If you scale your Ubuntu Exit Routers to use DPDK, you do not write raw C code to handle the packets. You layer a production-ready, open-source networking engine on top of DPDK. The industry gold standards are:
+## 1. FD.io VPP (Vector Packet Processing)
+Sponsored by Cisco and the Linux Foundation, VPP is a high-performance packet-processing stack that runs in user space over DPDK. Instead of processing packets one by one (which ruins CPU L1/L2 cache efficiency), VPP processes packets in "vectors" (batches of up to 256 packets at a time).
+
+* The Performance: A dual-socket x86 server running VPP can easily push over 100+ Gbps of routing, NAT, and ACL traffic.
+* Bonus: It has a native open-source plugin called vpp-wireguard, allowing you to run your WireGuard tunnel terminations completely within the hardware-bypassed DPDK space.
+
+## 2. Danos (VyOS Ecosystem Branch)
+DANOS (Data Plane Network Operating System) is an open-source router platform started by AT&T under the Linux Foundation. It combines a VyOS-like network CLI wrapper with a DPDK/VPP data plane core. It is built specifically to turn standard x86 servers into carrier-grade edge routers.
+------------------------------
+## 📊 Part 2: Prometheus Telemetry Architecture
+To scrape data from your hardware devices and software routers, you deploy three open-source exporter engines inside your MonitorSrv (10.10.1.10) configuration files:
+
+┌─────────────────────────────────┐      ┌─────────────────────────────┐
+│    SONiC Spines & Leafs         │ ──►  │ Prometheus snmp_exporter    │ ──┐
+└─────────────────────────────────┘      └─────────────────────────────┘   │
+┌─────────────────────────────────┐      ┌─────────────────────────────┐   │
+│    Ubuntu Exit Routers (Host)   │ ──►  │ Prometheus node_exporter    │ ──┼─► [ Prometheus Server ]
+└─────────────────────────────────┘      └─────────────────────────────┘   │   (Scrapes endpoints)
+┌─────────────────────────────────┐      ┌─────────────────────────────┐   │
+│    Ubuntu FRR Daemon (vtysh)    │ ──►  │ Prometheus frr_exporter     │ ──┘
+└─────────────────────────────────┘      └─────────────────────────────┘
+
+
+   1. snmp_exporter: Monitors your SONiC Spines and Leafs for hardware transceiver metrics, ASIC temperature tracking, and physical link errors.
+   2. node_exporter: Monitors your Ubuntu Exit Routers for softnet drops, CPU interrupts, and interface errors.
+   3. frr_exporter: Monitors BGP state changes, prefix counts, and peer state flaps across your entire architecture.
+
+------------------------------
+## 🚨 Part 3: Production Prometheus Alerting Rules (alerts.yml)
+Save these production-grade PromQL alert expressions inside your Prometheus rules directory (/etc/prometheus/alert.rules.yml) to catch bottlenecks across your layout: [2] 
+## 1. Bottleneck Category: Ubuntu Software Router Strain
+Software routers fail when the Linux kernel cannot process network hardware interrupts fast enough. This alert catches Softnet Drops—the absolute proof that your CPU is choking on packet processing.
+
+  - alert: UbuntuRouterSoftnetDropsDetect
+    expr: increase(node_softnet_dropped_total[2m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+      tier: edge
+    annotations:
+      summary: "Ubuntu Exit Router Kernel Dropping Packets on {{ $labels.instance }}"
+      description: "The Linux kernel softnet backlog ring buffer is overflowing. The CPU is failing to handle packet interrupts fast enough. Network throughput is heavily bottlenecked."
+
+  - alert: UbuntuRouterHighCPUInterrupts
+    # Alerts if more than 30% of total CPU time is spent strictly handling hardware/software interrupts
+    expr: (rate(node_cpu_seconds_total{mode=~"irq|softirq"}[5m]) / ignoring(mode) group_left sum by (instance)(rate(node_cpu_seconds_total[5m]))) * 100 > 30
+    for: 2m
+    labels:
+      severity: warning
+      tier: edge
+    annotations:
+      summary: "High CPU Interrupt Storm on {{ $labels.instance }}"
+      description: "Exit Router CPU spent {{ $value | printf \"%.2f\" }}% of its cycles on network interrupts. Check for small packet DDoS or consider migrating to SR-IOV/DPDK."
+
+## 2. Bottleneck Category: Physical Fabric Link Saturation
+Catches when your high-speed 10G or 100G links between your Leafs, Spines, and Exit Routers cross 85% utilization, preventing unexpected micro-burst drops.
+
+  - alert: FabricInterfaceSaturation85
+    # Evaluates interface capacity tracking across both SONiC switches and Ubuntu nodes
+    expr: (rate(node_network_receive_bytes_total[5m]) * 8 / node_network_speed_bytes) * 100 > 85
+      or (rate(ifHCInOctets[5m]) * 8 / ifSpeed) * 100 > 85
+    for: 5m
+    labels:
+      severity: warning
+      tier: fabric
+    annotations:
+      summary: "Fabric Network Interface Over-Saturated on {{ $labels.instance }}"
+      description: "Interface {{ $labels.device }}{{ $labels.ifName }} has crossed 85% bandwidth capacity (Current: {{ $value | printf \"%.2f\" }}%). Active-Active ECMP lines may be unbalanced."
+
+## 3. Bottleneck Category: Physical Hardware Link Signal Failures
+Catches Layer-1 physical problems (bad fiber connections, dirty SFPs, faulty cables) by monitoring sudden spikes in interface frame errors.
+
+  - alert: SwitchInterfaceHardwareErrors
+    # Tracks both incoming and outgoing packet corruption metrics
+    expr: rate(node_network_receive_errs_total[2m]) > 5 
+      or rate(ifInErrors[2m]) > 5
+    for: 1m
+    labels:
+      severity: error
+      tier: hardware
+    annotations:
+      summary: "Physical Link Packet Errors Dropping on {{ $labels.instance }}"
+      description: "Interface {{ $labels.device }}{{ $labels.ifName }} is recording input/output errors at a rate of {{ $value }} errors/sec. Inspect physical fiber/cables immediately."
+
+## 4. Bottleneck Category: BGP Routing Plane Stability
+If an eBGP Unnumbered session flaps or falls out of its Established state, your 100G CLOS topology loses ECMP multi-paths. This alert flags routing plane drops instantly.
+
+  - alert: BgpSessionNeighborDown
+    # Monitors your FRR routing planes across switches and exit boxes
+    expr: frr_bgp_peer_status != 1
+    for: 30s
+    labels:
+      severity: page
+      tier: controlplane
+    annotations:
+      summary: "eBGP Router Peering Down on {{ $labels.instance }}"
+      description: "BGP Neighbor session with peer {{ $labels.peer }} has dropped out of Established state. Fabric routing convergence path is broken."
+
+------------------------------
+## 🚀 Next Steps for Your Monitoring Platform
+By adding these alert matrices to your telemetry plane:
+
+   1. The Telemetry Loop: Your MonitorSrv (10.10.1.10) continuously queries all physical nodes.
+   2. Early Warnings: If your Ubuntu Exit Router hits a bottleneck during a heavy OpenStack tenant workload rush, the UbuntuRouterHighCPUInterrupts warning will trigger before the system starts dropping user data frames.
+   3. Automated Response: You can configure Prometheus Alertmanager to send these notifications directly to your startup team's Slack, Discord, or PagerDuty webhooks. [3, 4] 
+
+Would you like to examine how to structure the matching Grafana Dashboard JSON dashboard layout templates to render these software and hardware metrics visually inside a centralized monitoring room?
+
+[1] [https://dev.to](https://dev.to/hassan_aftab/why-prometheus-and-grafana-are-essential-for-monitoring-in-devops-and-how-they-enhance-the-sdlc-gmk)
+[2] [https://webdock.io](https://webdock.io/en/docs/how-guides/system-maintenance/how-monitor-webdock-server-resources-using-prometheus-grafana-node-exporter-and-prometheus-alert-manager)
+[3] [https://www.linkedin.com](https://www.linkedin.com/pulse/business-metrics-monitoring-prometheus-openshift-dhinesh-kumar-1oagc)
+[4] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-04-setup-alertmanager-prometheus-rhel-9/view)
+
+
+# How to install/configure/setup snmp_exporter/node_exporter/frr_exporter to the respective devices of fabric topology including Server Hosts. And also along with that how to install/configure/setup 'Open-Source DPDK Router Software' suggested above??
+
+To transition your telemetry blueprint and high-performance edge routers into reality, here is the complete installation, configuration, and setup guide for the Prometheus exporters and the FD.io VPP (DPDK) software routing stack.
+------------------------------
+## 📊 Part 1: Setting Up Exporters Across the Topology## 1. The Ubuntu Exit Routers & Compute Server Hosts
+Every bare-metal Ubuntu host (including your compute workers and Exit Routers) runs node_exporter for OS tracking and frr_exporter to pull BGP states out of the running FRR daemon.
+## Step A: Install and Configure node_exporter [1, 2, 3] 
+Run these commands on all Ubuntu nodes:
+
+# 1. Download the modern stable release binary
+wget https://github.com
+tar -xvf node_exporter-1.8.2.linux-amd64.tar.gz
+sudo mv node_exporter-1.8.2.linux-amd64/node_exporter /usr/local/bin/
+# 2. Create an isolated system user
+sudo useradd -rs /bin/false prometheus
+# 3. Create the Systemd daemon description file
+sudo tee /etc/systemd/system/node_exporter.service > /dev/null <<'EOF'
+[Unit]
+Description=Prometheus Node Exporter
+After=network.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/node_exporter --collector.softnet
+
+[Install]
+WantedBy=multi-user.target
+EOF
+# 4. Start and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now node_exporter
+
+## Step B: Install and Configure frr_exporter
+To allow the exporter to talk to your FRR daemon, you must first verify that the local vtysh watchdog is accessible.
+
+# 1. Download and extract the exporter
+wget https://github.com
+tar -xvf frr-exporter-1.4.0.linux-amd64.tar.gz
+sudo mv frr-exporter-1.4.0.linux-amd64/frr-exporter /usr/local/bin/
+# 2. Create the Systemd service
+sudo tee /etc/systemd/system/frr_exporter.service > /dev/null <<'EOF'
+[Unit]
+Description=FRRouting Prometheus Exporter
+After=frr.service
+
+[Service]
+User=root
+Type=simple
+ExecStart=/usr/local/bin/frr-exporter --frr.vtysh.path=/usr/bin/vtysh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+# 3. Start and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now frr_exporter
+
+------------------------------
+## 2. The SONiC Spine & Leaf Switches
+SONiC switches run a native Linux platform under the hood, but their hardware metrics (ASIC temperature, transceiver light levels) are exposed via an internal SNMP daemon (snmpd). Instead of running individual software binaries on the switches, you collect this data by deploying the snmp_exporter container directly onto your central MonitorSrv (10.10.1.10).
+## Step A: Run the snmp_exporter via Docker on MonitorSrv
+
+# 1. Create a workspace directory
+mkdir -p ~/snmp_exporter && cd ~/snmp_exporter
+# 2. Fetch the standard network hardware OID compilation mappings
+wget https://githubusercontent.com
+# 3. Run the container bound to your management interface
+docker run -d --name=snmp_exporter \
+  -p 9116:9116 \
+  -v ~/snmp_exporter/snmp.yml:/etc/snmp_exporter/snmp.yml \
+  --restart=always \
+  prom/snmp-exporter
+
+## Step B: Link Them Inside Your Central /etc/prometheus/prometheus.yml Configuration
+
+scrape_configs:
+  - job_name: 'ubuntu-os-metrics'
+    static_configs:
+      - targets: ['10.10.1.40:9100', '10.10.1.39:9100', '10.10.1.30:9100', '10.10.1.29:9100']
+
+  - job_name: 'frr-bgp-metrics'
+    static_configs:
+      - targets: ['10.10.1.40:9417', '10.10.1.39:9417', '10.10.1.30:9417']
+
+  - job_name: 'sonic-switch-snmp'
+    static_configs:
+      - targets:
+          - 10.10.1.48  # Spine 1
+          - 10.10.1.42  # Border Leaf 1
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 10.10.1.10:9116 # Targets the snmp_exporter container proxy running locally
+
+------------------------------
+## 🚀 Part 2: Installing and Configuring FD.io VPP (DPDK)
+To scale your Ubuntu Exit Routers to handle hardware-bypassed line-rate routing, you replace the standard Linux kernel network loop with FD.io VPP.
+## 1. Hardware Prerequisite Setup (Grub Tweaks)
+To enable DPDK, you must tell the Linux kernel to lock down continuous memory structures (Hugepages) and enable PCIe pass-through virtualization.
+Edit /etc/default/grub on your physical Dell R630 routers:
+
+# Append these tracking variables inside the command line options string:
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash intel_iommu=on iommu=pt hugepagesz=1G hugepages=4 default_hugepagesz=1G"
+
+Update your boot profiles and perform a clean physical restart:
+
+sudo update-grub
+sudo reboot
+
+## 2. Installing the VPP Repositories & Engine Software
+Execute these installation chains to pull the official Linux Foundation VPP packages:
+
+# 1. Establish repository trust
+curl -s https://packagecloud.io | sudo bash
+# 2. Pull down the runtime engines, core plugins, and DPDK modules
+sudo apt-get update
+sudo apt-get install -y vpp vpp-plugin-core vpp-plugin-dpdk python3-vpp-api
+
+## 3. Overriding the VPP Device System Map (/etc/vpp/startup.conf)
+You must unbind your high-speed 10G/40G interfaces (enp2s0 and enp3s0) from the standard Ubuntu kernel drivers and bind them directly to the DPDK polling engine.
+First, discover the precise PCIe hardware address slots using lspci:
+
+lspci | grep -i ether# Example output lines look like this:# 02:00.0 Ethernet Controller X710 for 10GbE SFP+# 02:00.1 Ethernet Controller X710 for 10GbE SFP+
+
+Now, map those physical slots and lock down your dedicated polling cores inside /etc/vpp/startup.conf:
+
+unix {
+  cli-listen /run/vpp/cli.sock
+  log /var/log/vpp/vpp.log
+  full-coredump
+  gid vpp
+}
+
+cpu {
+  # Lock CPU Core 1 and Core 2 to permanently poll the network interfaces at 100% speed
+  main-core 1
+  corelist-workers 2
+}
+
+buffers {
+  # Expand memory allocations to soak up high-speed microburst traffic
+  buffers-per-numa 128000
+  default data-size 2048
+}
+
+dpdk {
+  # Paste the exact hardware PCIe addresses found during your lspci check
+  dev 0000:02:00.0 { name GigabitEthernet2/0/0 }  # Maps to your old enp2s0 link to Border-Leaf 1
+  dev 0000:02:00.1 { name GigabitEthernet2/0/1 }  # Maps to your old enp3s0 link to Border-Leaf 2
+  
+  # Ensure the engine utilizes the hugepages locked down at grub boot
+  num-mbufs 256000
+}
+
+Restart VPP to commit your configuration changes:
+
+sudo systemctl daemon-reload
+sudo systemctl restart vpp
+
+## 4. Configuring Interfaces and Subnet Parameters within VPP
+You interact with your hardware-accelerated router using the vppctl runtime shell interface tool:
+
+# 1. Bring the hardware accelerated links online
+sudo vppctl set interface state GigabitEthernet2/0/0 up
+sudo vppctl set interface state GigabitEthernet2/0/1 up
+# 2. Initialize your high-performance Vrf_Transit table (Layer 3 Routing Domain 2000)
+sudo vppctl ip table add 2000
+# 3. Securely bind the interfaces inside the VRF table routing scope
+sudo vppctl set interface ip table GigabitEthernet2/0/0 2000
+sudo vppctl set interface ip table GigabitEthernet2/0/1 2000
+# 4. Enable IPv6 on the interfaces so they can process incoming SONiC Router Advertisements
+sudo vppctl ip6 nd address autoconf GigabitEthernet2/0/0
+sudo vppctl ip6 nd address autoconf GigabitEthernet2/0/1
+
+Once this pipeline stabilizes, traffic entering your multi-homed links completely bypasses the Ubuntu OS kernel. The VPP vector network engine processes the data plane traffic at full line speed, while your host operating system remains clean, lightweight, and focused on your platform services.
+Would you like to examine how to integrate the native vpp-wireguard crypto plugin configuration commands to terminate your operations team VPN access directly inside this hardware-accelerated space?
+
+[1] [https://medium.com](https://medium.com/devops-playbook/step-by-step-guide-to-installing-node-exporter-on-rhel-8-10-88d54597312f)
+[2] [https://aptira.com](https://aptira.com/prometheus-exporters/)
+[3] [https://ashwinikd.github.io](https://ashwinikd.github.io/monitoring/router/prometheus/2020/07/30/router-series-1.html)
+
+
+# Yes, also like to learn in detail how to install/setup/integrate the native vpp-wireguard crypto plugin configuration commands to terminate your operations team VPN access directly inside this hardware-accelerated space
+
+Integrating WireGuard directly into FD.io VPP allows your operations team to terminate their administrative connections within a hardware-accelerated user-space data plane. Packets are encrypted and decrypted using vectorized CPU optimization paths (utilizing the Intel Xeon crypto-acceleration features like AVX-512 or AES-NI inside your Dell R630 servers), completely bypassing the standard Linux kernel network stack bottleneck. [1, 2] 
+------------------------------
+## 📦 Part 1: Prerequisites & Verification
+The WireGuard implementation inside FD.io VPP is built directly into the core engine platform through a native component called the WireGuard Plugin.
+Before configuring the crypto paths, verify that the plugin loaded cleanly during the VPP daemon initialization phase. Run this command inside your router bash prompt:
+
+vppctl show plugins | grep wireguard
+
+
+* Expected Output: wireguard_plugin.so - Wireguard Protocol along with its build version, confirming that VPP is ready to handle vectorized crypto-tunnels.
+
+------------------------------
+## 🔑 Part 2: Generating the Cryptographic Keys
+Just like standard Linux WireGuard, VPP relies on standard Curve25519 elliptic-curve public/private key pairs. Because you are inside the hardware-accelerated user space, you generate and look up these keys directly within the VPP CLI environment. [3, 4] 
+
+# 1. Enter the VPP execution control shell
+vppctl
+# 2. Generate the unique master private key for Exit-Router 1
+vpp inline wireguard key-generate# Example output printed: # Private key: [SERVER_PRIVATE_KEY_STRING]# Public key:  [SERVER_PUBLIC_KEY_STRING]
+
+(Make a safe note of both strings. You will place the Server Private Key directly into the VPP engine configuration, and pass the Server Public Key down to your ops team members for their local laptop WireGuard .conf client profiles).
+------------------------------
+## ⚙️ Part 3: Step-by-Step VPP WireGuard Tunnel Provisioning
+To map the tunnel cleanly into your architecture, we initialize a virtual WireGuard adapter inside VPP, assign it to your public-facing Vrf_Transit (Table 2000) layer to intercept incoming packets from the internet, and create a cross-over path leading straight to your local OOB Management Switch loop (Table 1000).
+Execute these structured commands within the vppctl runtime shell:
+## 🛠️ Step 1: Create and Initialize the Vectorized Tunnel Interface
+
+# Create a dedicated hardware-accelerated wireguard virtual interface
+vppctl create wireguard interface
+
+# The system will output the newly created interface name, typically: wireguard0
+
+## 🛠️ Step 2: Apply Cryptographic and Network Layer Bindings
+
+# 1. Assign the generated private key and set the public-facing UDP port
+vppctl set wireguard interface wireguard0 private-key SERVER_PRIVATE_KEY_STRING port 51820
+
+# 2. Set the private transit interface IP assigned to this router endpoint
+vppctl set interface ip address wireguard0 192.168.99.1/24
+
+# 3. Securely bind the inner decrypted space to table 1000 (Your isolated OOB mgmt-vrf)
+vppctl set interface ip table wireguard0 1000
+
+# 4. Fire up the operational state of the virtual adapter interface
+vppctl set interface state wireguard0 up
+
+## 🛠️ Step 3: Registering Operations Team Members as Peers
+Now we tell the VPP engine exactly which remote client devices are authorized to pass through the crypto firewall blocks.
+
+# Add an administrative laptop peer profile to the tunnel matrix
+vppctl wireguard peer add wireguard0 public-key ADMIN_LAPTOP_PUBLIC_KEY_STRING endpoint your-home-isp-public-ip port 51820 allowed-ip 192.168.99.100/32 allowed-ip 10.10.1.0/24 dst-port 51820
+
+
+* allowed-ip 192.168.99.100/32: The fixed inner tunnel transit IP assigned to this specific engineer.
+* allowed-ip 10.10.1.0/24: Enforces the cross-over permission, allowing the authenticated peer packet to route directly into your Rack 1 OOB management switch network.
+
+------------------------------
+## 🔄 Part 4: Managing Cross-VRF Inter-Routing Policies
+Because the outer encrypted traffic lands in Table 2000 (Vrf_Transit) via your physical WAN interfaces (GigabitEthernet2/0/0 / enp4s0) and emerges from the crypto engine inside Table 1000 (mgmt-vrf), you must configure an internal routing path to direct return traffic.
+Tell the OOB management routing table inside VPP how to pass response packets back into the crypto tunnel:
+
+# Add a static path inside the management table forcing responses back into the WireGuard interface
+vppctl ip route add 192.168.99.0/24 table 1000 via wireguard0
+
+------------------------------
+## 💾 Part 5: Making the Accelerated Configurations Persistent
+By default, configurations written inside the live vppctl shell live inside volatile memory and will vanish if the physical host reboots. To ensure your WireGuard edge routers boot automatically, compile all commands into a production shell script and register it as a systemd automation boot script.
+Create the automation initialization file:
+
+sudo nano /usr/local/bin/vpp-fabric-init.sh
+
+Paste the unified configuration parameters inside it:
+
+#!/usr/bin/env bash# Wait for the master VPP daemon sockets to stabilize on host boot
+sleep 5
+
+vppctl set interface state GigabitEthernet2/0/0 up
+vppctl set interface state GigabitEthernet2/0/1 up
+vppctl ip table add 2000
+
+vppctl set interface ip table GigabitEthernet2/0/0 2000
+vppctl set interface ip table GigabitEthernet2/0/1 2000
+# WireGuard Crypto Interface Initialization Engine
+vppctl create wireguard interface
+vppctl set wireguard interface wireguard0 private-key SERVER_PRIVATE_KEY_STRING port 51820
+vppctl set interface ip address wireguard0 192.168.99.1/24
+vppctl set interface ip table wireguard0 1000
+vppctl set interface state wireguard0 up
+# Authorize Operations Team Peers
+vppctl wireguard peer add wireguard0 public-key ADMIN_LAPTOP_PUBLIC_KEY_STRING endpoint your-home-isp-public-ip port 51820 allowed-ip 192.168.99.100/32 allowed-ip 10.10.1.0/24 dst-port 51820
+# Apply table crossover route entries
+vppctl ip route add 192.168.99.0/24 table 1000 via wireguard0
+
+Make the script executable:
+
+sudo chmod +x /usr/local/bin/vpp-fabric-init.sh
+
+Now append this script path to your /etc/rc.local file or structure it as a simple systemd service hooked to trigger immediately After=vpp.service. This ensures that your Dell R630 routers initialize their BGP-Unnumbered fabrics and bring up your accelerated admin VPNs on a single boot cycle with zero operator intervention.
+Would you like to examine how to verify the real-time cryptographic packet counters inside VPP to monitor active transit pipelines from your ops team laptops?
+
+[1] [https://docs.redhat.com](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/configuring_and_managing_networking/setting-up-a-wireguard-vpn)
+[2] [https://wafatech.sa](https://wafatech.sa/blog/linux/linux-security/simplifying-secure-remote-access-configuring-wireguard-vpn-on-linux-servers/)
+[3] [https://stanislas.blog](https://stanislas.blog/2019/01/how-to-setup-vpn-server-wireguard-nat-ipv6/)
+[4] [https://www.plc-hmi-scadas.com](https://www.plc-hmi-scadas.com/en/blog/vpn-home-lab-wireguard/)
+
+
+# Yes, I like to examine how to verify the real-time cryptographic packet counters inside VPP to monitor active transit pipelines from ops team laptops
+
+To verify your real-time cryptographic packet counters and ensure your vectorized data pipeline is processing your operations team's encrypted traffic smoothly, you will interact directly with the hardware-bypassed VPP execution engine.
+VPP tracks packet counters at two distinct levels: the Interface Level (tracking overall ingress/egress bytes on the tunnel) and the Cryptographic Peer Level (tracking specific cryptographic handshakes, keepalives, and individual key lifetimes).
+------------------------------
+## 📊 1. Checking General Interface Counters (wireguard0)
+The first step is verifying that packets are physically hitting the virtual WireGuard adapter. Run the following command inside your host shell:
+
+vppctl show interface
+
+## 🔍 What to Look For in the Output:
+Locate the wireguard0 interface block inside the printed matrix. A healthy, active tunnel will look like this:
+
+              Name               Idx    State  MTU (L3/IP4/IP6/MPLS)     Counter          Count     
+wireguard0                        3      up          1420/0/0/0       rx packets               4120
+                                                                      rx bytes               384210
+                                                                      tx packets               3210
+                                                                      tx bytes               291450
+
+
+* rx packets / rx bytes: This incrementing counter proves that an admin's laptop is actively sending encrypted data, which VPP is successfully receiving.
+* tx packets / tx bytes: This proves that your local cloud infrastructure is successfully routing response frames back into the tunnel to the operator's browser or terminal.
+
+------------------------------
+## 🔑 2. Inspecting Granular Cryptographic Peer Counters
+To drill down into specific client connections, track active crypto states, and view key rotation timers, query the WireGuard plugin protocol statistics directly:
+
+vppctl show wireguard peer
+
+## 🔍 The Real-Time Telemetry Breakdown:
+This command dumps the precise cryptographic state machine configuration for every authorized operator laptop profile:
+
+[0] peer public-key: ADMIN_LAPTOP_PUBLIC_KEY_STRING...
+    endpoint: your-home-isp-public-ip:51820
+    allowed-ips:
+      192.168.99.100/32
+      10.10.1.0/24
+    persistent-keepalive: 25
+    ingress:
+      packets: 4120
+      bytes: 384210
+    egress:
+      packets: 3210
+      bytes: 291450
+    handshake:
+      will-initiate: no
+      last-time: 1718293412.12 (34 seconds ago)
+
+## 🚨 How to Audit This Telemetry During Live Operations:
+
+* last-time (Handshake Age): WireGuard automatically forces a new cryptographic key rotation every 2 minutes. If last-time shows the last handshake was completed within the past 120 seconds, the tunnel is actively communicating. If it shows never or values stretching into hours, the client laptop is either disconnected or its local configuration keys are mismatched.
+* ingress / egress: If an operator complains that they can access the OpenStack Horizon dashboard but cannot run a file upload, watch these numbers in real time. If ingress increments while egress remains completely frozen, the issue is an asymmetric route path drop on the local management switch side, rather than a crypto breakdown.
+
+------------------------------
+## 📈 3. Tracking Vector Packet Clock Cycles (The Performance Metric)
+Because VPP processes data in packet vectors, you can audit exactly how efficiently your CPU is executing crypto tasks by reading the active worker thread statistics:
+
+vppctl show runtime
+
+## 🔍 What Success Looks Like:
+Look for the wg-input and wg-output nodes in the processing list:
+
+Name                      State      Calls    Vectors    Clocks/Pkts  
+wg-input                 active       2100     256000          42.12
+wg-output                active       1850     192000          38.50
+
+
+* Vectors: Confirms that VPP is batch-processing packets in vectors, maximizing your CPU's L1/L2 data cache usage.
+* Clocks/Pkts: This number represents the physical CPU clock cycles consumed to process a single network packet. A lower value (typically under 60-80 clocks per packet for native vector crypto execution) indicates that the server's hardware-accelerated instructions (such as Intel AES-NI or AVX-512) are executing cleanly, optimizing processing efficiency.
+
+------------------------------
+## 📝 4. Automating Live Telemetry Monitoring
+To track these values dynamically without running manual terminal checks, combine VPP's internal watch commands inside an active terminal session:
+
+# Refreshes the granular cryptographic states and interface counters every 2 seconds
+watch -n 2 "vppctl show interface ; vppctl show wireguard peer"
+
+If you prefer a fully automated, hands-off setup, you can deploy the open-source vpp_exporter container. This tool pulls these vector performance logs and peer metrics straight out of the /run/vpp/cli.sock runtime socket file and exposes them natively to your Prometheus server on MonitorSrv (10.10.1.10), giving your team full visibility on an operations room Grafana dashboard.
+To advance your platform's edge design, let's look at how to approach your next steps:
+
+* We can explore how to write the Prometheus scraping parameters specifically for these VPP data plane runtime counters.
+* We can build out the matching Grafana Dashboard JSON panels to visualize your real-time data center edge throughput.
+
+Let me know how you would like to proceed with scaling your telemetry and edge architecture!
+
+# Can you do both suggested above?
+
+To bring your high-performance edge infrastructure into your central operations visibility plane, we will configure the Prometheus Scraper Engine to pull vectorized metrics from your accelerated routers and write the matching production-ready Grafana Dashboard JSON structures.
+------------------------------
+## 📊 Part 1: Prometheus Scraping Configuration (prometheus.yml)
+The open-source vpp_exporter collects real-time statistics from the VPP CLI Unix socket (/run/vpp/cli.sock) and translates them into native Prometheus format on HTTP port 9436.
+Add this configuration stanza to your master Prometheus server setup file located on MonitorSrv (10.10.1.10):
+
+scrape_configs:
+  - job_name: 'vpp-accelerated-routers'
+    scrape_interval: 10s       # Tight scraping window to catch high-speed microbursts
+    scrape_timeout: 8s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - '10.10.1.40:9436'  # Exit_Router1 (VPP Engine Slot)
+          - '10.10.1.39:9436'  # Exit_Router2 (VPP Engine Slot)
+    
+    # Clean up the output names for your operators
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '(.*):9436'
+        target_label: 'router_ip'
+
+------------------------------
+## 🎨 Part 2: Production Grafana Dashboard Template (vpp_dashboard.json)
+This optimized JSON template builds a unified, high-density operations dashboard. It maps your VPP Interface Speeds, Intel CPU Vector Clock Cycles, and WireGuard Peer Telemetry onto clean visual elements.
+Create a file named vpp_dashboard.json and paste this payload directly into your Grafana import panel (Dashboards -> New -> Import -> Paste JSON):
+
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 1,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "🔒 HARDWARE-ACCELERATED WIREGUARD PEER REAL-TIME STATUS",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 4 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "textMode": "value"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "editorMode": "code",
+          "expr": "vpp_wireguard_peer_status{allowed_ip=\"192.168.99.100/32\"}",
+          "legendFormat": "Ops Lead Tunnel Connection Status",
+          "range": true
+        }
+      ],
+      "title": "Ops Lead Connection State",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth" },
+          "unit": "decbytes"
+        }
+      },
+      "gridPos": { "h": 7, "w": 18, "x": 6, "y": 4 },
+      "id": 3,
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "rate(vpp_wireguard_peer_rx_bytes_total[1m])",
+          "legendFormat": "Tunnel Crypto Ingress (Bytes/sec)",
+          "range": true
+        },
+        {
+          "expr": "rate(vpp_wireguard_peer_tx_bytes_total[1m])",
+          "legendFormat": "Tunnel Crypto Egress (Bytes/sec)",
+          "range": true
+        }
+      ],
+      "title": "WireGuard Active Transit Throughput (User-Space Crypto)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 11 },
+      "id": 4,
+      "title": "🚀 FD.IO VPP VECTOR DATA PLANE AND CPU METRICS",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "lineInterpolation": "linear" },
+          "unit": "clocks"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 5,
+      "options": {
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "expr": "vpp_runtime_node_clocks_per_packet{node_name=~\"wg-input|wg-output\"}",
+          "legendFormat": "CPU Cycles/Packet - {{node_name}}",
+          "range": true
+        }
+      ],
+      "title": "Vector Crypto Efficiency (Intel AES-NI Clocks Per Packet)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "fillOpacity": 80 },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 6,
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "expr": "rate(vpp_runtime_node_vectors_total[1m])",
+          "legendFormat": "Batched Vector Calls - {{node_name}}",
+          "range": true
+        }
+      ],
+      "title": "Vector Processing Batches (Cache-Line Utilization Index)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["fabric", "vpp", "wireguard"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s"]
+  },
+  "timezone": "browser",
+  "title": "L3 CLOS Data Center - VPP Accelerated Edge Routers",
+  "version": 1
+}
+
+------------------------------
+## 🚨 Part 3: Operational Threshold Auditing Cheat Sheet
+Once data populates the dashboard panels, use this matrix to identify and triage hardware/software friction points during system load events:
+
+| Grafana Panel Metric | Critical Operational Boundary | Required Triage Step if Triggered |
+|---|---|---|
+| vpp_wireguard_peer_status | Drops to 0 (Red State) | Check client laptop internet access or re-verify if the operator's public key hash was rotated. |
+| vpp_runtime_node_clocks_per_packet | Crosses > 120 Clocks/Packet | The CPU is falling back to standard software crypto processing. Verify that Intel AES-NI or AVX-512 extensions are active in the Dell BIOS. |
+| vpp_runtime_node_vectors_total | Drops to a flat 0 during high traffic | VPP vector queues are running dry. The processing bottleneck is occurring further upstream at your network interface card or transceiver layer. |
+
+This setup hooks your telemetry engine directly into the core of your high-speed user-space data plane. Your team gets instant visibility into crypto efficiencies and line-rate link states across the fabric.
+To prepare the environment for live execution, let's explore your next steps:
+
+* We can configure the Prometheus Alertmanager routing notification blocks to send immediate warnings to your group communication channels when crypto cycles bottleneck.
+* We can review how to set up automated snapshot tracking inside your Grafana instance to log performance baselines before and after major OpenStack tenant migrations.
+
+Let me know how you would like to proceed with your operations monitoring plane!
+
+# Let us do both. And also suggest free and opensource 'group communication channels' for notification purposes.
+
+Here is the complete setup to close the loop on your accelerated data center orchestration.
+First, we will review the top Free and Open-Source Software (FOSS) group communication channels that your startup can self-host to maintain total privacy over your infrastructure alerts. Then, we will configure the Prometheus Alertmanager routing blocks and look at how to automate Grafana performance snapshot baselines. [1] 
+------------------------------
+## 💬 Part 1: Top FOSS Self-Hosted Group Communication Channels
+When you are a lean startup short on funding, paying per-user monthly fees for tools like Slack or Microsoft Teams is a drain on capital. Since you already have an isolated OOB management switch loop and a virtual/bare-metal server fleet, you can self-host these production-quality options for free: [2] 
+## 1. Mattermost (The Open-Source Slack Alternative)
+Mattermost is an enterprise-grade team communication platform written in Go and React. [3, 4] 
+
+* Why it fits your setup: It looks and behaves identically to Slack. It provides an official, native incoming webhook feature that maps to Prometheus Alertmanager. [5, 6, 7, 8, 9] 
+* Startup Benefit: You can run the Mattermost Team Edition completely free of charge as a lightweight Docker container directly on your MonitorSrv (10.10.1.10). [10] 
+
+## 2. Matrix / Element (The Secure Federated Engine)
+Matrix is an open standard protocol for secure, decentralized, real-time communication, typically paired with the Element client web/mobile app. [11, 12, 13, 14] 
+
+* Why it fits your setup: Every room can be end-to-end encrypted (E2EE). If an alert fires containing a sensitive piece of infrastructure metadata (like an IP address or interface port string), it is encrypted before leaving the monitoring server. [15] 
+* Startup Benefit: Highly resilient. It uses a lightweight Matrix-Alertmanager webhook wrapper to pipe infrastructure logs straight into your secure engineering rooms.
+
+------------------------------
+## 🚨 Part 2: Prometheus Alertmanager Notification Routing (alertmanager.yml)
+This configuration instructs Alertmanager to intercept the VPP vector crypto and physical interface warnings we wrote earlier, bundle them together to prevent notification storms, and pipe them directly into a self-hosted Mattermost incoming webhook channel.
+Create or update your /etc/prometheus/alertmanager.yml file: [16] 
+
+global:
+  resolve_timeout: 5m
+# 1. THE ALARM ROUTING MATRIXroute:
+  group_by: ['alertname', 'instance', 'node_name']
+  group_wait: 10s       # Wait 10 seconds to catch overlapping vector alerts
+  group_interval: 30s   # Wait 30 seconds before sending a batch of new alerts
+  repeat_interval: 2h   # Re-send active critical errors every 2 hours
+  receiver: 'mattermost-engineering-channel'
+# 2. DEFINING THE NOTIFICATION DESTINATIONSreceivers:
+- name: 'mattermost-engineering-channel'
+  webhook_configs:
+  # Points to the local Dockerized Mattermost container running on your management layer
+  - url: 'http://10.10.1'
+    send_resolved: true # Automatically notify the team when the network stabilizes
+# 3. GLOBAL ALERT MUTING (Optional maintenance windows)inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+------------------------------
+## 📸 Part 3: Automated Grafana Performance Snapshot Baseline Script
+When your startup migrates a large batch of OpenStack tenant workloads or tests a new cluster feature, you need a snapshot of your network state to evaluate optimization differences.
+If you use manual screenshots, you lose the ability to inspect underlying raw data points later. Instead, we can write an automated bash script that calls the Grafana HTTP Dashboard API. This grabs an interactive, point-in-time, data-complete snapshot of your VPP edge router dashboard and saves it as a permanent static file.
+Create a file named capture-network-baseline.sh on your monitoring node:
+
+#!/usr/bin/env bash# =====================================================================# TELEMETRY AUTOMATION: Grafana Interactive Dashboard Snapshot Engine# Captures raw data states before/after infrastructure events# =====================================================================
+set -euo pipefail
+# 1. INITIALIZATION PARAMETERS
+GRAFANA_URL="http://10.10.1.10:3000"# Generate a Service Account or Admin Token inside Grafana UI (Configuration -> API Keys)
+API_TOKEN="glsa_your_secure_grafana_api_token_here"# The specific system identification UID found inside your vpp_dashboard.json file
+DASHBOARD_UID="vpp-accelerated-edge"
+OUTPUT_DIR="/var/log/dc-baselines"
+
+mkdir -p "$OUTPUT_DIR"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+SNAPSHOT_FILE="${OUTPUT_DIR}/vpp_baseline_${TIMESTAMP}.json"
+
+echo "Extracting live dashboard data structure from local Grafana portal..."# 2. FETCH CURRENT EXPANDED DASHBOARD DATA SCHEMA
+DB_MODEL=$(curl -sS -H "Authorization: Bearer ${API_TOKEN}" \
+  "${GRAFANA_URL}/api/dashboards/uid/${DASHBOARD_UID}" | jq '.dashboard')
+# 3. COMPILE PAYLOAD BLOCK FOR THE SNAPSHOT ENGINE# Forces Grafana to freeze current time windows and lock metric queries into flat JSON data arrays
+SNAPSHOT_PAYLOAD=$(jq -n \
+  --arg name "Automated Platform Baseline - ${TIMESTAMP}" \
+  --argjson expires 2592000 \
+  --argjson dashboard "$DB_MODEL" \
+  '{name: $name, expires: $expires, dashboard: $dashboard, external: false}')
+
+echo "Compiling frozen metrics snapshot..."# 4. TRIGGER GRAFANA SNAPSHOT ENGINE VIA REST API
+RESPONSE=$(curl -sS -X POST \
+  -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$SNAPSHOT_PAYLOAD" \
+  "${GRAFANA_URL}/api/snapshots")
+# 5. PARSE RESOLUTION URL FOR OPERATIONS TEAM
+SNAPSHOT_URL=$(echo "$RESPONSE" | jq -r '.url')
+echo "====================================================================="
+echo "SUCCESS: Interactive Data Baseline Frozen Successfully!"
+echo "--> Saved Schema Path:  ${SNAPSHOT_FILE}"
+echo "--> Shareable Link:      ${SNAPSHOT_URL}"
+echo "====================================================================="
+# Store raw structural dump for offline git-tracking if needed
+echo "$RESPONSE" > "$SNAPSHOT_FILE"
+
+Make the baseline utility executable:
+
+chmod +x capture-network-baseline.sh
+
+## 🎯 How to Use this Snapshot Engine in Your Workflow
+Before your platform engineering team kicks off an execution script (like spinning up a massive OpenStack tenant cluster or testing a high-capacity VPP WireGuard VPN load), run this command:
+
+./capture-network-baseline.sh
+
+Grafana will generate a unique link. When an engineer clicks that link, they see an interactive web dashboard containing the exact metrics, CPU vector loads, and traffic counters from that specific moment in time, allowing your startup team to compare and optimize performance changes with absolute accuracy. [17] 
+To advance your operational infrastructure design, let me know how you would like to proceed:
+
+* We can look at writing the Docker Compose stack to bring up Mattermost, Prometheus, Alertmanager, and Grafana on your MonitorSrv in a single command.
+* We can write a script to link Mattermost alerts to alert channels so critical alerts page your engineers' mobile devices automatically.
+
+
+[1] [https://blog.incidenthub.cloud](https://blog.incidenthub.cloud/sending-alerts-using-prometheus-and-alertmanager)
+[2] [https://news.ycombinator.com](https://news.ycombinator.com/item?id=36407245)
+[3] [https://www.contus.com](https://www.contus.com/blog/best-instant-messaging-solutions/)
+[4] [https://opensource.com](https://opensource.com/article/20/7/mattermost)
+[5] [https://www.indeed.com](https://www.indeed.com/career-advice/career-development/team-chat-apps)
+[6] [https://lwn.net](https://lwn.net/Articles/1058319/)
+[7] [https://wz-it.com](https://wz-it.com/en/blog/slack-alternatives-mattermost-rocketchat-zulip/)
+[8] [https://www.m.io](https://www.m.io/blog/mattermost)
+[9] [https://matrix-appservice-slack.readthedocs.io](https://matrix-appservice-slack.readthedocs.io/en/latest/link_channels/)
+[10] [https://trueconf.com](https://trueconf.com/blog/reviews-comparisons/mattermost-vs-slack-vs-trueconf)
+[11] [https://bloggeek.me](https://bloggeek.me/state-of-webrtc-open-source-projects/)
+[12] [https://opensource.com](https://opensource.com/article/20/3/open-source-working-home)
+[13] [https://itldc.com](https://itldc.com/en/blog/talk-nerdy-to-me-self-hosted-alternatives-to-slack-you-ll-actually-enjoy/)
+[14] [https://kb.ettus.com](https://kb.ettus.com/Matrix)
+[15] [https://www.howtogeek.com](https://www.howtogeek.com/discord-has-a-private-open-source-rival-youve-never-heard-ofand-its-million-of-users-strong/)
+[16] [https://harsh05.medium.com](https://harsh05.medium.com/mastering-prometheus-recording-rules-and-sending-email-alerts-using-alertmanager-b62acfe8546d)
+[17] [https://vlinkinfo.com](https://vlinkinfo.com/blog/guide-on-collaborative-coding-with-vs)
+
+
+# Yes, let's do that above...
+
+To deploy this complete telemetry, observability, and communication stack on your central monitoring instance, we will use a unified Docker Compose architecture.
+This production-grade configuration spins up Mattermost, Prometheus, Alertmanager, and Grafana directly on your MonitorSrv (10.10.1.10) with a single command. It mounts persistent data volumes so your logs survive server restarts, establishes internal container network routes, and pre-configures Alertmanager to pass warnings to your self-hosted engineering communication rooms.
+------------------------------
+## 📂 Part 1: The Unified Docker Compose Blueprint (docker-compose.yml)
+Create a directory named infra-monitoring on your monitoring server and save this file as docker-compose.yml:
+
+version: '3.8'
+networks:
+  monitor-network:
+    driver: bridge
+volumes:
+  prometheus_data:
+  grafana_data:
+  mattermost_db_data:
+  mattermost_app_data:
+services:
+  # ─── 1. CORE TELEMETRY METRICS DATABASE ───
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: dc_prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d' # 30 days data retention policy
+    ports:
+      - '9090:9090'
+    networks:
+      - monitor-network
+
+  # ─── 2. INSTANT NOTIFICATION ROUTING ENGINE ───
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: dc_alertmanager
+    restart: always
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - '9093:9093'
+    networks:
+      - monitor-network
+
+  # ─── 3. VISUALIZATION AND ANALYTICS ENGINE ───
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: dc_grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=Welcome0! # Aligned default infrastructure password
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - '3000:3000'
+    networks:
+      - monitor-network
+
+  # ─── 4. FOSS COMMUNICATION ENGINE (POSTGRES DATABASE BACKEND) ───
+  mattermost-db:
+    image: postgres:16-alpine
+    container_name: mattermost_db
+    restart: always
+    environment:
+      - POSTGRES_USER=mmuser
+      - POSTGRES_PASSWORD=mmuser_password_welcome0!
+      - POSTGRES_DB=mattermost
+    volumes:
+      - mattermost_db_data:/var/lib/postgresql/data
+    networks:
+      - monitor-network
+
+  # ─── 5. FOSS COMMUNICATION ENGINE (APPLICATION SERVER LAYER) ───
+  mattermost:
+    image: mattermost/mattermost-team-edition:9.11.0
+    container_name: dc_mattermost
+    restart: always
+    depends_on:
+      - mattermost-db
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://mmuser:mmuser_password_welcome0!@mattermost-db:5432/mattermost?sslmode=disable&connect_timeout=10
+      - MM_SERVICESETTINGS_SITEURL=http://10.10.1.10:8065
+    volumes:
+      - mattermost_app_data:/mattermost/data
+    ports:
+      - '8065:8065'
+    networks:
+      - monitor-network
+
+------------------------------
+## ⚙️ Part 2: Linking Core Config Files in the Directory
+Before running the compose up trigger, ensure you drop the configuration templates we structured into the exact same folder location:
+
+   1. prometheus.yml: Ensure your targets point natively to your layout addresses (10.10.1.40:9100 for your VPP routers, 10.10.1.10:9116 for the SNMP switch proxy scraper). Add this evaluation instruction line to the top of your prometheus.yml:
+   
+   rule_files:
+     - "alerts.yml"
+   
+   2. alerts.yml: Contains your custom UbuntuRouterSoftnetDropsDetect and FabricInterfaceSaturation85 alert code blocks.
+   3. alertmanager.yml: Contains your Mattermost notification destination blocks.
+
+------------------------------
+## 🔗 Part 3: Establishing the Mattermost Webhook Pipeline
+To activate the real-time link between your data center errors and your engineers' mobile devices:
+
+   1. Fire up the stack: Run docker compose up -d on MonitorSrv.
+   2. Create your workspace account: Open a web browser, go to http://10.10.1.10:8065, and complete the primary initialization wizard to build your admin profile and your initial chat channel (e.g., #engineering-alerts).
+   3. Generate the Input Gateway Token:
+   * Navigate to Main Menu ➔ Product Settings ➔ Integrations ➔ Incoming Webhooks.
+      * Click Add Incoming Webhook, name it "Prometheus System Alarms," and map it directly to your #engineering-alerts room destination.
+      * Click Save. Mattermost will output an internal gateway string URL looking like this:
+      http://10.10.1...
+   4. Update Alertmanager: Open your ./alertmanager.yml file, paste this token URL straight into the webhook_configs.url value slot, and reload the service:
+   
+   docker restart dc_alertmanager
+   
+   
+------------------------------
+## 📱 Part 4: Paging Engineers on Mobile Devices (Zero Added Costs)
+To escalate critical alarms directly to your engineers' smartphones without paying for expensive third-party notification software subscriptions, take advantage of the native open-source mobile synchronization frameworks built right into Mattermost.
+
+[ Data Center Incident Occurs ] 
+               │
+               ▼
+[ Prometheus Evaluates Alerts Matrix ] 
+               │
+               ▼
+[ Alertmanager Batches & Formats Webhook ]
+               │
+               ▼
+[ Self-Hosted Mattermost Team App Server ]
+               │
+               ▼ (Uses Mobile OS Native Notification Buses)
+┌──────────────────────────────────────────────┐
+│  📲 Engineer Smartphone App Push Event      │
+│  - Alert: "VPP Vector Engine Drops Detected" │
+│  - Severity: Critical | Action: Connect VPN   │
+└──────────────────────────────────────────────┘
+
+
+   1. Download the Mobile Application: Your engineers download the official Mattermost App on their iPhone or Android devices directly from the public app stores.
+   2. Link the Private Server: Upon loading the app, they input your private data center site access URL: http://10.10.1.10:8065. They sign in using their standard login profile.
+   3. Configure High-Priority Auditing Filters: Inside the mobile client's notification options dashboard, instruct the app to trigger push notifications instantly for all alert tags matching words like @all or any target channel activity.
+   4. The End-to-End Validation: If an issue occurs (e.g., an eBGP unnumbered link flips off status or an interactive tenant router experiences line drops), your Prometheus configuration catches the incident, hands it to Alertmanager, and Mattermost pushes a push notification right down onto the engineer's lock screen within seconds.
+
+This unified implementation establishes a comprehensive, zero-cost operations center for your startup. Your team gains total control over tracking metrics, freezing baseline environments, and responding to infrastructure issues before they ever expand to affect live tenant hypervisors.
+If you are interested, we can explore how to write an automated Ansible provisioning task to safely deploy the standard monitoring exporters across your computing network nodes automatically. Let me know how you would like to proceed!
+
+# I would love to have this automated through Ansible.
+
+This production-ready Ansible Playbook is designed to automatically deploy, configure, and initialize the Prometheus node_exporter and frr_exporter services across all your Ubuntu compute hosts and virtual routers.
+It leverages the exact structure we generated in your dynamic inventory.yml file, matching your production parameters, setting up dedicated system users, and wiring up the service hooks securely under systemd. [1, 2, 3] 
+------------------------------
+## 📂 Step 1: Create the Ansible Inventory Var Map (group_vars/all.yml)
+To ensure the exporters bind cleanly to your isolated Out-of-Band (OOB) Management network interfaces (enp1s0) instead of bleeding onto the high-speed data fabric wires, define your global variables first.
+Create a file at group_vars/all.yml: [4] 
+
+# --- Infrastructure Exporter Variables ---node_exporter_version: "1.8.2"frr_exporter_version: "1.4.0"
+# Explicitly bind the metric collection endpoints to the local OOB Management IP# This prevents public tenant networks from probing infrastructure telemetry metricsexporter_bind_ip: "{{ ansible_host }}"
+# System pathsbinary_dest_dir: "/usr/local/bin"
+
+------------------------------
+## 📂 Step 2: The Unified Deployment Playbook (deploy_exporters.yml)
+Create a file named deploy_exporters.yml. This playbook will execute against your entire server fleet in parallel, using matching credentials (Welcome0!).
+
+---
+- name: "DC FABRIC PLATFORM: Automated Monitoring Exporter Provisioning Loop"
+  hosts: kube_cluster:exit_routers
+  become: true
+  gather_facts: true
+
+  tasks:
+    # ─────────────────────────────────────────────────────────────────
+    # TASK MATRIX A: FOUNDATIONAL LINUX USER ISOLATION
+    # ─────────────────────────────────────────────────────────────────
+    - name: Ensure an isolated prometheus system group exists
+      ansible.builtin.group:
+        name: prometheus
+        state: present
+        system: true
+
+    - name: Ensure a non-privileged prometheus system user account is active
+      ansible.builtin.user:
+        name: prometheus
+        group: prometheus
+        shell: /bin/false
+        system: true
+        create_home: false
+        state: present
+
+    # ─────────────────────────────────────────────────────────────────
+    # TASK MATRIX B: PROMETHEUS NODE_EXPORTER AUTOMATION ENGINE
+    # ─────────────────────────────────────────────────────────────────
+    - name: Download the target node_exporter release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+        mode: '0644'
+
+    - name: Extract the node_exporter execution binary engine
+      ansible.builtin.unarchive:
+        src: "/tmp/node_exporter.tar.gz"
+        dest: "/tmp"
+        remote_src: true
+
+    - name: Deploy node_exporter binary to system executables path
+      ansible.builtin.copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: "{{ binary_dest_dir }}/node_exporter"
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: true
+      notify: Restart Node Exporter
+
+    - name: Inject the optimized Node Exporter Systemd unit config description
+      ansible.builtin.template:
+        src: templates/node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify: Restart Node Exporter
+
+    # ─────────────────────────────────────────────────────────────────
+    # TASK MATRIX C: PROMETHEUS FRR_EXPORTER AUTOMATION ENGINE
+    # ─────────────────────────────────────────────────────────────────
+    - name: Download the target frr_exporter release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com{{ frr_exporter_version }}/frr-exporter-{{ frr_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/frr_exporter.tar.gz"
+        mode: '0644'
+
+    - name: Extract the frr_exporter routing metrics engine
+      ansible.builtin.unarchive:
+        src: "/tmp/frr_exporter.tar.gz"
+        dest: "/tmp"
+        remote_src: true
+
+    - name: Deploy frr_exporter binary to system executables path
+      ansible.builtin.copy:
+        src: "/tmp/frr-exporter-{{ frr_exporter_version }}.linux-amd64/frr-exporter"
+        dest: "{{ binary_dest_dir }}/frr-exporter"
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: true
+      notify: Restart FRR Exporter
+
+    - name: Inject the optimized FRR Exporter Systemd unit config description
+      ansible.builtin.template:
+        src: templates/frr_exporter.service.j2
+        dest: /etc/systemd/system/frr_exporter.service
+        mode: '0644'
+      notify: Restart FRR Exporter
+
+    # ─────────────────────────────────────────────────────────────────
+    # TASK MATRIX D: SYSTEM INITIALIZATION & STATE ENFORCEMENT
+    # ─────────────────────────────────────────────────────────────────
+    - name: Flush handlers to force daemon reloads and service restarts
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enforce running and active boot startup status states for all telemetry loops
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+        daemon_reload: true
+      loop:
+        - node_exporter
+        - frr_exporter
+
+  # --- HANDLER MANAGEMENT SUBSYSTEM ---
+  handlers:
+    - name: Restart Node Exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: restarted
+
+    - name: Restart FRR Exporter
+      ansible.builtin.systemd:
+        name: frr_exporter
+        state: restarted
+
+------------------------------
+## 📂 Step 3: Create the Systemd Jinja2 Templates
+Create a directory named templates/ inside your playbook workspace folder to store your system service layouts.
+## 📜 templates/node_exporter.service.j2
+
+[Unit]
+Description=Prometheus Node Exporter (Automated by Startup Deployment Loop)
+After=network.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+# Binds specifically to your secure OOB management IP and forces softnet performance tracking
+ExecStart={{ binary_dest_dir }}/node_exporter --web.listen-address={{ exporter_bind_ip }}:9100 --collector.softnet
+
+[Install]
+WantedBy=multi-user.target
+
+## 📜 templates/frr_exporter.service.j2
+
+[Unit]
+Description=FRRouting Prometheus Exporter (Automated by Startup Deployment Loop)
+After=frr.service
+Wants=frr.service
+
+[Service]
+# Runs as root to cleanly interface with the local host /usr/bin/vtysh shell socket loop
+User=root
+Type=simple
+ExecStart={{ binary_dest_dir }}/frr-exporter --web.listen-address={{ exporter_bind_ip }}:9417 --frr.vtysh.path=/usr/bin/vtysh
+
+[Install]
+WantedBy=multi-user.target
+
+------------------------------
+## 🚀 Step 4: Running the Orchestration Loop
+Ensure your directory structure is clean:
+
+├── deploy_exporters.yml
+├── inventory.yml
+├── group_vars/
+│   └── all.yml
+└── templates/
+    ├── frr_exporter.service.j2
+    └── node_exporter.service.j2
+
+Execute the playbook directly from your workstation or administration node over your secure WireGuard tunnel network interface:
+
+ansible-playbook -i inventory.yml deploy_exporters.yml
+
+## 📊 What Happens Once Executed
+
+   1. Ansible uses your master password (Welcome0!) to securely scale horizontally across all hosts in parallel.
+   2. The code downloads the highly optimized binary components, builds your unprivileged isolation accounts, configurations, and fires up systemd.
+   3. The metrics are exposed uniquely on 10.10.1.X:9100 and 10.10.1.X:9417, allowing your central MonitorSrv (10.10.1.10) container pool to immediately scrape and stream real-time telemetry graphs directly onto your dashboard room.
+
+If you are interested, we can look at how to structure an Ansible automation cleanup step to scrub the temporary /tmp download paths post-execution or review your next platform development steps. Let me know how you would like to proceed!
+
+[1] [https://medium.com](https://medium.com/@ranmalsl/ansible-create-initial-user-on-managed-hosts-using-a-playbook-e7406a99e98b)
+[2] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-02-21-how-to-use-ansible-to-configure-prometheus/view)
+[3] [https://www.redhat.com](https://www.redhat.com/en/blog/integrating-ansible-jenkins-cicd-process)
+[4] [https://developer.cisco.com](https://developer.cisco.com/docs/nexus-as-code/nx-os-with-ansible/)
+
+
+# Recall we were discuss what software's could be installed on these Ubuntu Exit Routers. What you are suggesting for MonitorSrv, can we do these in here. If YES, how to spread among these two boxes??
+
+Yes, absolutely. You can eliminate the dedicated MonitorSrv machine entirely and host your entire telemetry, observability, and communication stack directly on your two Ubuntu Exit Routers (Exit_Router1 and Exit_Router2).
+Because your routers have sizable RAM and CPU capacity, they can easily absorb these lightweight Docker containers without impacting their routing pipelines. Spreading this stack across both boxes gives you High Availability (HA), ensuring your critical chat alerts and monitoring dashboards stay online even if one router drops its ISP connection.
+------------------------------
+## 🗺️ Part 1: How to Spread the Software (The HA Architecture)
+To split the stack perfectly while avoiding single-point-of-failure lockouts, divide the tools logically across your two exit nodes:
+
+┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐
+│       EXIT_ROUTER 1 (10.10.1.40)     │      │       EXIT_ROUTER 2 (10.10.1.39)     │
+├──────────────────────────────────────┤      ├──────────────────────────────────────┤
+│ • Prometheus Server (Primary Scraper)│      │ • Prometheus Server (Secondary Sync) │
+│ • Alertmanager (Primary Router)      │      │ • Alertmanager (HA Cluster Mesh)     │
+│ • Grafana Dashboard UI (Primary)     │      │ • Grafana Dashboard UI (Secondary)   │
+│ • Mattermost App Server (Primary)    │      │ • Mattermost DB (PostgreSQL Replication)
+└──────────────────────────────────────┘      └──────────────────────────────────────┘
+
+## The Balancing Strategy:
+
+* The Telemetry Plane (Prometheus/Grafana): Runs on both routers simultaneously. Both instances independently scrape your switches, hosts, and local VPP engines. If Exit_Router1 catches fire, you open your browser to Exit_Router2's IP and have identical, uncorrupted Grafana dashboards.
+* The Notification Plane (Alertmanager): Runs on both routers configured in a native High-Availability Mesh Network. They talk to each other to deduplicate alerts. If a switch fails, both Alertmanagers see it, but they execute a cryptographic handshake to make sure your team only receives one single notification on their smartphones.
+* The Communication Plane (Mattermost): Run the central Mattermost application processing server on Exit_Router1 and host the stateful storage engine (PostgreSQL database) on Exit_Router2. This naturally splits the processing load and separates your communication channel application code from the structural message tables.
+
+------------------------------
+## 📂 Part 2: Split Docker Compose Deployment Blueprints
+To implement this layout, log into each router via your secure WireGuard tunnel and deploy these tailored configuration scripts:
+## 🛠️ Router 1 Stack Config (/opt/monitor-edge/docker-compose.yml)
+Log into Exit_Router1 (10.10.1.40) and drop this file:
+
+version: '3.8'
+networks:
+  monitor-edge-net:
+    driver: bridge
+volumes:
+  prometheus_data:
+  grafana_data:
+  mattermost_app_data:
+services:
+  # Prometheus Scraper Instance 1
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: edge_prometheus_1
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    networks:
+      - monitor-edge-net
+
+  # Alertmanager Node 1 (Configured for HA Clustering)
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: edge_alertmanager_1
+    restart: always
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      # CRITICAL: Wake up the internal cluster communication mesh engine
+      - '--cluster.listen-address=0.0.0.0:9094'
+    ports:
+      - '9093:9093'
+      - '9094:9094' # Cluster peering port
+    networks:
+      - monitor-edge-net
+
+  # Grafana Control Panel UI 1
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: edge_grafana_1
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=Welcome0!
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - '3000:3000'
+    networks:
+      - monitor-edge-net
+
+  # Mattermost Front-End Application UI Server
+  mattermost:
+    image: mattermost/mattermost-team-edition:9.11.0
+    container_name: edge_mattermost_app
+    restart: always
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      # CRITICAL: Points across your OOB management switch straight to Router 2 database
+      - MM_SQLSETTINGS_DATASOURCE=postgres://mmuser:mmuser_password_welcome0!@10.10.1.39:5432/mattermost?sslmode=disable&connect_timeout=10
+      - MM_SERVICESETTINGS_SITEURL=http://10.10.1.40:8065
+    volumes:
+      - mattermost_app_data:/mattermost/data
+    ports:
+      - '8065:8065'
+    networks:
+      - monitor-edge-net
+
+------------------------------
+## 🛠️ Router 2 Stack Config (/opt/monitor-edge/docker-compose.yml)
+Log into Exit_Router2 (10.10.1.39) and drop this matching file:
+
+version: '3.8'
+networks:
+  monitor-edge-net:
+    driver: bridge
+volumes:
+  prometheus_data:
+  grafana_data:
+  mattermost_db_data:
+services:
+  # Prometheus Scraper Instance 2 (Redundant Backup Mirror)
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: edge_prometheus_2
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '9090:9090'
+    networks:
+      - monitor-edge-net
+
+  # Alertmanager Node 2 (Peers with Node 1 to prevent double paging)
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: edge_alertmanager_2
+    restart: always
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--cluster.listen-address=0.0.0.0:9094'
+      # CRITICAL: Instructs this node to actively register with Router 1's engine
+      - '--cluster.peer=10.10.1.40:9094'
+    ports:
+      - '9093:9093'
+      - '9094:9094'
+    networks:
+      - monitor-edge-net
+
+  # Grafana Control Panel UI 2
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: edge_grafana_2
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=Welcome0!
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - '3000:3000'
+    networks:
+      - monitor-edge-net
+
+  # Mattermost Core PostgreSQL Database backend (Exposed onto OOB Management Switch)
+  mattermost-db:
+    image: postgres:16-alpine
+    container_name: edge_mattermost_db
+    restart: always
+    environment:
+      - POSTGRES_USER=mmuser
+      - POSTGRES_PASSWORD=mmuser_password_welcome0!
+      - POSTGRES_DB=mattermost
+    volumes:
+      - mattermost_db_data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432' # Open to the 10.10.1.0/24 management segment so Router 1 can connect
+    networks:
+      - monitor-edge-net
+
+------------------------------
+## 🧱 Part 3: Updating Your Global Exporter Scraping Targets
+Because your telemetry servers now live on the Exit Routers themselves, update the targets block inside your prometheus.yml file (which you will copy to both routers) to monitor the local loops cleanly alongside the compute hosts:
+
+scrape_configs:
+  - job_name: 'vpp-accelerated-routers'
+    static_configs:
+      - targets:
+          - '127.0.0.1:9436'  # Targets local VPP exporter natively inside the box
+          - '10.10.1.40:9436' # Cross-targets Router 1 from Router 2
+          - '10.10.1.39:9436' # Cross-targets Router 2 from Router 1
+
+  - job_name: 'ubuntu-compute-hosts'
+    static_configs:
+      - targets:
+          - '10.10.1.30:9100'  # Host12_1
+          - '10.10.1.29:9100'  # Host12_2
+          - '10.10.1.28:9100'  # Host12_3
+          - '10.10.1.27:9100'  # Host34_1
+          - '10.10.1.26:9100'  # Host34_2
+
+  - job_name: 'sonic-switch-snmp'
+    static_configs:
+      - targets: ['10.10.1.48', '10.10.1.47', '10.10.1.42', '10.10.1.41']
+    metrics_path: /snmp
+    params:
+      module: [if_mib]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        # Points locally to the router's own internal bridge if snmp_exporter container is run.
+        # Alternatively, target '10.10.1.40:9116' or '10.10.1.39:9116' symmetrically.
+        replacement: '127.0.0.1:9116' 
+
+## 🎯 Startup Advantage of This Converged Layout
+By packing your telemetry services straight into your physical edge routing hardware, your startup maximizes its asset density. You save space, save power, and eliminate an entire machine configuration from your deployment plans, while maintaining a resilient system tracking plane.
+Would you like to examine how to adjust your Mattermost webhooks or your Ansible exporter playbooks to account for this split routing system architecture?
+
+# Like both in here..."like to examine how to adjust your Mattermost webhooks and  Ansible exporter playbooks to account for this split routing system architecture"
+
+
+To finish consolidating your platform onto this dual-router high-availability topology, you need to adjust two final pipeline links: your Mattermost Incoming Webhooks and your Ansible Exporter Deployment Playbooks.
+Because your Mattermost application server runs on Exit_Router1 (10.10.1.40) while pulling its persistent data tables from Exit_Router2 (10.10.1.39), you must configure an internal cross-over routing mesh so both Alertmanagers can dispatch notifications through a single, highly available communication gateway.
+------------------------------
+## 💬 Part 1: Adjusting the Mattermost Webhooks for HA Alertmanager
+Since your Mattermost frontend app server runs on Exit_Router1 (10.10.1.40:8065), it acts as the primary API destination for all alerts. However, because both routers run active Alertmanager nodes (edge_alertmanager_1 and edge_alertmanager_2) in a mesh network, you need to update your alertmanager.yml file to point symmetrically to this centralized address on both nodes.
+## The Synchronized Webhook Configuration (alertmanager.yml)
+Deploy this exact configuration file to both Exit_Router1 and Exit_Router2. The Alertmanager cluster mesh will handle deduplication so you only receive one notification for an incident.
+
+global:
+  resolve_timeout: 5m
+route:
+  group_by: ['alertname', 'instance', 'node_name']
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 2h
+  receiver: 'mattermost-edge-cluster'
+receivers:
+- name: 'mattermost-edge-cluster'
+  webhook_configs:
+  # BOTH nodes target the active frontend proxy hosted on Router 1
+  # The OOB Management Switch (10.10.1.0/24) safely routes Router 2's alerts across to Router 1
+  - url: 'http://10.10.1'
+    send_resolved: true
+
+------------------------------
+## 📂 Part 2: Adjusting the Ansible Exporter Playbook
+We must update the Ansible playbook we wrote earlier to account for the fact that Exit_Router1 and Exit_Router2 are now both target production hosts (running standard node/frr exporters) and infrastructure master servers hosting your Docker-based monitoring stacks.
+We can optimize this by updating your global group_vars/all.yml file and structuring an edge-aware playbook targeting your split configuration architecture.
+## 📝 Step A: Update the Global Configuration (group_vars/all.yml)
+
+# --- Infrastructure Exporter System Parameters ---node_exporter_version: "1.8.2"frr_exporter_version: "1.4.0"
+# Explicitly bind the metric collection endpoints to the local OOB Management IPexporter_bind_ip: "{{ ansible_host }}"binary_dest_dir: "/usr/local/bin"
+# --- Converged Docker Stack Flags ---# Forces the playbook to avoid container collisions by assigning unique internal labelsrouter1_mgmt_ip: "10.10.1.40"router2_mgmt_ip: "10.10.1.39"
+
+## 📝 Step B: The Updated Ansible Playbook (deploy_exporters.yml)
+This updated playbook handles two tasks: it deploys standard operating system and routing exporters to your worker nodes, and automatically opens up the target firewall exceptions and Docker space mappings for your converged monitoring stacks on the routers. [1] 
+
+---
+- name: "DC FABRIC PLATFORM: Converged Exporter & Stack Preparation Loop"
+  hosts: kube_cluster:exit_routers
+  become: true
+  gather_facts: true
+
+  tasks:
+    # ─── SECTION 1: BASE SYSTEM ISOLATION ACCOUNTS ───
+    - name: Ensure an isolated prometheus system group exists
+      ansible.builtin.group:
+        name: prometheus
+        state: present
+        system: true
+
+    - name: Ensure a non-privileged prometheus system user account is active
+      ansible.builtin.user:
+        name: prometheus
+        group: prometheus
+        shell: /bin/false
+        system: true
+        create_home: false
+        state: present
+
+    # ─── SECTION 2: STANDARDIZED NODE_EXPORTER ENGINE ───
+    - name: Download the target node_exporter release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+        mode: '0644'
+
+    - name: Extract the node_exporter execution binary engine
+      ansible.builtin.unarchive:
+        src: "/tmp/node_exporter.tar.gz"
+        dest: "/tmp"
+        remote_src: true
+
+    - name: Deploy node_exporter binary to system executables path
+      ansible.builtin.copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: "{{ binary_dest_dir }}/node_exporter"
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: true
+      notify: Restart Node Exporter
+
+    - name: Inject the optimized Node Exporter Systemd unit config description
+      ansible.builtin.template:
+        src: templates/node_exporter.service.j2
+        dest: /etc/systemd/system/node_exporter.service
+        mode: '0644'
+      notify: Restart Node Exporter
+
+    # ─── SECTION 3: ROUTING CONTROL PLANE FRR_EXPORTER ───
+    - name: Download the target frr_exporter release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com{{ frr_exporter_version }}/frr-exporter-{{ frr_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/frr_exporter.tar.gz"
+        mode: '0644'
+
+    - name: Extract the frr_exporter routing metrics engine
+      ansible.builtin.unarchive:
+        src: "/tmp/frr_exporter.tar.gz"
+        dest: "/tmp"
+        remote_src: true
+
+    - name: Deploy frr_exporter binary to system executables path
+      ansible.builtin.copy:
+        src: "/tmp/frr-exporter-{{ frr_exporter_version }}.linux-amd64/frr-exporter"
+        dest: "{{ binary_dest_dir }}/frr-exporter"
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: true
+      notify: Restart FRR Exporter
+
+    - name: Inject the optimized FRR Exporter Systemd unit config description
+      ansible.builtin.template:
+        src: templates/frr_exporter.service.j2
+        dest: /etc/systemd/system/frr_exporter.service
+        mode: '0644'
+      notify: Restart FRR Exporter
+
+    # ─── SECTION 4: ROUTER INTER-NETWORKING REPLICATION TARGETS ───
+    # Dynamically opens up the standard PostgreSQL database port ONLY on Router 2
+    - name: Open database network port exception inside iptables on Router 2
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "5432"
+        source: "{{ router1_mgmt_ip }}"
+        jump: ACCEPT
+        comment: "Allow Mattermost Frontend App on Router 1 to securely reach Router 2 DB"
+      when: ansible_host == router2_mgmt_ip
+
+    - name: Flush handlers to force systemd unit updates
+      ansible.builtin.meta: flush_handlers
+
+    - name: Enforce active boot tracking status states for all baseline collectors
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+        daemon_reload: true
+      loop:
+        - node_exporter
+        - frr_exporter
+
+  handlers:
+    - name: Restart Node Exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: restarted
+
+    - name: Restart FRR Exporter
+      ansible.builtin.systemd:
+        name: frr_exporter
+        state: restarted
+
+------------------------------
+## 🚀 Part 3: Deploying and Running the Ecosystem
+
+   1. Run the Ansible playbook from your management machine to register all basic metrics loops:
+   
+   ansible-playbook -i inventory.yml deploy_exporters.yml
+   
+   2. Log into Exit_Router2 (10.10.1.39) and boot your storage backend block first:
+   
+   cd /opt/monitor-edge && docker compose up -d
+   
+   3. Log into Exit_Router1 (10.10.1.40) and spin up your application frontend tools:
+   
+   cd /opt/monitor-edge && docker compose up -d
+   
+   [2] 
+
+Once the containers stabilize, you can log into Mattermost via your secure WireGuard VPN tunnel, generate your webhook token key, and drop it straight into the /opt/monitor-edge/alertmanager.yml template paths on both machines.
+Your entire infrastructure is now completely redundant, monitored, and automated using pure, free, high-performance open-source tools.
+Would you like to examine how to write the final Grafana dashboard configuration rules to merge the metric queries from both redundant Prometheus databases into a single interface graph?
+
+[1] [https://networktocode.com](https://networktocode.com/blog/ansible-execution-strategies/)
+[2] [https://shoumikmahbub.medium.com](https://shoumikmahbub.medium.com/basic-of-ansible-simplifying-it-automation-c42c28a2ade4)
+
+# Yes, I do.
+
+To merge metrics from both Exit_Router1 and Exit_Router2 into a single, unified Grafana view, you take advantage of Grafana's native High-Availability (HA) Mixed Datasource Handling and PromQL aggregation functions.
+Because both Prometheus instances dynamically scrape identical endpoints across your 100G SONiC BGP-Unnumbered fabric, we want to build your graphs so they display a single consolidated line, but automatically failover if one database goes offline.
+------------------------------
+## 🛠️ Step 1: Register Both Routers as Core Datasources
+Before building the dashboard panels, you must explicitly link both Prometheus databases inside your Grafana UI (Home ➔ Administration ➔ Data sources ➔ Add data source):
+
+   1. Add Datasource 1:
+   * Name: Prometheus-Router-1
+      * URL: http://10.10.1.40:9090
+   2. Add Datasource 2:
+   * Name: Prometheus-Router-2
+      * URL: http://10.10.1.39:9090
+   
+------------------------------
+## 📊 Step 2: The High-Availability PromQL Aggregation Pattern
+If you write a standard query like rate(node_network_receive_bytes_total[1m]), Grafana will print duplicate overlapping lines if you try to view both databases simultaneously.
+To merge them cleanly while accounting for the multi-homed, active-active edge links (enp2s0/enp3s0), we use max by or sum by wrappers across the structural instance and device labels.
+## Panel 1: Merged Active-Active Edge Fabric Throughput
+To plot the true real-time ingress data coming from your SONiC switches down into your compute workers, use this exact configuration block inside your Timeseries panel:
+
+* Datasource Select: Choose -- Mixed -- from the dropdown menu.
+* Query A (Prometheus-Router-1 target identifier):
+
+sum by (instance, device) (rate(node_network_receive_bytes_total{device=~"enp2s0|enp3s0"}[1m]))
+
+* Query B (Prometheus-Router-2 target identifier):
+
+sum by (instance, device) (rate(node_network_receive_bytes_total{device=~"enp2s0|enp3s0"}[1m]))
+
+* Panel Overrides Settings: Under the Query Options dropdown menu on the right panel, toggle Min Interval to 10s to match our fast scraping windows.
+
+## How this behaves during a production outage:
+Because both queries map to the exact same visual labels, Grafana layers them on top of each other perfectly. If Exit_Router1 undergoes a hardware reboot, Query A will drop to zero, but Query B instantly keeps the graphs alive, ensuring your operations team sees no data gaps.
+------------------------------
+## 🎨 Step 3: Complete Unified High-Availability JSON Configuration
+This production-grade JSON block creates a dedicated Multi-Datasource Failover Panel. It links Queries A and B together, configuring Grafana to seamlessly overlay their data points into single, easily readable paths.
+Copy this panel code block and paste it directly into your dashboard view:
+
+{
+  "datasource": {
+    "type": "prometheus",
+    "uid": "-- Mixed --"
+  },
+  "fieldConfig": {
+    "defaults": {
+      "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "smooth",
+        "lineWidth": 2
+      },
+      "unit": "bps"
+    }
+  },
+  "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 20
+  },
+  "id": 10,
+  "options": {
+    "legend": {
+      "calcs": ["mean", "max"],
+      "displayMode": "table",
+      "placement": "bottom"
+    },
+    "tooltip": {
+      "mode": "multi",
+      "sort": "desc"
+    }
+  },
+  "targets": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus-Router-1"
+      },
+      "editorMode": "code",
+      "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device=~\"enp2s0|enp3s0\"}[1m]) * 8)",
+      "legendFormat": "Edge Ingress (Router 1 Pool Link)",
+      "range": true
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus-Router-2"
+      },
+      "editorMode": "code",
+      "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device=~\"enp2s0|enp3s0\"}[1m]) * 8)",
+      "legendFormat": "Edge Ingress (Router 2 Pool Link)",
+      "range": true
+    }
+  ],
+  "title": "⛓️ CONSOLIDATED EDGE INTERFACE CAPACITIES (ACTIVE-ACTIVE HA FABRIC)",
+  "type": "timeseries"
+}
+
+------------------------------
+## 📈 Step 4: The Ultimate Startup Dashboard Topology Flow
+By combining your converged software router stack with this mixed querying method, your startup infrastructure dashboard pipeline is complete:
+
+   1. Symmetric Scraping: Both Exit_Router1 and Exit_Router2 scrape all your hardware switches and compute nodes concurrently over the OOB management switch loop.
+   2. Deduplicated Alerting: If an error is caught, the Alertmanager mesh deduplicates the incident and triggers a single push notification via your self-hosted Mattermost service.
+   3. Resilient Visibility: Your engineers log into either Grafana instance over WireGuard. The unified graphs display complete, aggregated insights into your 100G SONiC fabric, completely hiding any backend server anomalies or local network updates from your public tenants.
+
+This completes the production-grade network telemetry design for your platform. Your startup now has an advanced, high-performance, and completely cost-free observability plane capable of scaling alongside your Kubernetes and OpenStack services.
+Now that the foundational networking, cluster orchestration, and monitoring planes are completely mapped out, would you like to review how to approach the initial OpenStack-Helm deployment commands to bring up your core storage and computing container primitives across your new 10.10.1.x node infrastructure?
+
+
+
 
 
 
