@@ -1,0 +1,186 @@
+Provide Ansible inventory, host_vars, and a ready-to-run playbook structure, 
+with all the Jinja templates and role breakdown and deployable folder structure with list of all the Software Stack to be installed in the laptop running the scripts when 
+it will install SONiC in Switch devices and Ubuntu in Host Servers where netplan and frr will be configured such as servers are multi-homed will be running OpenStack on Kubernetes wnd bare-metal servers will be commissioned from MaaS Server for the following leaf-spine topology
+
+'Deployer Machine' will be the one where all ansible playbooks will be executed from which in tern connects to the below devices using ssh.
+Physical Wiring
+Reference: The CLOS connection details given below:
+
+Name	Wiring
+Tenant server (aka Machine)	Bare metal server that is associated to a tenant. Dual-connected to leafs.
+Tenant firewall	Bare metal server that is associated to a tenant. Dual-connected to leaves.
+Leaf/Leaves	Network Switch that interconnects tenant servers and firewalls. Connected to spines.
+Border-Leaf/Border-Leaves Spine and Exit router are connected to these devices, as well as Ubuntu Firewall
+Spine	Network switch that interconnects leafs and exit switches.
+Exit	Network switch that connects to spines and interconnects to external networks.
+Management Server	Jump-host to access all network switches within the CLOS topology for administrative purpose.
+Management Switch	Connected to the management port of each of the network switches.
+
+Switch Fabrics Management subnet 172.16.2.0/16
+Host Servers Management(iDRAC)  and MaaS PXE subnet 192.168.255.0/125
+
+Physical Switch Profile Consideration:
+Spine:  Celestica chassis DX010 to be used
+Leaf_L1, Leaf_L2: Edge/Accton AS5712-54X model to be used
+Leaf_L3, Leaf_L4: Arista-7050QX-32 to be used
+Border-Leaf: Arista-7050QX-32S to be used
+
+NOTES: Due to different port speed for being different manufacturer of switch chassis and model, 
+during port configuration, it is essential to have breakout configuration when L3 CLOS Fabric is connected.
+
+Leaves-Column Data-Port Physical Wiring:
+Leaf_L1  Ethernet68 to Spine_S1 Ethernet0
+Leaf_L1 Ethernet64 to Spine_S2 Ethernet0
+Leaf_L2 Ethernet68 to Spine_S1 Ethernet4
+Leaf_L2 Ethernet64 to Spine_S2 Etheret4
+Leaf_L3 Ethernet124 to Spine_S1 Ethernet8
+Leaf_L3 Ethernet120 to Spine_S2 Ethernet8
+Leaf_L4 Ethernet124 to Spine_S1 Ethernet12
+Leaf_L4 Ethernet120 to Spine_S2 Ethernet12
+
+Border-Leaf1 Ethernet124 to Spine_S1 Ethernet16
+Border-Leaf1 Ethernet120 to Spine_S2 Ethernet16
+
+
+Border-Leaf2 Ethernet124 to Spine_S1 Ethernet20
+Border-Leaf2 Ethernet120 to Spine_S2 Ethernet20
+
+Border-Leaf1 Ethernet3 to Exit-Router1 CRS326 ether24
+Border-Leaf2 Ethernet3 to Exit-Router2 CRS326 ether24
+
+wifi-router for windows laptop LabController Access:
+Exit-Router1 CRS326 ether2 connected to ether1 of CRS125 for admin wifi access
+Exit-Router2 CRS326 ether2 connected to ether2 of CRS125 for admin wifi access
+
+
+Multi-Homed Server Connection to Leave Column's:
+Leaf Column Leaf_L1/L2:
+Host12_1 enps1 port to Leaf_L1 Ethernet0
+Host12_1 enps2 port to Leaf_L2 Ethernet0
+Host12_2 enps1 port to Leaf_L1 Ethernet1
+Host12_2 enps2 port to Leaf_L2 Ethernet1
+Host12_3 enps1 port to Leaf_L1 Ethernet2
+Host12_3 enps2 port to Leaf_L2 Ethernet2
+
+
+Leaf Column Leaf_L3/L4:
+Host34_1 enps1 port to Leaf_L3 Ethernet0
+Host34_1 enps2 port to Leaf_L4 Ethernet0
+Host34_2 enps1 port to Leaf_L3 Ethernet1
+Host34_2 enps2 port to Leaf_L4 Ethernet2
+
+Leaf Column Border_Leaf1/Border_Leaf2:
+HostB12_1 enps1 port to Border-Leaf1 Ethernet0
+HostB12_1 enps2 port to Border-Leaf2 Ethernet0
+HostB12_2 enps1 port to Border-Leaf1 Ethernet1
+HostB12_2 enps2 port to Border-Leaf2 Ethernet1
+MonitorSrv enps1 port to Border-Leaf1 Ethernet2
+MonitorSrv enps2 port to Border-Leaf2 Ethernet2
+
+Dedicated Ceph Storage Server:
+Stotage_Server_HDD_01  enps1 port to Leaf_L3 Ethernet2
+Stotage_Server_HDD_01  enps2 port to Leaf_L4 Ethernet2
+Stotage_Server_HDD_02: enps1 port to Leaf_L3 Ethernet3
+Stotage_Server_HDD_01  enps2 port to Leaf_L4 Ethernet3
+Stotage_Server_SSD_01:  enps1 port to Borde-Leaf1 Ethernet2
+Stotage_Server_SSD_01:  enps2 port to Border-Leaf2 Ethernet2
+Stotage_Server_SSD_02:  enps1 port to Borde-Leaf1 Ethernet3
+Stotage_Server_SSD_02:  enps2 port to Border-Leaf2 Ethernet3
+
+
+Mgmt-Switch is out of the fabric BGP underlay. It an OOB L2 aggregation switch with VLANs:
+
+VLAN 10: Switch OOB management and exit-router/Leaf-Column mgmt
+Exit_Router1/2 & Mgmt-Switch Wiring:
+Exit_Router1 MGMT Port to Mgmt-Switch Ethernet47/Physical Port48  
+Exit_Router2 MGMT Port to Mgmt-Switch Ethernet46/Physical Port47
+
+
+Leaf-Spine Fabric & Mgmt-Switch Wiring:
+Spine_S1 Management Port  to Mgmt-Switch Ethernet45/Physical Port46
+Spine_S2 L1 Management Port  to Mgmt-Switch Ethernet44/Physical Port45
+
+Leaf_L1 Management Port  to Mgmt-Switch Ethernet43/Physical Port44
+Leaf_L2 Management Port  to Mgmt-Switch Ethernet42/Physical Port43
+Leaf_L3 Management Port  to Mgmt-Switch Ethernet41/Physical Port42
+Leaf_L4 Management Port  to Mgmt-Switch Ethernet40/Physical Port41
+
+Border-Leaf1 Management Port  to Mgmt-Switch Ethernet39/Physical Port40
+Border-Leaf2 Management Port  to Mgmt-Switch Ethernet38/Physical Port39
+
+
+VLAN 20: iDRAC/IPMI
+Host-Servers connected throgh iDRAC port with Mgmt-Switch Wiring:
+Leavs-Column L1/L2:
+Host12_1 iDRAC port to Mgmt-Switch Ethernet0/Physical Port1
+Host12_2 iDRAC port to Mgmt-Switch Ethernet1/Physical Port2
+Host12_3 iDRAC port to Mgmt-Switch Ethernet2/Physical Port3
+
+Leavs-Column L2/L3:
+
+Host34_1 iDRAC port to Mgmt-Switch Ethernet3/Physical Port2
+Host34_2 iDRAC port to Mgmt-Switch Ethernet4/Physical Port5
+
+BorderLeavs-Column L1/L2:
+HostB12_1 iDRAC port to Mgmt-Switch Ethernet5/Physical Port6
+HostB12_2 iDRAC port to Mgmt-Switch Ethernet6/Physical Port7
+MonitorSrv iDRAC port to Mgmt-Switch Ethernet7/Physical Port8
+
+
+
+VLAN 30: MaaS PXE / commissioning
+PXE-Boot Port Wiring:
+Leaf Column Leaf_L1/L2:
+Host12_1 enps0 port to Mgmt-Switch Ethernet11/Physical Port12 for MaaS PXE
+Host12_2 enps0 port to Mgmt-Switch Ethernet12/Physical Port13 for MaaS PXE
+Host12_3 enps0 port to Mgmt-Switch Ethernet13/Physical Port14 for MaaS PXE
+
+Leaf Column Leaf_L3/L4:
+Host34_1 enps0 port to Mgmt-Switch Ethernet14/Physical Port15 for MaaS PXE
+Host34_2 enps0 port to Mgmt-Switch Ethernet15/Physical Port16 for MaaS PXE
+
+Borde_Leaf Column Leaf1/2:
+HostB12_1/Service-Node enps0 port to Mgmt-Switch Ethernet16/Physical Port17 for MaaS  PXE
+HostB12_2 enps0 port to Mgmt-Switch Ethernet17/Physical Port18 for MaaS  PXE
+MonitorSrv enps0 port to Mgmt-Switch Ethernet18/Physical Port19 for MaaS  PXE
+
+
+
+SONiC Border-Leaf1 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0
+SONiC Border-Leaf1 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0
+SONiC Border-Leaf2 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0
+SONiC Border-Leaf2 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0
+
+
+Mangement Switch interface ether22 to Exit-Router1_R630-Ubuntu enp1s0
+Mangement Switch interface ether22 to Exit-Router2_R630-Ubuntu enp1s0
+
+Exit-Router1_R630-Ubuntu enp4s0 to ISP_1 Modem/Router_1 Port
+Exit-Router2_R630-Ubuntu enp4s0 to ISP_2 Modem/Router_2 Port
+
+
+
+
+Chronology of steps are as follows:
+'Deployer Machine' will have executed KubeSpray to deploy K8 Controller and Worker Nodes on HostB12_1
+'Deployer Machine' will execute Openstack Postgres/Helm Chart to install One  PostGres Instance on HostB12_1 Worker Node
+'Deployer Machine' will execute MaaS Helm Chart to install One MaaS Region Controller and One MaaS Rack Controller on HostB12_1 and integrate with Postgres deployed in above steps.
+MaaS Instance running on HostB12_1 will start recognizing and receiving Host Servers availability and start deploying Ubuntu OS through PXE boot to Host12_1, Host12_2, Host12_3, Host34_1, Host34_2 and complete commissioning those servers.
+'Deployer Machine' will start configuring the fabric switches using Ansible roles/ templates of all Spine_S1, Spine_S2, Leaf_L1, Leaf_L2, Leaf_L3, Leaf_L4, Border-Leaf1 & Border-Leaf2 and including ExitRouter CRS326 and complete ebgp process running.
+'Deployer Machine' will start configuring the Host servers such as all Host12_1, Host12_2, Host12_3, Host34_1, Host34_2, HostB12_1 all their network/netplan configuration.
+'Deployer Machine' will start updating the K8s infrastructure using kubespray by adding Host12_1,Host34_1 as Kube Controller and Host12_2, Host12_3, Host34_2 configure as K8 worker Nodes and prepare running instance there.
+Discover OSD's from all above Nodes, Ansible task for polling all Host Servers Storage for Ceph/Helm OSD Mapping/installation automatically for all nodes
+Deploy Ceph Monitor, Ceph manager Ceph OSD and Ceph MetaData Server in all nodes
+'Deployer Machine' will start configuring all the servers for Ceph/Helm deployment and run controller on the controller nodes and ceph other instances on the worker nodes above for Host-specific Ceph disk mapping.
+'Deployer Machine' will start installing Openstack/Helm and deploy Openstack Network Controller on Host12_1,Host34_1 and  Host12_2, Host12_3, Host34_2 configure as other openstack components to make them as Openstack Compute.
+Deploy Openstack Helm Compute Node Components 
+Deploy Prometheous/Grafana using Helm in instance and exporter for log collections and dashboard display
+'Deployers machine validates all the above deployment and configuration and their connectivity.
+
+Ansible health-check/retry tasks for all playbooks
+A vault.yml example for secret management
+A Ansible task for polling MaaS for “Ready” nodes
+Another Ansible task for polling all Host Servers Storage for Ceph/Helm OSD Mapping/installation automatically for all nodes
+Build a report/playbook summary on completion
+
+Automate with Ansible the following to have a complete and ready to start kubespray deployment and later MaaS Server/ Ceph Cluster/ Openstack deployment by writing Ansible Playbook and roles:
