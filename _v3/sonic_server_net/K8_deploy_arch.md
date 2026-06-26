@@ -5469,6 +5469,203 @@ Would you like to examine how to structure the matching OpenStack Nova configura
 
 # Let us modify the script with some changes. Exit_Router1/2 now will not be a CHR vm anymore. It will simply be Two Ubuntu VM. As from the above context, we will configure wireguard in it. However, role of this two vm is to act as Exit_Router. Following is the port and interface configuration: SONiC Border-Leaf1 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0SONiC Border-Leaf1 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0SONiC Border-Leaf2 Ethernet0 to Exit-Router1_R630-Ubuntu enp2s0SONiC Border-Leaf2 Ethernet1 to Exit-Router2_R630-Ubuntu enp3s0Mangement Switch interface ether22 to Exit-Router1_R630-Ubuntu enp1s0Mangement Switch interface ether22 to Exit-Router2_R630-Ubuntu enp1s0Exit-Router1_R630-Ubuntu enp4s0 to ISP_1 Modem/Router_1 PortExit-Router2_R630-Ubuntu enp4s0 to ISP_2 Modem/Router_2 Port
 
+To shift the lab script (deploy_lab_v13.sh) away from the MikroTik CHR virtual machines and implement your exact physical wiring schema using two Ubuntu-based Exit Routers, we must modify the global arrays, the image processing pipelines, the virtual interface maps, and create an automated cloud-init provisioning configuration (p. 1).This setup converts the routers into native Ubuntu nodes (p. 1). They will automatically boot, establish eBGP Unnumbered down to your SONiC Border Leafs (p. 1), map their respective ISP links inside Vrf_Transit, and bring up your WireGuard administration server for remote operators.📂 Modifying the Script Core: The Target Mappings & Resource OverridesLocate the static configuration block inside your script and update these specific sections to redefine the Exit Routers:1. Redefine VM Types, Sizing Tiers, and CredentialsLocate the resource dictionary blocks (around pages 4–7) and change the variables to convert chr to ubuntu (pp. 4, 11):bash# --- Inside CONFIGURATION block ---
+# Change original CHR resource tiers to fit an Ubuntu router footprint
+CHR_RAM=2048   # Increased from 512MB to comfortably run Ubuntu + FRR + WireGuard
+CHR_VCPU=2     # Increased from 1 to 2 vCPUs for parallel packet forwarding
+CHR_ROOT_DISK_GB=20 # Increased to handle standard Ubuntu Noble cloud disk image profiles
+
+# --- Inside initialize_vm_catalog() function (Page 6-7) ---
+# Ensure Exit_Router1 and Exit_Router2 map to the "ubuntu" type matrix
+for er in Exit_Router1 Exit_Router2; do
+  VM_TYPE[$er]="ubuntu"  # Changed from "chr"
+  VM_RAM[$er]=$CHR_RAM
+  VM_VCPU[$er]=$CHR_VCPU
+  VM_NICS[$er]=4         # Mapped to match your 4 physical interface lines: enp1s0-enp4s0
+done
+
+# --- Inside Credentials map (Page 11) ---
+# This ensures cloud-init automatically applies the default system passwords
+VM_USER[ubuntu]="ubuntu"; VM_PASS[ubuntu]="amolla01"
+Use code with caution.2. Re-map the Virtual Interface Bridge Matrix (Pages 11–12)Your physical wiring dictates that each router has four cables connected (p. 11):enp1s0: Management Switch (p. 11)enp2s0: Border-Leaf 1 (p. 11)enp3s0: Border-Leaf 2 (p. 11)enp4s0: ISP Modem (p. 11)Update the VM_BRIDGES map definition precisely to build out libvirt's network boundaries (p. 11):bash# --- Inside TOPOLOGY MAP block (Page 11) ---
+# Format: NIC0 = mgmt-net (enp1s0), NIC1 = fabric0 (enp2s0), NIC2 = fabric1 (enp3s0), NIC3 = ISP Bridge (enp4s0)
+VM_BRIDGES[Exit_Router1]="br-BL1-ER1,br-BL2-ER1,br-isp1"
+VM_BRIDGES[Exit_Router2]="br-BL1-ER2,br-BL2-ER2,br-isp2"
+Use code with caution.(Note: You will need to add "br-isp1" and "br-isp2" to your global FABRIC_BRIDGES array around page 8 to ensure libvirt generates the underlying Open vSwitch mapping segments automatically during execution (pp. 8, 24)).📦 Updating the Automated Day-0 Cloud-Init Injection EngineBecause the Exit Routers are now standard Ubuntu Cloud Images instead of a locked-down network appliance, they can ingest your complex Netplan files, WireGuard endpoints, and FRR configs right out of the box during the virt-install phase (pp. 11, 25).Locate the create_cloud_init_iso function (Pages 24–25) and append a conditional routing branch (p. 24). This will write your custom router properties whenever the script processes Exit_Router1 or Exit_Router2 (p. 24):bashcreate_cloud_init_iso() {
+  local vm_name="$1" user="$2" pass="$3"
+  local iso="$CLOUD_INIT_DIR/${vm_name}-cidata.iso"
+  [[ -f "$iso" ]] && return 0
+
+  local ci_tmp="$TMP_DIR/ci-${vm_name}"
+  mkdir -p "$ci_tmp"
+  local md="$ci_tmp/meta-data"
+  local ud="$ci_tmp/user-data"
+  local nc="$ci_tmp/network-config"
+
+  # Basic Metadata Mapping
+  cat > "$md" <<EOF
+instance-id: ${vm_name}
+local-hostname: ${vm_name}
+EOF
+
+  # 1. Standard Cloud-Init User & Growpart directives (Common for all Ubuntu nodes)
+  cat > "$ud" <<EOF
+#cloud-config
+hostname: ${vm_name}
+manage_etc_hosts: true
+users:
+ - name: ${user}
+   sudo: ALL=(ALL) NOPASSWD:ALL
+   lock_passwd: false
+   plain_text_passwd: '${pass}'
+   shell: /bin/bash
+ssh_pwauth: true
+disable_root: false
+chpasswd:
+ expire: false
+ list: |
+   ${user}:${pass}
+growpart:
+ mode: auto
+ devices: ['/']
+ignore_growroot_disabled: false
+resize_rootfs: true
+write_files:
+ - path: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+   content: |
+     network: {config: disabled}
+   permissions: '0644'
+EOF
+
+  # 2. Check if the target is an Exit Router to inject the Netplan, WG, and FRR pipelines
+  if [[ "$vm_name" == "Exit_Router1" || "$vm_name" == "Exit_Router2" ]]; then
+    
+    # Establish dynamic location-aware variables
+    local clean_slot="41"
+    local wan_gw="192.168.1.1"
+    local wan_ip="192.168.1.50/24"
+    if [[ "$vm_name" == "Exit_Router2" ]]; then
+      clean_slot="42"
+      wan_gw="192.168.2.1"
+      wan_ip="192.168.2.50/24"
+    fi
+
+    # Append structural text parameters directly to user-data for dynamic rendering
+    cat >> "$ud" <<UDROUTEREOF
+runcmd:
+ - systemctl enable serial-getty@ttyS0.service || true
+ - apt-get update && apt-get install -y wireguard frr frr-pythontools iptables
+ - sed -i 's/bgpd=no/bgpd=yes/g' /etc/frr/daemons
+ - mkdir -p /etc/netplan /etc/wireguard /etc/frr
+ # Write Network Interfaces Profile Matrix
+ - |
+   cat << 'NETEOF' > /etc/netplan/01-router-net.yaml
+   network:
+     version: 2
+     renderer: networkd
+     vrfs:
+       mgmt-vrf:
+         table: 1000
+         interfaces: [enp1s0]
+         routing-policy:
+           - from: 192.168.99.0/24
+             table: 1000
+       Vrf_Transit:
+         table: 2000
+         interfaces: [enp2s0, enp3s0, enp4s0]
+     ethernets:
+       enp1s0:
+         dhcp4: false
+         addresses: [10.10.12.${clean_slot}/24]
+       enp4s0:
+         dhcp4: false
+         addresses: [${wan_ip}]
+         routes:
+           - to: default
+             via: ${wan_gw}
+             metric: 100
+       enp2s0: { dhcp4: false, ipv6-privacy: false }
+       enp3s0: { dhcp4: false, ipv6-privacy: false }
+     loopbacks:
+       lo:
+         addresses: [10.1.12.${clean_slot}/32]
+   NETEOF
+ # Apply Netplan state layers directly to the kernel namespaces
+ - rm -f /etc/netplan/50-cloud-init.yaml
+ - netplan apply
+ # Write WireGuard Server configuration
+ - |
+   cat << 'WGEOF' > /etc/wireguard/wg0.conf
+   [Interface]
+   PrivateKey = SERVER_PRIVATE_KEY_PLACEHOLDER
+   ListenPort = 51820
+   Address = 192.168.99.1/24
+   [Peer]
+   PublicKey = ADMIN_LAPTOP_PUBLIC_KEY_PLACEHOLDER
+   AllowedIPs = 192.168.99.100/32, 10.10.0.0/16
+   WGEOF
+ - systemctl enable wg-quick@wg0 && systemctl start wg-quick@wg0
+ - ip route add 192.168.99.0/24 dev wg0 table 1000
+ # Write FRR BGP routing daemon configurations
+ - |
+   cat << 'FRREOF' > /etc/frr/frr.conf
+   frr version 8.x
+   !
+   router bgp 4200000000 vrf Vrf_Transit
+    bgp router-id 10.1.12.${clean_slot}
+    no bgp default ipv4-unicast
+    bgp bestpath as-path multipath-relax
+    !
+    neighbor enp2s0 interface remote-as 4200000001
+    neighbor enp3s0 interface remote-as 4200000002
+    !
+    address-family ipv4 unicast
+     neighbor enp2s0 activate
+     neighbor enp2s0 capability extended-nexthop
+     neighbor enp3s0 activate
+     neighbor enp3s0 capability extended-nexthop
+     !
+     default-originate
+     redistribute kernel
+     maximum-paths 64
+    exit-address-family
+   !
+   FRREOF
+ - chown frr:frr /etc/frr/frr.conf && chmod 640 /etc/frr/frr.conf
+ - systemctl restart frr
+ - iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
+ - touch /etc/cloud/cloud-init.disabled
+UDROUTEREOF
+
+  else
+    # Fall back to your original generic Ubuntu cloud-init configuration block (Page 25)
+    cat >> "$ud" <<EOF
+runcmd:
+ - systemctl enable serial-getty@ttyS0.service || true
+ - touch /etc/cloud/cloud-init.disabled
+EOF
+  fi
+
+  # 3. Generate the standard cidata ISO file image structure
+  local mgmt_mac=$(gen_mac "$vm_name" "mgmt")
+  cat > "$nc" <<EOF
+version: 2
+ethernets:
+  mgmt:
+    match:
+      macaddress: "${mgmt_mac}"
+    dhcp4: true
+EOF
+
+  genisoimage -output "$iso" -volid cidata -joliet -rock "$ud" "$md" "$nc" 2>/dev/null
+  rm -rf "$ci_tmp"
+  sudo chmod o+r "$iso"
+}
+Use code with caution.✂️ Eliminating the CHR Virtio Checksum WorkaroundBecause the routers are now standard, native Ubuntu nodes (p. 1), you must eliminate the multiline Python XML modification code block found on pages 29–31 (p. 29). That workaround was required because MikroTik RouterOS lacks internal drivers to negotiate checksum processing inside QEMU (p. 28). Ubuntu handles this natively at the kernel level, making the old code unnecessary.Locate this block in deploy_single_vm (bottom of page 29 to page 31) (p. 29):bash# --- CHR: Patch libvirt XML to disable virtio checksum offload on fabric NICs ---
+if [[ "$type" == "chr" && -n "$bridges" ]]; then
+...
+fi
+Use code with caution.Delete that entire block cleanly from the file.🌐 The Resulting Structural ArchitectureBy applying these modifications to deploy_lab_v13.sh (p. 1):Running ./deploy_lab_v13.sh deploy will download only the SONiC and standard Ubuntu base image formats (pp. 2, 20). It completely skips the MikroTik zip pipeline (p. 20).The script provisions two dual-homed Ubuntu routers (p. 1). They route public tenant traffic through Vrf_Transit via active-active ECMP out of port enp4s0 (p. 1).It separates your admin controls. Your operations team can securely run a standard WireGuard tunnel handshake directly over the internet into enp4s0 to interact with your local, isolated CRS125 Management Switch infrastructure (p. 1).Would you like assistance in validating the upstream SONiC Border Leaf configurations to confirm they are actively accepting the default routes generated by these newly added Ubuntu Exit Routers?AI responses may include mistakes. Current limitations only allow part of the document to be used for this answer. Learn more
 
 # It would be easy if you can provide me the line numbers 'from' and 'to' to copy the changes to original files.
 
