@@ -3,7 +3,7 @@
 To simulate and configure this setup on a single Ubuntu host, you need to map Open vSwitch (OVS) bridges to the virtualized SONiC switches using Virtual Ethernet (veth) pairs.
 Here is the comprehensive guide, architectural layout, and configuration steps for both Arista hardware profiles simulated in SONiC.
 ## Network Architecture Diagram
-
+```mermaid
 ==========================================================================================
                                UBUNTU HOST (EMULATION ENVIRONMENT)
 ==========================================================================================
@@ -49,7 +49,7 @@ Here is the comprehensive guide, architectural layout, and configuration steps f
    |       SONiC Switch Instance 1     |           |       SONiC Switch Instance 2     |
    |          (Arista 7050QX32)        |           |         (Arista 7050QX32S)        |
    +-----------------------------------+           +-----------------------------------+
-
+```
 ------------------------------
 ## OVS and Host Connectivity Breakdown
 Inside your Ubuntu emulation host, the connections are mapped via veth pipes. One end of the pipe plugs into the OVS bridge (representing the server layer), and the other end maps directly to the network interfaces assigned to the SONiC container or virtual machine.
@@ -153,7 +153,7 @@ Here is the complete implementation, directory layout, and data-driven Ansible a
 If you pass a random host interface to virsh, it will fail because QEMU needs a file descriptor or a TAP interface it can control.
 ## The Proper Manual Wiring (virsh XML snippet)
 For your virtual SONiC virtual machines, define the interfaces inside your Libvirt domain XML file using the type='bridge' configuration pointing to your OVS bridge:
-
+```
 <interface type='bridge'>
   <mac address='52:54:00:a1:b1:c1'/>
   <!-- This connects the VM port directly to your OVS bridge -->
@@ -161,7 +161,7 @@ For your virtual SONiC virtual machines, define the interfaces inside your Libvi
   <virtualport type='openvswitch'/>
   <model type='virtio'/>
 </interface>
-
+```
 When Libvirt boots this VM, it dynamically creates a TAP interface on the Ubuntu host and hot-plugs it into br-h101-l1. Inside the SONiC VM, this maps sequentially to its first front-panel data port (Ethernet0). [2] 
 ------------------------------
 ## Part 2: SONiC HwSKU Port Configurations
@@ -189,7 +189,7 @@ Ethernet3 4 10000
 
 ------------------------------
 ## Part 3: Data-Driven Ansible Automation Design## Directory Structure
-
+```mermaid
 sonic-provisioning/
 ├── group_vars/
 │   └── all.yml
@@ -205,9 +205,9 @@ sonic-provisioning/
 │           ├── pre_check.yml
 │           └── post_check.yml
 └── deploy_topology.yml
-
+```
 ## Variable Architecture## Global Variables (group_vars/all.yml)
-
+```yaml
 ---ansible_user: adminansible_network_os: sonicsonic_config_dir: /etc/sonic
 
 ## Switch 1 Context Profile (host_vars/switch1-7050qx32.yml)
@@ -263,9 +263,9 @@ sonic-provisioning/
       - item.speed in [10000, 40000]
     fail_msg: "Interface definition contains variable formatting errors."
   loop: "{{ interfaces }}"
-
+```
 ## Jinja2 Layout Configuration Engine (roles/sonic_breakout/templates/config_db.json.j2)
-
+```
 {
     "PORT": {
         {% for intf in interfaces %}
@@ -292,9 +292,9 @@ sonic-provisioning/
         {% endfor %}
     }
 }
-
+```
 ## Execution Core Tasks (roles/sonic_breakout/tasks/main.yml)
-
+```
 ---
 - include_tasks: pre_check.yml
 
@@ -342,7 +342,7 @@ sonic-provisioning/
   gather_facts: no
   roles:
     - sonic_breakout
-
+```
 ------------------------------
 Would you like to build an inventory file example to orchestrate these connections, or do you need assistance generating the Ubuntu-side automation scripts to map the virsh OVS bridges dynamically?
 
