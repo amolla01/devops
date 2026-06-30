@@ -998,6 +998,384 @@ If you are using terminal servers in your rack, would you like to see how to con
 
 
 
+#### For simulating a complete production level Routed to Host Leaf Spine CLOS 3 fabric, which option will have less network complexity for complete setup, creating all the vms through virsh by a script deploy/ubuntu/sonic vms and then apply port/interface configuration or the approach provided above, where virsh vm's configuration xml created from virsh bridge designed and later start vms?
+
+For simulating a production-level, 3-stage Clos fabric (Leaf-Spine Routed-to-Host) in a lab environment, the approach provided above—generating complete, declarative Libvirt XML files and then launching the VMs—is significantly less complex, less error-prone, and much closer to a real-world pipeline.
+Here is a analytical breakdown of why the declarative XML approach minimizes network complexity compared to a dynamic scripting approach, along with how it directly benefits a 3-stage Clos architecture.
+------------------------------
+## The Two Approaches Compared## 1. The Dynamic Scripted Approach (High Complexity)
+In this method, you boot generic "blank" virtual machines first, and then use a host bash/python script or hot-plug commands (virsh attach-interface) to dynamically map OVS bridges and virtual Ethernet pairs while the system is initializing or running.
+
+* Why it adds complexity: Linux reorders network interfaces based on the timing of when PCI slots are discovered or attached. If you attach 32 interfaces dynamically, your virtual SONiC instance might map physical port 1 to Ethernet4 and physical port 5 to Ethernet0. This completely breaks data-driven configuration automation.
+* Troubleshooting nightmare: You have to constantly track temporary TAP index numbers on the Ubuntu host to find out which VM interface links to which OVS bridge.
+
+## 2. The Declarative XML Approach (Low Complexity)
+In this method, your Ansible playbook defines the entire hardware topology upfront into a static Libvirt XML configuration template, maps all active and stub ports sequentially, and then runs a single virsh start.
+
+* Why it reduces complexity: QEMU presents the entire network bus to the SONiC guest operating system at exact boot time. PCI slots are fixed (0x03, 0x04, 0x05, etc.), meaning the physical cabling index directly and perfectly matches SONiC's EthernetX mapping every single boot.
+* Idempotency: If a VM crashes or reboots, its network layout remains structurally identical.
+
+------------------------------
+## Why the Declarative XML Approach Wins for a Routed-to-Host Clos Fabric
+A 3-stage Routed-to-Host Clos fabric demands precise structural mapping across three distinct layers. Managing this via dynamic scripting becomes unmaintainable quickly, whereas declarative data modeling keeps it clean:
+```
+  [Spine Layer]      Spine-1  <=== (Fabric Links) ===>  Spine-2
+                        ▲                                  ▲
+                        └───┐                          ┌───┘
+                            ▼                          ▼
+  [Leaf Layer]            Leaf-1                     Leaf-2
+                            ▲                          ▲
+                        ┌───┴───┐                  ┌───┴───┐
+                        ▼       ▼                  ▼       ▼
+  [Host Layer]       Server-1 Server-2          Server-3 Server-4
+                    (Routed Links directly to Server Operating Systems)
+```
+## 1. Perfect Fabric Link Alignment (Leaf to Spine)
+In a Clos network, predictable link grouping is vital for ECMP (Equal-Cost Multi-Path) routing.
+Using the declarative XML approach, your host_vars completely map the topology. For example, Leaf-1's port Ethernet28 will always plug into Spine-1's port Ethernet0 via a dedicated OVS bridge (br-l1-s1), eliminating any tracking guesswork.
+## 2. Seamless "Routed-to-Host" (BGP-to-the-Host) Emulation
+Because you are routing all the way to the server, the virtual host servers (Ubuntu VMs) also need structured network configurations. By creating the XML files upfront, you can configure your server VMs to run FRRouting (FRR) or standard BGP daemons, aligning their interfaces perfectly with the Leaf switch child breakout ports.
+## 3. Data-Driven Port Densities (The Stub Port Solution)
+As established earlier, an Arista switch expects 32 or 36 ports. The declarative template fills the gaps up to the hardware profile maximum using br-stub. This allows SONiC to initialize its routing protocols (like BGP) across the active ports while gracefully ignoring the rest, perfectly mirroring a true production data center deployment.
+------------------------------
+## Recommended Pipeline Execution Workflow
+To keep complexity at a minimum, organize your deployment pipeline into three distinct, decoupled phases using the automation architecture we built:
+
+   1. Phase 1 (The Blueprint): Execute the host playbook to render the virsh XML definitions containing all exact active lab OVS bridges and loopback stub ports.
+   2. Phase 2 (The Fabric Ignite): Run virsh start against all nodes (Spines, Leafs, and Host Servers). QEMU handles the virtual cabling instantaneously.
+   3. Phase 3 (The Configuration Engine): Run your data-driven SONiC breakout and routing playbook to push IP addresses and BGP parameters down the known, stable interface index.
+
+If you are mapping out the routing protocols for this Clos setup, would you like to see how to extend your existing Ansible variable architecture to automatically generate the BGP Peering and Autonomous System Number (ASN) configurations for the Leaf and Spine layers?
+
+### Attaching my complete wiring. Analyze deeply. Understand interface wiring for different switch and device models and get information from internet on SONiC and ubuntu configuration. The provide a complete Ansible var files with relevant models and group / host var details with proper interface wiring setup through ansible.
+
+
+To construct a production-ready, data-driven automation framework for this complex multi-vendor L3 Clos architecture (pp. 1-2), we must abstract the underlying hardware idiosyncrasies (such as the 40G QSFP+ breakouts (p. 2) versus standard SFP+ lanes (p. 2)) into clean, unified Ansible host variable models.Below is the production-grade blueprint, inventory scheme, and host/group variable design implementing the exact wiring topology requested (p. 1).Software Stack Requirements (Deployer Machine)To run these playbooks successfully, your Deployer Machine (p. 1) requires the following software layer:Ubuntu Linux 24.04 LTS / 22.04 LTS as the baseline OS.Ansible Core (>= 2.15) to orchestrate both Linux endpoints and network switches (p. 1).Ansible Collections:sonic.sonic_os (To push configuration to Celestica, Edge-Core, and Arista SONiC switches) (p. 2).community.libvirt & openvswitch.openvswitch (For hypervisor/simulation control if running via the KVM/OVS approach).ansible.netcommon & community.network (For core network tasks).Python Libraries: netaddr (for subnet parsing), jmespath (for complex variable filtering).FRRouting (FRR) & Netplan tools (built-in targeted dependencies for host server configurations) (p. 1).Directory Architecture Blueprinttextdeployer-fabric-root/
+```
+├── inventory.ini
+├── vault.yml
+├── group_vars/
+│   ├── all.yml
+│   ├── spines.yml
+│   ├── leafs.yml
+│   ├── border_leafs.yml
+│   └── compute_nodes.yml
+├── host_vars/
+│   ├── Spine_S1.yml
+│   ├── Spine_S2.yml
+│   ├── Leaf_L1.yml
+│   ├── Leaf_L3.yml
+│   ├── Border-Leaf1.yml
+│   └── Host12_1.yml
+├── roles/
+│   ├── fabric_breakout/
+│   ├── fabric_routing/
+│   └── host_networking/
+└── site_deploy.yml
+```
+Use code with caution.Part 1: Ansible Inventory (inventory.ini)This structured inventory groups devices cleanly by their operational tier in the Clos topology (p. 1), separating switches by hardware capability to handle distinct profile templates.ini[spines]
+```
+Spine_S1 ansible_host=172.16.2.46 hw_model="Celestica-DX010"
+Spine_S2 ansible_host=172.16.2.45 hw_model="Celestica-DX010"
+
+[leafs_accton]
+Leaf_L1 ansible_host=172.16.2.44 hw_model="Accton-AS5712-54X"
+Leaf_L2 ansible_host=172.16.2.43 hw_model="Accton-AS5712-54X"
+
+[leafs_arista_qx]
+Leaf_L3 ansible_host=172.16.2.42 hw_model="Arista-7050QX-32"
+Leaf_L4 ansible_host=172.16.2.41 hw_model="Arista-7050QX-32"
+
+[border_leafs]
+Border-Leaf1 ansible_host=172.16.2.40 hw_model="Arista-7050QX-32S"
+Border-Leaf2 ansible_host=172.16.2.39 hw_model="Arista-7050QX-32S"
+
+[leafs:children]
+leafs_accton
+leafs_arista_qx
+
+[fabric_switches:children]
+spines
+leafs
+border_leafs
+
+[compute_nodes]
+Host12_1 ansible_host=192.168.255.10
+Host12_2 ansible_host=192.168.255.11
+Host12_3 ansible_host=192.168.255.12
+Host34_1 ansible_host=192.168.255.13
+Host34_2 ansible_host=192.168.255.14
+HostB12_1 ansible_host=192.168.255.15
+HostB12_2 ansible_host=192.168.255.16
+MonitorSrv ansible_host=192.168.255.17
+```
+Use code with caution.Part 2: Fabric Switch Variable InfrastructureGlobal Group Configuration (group_vars/fabric_switches.yml)yaml
+```yaml
+---
+ansible_user: admin
+ansible_network_os: sonic
+sonic_config_dir: /etc/sonic
+fabric_mgmt_subnet: "172.16.2.0/16"
+Use code with caution.Spine Configuration Template Context (host_vars/Spine_S1.yml)yaml---
+bgp_asn: 65000
+loopback_ip: "10.0.0.1/32"
+
+# Fabric Uplinks/Downlinks Map
+fabric_ports:
+  - name: "Ethernet0" # Connects to Leaf_L1 Eth68
+    ip_address: "10.254.1.1/30"
+  - name: "Ethernet4" # Connects to Leaf_L2 Eth68
+    ip_address: "10.254.1.5/30"
+  - name: "Ethernet8" # Connects to Leaf_L3 Eth124
+    ip_address: "10.254.1.9/30"
+  - name: "Ethernet12" # Connects to Leaf_L4 Eth124
+    ip_address: "10.254.1.13/30"
+  - name: "Ethernet16" # Connects to Border-Leaf1 Eth124
+    ip_address: "10.254.1.17/30"
+  - name: "Ethernet20" # Connects to Border-Leaf2 Eth124
+    ip_address: "10.254.1.21/30"
+Use code with caution.Leaf L1 Configuration Context (host_vars/Leaf_L1.yml)yaml---
+bgp_asn: 65101
+loopback_ip: "10.0.1.1/32"
+
+# Upstream Infrastructure Connections
+fabric_uplinks:
+  - name: "Ethernet68" # Maps to Spine_S1 Eth0
+    ip_address: "10.254.1.2/30"
+    peer_asn: 65000
+  - name: "Ethernet64" # Maps to Spine_S2 Eth0
+    ip_address: "10.254.2.2/30"
+    peer_asn: 65000
+
+# Downstream Multi-Homed Host Server Connectivity
+downstream_ports:
+  - name: "Ethernet0" # Host12_1 enps1
+    ip_address: "10.1.1.1/30"
+  - name: "Ethernet1" # Host12_2 enps1
+    ip_address: "10.1.1.5/30"
+  - name: "Ethernet2" # Host12_3 enps1
+    ip_address: "10.1.1.9/30"
+Use code with caution.Leaf L3 Breakout Architecture Context (host_vars/Leaf_L3.yml)Because Leaf_L3 is an Arista-7050QX-32, its uplink speeds to the Spine must be calculated using explicitly defined parent breakout configurations (p. 2).yaml---
+bgp_asn: 65103
+loopback_ip: "10.0.1.3/32"
+
+# Explicit Parent Breakout Definitions
+breakout_topology:
+  - parent_port: "Ethernet120"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet120" # Spine_S2 Eth8 Connectivity
+        lanes: "121"
+        speed: 10000
+        ip_address: "10.254.2.10/30"
+        peer_asn: 65000
+  - parent_port: "Ethernet124"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet124" # Spine_S1 Eth8 Connectivity
+        lanes: "125"
+        speed: 10000
+        ip_address: "10.254.1.10/30"
+        peer_asn: 65000
+
+# Server Access Ports
+downstream_ports:
+  - name: "Ethernet0" # Host34_1 enps1
+    ip_address: "10.3.1.1/30"
+  - name: "Ethernet1" # Host34_2 enps1
+    ip_address: "10.3.1.5/30"
+  - name: "Ethernet2" # Storage_Server_HDD_01 enps1
+    ip_address: "10.3.2.1/30"
+  - name: "Ethernet3" # Storage_Server_HDD_02 enps1
+    ip_address: "10.3.2.5/30"
+Use code with caution.Border-Leaf 1 Dynamic Mapping Context (host_vars/Border-Leaf1.yml)The Arista-7050QX-32S breakout profiles reflect native SFP+ port groupings (p. 2) as specified in the physical wiring requirements.yaml---
+bgp_asn: 65201
+loopback_ip: "10.0.2.1/32"
+
+breakout_topology:
+  - parent_port: "Ethernet120"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet120" # Spine_S2 Eth16 Link
+        lanes: "121"
+        speed: 10000
+        ip_address: "10.254.2.18/30"
+        peer_asn: 65000
+  - parent_port: "Ethernet124"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet124" # Spine_S1 Eth16 Link
+        lanes: "125"
+        speed: 10000
+        ip_address: "10.254.1.18/30"
+        peer_asn: 65000
+
+# Edge Upstream Route Connectivity (Exit-Router Connections)
+external_uplinks:
+  - name: "Ethernet3" # Exit-Router1 CRS326 ether24
+    ip_address: "192.168.100.2/30"
+    peer_asn: 64999
+
+# Dedicated Server & Core Compute Tier Ports
+downstream_ports:
+  - name: "Ethernet0" # HostB12_1 enps1
+    ip_address: "10.5.1.1/30"
+  - name: "Ethernet1" # HostB12_2 enps1
+    ip_address: "10.5.1.5/30"
+  - name: "Ethernet2" # Storage_Server_SSD_01 enps1
+    ip_address: "10.5.2.1/30"
+  - name: "Ethernet3" # Storage_Server_SSD_02 enps1
+    ip_address: "10.5.2.5/30"
+Use code with caution.Part 3: Host Server Configuration Context (host_vars/Host12_1.yml)The multi-homed bare-metal compute servers run both Netplan and FRR natively (p. 1), allowing BGP-to-the-Host routing to handle active-active L3 forwarding loops into the OpenStack on Kubernetes cluster infrastructure (p. 1).yaml---
+ansible_user: ubuntu
+ansible_network_os: linux
+
+# Multi-Homed Routing Variables
+server_bgp_asn: 65501
+server_loopback: "10.100.0.1/32"
+
+# Netplan Wire Map
+pxe_interface: "enps0" # OOB MaaS Deployment Link
+pxe_ip: "192.168.255.10/24"
+
+fabric_interfaces:
+  - device: "enps1" # Plugs into Leaf_L1 Ethernet0
+    ip_address: "10.1.1.2/30"
+    peer_ip: "10.1.1.1"
+    peer_asn: 65101
+  - device: "enps2" # Plugs into Leaf_L2 Ethernet0
+    ip_address: "10.1.2.2/30"
+    peer_ip: "10.1.2.1"
+    peer_asn: 65102
+Use code with caution.Part 4: Jinja2 Automation Templates1. SONiC Interface DB Generation (roles/fabric_breakout/templates/config_db.json.j2)json{
+    "PORT": {
+        {% if breakout_topology is defined %}
+        {% for breakout in breakout_topology %}
+            {% for child in breakout.child_ports %}
+        "{{ child.name }}": {
+            "alias": "{{ child.name }}",
+            "lanes": "{{ child.lanes }}",
+            "speed": "{{ child.speed }}",
+            "admin_status": "up"
+        }{{ ',' if not loop.last else '' }}
+            {% endfor %}{{ ',' if not loop.last else '' }}
+        {% endfor %}
+        {% endif %}
+    },
+    "BREAKOUT_CFG": {
+        {% if breakout_topology is defined %}
+        {% for breakout in breakout_topology %}
+        "{{ breakout.parent_port }}": {
+            "brkout_mode": "{{ breakout.breakout_mode }}"
+        }{{ ',' if not loop.last else '' }}
+        {% endfor %}
+        {% endif %}
+    }
+}
+Use code with caution.2. Host Server Network Definition (roles/host_networking/templates/netplan.yaml.j2)yamlnetwork:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ pxe_interface }}:
+      addresses:
+        - {{ pxe_ip }}
+      nameservers:
+        addresses:
+    {% for intf in fabric_interfaces %}
+    {{ intf.device }}:
+      addresses:
+        - {{ intf.ip_address }}
+      critical: true
+    {% endfor %}
+Use code with caution.3. Host FRRouting Daemon Config (roles/host_networking/templates/frr.conf.j2)textfrr version 8.1
+frr defaults traditional
+hostname {{ inventory_hostname }}
+!
+interface {{ server_loopback }}
+!
+router bgp {{ server_bgp_asn }}
+ bgp router-id {{ server_loopback | ipaddr('address') }}
+ no bgp default ipv4-unicast
+ neighbor FABRIC peer-group
+ {% for intf in fabric_interfaces %}
+ neighbor {{ intf.peer_ip }} remote-as {{ intf.peer_asn }}
+ neighbor {{ intf.peer_ip }} peer-group FABRIC
+ {% endfor %}
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  neighbor FABRIC activate
+ exit-address-family
+!
+line vty
+!
+Use code with caution.Part 5: Secure Secrets Pipeline (vault.yml)yaml---
+vault_sonic_admin_password: "$6$rounds=40000$SaltString$YourEncryptedProductionSONiCSecretKeyHash..."
+vault_ubuntu_sudo_password: "CleartextOrEncryptedSudoPasswordForHostProvisioning Tasks"
+Use code with caution.Part 6: Complete Automation Blueprint (site_deploy.yml)This production-ready execution engine applies configurations sequentially across layers, validating states before advancing to ensure fabric stability (p. 7).yaml---
+- name: Phase 1 - Orchestrate SONiC Fabric Layer Breakouts & Routing
+  hosts: fabric_switches
+  gather_facts: no
+  tasks:
+    - name: Deploy Custom JSON Database Profile Templates
+      template:
+        src: roles/fabric_breakout/templates/config_db.json.j2
+        dest: "{{ sonic_config_dir }}/config_db.json"
+        backup: yes
+      register: database_patch
+
+    - name: Hot reload SONiC configuration database if configurations changed
+      sonic_command:
+        commands: ["sudo config reload -y"]
+      when: database_patch.changed
+
+    - name: Validation | Enforce Data Plane Routing Connectivity Engine
+      sonic_command:
+        commands: ["show ip route"]
+      register: routing_table
+      retries: 3
+      delay: 10
+      until: "'bgp' in routing_table.stdout"
+
+- name: Phase 2 - Configure Multi-Homed Host Target Infrastructure
+  hosts: compute_nodes
+  gather_facts: yes
+  become: yes
+  tasks:
+    - name: Push Declarative Netplan Layout Mapping File
+      template:
+        src: roles/host_networking/templates/netplan.yaml.j2
+        dest: /etc/netplan/01-netcfg.yaml
+      register: netplan_cfg
+
+    - name: Apply Host System Network Changes
+      command: netplan apply
+      when: netplan_cfg.changed
+
+    - name: Deploy Dynamic FRR Underlay BGP Configurations
+      template:
+        src: roles/host_networking/templates/frr.conf.j2
+        dest: /etc/frr/frr.conf
+      register: frr_cfg
+
+    - name: Restart FRRouting Daemon Engine
+      service:
+        name: frr
+        state: restarted
+      when: frr_cfg.changed
+
+- name: Phase 3 - End-to-End Clos Infrastructure Verification Check
+  hosts: compute_nodes
+  gather_facts: no
+  tasks:
+    - name: Run End-to-End Data Fabric Ping Validations
+      command: "ping -c 3 10.0.0.1" # Target Spine_S1 Loopback IP to confirm path
+      register: ping_check
+      failed_when: ping_check.rc != 0
+
+```
+Use code with caution.Since you are running an OpenStack on Kubernetes (KubeSpray) deployment on top of this routed fabric (pp. 1, 7), would you like to see the Calico / Cilium BGP peering configuration overlay variables to map your Kubernetes CNI directly into these Leaf switches?
+
 
 
 
