@@ -1754,7 +1754,8 @@ These files fully define the logical switch/server identities alongside their co
 # Libvirt VM Guest System Specs
 vm_name: "vsonic-spine-s1"
 total_physical_ports: 32
-vm_cpu: 2vm_ram_mb: 4096
+vm_cpu: 2
+vm_ram_mb: 4096
 os_variant: "debian11"
 disk_image_path: "/var/lib/libvirt/images/sonic-celestica.qcow2"
 
@@ -1784,7 +1785,8 @@ host_network_mapping:
 ---
 vm_name: "vsonic-leaf-l1"
 total_physical_ports: 54         # Edge/Accton AS5712 hardware profile layout
-vm_cpu: 2vm_ram_mb: 4096
+vm_cpu: 2
+vm_ram_mb: 4096
 os_variant: "debian11"
 disk_image_path: "/var/lib/libvirt/images/sonic-accton.qcow2"
 host_network_mapping:
