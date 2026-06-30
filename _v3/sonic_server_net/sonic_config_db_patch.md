@@ -63,13 +63,13 @@ All three switches share a Broadcom Trident 2 ASIC, which groups four 10G intern
 ------------------------------
 ## Platform Driving Variables & Models Breakdown
 While the underlying json payload format is consistent across these Trident 2 architectures, the variations lie entirely in port layout and indexing:
-
+```mermaid
 | Switch Model [12, 13, 14, 15, 16] | Total Cages Affected | Native Master Profile | Breakout Mapping Profile | Driving SerDes Blocks |
 |---|---|---|---|---|
 | Accton AS5712-54X | 6x QSFP+ Ports (Ports 49-54) | 1x40G over 4 bonded lanes | 4x10G per QSFP+ cage | Lanes 112 through 135 depending on chosen cage selection |
 | Arista 7050QX-32S | 32x QSFP+ Ports + 4x SFP+ Ports | 1x40G over 4 bonded lanes | 4x10G per QSFP+ cage | Full Trident 2 SerDes map up to 128 discrete channels |
 | Arista 7050QX-3 | 32x QSFP+ Ports | 1x40G over 4 bonded lanes | 4x10G per QSFP+ cage | Maps identically to the 32S omitting the native discrete SFP+ indices |
-
+```
 ------------------------------
 ## Executing the Breakout
 To feed this JSON into the running Redis instance and ensure the dependencies compile cleanly, run the following tool string on the terminal: [4, 17] 
@@ -406,7 +406,7 @@ To break out specific ports, it uses precise Broadcom Trident 2 ASIC mappings de
 
 * Accton AS5712-54X (Ports 49 & 50): In SONiC's logical profile, physical QSFP+ ports 49 and 50 are identified as master logical interfaces Ethernet192 (Lanes 192–195) and Ethernet196 (Lanes 196–199).
 * Arista 7050QX-32 / 32S (Port 1): For both variations, the first physical QSFP+ port maps to logical interface Ethernet0 (SerDes Lanes 0–3) [7050QX-32S Data Sheet](https://www.arista.com/assets/data/pdf/Datasheets/7050QX-32_32S_Datasheet_S.pdf). Note that on the 32S, breaking out QSFP+ Port 1 safely overrides the shared front-panel SFP+ interfaces [First Four Ports on Arista 7050QX-32S](https://networkengineering.stackexchange.com/questions/72408/how-to-use-the-first-four-ethernet-ports-on-arista-7050qx-32s).
-
+```mermaid
 ------------------------------
 ## 1. Structure the Project Files
 Create a workspace organized into standard Ansible structures:
@@ -426,6 +426,7 @@ Create a workspace organized into standard Ansible structures:
 └── deploy_breakout.yml
 
 ------------------------------
+```
 ## 2. Group and Host Variables Data Model## inventory/group_vars/sonic_switches.yml
 
 ---ansible_connection: ansible.netcommon.network_cliansible_network_os: sonic.sonic.sonicansible_user: adminansible_ssh_pass: "YourSecureNetOpsPassword"sonic_mtu: 9100
