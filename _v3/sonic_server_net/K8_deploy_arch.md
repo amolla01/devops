@@ -183,7 +183,7 @@ ingress_nginx_enabled: true
 
 ## Step 2: Enable and Configure MetalLB
 In the same addons.yml file, enable MetalLB and provide it with a pool of unassigned, dedicated IP addresses from your local physical subnet:
-
+```
 metallb_enabled: truemetallb_protocol: "layer2" # Use layer2 for simplicity, or "bgp"
 metallb_config:
   address_pools:
@@ -193,6 +193,7 @@ metallb_config:
       auto_assign: true
 
 ------------------------------
+```
 ## 4. The Final Traffic Flow
 Once Kubespray finishes running, the magic happens automatically:
 
@@ -304,14 +305,14 @@ Because it is an L2 network, MetalLB doesn't need to advertise routes to your Sp
 * How Ops Staff Access It: Your operations staff must have a jump box, a VPN gateway, or a dedicated workstation physically connected (or VLAN-tagged) into that same L2 Management network. They will query the dashboard directly using the local L2 IP assigned by MetalLB.
 
 Kubespray Configuration for this setup (addons.yml):
-
+```
 metallb_enabled: truemetallb_protocol: "layer2" # No BGP requiredmetallb_config:
   address_pools:
     ops-management:
       ip_range:
         - 10.10.10.200-10.10.10.250 # Free IPs in your OOB/Management Subnet
       auto_assign: true
-
+````
 ------------------------------
 ## Solution 2: Use MetalLB BGP Mode, but over the Workload Fabric (Using a Management VRF)
 If your corporate security policy dictates that Operations staff must access the dashboards from outside the physical data center (meaning the traffic must traverse the Leaf-Spine network), you cannot use the isolated OOB switch.
@@ -621,7 +622,7 @@ To prevent the CHR VM from becoming a bottleneck for your entire data center's 1
 ## 3. Activating the OOB VPN Gateway (The Packet Flow)
 Now that your host is powerful enough, you can scale your remote access architecture securely without risking network failure.
 Inside the MikroTik CHR VM, you will maintain the Multi-VRF Isolation design:
-
+```
 [Remote Admin] 
       │ (WireGuard over Internet / 10G WAN)
       ▼
@@ -651,6 +652,7 @@ Inside the MikroTik CHR VM, you will maintain the Multi-VRF Isolation design:
    4. The Local Delivery: The packet leaves the CHR VM via the OOB interface, crosses your physical CRS125-24G switch, and hits the Kubespray cluster nodes locally.
 
 ------------------------------
+```
 ## 🚀 Hardware Recommendation (Which server to choose?)
 If you have a choice among the models you listed, deploy this on the Dell R630 or R720:
 
@@ -671,6 +673,7 @@ Which routing protocol (eBGP or iBGP) are you planning to use across your intern
 Connecting your Exit Routers directly to the Border Leafs (instead of the Spines) is the industry-standard design for modern L3 CLOS datacenters. In network architecture, this is known as a Dedicated Border Pod or Edge Block.
 In an eBGP-styled SONiC fabric, this layout keeps your core network highly efficient. Your Spines can focus entirely on high-speed internal switching (East-West traffic) without having to process external internet routing tables (North-South traffic). [1, 2] 
 Here is exactly how the network topology, eBGP peerings, and your Dell KVM/CHR server fit together in this setup.
+```
 ------------------------------
 ## 🗺️ The Revised Topology Layout
 The physical and logical connection layout flows sequentially from the outside world down to your servers:
@@ -684,6 +687,7 @@ The physical and logical connection layout flows sequentially from the outside w
       │
 [SONiC Compute Leafs] ───► [Kubespray Workers & Master Nodes]
 ------------------------------
+```
 ## 🤝 How eBGP Routing Works in This Setup
 Since you are running eBGP, every tier of your network layout must use a distinct Autonomous System (AS) number to prevent routing loops and ensure clean traffic separation. [3, 4] 
 ## 1. Assign Your AS Numbers
@@ -701,6 +705,7 @@ Your CHR VM will establish two separate eBGP sessions: one to Border Leaf A, and
 
 ## 3. Fabric Multipathing (ECMP)
 Because the CHR VM is connected to both Border Leafs simultaneously, you must enable ECMP (Equal-Cost Multi-Pathing) inside both SONiC and MikroTik RouterOS. This allows traffic to be perfectly load-balanced across both 10G links. If one Border Leaf crashes or undergoes maintenance, the other link instantly absorbs 100% of the traffic with zero packet drop.
+```
 ------------------------------
 ## 🔒 Isolating the OOB Management Network
 Even though the CHR VM is physically wired to the Border Leafs for your production data plane, it still acts as your secure gateway to the isolated CRS125 management switch.
@@ -715,6 +720,7 @@ Your physical cabling strategy on the Dell R630 host server will look like this:
 
 Inside the CHR VM configuration, you must ensure that no BGP configurations or routing tables reference NIC 4. The OOB-Mgmt VRF remains an isolated logical island inside the router.
 ------------------------------
+```
 ## 🚀 Summary of the Traffic Flows
 This architecture cleanly isolates your traffic paths based on the destination:
 
@@ -740,6 +746,7 @@ Are you planning to run your eBGP sessions over standard IPv4/IPv6 addresses, or
 Yes, you are 100% correct. Spotting this is a critical milestone in enterprise architecture design.
 By routing all external tenant workload traffic and management traffic through a single Dell R630 server, you have introduced a massive Single Point of Failure (SPOF). If that single server experiences a power supply failure, a motherboard crash, or a routine hypervisor kernel upgrade, your entire data center loses its connection to the outside world. Furthermore, a single 10G link per Border Leaf can easily bottleneck a 100G SONiC core if your OpenStack tenants run bandwidth-heavy applications.
 To eliminate this bottleneck and failure point, you must scale your edge to a Dual-Exit Router (Active-Active) architecture. Here is exactly how to design a fully redundant external gateway using a second server and standard routing mechanics.
+```
 ------------------------------
 ## 🏗️ The Redundant Edge Architecture
 To eliminate the SPOF, you introduce a second physical server (e.g., a second Dell R630 or R620) running an identical Ubuntu KVM and MikroTik CHR configuration.
@@ -765,6 +772,7 @@ To eliminate the SPOF, you introduce a second physical server (e.g., a second De
             [   100G SONiC Spine Fabric   ]
 
 ------------------------------
+```
 ## 1. How Redundancy and Scale Work across the Data Plane
 Because you are using eBGP, you do not need complex, fragile clustering software (like Corosync or Pacemaker) at the router level. The network routing protocol handles failover and load balancing natively. [1] 
 
@@ -888,6 +896,7 @@ Because the keys and configurations match perfectly, an administrator's laptop c
 ## 3. The Internal OOB Layer: Routing the Management Traffic
 Once an admin successfully authenticates via WireGuard into either router, they need to reach your physical CRS125-24G switch to manage the Kubespray cluster.
 As we touched on earlier, you will use VRRP inside the OOB-Mgmt VRF to handle this internal leg safely:
+```
 
                   [ Remote Administrator ]
                              │
@@ -913,7 +922,7 @@ As we touched on earlier, you will use VRRP inside the OOB-Mgmt VRF to handle th
    │   └──► NGINX Ingress Dashboard   │
    └──────────────────────────────────────────────────┘
 
-
+```
    1. Inside CHR VM 1, you assign the OOB interface (NIC 4) an IP of 10.10.10.2/24 and create a VRRP instance with a high priority (e.g., 100), assigning it the virtual IP 10.10.10.1.
    2. Inside CHR VM 2, you assign the OOB interface an IP of 10.10.10.3/24 and create a VRRP instance with a lower priority (e.g., 50), assigning it the same virtual IP 10.10.10.1.
    3. In your MikroTik routing rules, when a WireGuard user tries to access the cluster dashboards, the router looks up the path via the OOB-Mgmt table.
@@ -994,6 +1003,7 @@ By setting encapsulation to None in your Kubespray variables (calico_ipip-mode: 
 ------------------------------
 ## 3. Separation of Concerns: K8s CNI vs. OpenStack Neutron + OVN
 You do not need to worry about the Kubernetes CNI conflicting with your tenant network paths. They operate on entirely different planes: [16] 
+```
 
 ┌────────────────────────────────────────────────────────┐
 │             Bare-Metal Ubuntu Host Server              │
@@ -1015,7 +1025,7 @@ You do not need to worry about the Kubernetes CNI conflicting with your tenant n
 ▼                            ▼                           ▼
                      [ SONiC Fabric ]
 
-
+```
 * The Kubernetes CNI Layer: Only handles the traffic for the OpenStack management controllers (the binaries and APIs running inside Docker/Containerd). This network traffic is internal, lightweight, and restricted to your administrative subnets. [17, 18, 19] 
 * The OpenStack Neutron/OVN Layer: Bypasses the Kubernetes network namespaces entirely. OpenStack uses Open vSwitch (OVS) and Geneve tunnels to bind tenant virtual machines directly to dedicated physical network cards or VLAN trunk ports. [20] 
 
@@ -1109,7 +1119,7 @@ Calico has a feature called Host Endpoints (HEPs). If you run Calico with encaps
 In an eBGP Unnumbered Leaf-Spine topology, assigning an IP address to a physical interface is skipped. Instead, the interface uses IPv6 Link-Local addresses to peer. Because the physical links lack standard IPv4 addresses, the loopback interface (lo) becomes the most important interface on the machine. It hosts the server's primary system IPv4 identifier (the VTEP or Router ID). [7, 8, 9] 
 ## The Multi-Homed Netplan Configuration [10] 
 This configuration keeps your OOB Management Subnet (enp1s0) cleanly locked in its own isolated VRF, handles BGP Unnumbered on your fabric bonds/interfaces, and hooks a stable anchor IP to lo.
-
+```
 network:
   version: 2
   renderer: networkd
@@ -1147,6 +1157,7 @@ network:
         - 192.168.254.11/32  # This unique IP is advertised via BGP Unnumbered
 
 ------------------------------
+```
 ## 3. Will Defining lo Introduce Confusion into Kubernetes?
 No, defining lo inside Netplan will not introduce confusion, provided you follow one strict rule.
 When a CNI (like Calico) or the container runtime launches a Kubernetes pod, it creates a completely fresh, isolated virtual network namespace for that pod. Inside that pod's namespace, the runtime automatically provisions a brand-new, completely clean lo (loopback) interface mapped strictly to 127.0.0.1. [11, 12, 13, 14, 15] 
@@ -1203,7 +1214,7 @@ This configuration does not happen inside your Kubespray cluster.yml or your Ubu
 Because you are deploying OpenStack, you will configure this inside your Helm values files (values.yaml) right before deploying the charts.
 ## Example: Where it looks inside a Helm override file:
 If you are deploying the OpenStack OVN or Ingress chart, you will modify its deployment values to enable host networking:
-
+```
 # Example snippet inside an openstack-helm values configuration filemanifests:
   daemonset_ovn_bgp_agent: true
 pod:
@@ -1225,7 +1236,7 @@ apiVersion: apps/v1kind: DaemonSetmetadata:
           image: t穩定/ovn-bgp-agent:latest
           securityContext:
             privileged: true # Often paired with hostNetwork to allow routing table modifications
-
+```
 ## ⚠️ A Critical Architecture Warning for Your Topology
 Because your Netplan separates your infrastructure into an isolated Management VRF (enp1s0) and a Production Fabric (lo + BGP Unnumbered), any pod deployed with hostNetwork: true will inherit all of those tables.
 Ensure that your hostNetwork application pods are explicitly configured to bind to your Loopback IP (192.168.254.x) or your fabric interfaces, and never accidentally bind their public-facing listening sockets to the OOB Management VRF interface.
@@ -1321,6 +1332,7 @@ Open addons.yml and modify or un-comment the following parameters to activate th
 # 3. Security & Automationcert_manager_enabled: true
 # 4. Resource Tracking & Auto-scalingmetrics_server_enabled: true
 # 5. Load Balancing (Essential for Bare-Metal / L2 OOB Management)metallb_enabled: truemetallb_protocol: "layer2"metallb_config:
+```
   address_pools:
     primary:
       ip_range:
@@ -1328,6 +1340,7 @@ Open addons.yml and modify or un-comment the following parameters to activate th
 
 (Note: CoreDNS is a mandatory core system component of Kubernetes; Kubespray automatically installs it by default, so you do not need to turn it on inside this file.)
 ------------------------------
+```
 ## 2. Other Components Essential for Your Architecture
 Because your end goal is running OpenStack and Ceph on top of a 100G SONiC Fabric, there are several other powerful enterprise plugins hidden inside Kubespray that you should consider activating.
 ## A. Multus CNI Addon (Multi-Network Pods) [2] 
@@ -1345,13 +1358,13 @@ kube_network_plugin_multus: true
 * What it does: Automatically creates persistent storage volumes utilizing the raw local NVMe/SSD drives physically installed inside your Dell R630/R720 servers. [6] 
 * Why it matters for OpenStack: Your OpenStack databases (like MariaDB/Galera for Keystone and Nova metadata) require low-latency local storage to perform effectively before your massive distributed Ceph cluster bootstraps. [7] 
 * Where to enable: Inside addons.yml:
-
+```
 local_volume_provisioner_enabled: truelocal_volume_provisioner_storage_classes:
   local-storage:
     host_dir: /mnt/disks
     mount_dir: /mnt/disks
 
-
+```
 ## C. Node Feature Discovery (NFD) [8] 
 
 * What it does: Inspects the physical hardware of your Dell servers and automatically applies text labels to the Kubernetes nodes (e.g., feature.node.kubernetes.io/cpu-hardware_encryption_aesni=true). [9] 
@@ -1471,7 +1484,7 @@ You must never run heavy, disk-intensive, data-plane storage systems on your Exi
 ------------------------------
 ## 🏗️ The Best Software Layout for your Exit Nodes
 To keep these hosts perfectly clean and predictable, do not install software packages directly onto the bare-metal Ubuntu host. Instead, install Docker/Podman on the raw Ubuntu OS and run your management utilities as standalone containers:
-
+```
 [ Dell R630 Bare-Metal Host OS: Ubuntu ]
   ├── [ KVM Hypervisor ] ──► MikroTik CHR VM (eBGP Core + WireGuard VPN)
   │
@@ -1479,7 +1492,7 @@ To keep these hosts perfectly clean and predictable, do not install software pac
         ├── Container: Vector / Rsyslog (Writes raw text logs to local disk)
         ├── Container: Dnsmasq (Local DNS / NTP for the rack)
         └── Container: Standalone Rancher Manager (To view the K8s cluster)
-
+```
 By confining your infrastructure software inside standard Docker containers on the host, you can easily set strict CPU/Memory resource limits (e.g., limiting Rancher or Syslog to a maximum of 2 CPU cores and 4GB of RAM). This guarantees that your host server will always have plenty of processing power left over to handle multi-gigabit WireGuard encryption and background BGP route calculations.
 How do you plan to handle backing up the configuration files and raw system logs stored on these Exit Router local disks?
 
@@ -1517,7 +1530,7 @@ These applications represent heavy, data-intensive workloads. They should be dep
 ------------------------------
 ## 🏗️ The Clean Architectural Mapping
 To visualize how this looks, your software assets are mapped across your two physical server tiers like this:
-
+```
 ┌────────────────────────────────────────────────────────┐
 │  EXIT ROUTER TIER (Two Dell R630 Nodes)                │
 │  - Isolated OOB Network                                │
@@ -1539,7 +1552,7 @@ To visualize how this looks, your software assets are mapped across your two phy
 │  ► Registry: Harbor Registry                           │
 │  ► DevOps SDLC: ArgoCD, Tekton, Plane, SonarQube       │
 └────────────────────────────────────────────────────────┘
-
+```
 ## 💡 Why this is Mandatory for BGP/WireGuard Performance
 The MikroTik CHR VM on your R630 expects a highly predictable environment. If an automated ArgoCD sync pulls down 50 containers, SonarQube runs a heavy code scan, and Harbor starts pulling gigabytes of images all at the exact same time, your Linux kernel will trigger its OOM (Out Of Memory) Killer. If it kills your local FRR daemon or chokes the CPU, your eBGP sessions to your SONiC Border Leafs will drop, knocking your entire cloud platform offline.
 By keeping your Exit Routers lean and mean (only MaaS, OpenBao, and the routing logic), you guarantee 100% uptime for your data center entry gate.
@@ -1552,6 +1565,7 @@ Are you planning to deploy MaaS using its standard multi-node High Availability 
 Yes, this physical cabling plan is highly efficient and perfectly aligns with enterprise high-availability standards. By utilizing the different speeds of your network interface cards (NICs) exactly where they make the most sense, you eliminate any physical bottlenecks.
 Your 10G links handle the massive throughput of your internal SONiC fabric, while your 1G links perfectly match your 1G external internet pipe without wasting expensive 10G ports.
 Here is exactly how to distribute your ports and configure the routing logic to support your dual-ISP setup across both servers.
+```
 ------------------------------
 ## 🔌 The Physical Cabling Map per Server
 To avoid any single point of failure, you will mirror this physical cabling across both of your Dell Exit Router servers (R630/R720 #1 and #2):
@@ -1591,6 +1605,7 @@ When both servers are cabled up, your dual-homed internet edge looks like this:
        [   100G SONiC Spine Fabric   ]
 
 ------------------------------
+```
 ## 🧠 How to Configure the Routing Logic inside the CHR VMs
 Because you have two separate ISPs providing a 1G connection, you must manage how traffic exits your data center so you don't cause asymmetric routing or routing loops. Inside your MikroTik CHR VMs, implement the following configuration strategies:
 ## A. Inbound Traffic Redundancy (For OpenStack Tenants & WireGuard)
