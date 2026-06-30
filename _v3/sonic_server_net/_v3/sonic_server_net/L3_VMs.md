@@ -1391,6 +1391,1005 @@ Part 6: Complete Automation Blueprint (site_deploy.yml)This production-ready exe
 ```
 Use code with caution.Since you are running an OpenStack on Kubernetes (KubeSpray) deployment on top of this routed fabric (pp. 1, 7), would you like to see the Calico / Cilium BGP peering configuration overlay variables to map your Kubernetes CNI directly into these Leaf switches?
 
+### Please update everything above related with ipv4 since we will be using bgp unnumbered for the topology.
+
+To transition this 3-stage Clos fabric to BGP Unnumbered, we eliminate the overhead of designing and assigning individual /30 point-to-point IPv4 addresses to link interfaces.
+BGP Unnumbered uses IPv6 Router Advertisements (RA) and IPv6 Link-Local addresses to automatically discover neighbors. IPv4 routing prefixes are then carried dynamically across these IPv6 links using Extended Next-Hop Encoding (RFC 8950).
+Here is your updated, fully data-driven BGP Unnumbered automation framework.
+------------------------------
+## Part 1: Ansible Inventory (inventory.ini)
+The inventory structure remains the same, but we add clear autonomous system boundaries. Spines share a single ASN, while every Leaf pair or single Leaf is assigned its own distinct ASN (following standard eBGP design).
+```
+[spines]
+Spine_S1 ansible_host=172.16.2.46 hw_model="Celestica-DX010" bgp_asn=65000 loopback_ip="10.0.0.1"
+Spine_S2 ansible_host=172.16.2.45 hw_model="Celestica-DX010" bgp_asn=65000 loopback_ip="10.0.0.2"
+
+[leafs_accton]
+Leaf_L1 ansible_host=172.16.2.44 hw_model="Accton-AS5712-54X" bgp_asn=65101 loopback_ip="10.0.1.1"
+Leaf_L2 ansible_host=172.16.2.43 hw_model="Accton-AS5712-54X" bgp_asn=65101 loopback_ip="10.0.1.2"
+
+[leafs_arista_qx]
+Leaf_L3 ansible_host=172.16.2.42 hw_model="Arista-7050QX-32" bgp_asn=65102 loopback_ip="10.0.1.3"
+Leaf_L4 ansible_host=172.16.2.41 hw_model="Arista-7050QX-32" bgp_asn=65102 loopback_ip="10.0.1.4"
+
+[border_leafs]
+Border-Leaf1 ansible_host=172.16.2.40 hw_model="Arista-7050QX-32S" bgp_asn=65201 loopback_ip="10.0.2.1"
+Border-Leaf2 ansible_host=172.16.2.39 hw_model="Arista-7050QX-32S" bgp_asn=65201 loopback_ip="10.0.2.2"
+
+[fabric_switches:children]
+spines
+leafs_accton
+leafs_arista_qx
+border_leafs
+
+[compute_nodes]
+Host12_1 ansible_host=192.168.255.10 server_asn=65501 loopback_ip="10.100.0.1"
+Host12_2 ansible_host=192.168.255.11 server_asn=65502 loopback_ip="10.100.0.2"
+Host12_3 ansible_host=192.168.255.12 server_asn=65503 loopback_ip="10.100.0.3"
+Host34_1 ansible_host=192.168.255.13 server_asn=65504 loopback_ip="10.100.0.4"
+Host34_2 ansible_host=192.168.255.14 server_asn=65505 loopback_ip="10.100.0.5"
+HostB12_1 ansible_host=192.168.255.15 server_asn=65506 loopback_ip="10.100.0.6"
+HostB12_2 ansible_host=192.168.255.16 server_asn=65507 loopback_ip="10.100.0.7"
+MonitorSrv ansible_host=192.168.255.17 server_asn=65508 loopback_ip="10.100.0.8"
+
+------------------------------
+```
+## Part 2: Fabric Switch BGP Unnumbered Host Variables
+We strip away all point-to-point IP configurations. The interface blocks now only need to identify which ports are running BGP Unnumbered.
+## Spine 1 Variable Profile (host_vars/Spine_S1.yml)
+```
+---
+# BGP Unnumbered interfaces towards the Leavesunnumbered_interfaces:
+  - "Ethernet0"   # To Leaf_L1
+  - "Ethernet4"   # To Leaf_L2
+  - "Ethernet8"   # To Leaf_L3
+  - "Ethernet12"  # To Leaf_L4
+  - "Ethernet16"  # To Border-Leaf1
+  - "Ethernet20"  # To Border-Leaf2
+
+## Leaf L1 Variable Profile (host_vars/Leaf_L1.yml)
+
+---# Fabric uplinks are purely unnumbered interfacesunnumbered_interfaces:
+  - "Ethernet68"  # To Spine_S1
+  - "Ethernet64"  # To Spine_S2
+  - "Ethernet0"   # Downlink to Host12_1
+  - "Ethernet1"   # Downlink to Host12_2
+  - "Ethernet2"   # Downlink to Host12_3
+
+## Leaf L3 Breakout & Unnumbered Profile (host_vars/Leaf_L3.yml)
+For your Arista breakout cages, we define the breakout transformation and include the final logical child ports in the unnumbered orchestration engine.
+
+---breakout_topology:
+  - parent_port: "Ethernet120"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet120" # To Spine_S2
+        lanes: "121"
+        speed: 10000
+  - parent_port: "Ethernet124"
+    breakout_mode: "4x10G"
+    child_ports:
+      - name: "Ethernet124" # To Spine_S1
+        lanes: "125"
+        speed: 10000
+unnumbered_interfaces:
+  - "Ethernet120"
+  - "Ethernet124"
+  - "Ethernet0"   # To Host34_1
+  - "Ethernet1"   # To Host34_2
+  - "Ethernet2"   # To Storage_Server_HDD_01
+  - "Ethernet3"   # To Storage_Server_HDD_02
+
+------------------------------
+```
+## Part 3: Host Server Configuration Context (host_vars/Host12_1.yml)
+The multi-homed hosts configure their fabric links without any IPv4 addresses. Instead, IPv6 link-local capability is enabled via Netplan, allowing FRR on the host to peer dynamically using unnumbered interfaces.
+```
+---
+pxe_interface: "enps0"pxe_ip: "192.168.255.10/24"
+# Pure data interfaces to the Leaves - No IPv4 assignedfabric_interfaces:
+  - name: "enps1" # Plugs into Leaf_L1 Ethernet0
+  - name: "enps2" # Plugs into Leaf_L2 Ethernet0
+
+------------------------------
+```
+## Part 4: Jinja2 Templates (BGP Unnumbered Native Configuration)
+In modern versions of SONiC, BGP configuration is managed natively via frr.conf directly inside the FRR container component.
+## 1. Switch Network Operating System Config (roles/fabric_routing/templates/frr.conf.j2)
+This template sets up the switch interfaces to send IPv6 Router Advertisements, defines the BGP Unnumbered peer group, and activates Extended Next-Hop capabilities.
+```
+! SONiC Routing Configuration for {{ inventory_hostname }}
+frr version 8.1
+frr defaults traditional
+hostname {{ inventory_hostname }}
+!
+{# Enable IPv6 Routing Advertisements on unnumbered links #}
+{% for intf in unnumbered_interfaces %}
+interface {{ intf }}
+ no ipv6 nd suppress-ra
+ ipv6 nd ra-interval 10
+exit
+!
+{% endfor %}
+!
+router bgp {{ bgp_asn }}
+ bgp router-id {{ loopback_ip }}
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ {# Peer Group Definition using Interface Peering #}
+ neighbor UNNUMBERED_FABRIC peer-group
+ neighbor UNNUMBERED_FABRIC remote-as external
+ neighbor UNNUMBERED_FABRIC capability extended-next-hop
+ !
+ {# Link every active unnumbered interface to the peer group #}
+ {% for intf in unnumbered_interfaces %}
+ neighbor {{ intf }} peer-group UNNUMBERED_FABRIC
+ {% endfor %}
+ !
+ address-family ipv4 unicast
+  network {{ loopback_ip }}/32
+  neighbor UNNUMBERED_FABRIC activate
+  neighbor UNNUMBERED_FABRIC send-community both
+ exit-address-family
+!
+
+## 2. Host Server Netplan Config (roles/host_networking/templates/netplan.yaml.j2)
+
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ pxe_interface }}:
+      addresses:
+        - {{ pxe_ip }}
+    {% for intf in fabric_interfaces %}
+    {{ intf.name }}:
+      # Force IPv6 Link-Local only for BGP Unnumbered path tracking
+      link-local: [ ipv6 ]
+      optional: true
+    {% endfor %}
+```
+## 3. Host FRRouting Configuration (roles/host_networking/templates/frr.conf.j2)
+```
+! Host Routing Configuration for {{ inventory_hostname }}
+frr version 8.1
+frr defaults traditional
+hostname {{ inventory_hostname }}
+!
+interface lo
+ ip address {{ loopback_ip }}/32
+exit
+!
+router bgp {{ server_asn }}
+ bgp router-id {{ loopback_ip }}
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ neighbor HOST_FABRIC peer-group
+ neighbor HOST_FABRIC remote-as external
+ neighbor HOST_FABRIC capability extended-next-hop
+ !
+ {% for intf in fabric_interfaces %}
+ neighbor {{ intf.name }} peer-group HOST_FABRIC
+ {% endfor %}
+ !
+ address-family ipv4 unicast
+  network {{ loopback_ip }}/32
+  neighbor HOST_FABRIC activate
+ exit-address-family
+!
+
+------------------------------
+```
+## Part 5: Deployment Execution Engine (site_deploy.yml)
+The production execution playbook pushes interface state breakouts, writes the unnumbered FRR routing blocks directly into the network components, and reloads the routing engine safely.
+```
+---
+- name: Phase 1 - Configure SONiC BGP Unnumbered Fabric Layer
+  hosts: fabric_switches
+  gather_facts: no
+  tasks:
+    - name: Push breakout mapping layers if hardware contains QSFP modules
+      template:
+        src: roles/fabric_breakout/templates/config_db.json.j2
+        dest: "{{ sonic_config_dir }}/config_db.json"
+      register: db_breakout
+
+    - name: Apply breakout engine changes
+      command: "sudo config reload -y"
+      when: db_breakout.changed
+
+    - name: Build and inject BGP Unnumbered routing layout matrix
+      template:
+        src: roles/fabric_routing/templates/frr.conf.j2
+        dest: /etc/sonic/frr/frr.conf
+      register: router_config
+
+    - name: Soft-reload switch routing daemon control loop
+      command: "vtysh -c 'write memory' && systemctl restart frr"
+      when: router_config.changed
+
+- name: Phase 2 - Configure Bare Metal Multi-Homed Host Targets
+  hosts: compute_nodes
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: Generate Netplan file with explicit IPv6 Link-Local targets
+      template:
+        src: roles/host_networking/templates/netplan.yaml.j2
+        dest: /etc/netplan/01-netcfg.yaml
+      register: netplan_patch
+
+    - name: Refresh Host interface state mappings
+      command: netplan apply
+      when: netplan_patch.changed
+
+    - name: Deploy Host Server BGP Unnumbered FRR profiles
+      template:
+        src: roles/host_networking/templates/frr.conf.j2
+        dest: /etc/frr/frr.conf
+      register: host_frr_patch
+
+    - name: Activate Host Routing Layer
+      service:
+        name: frr
+        state: restarted
+      when: host_frr_patch.changed
+
+- name: Phase 3 - Fabric Validation Engine
+  hosts: fabric_switches
+  gather_facts: no
+  tasks:
+    - name: Validation | Verify BGP Unnumbered Neighbor Adjacency Sessions
+      sonic_command:
+        commands: ["vtysh -c 'show bgp summary'"]
+      register: bgp_state
+
+    - name: Validation | Confirm active IPv4 Extended Next-Hop routes are passing
+      assert:
+        that:
+          - "'Established' in bgp_state.stdout"
+        fail_msg: "Fabric Validation Failure: Unnumbered routing adjacency failed to establish."
+```
+Would you like to build an automated post-boot check task to parse the routing table using the ipaddr module, confirming that each host can see every other host's IPv4 loopback across the unnumbered network mesh?
+
+### Can we have a dedicated playbook that will complete the task up to starting the virsh vms (SONiC and Ubuntu) with appropriate openvswitch bridge/stub wiring with switch/ubuntu interfaces properly and completely data driven from the var files you created. Complete rendering of virsh xml that explains how the topology connectivity is working between switches/virsh tap interfaces etc. As you stated 3 phases above. Assuming this one is the first phase.
+
+To automate the initial infrastructure orchestration phase on your Ubuntu hypervisor, we will map out a complete, standalone Ansible playbook and role.
+This role generates the Open vSwitch (OVS) bridges, constructs the full, production-grade Libvirt domain XML files, inserts the active or stub interfaces sequentially to guarantee EthernetX mapping predictability inside SONiC, and then launches the entire virtual Clos fabric.
+------------------------------
+## Step 1: Directory Layout for Phase 1 Infrastructure
+
+hypervisor-orchestration/
+├── inventory.ini
+├── group_vars/
+│   ├── all.yml
+│   ├── fabric_switches.yml
+│   └── compute_nodes.yml
+├── host_vars/
+│   ├── Spine_S1.yml
+│   ├── Leaf_L1.yml
+│   ├── Leaf_L3.yml
+│   └── Host12_1.yml
+├── roles/
+│   └── kvm_clos_provision/
+│       ├── tasks/
+│       │   └── main.yml
+│       └── templates/
+│           ├── kvm_sonic_domain.xml.j2
+│           └── kvm_ubuntu_domain.xml.j2
+└── phase1_ignite_fabric.yml
+
+------------------------------
+## Step 2: Comprehensive Infrastructure Variable Data-Model
+These files fully define the logical switch/server identities alongside their corresponding physical host virtualizations. Unconfigured interfaces automatically derive sequential, deterministic stub-plugs up to the designated hardware limits (32 for Arista QX models, 54 for Edge-Core AS5712, etc.).
+## 1. Spine 1 Definition Profile (host_vars/Spine_S1.yml)
+
+---# Libvirt VM Guest System Specsvm_name: "vsonic-spine-s1"total_physical_ports: 32vm_cpu: 2vm_ram_mb: 4096os_variant: "debian11"disk_image_path: "/var/lib/libvirt/images/sonic-celestica.qcow2"
+# Explicit active wiring to the Leaf Layerhost_network_mapping:
+  - guest_interface: "Ethernet0"
+    ovs_bridge: "br-s1-l1"       # Wired to Leaf_L1 Ethernet68
+    mac_address: "52:54:00:a1:00:00"
+  - guest_interface: "Ethernet4"
+    ovs_bridge: "br-s1-l2"       # Wired to Leaf_L2 Ethernet68
+    mac_address: "52:54:00:a1:00:04"
+  - guest_interface: "Ethernet8"
+    ovs_bridge: "br-s1-l3"       # Wired to Leaf_L3 Ethernet124
+    mac_address: "52:54:00:a1:00:08"
+  - guest_interface: "Ethernet12"
+    ovs_bridge: "br-s1-l4"       # Wired to Leaf_L4 Ethernet124
+    mac_address: "52:54:00:a1:00:12"
+  - guest_interface: "Ethernet16"
+    ovs_bridge: "br-s1-bl1"      # Wired to Border-Leaf1 Ethernet124
+    mac_address: "52:54:00:a1:00:16"
+  - guest_interface: "Ethernet20"
+    ovs_bridge: "br-s1-bl2"      # Wired to Border-Leaf2 Ethernet124
+    mac_address: "52:54:00:a1:00:20"
+
+## 2. Leaf L1 Definition Profile (host_vars/Leaf_L1.yml)
+
+---vm_name: "vsonic-leaf-l1"total_physical_ports: 54         # Edge/Accton AS5712 hardware profile layoutvm_cpu: 2vm_ram_mb: 4096os_variant: "debian11"disk_image_path: "/var/lib/libvirt/images/sonic-accton.qcow2"
+host_network_mapping:
+  - guest_interface: "Ethernet68"
+    ovs_bridge: "br-s1-l1"       # Connects up to Spine_S1 Ethernet0
+    mac_address: "52:54:00:b1:00:68"
+  - guest_interface: "Ethernet64"
+    ovs_bridge: "br-s2-l1"       # Connects up to Spine_S2 Ethernet0
+    mac_address: "52:54:00:b1:00:64"
+  - guest_interface: "Ethernet0"
+    ovs_bridge: "br-l1-h12-1"    # Downlink to Host12_1 enps1
+    mac_address: "52:54:00:b1:00:00"
+  - guest_interface: "Ethernet1"
+    ovs_bridge: "br-l1-h12-2"    # Downlink to Host12_2 enps1
+    mac_address: "52:54:00:b1:00:01"
+  - guest_interface: "Ethernet2"
+    ovs_bridge: "br-l1-h12-3"    # Downlink to Host12_3 enps1
+    mac_address: "52:54:00:b1:00:02"
+
+## 3. Host Server Definition Profile (host_vars/Host12_1.yml)
+
+---vm_name: "vhost-server-12-1"vm_cpu: 4vm_ram_mb: 8192os_variant: "ubuntu22.04"disk_image_path: "/var/lib/libvirt/images/ubuntu-openstack-base-1.qcow2"
+# Ubuntu multi-homed mapping layerhost_server_interfaces:
+  - os_dev: "enps0"
+    ovs_bridge: "br-maas-pxe"    # Management, iDRAC, and MaaS network segment
+    mac_address: "52:54:00:f0:12:01"
+  - os_dev: "enps1"
+    ovs_bridge: "br-l1-h12-1"    # L3 Unnumbered Link directly to Leaf_L1
+    mac_address: "52:54:00:f1:12:01"
+  - os_dev: "enps2"
+    ovs_bridge: "br-l2-h12-1"    # L3 Unnumbered Link directly to Leaf_L2
+    mac_address: "52:54:00:f2:12:01"
+
+------------------------------
+## Step 4: The Dynamic Libvirt Domain XML Engines
+To maintain absolute PCI slot index predictability inside the guest operating system kernels, these templates unroll active ports directly into their targeted network structures while sweeping unassigned capacities sequentially into a common local loopback bridge (br-stub).
+## 1. Network NOS Node Engine (roles/kvm_clos_provision/templates/kvm_sonic_domain.xml.j2)
+
+<domain type='kvm'>
+  <name>{{ vm_name }}</name>
+  <memory unit='KiB'>{{ vm_ram_mb * 1024 }}</memory>
+  <currentMemory unit='KiB'>{{ vm_ram_mb * 1024 }}</currentMemory>
+  <vcpu placement='static'>{{ vm_cpu }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-rhel9.0.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/><apic/><pae/>
+  </features>
+  <cpu mode='host-passthrough' check='none'/>
+  <clock offset='utc'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' cache='none'/>
+      <source file='{{ disk_image_path }}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+
+    <!-- Slot 0: Out-of-Band (OOB) Management Interface Port (eth0) -->
+    <interface type='bridge'>
+      <source bridge='br-mgmt-vlan10'/>
+      <virtualport type='openvswitch'/>
+      <model type='virtio'/>
+    </interface>
+
+    <!-- Data Plane Array Compilation Loop (Sequential Device Index Enforcement) -->
+    {% for port_num in range(total_physical_ports) %}
+      {% set current_eth = "Ethernet" ~ port_num %}
+      {% set matched_port = host_network_mapping | selectattr('guest_interface', 'equalto', current_eth) | list %}
+      
+      {% if matched_port | length > 0 %}
+    <!-- Active Clos Fabric Member: {{ current_eth }} -->
+    <interface type='bridge'>
+      <mac address='{{ matched_port[0].mac_address }}'/>
+      <source bridge='{{ matched_port[0].ovs_bridge }}'/>
+      <virtualport type='openvswitch'/>
+      <model type='virtio'/>
+    </interface>
+      {% else %}
+    <!-- Hardware Lane Stub Loopback Protection: {{ current_eth }} -->
+    <interface type='bridge'>
+      <source bridge='br-stub'/>
+      <virtualport type='openvswitch'/>
+      <model type='virtio'/>
+    </interface>
+      {% endif %}
+    {% endfor %}
+
+    <serial type='pty'>
+      <target port='0'/>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'/>
+  </devices>
+</domain>
+
+## 2. Bare-Metal Compute Simulation Node Engine (roles/kvm_clos_provision/templates/kvm_ubuntu_domain.xml.j2)
+
+<domain type='kvm'>
+  <name>{{ vm_name }}</name>
+  <memory unit='KiB'>{{ vm_ram_mb * 1024 }}</memory>
+  <vcpu placement='static'>{{ vm_cpu }}</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc-q35-rhel9.0.0'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/><apic/>
+  </features>
+  <cpu mode='host-passthrough'/>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='{{ disk_image_path }}'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+
+    <!-- Compute Array Interfacing Array Loop -->
+    {% for nic in host_server_interfaces %}
+    <!-- Native OS Device Allocation Mapping Reference: {{ nic.os_dev }} -->
+    <interface type='bridge'>
+      <mac address='{{ nic.mac_address }}'/>
+      <source bridge='{{ nic.ovs_bridge }}'/>
+      <virtualport type='openvswitch'/>
+      <model type='virtio'/>
+    </interface>
+    {% endfor %}
+
+    <serial type='pty'><target port='0'/></serial>
+    <console type='pty'><target type='serial' port='0'/></console>
+  </devices>
+</domain>
+
+------------------------------
+## Step 5: Hypervisor Automated Execution Pipeline Task Engine
+This production engine gathers structural mappings across your switches and compute hosts. It identifies all unique target bridges, spins them up cleanly inside the OVS daemon space, builds the complete XML specifications, imports them to the local hypervisor domain registries, and starts the entire virtual framework.
+Save this script workspace to: roles/kvm_clos_provision/tasks/main.yml.
+
+---
+- name: Prep | Enforce structural runtime existence of global OVS stub tracking bridge
+  openvswitch.openvswitch.openvswitch_bridge:
+    name: "br-stub"
+    state: present
+  delegate_to: localhost
+
+- name: Prep | Enforce structural runtime existence of global OVS OOB management bridge
+  openvswitch.openvswitch.openvswitch_bridge:
+    name: "br-mgmt-vlan10"
+    state: present
+  delegate_to: localhost
+
+- name: Extract | Compute unique target OVS infrastructure fabric bridges
+  set_fact:
+    target_bridges: >-
+      {% set bridges = [] %}
+      {% if host_network_mapping is defined %}
+        {% for mapping in host_network_mapping %}
+          {% if mapping.ovs_bridge not in bridges %}
+            {% set _ = bridges.append(mapping.ovs_bridge) %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {% if host_server_interfaces is defined %}
+        {% for nic in host_server_interfaces %}
+          {% if nic.ovs_bridge not in bridges %}
+            {% set _ = bridges.append(nic.ovs_bridge) %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {{ bridges }}
+
+- name: Fabric | Deploy structural Open vSwitch bridges across hypervisor host
+  openvswitch.openvswitch.openvswitch_bridge:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ target_bridges }}"
+  delegate_to: localhost
+
+- name: Render | Build declarative architectural Libvirt XML blueprint configuration files
+  template:
+    src: "{{ 'kvm_sonic_domain.xml.j2' if (host_network_mapping is defined) else 'kvm_ubuntu_domain.xml.j2' }}"
+    dest: "/tmp/libvirt_compiled_{{ vm_name }}.xml"
+  delegate_to: localhost
+
+- name: Libvirt | Define domain blueprint structures into target Hypervisor engine
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('file', '/tmp/libvirt_compiled_' ~ vm_name ~ '.xml') }}"
+  delegate_to: localhost
+
+- name: Boot | Start runtime virtual machines across Clos layers simultaneously
+  community.libvirt.virt:
+    name: "{{ vm_name }}"
+    state: running
+  delegate_to: localhost
+
+- name: Clean | Purge temporary workspace XML data models
+  file:
+    path: "/tmp/libvirt_compiled_{{ vm_name }}.xml"
+    state: absent
+  delegate_to: localhost
+
+------------------------------
+## Step 6: Master Ignition Playbook Runner (phase1_ignite_fabric.yml)
+Execute this master playbook runner from your deployer terminal machine. It orchestrates the host environment sequentially to lay down the underlying Layer-1 structural virtualization matrix.
+
+---
+- name: Orchestrate Phase 1 - Ignite Virtual Clos Layer 1 Infrastructure
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Instantiate Network Layer (Spines, Leafs, and Border Switches)
+      include_role:
+        name: kvm_clos_provision
+      vars:
+        vm_name: "{{ hostvars[item]['vm_name'] }}"
+        total_physical_ports: "{{ hostvars[item]['total_physical_ports'] }}"
+        vm_cpu: "{{ hostvars[item]['vm_cpu'] }}"
+        vm_ram_mb: "{{ hostvars[item]['vm_ram_mb'] }}"
+        os_variant: "{{ hostvars[item]['os_variant'] }}"
+        disk_image_path: "{{ hostvars[item]['disk_image_path'] }}"
+        host_network_mapping: "{{ hostvars[item]['host_network_mapping'] }}"
+      loop: "{{ groups['fabric_switches'] }}"
+      when: hostvars[item]['vm_name'] is defined
+
+    - name: Instantiate Bare-Metal Server Compute Layer
+      include_role:
+        name: kvm_clos_provision
+      vars:
+        vm_name: "{{ hostvars[item]['vm_name'] }}"
+        vm_cpu: "{{ hostvars[item]['vm_cpu'] }}"
+        vm_ram_mb: "{{ hostvars[item]['vm_ram_mb'] }}"
+        os_variant: "{{ hostvars[item]['os_variant'] }}"
+        disk_image_path: "{{ hostvars[item]['disk_image_path'] }}"
+        host_server_interfaces: "{{ hostvars[item]['host_server_interfaces'] }}"
+      loop: "{{ groups['compute_nodes'] }}"
+      when: hostvars[item]['vm_name'] is defined
+
+Now that Phase 1 is completely automated, would you like to review how to implement Phase 2 (The Automated MaaS PXE Bootstrap) to configure your MaaS controller node and begin provisioning the Ubuntu servers automatically?
+
+### Please do.
+
+To implement Phase 2 (The Automated MaaS PXE Bootstrap), we move from the infrastructure layout layer to the orchestration layer (p. 7). In this step, your Deployer Machine prepares the Kubernetes control plane via KubeSpray (p. 7), installs a persistent database layer, and spins up Canonical MaaS (Metal as a Service) using Helm charts inside the cluster (p. 7).
+Once active, MaaS intercepts PXE boot requests across your isolated br-maas-pxe bridge network to automatically discover, catalog, and provision your bare-metal server cluster with Ubuntu OS (pp. 5, 7).
+------------------------------
+## Step 1: Directory Architecture Extension
+Add the MaaS deployment structure into your existing operational workspace:
+```
+deployer-fabric-root/
+├── group_vars/
+│   └── maas_masters.yml
+├── host_vars/
+│   └── HostB12_1.yml
+├── roles/
+│   ├── kubespray_bootstrap/
+│   └── maas_helm_deploy/
+│       ├── tasks/
+│       │   └── main.yml
+│       └── templates/
+│           ├── postgres-values.yaml.j2
+│           └── maas-values.yaml.j2
+└── phase2_maas_bootstrap.yml
+
+------------------------------
+```
+## Step 2: MaaS Master Node Variable Definitions (host_vars/HostB12_1.yml)
+As outlined in your wiring specs, HostB12_1 functions as the Kubernetes cluster master node, housing the centralized PostgreSQL database instance and the MaaS Region/Rack controllers (p. 7).
+```
+---
+# Host Identity Propertiesvm_name: "vhost-server-b12-1"ansible_host: "192.168.255.15"
+# MaaS Specific Configuration Variablesmaas_admin_user: "admin"maas_admin_email: "infra-admin@datacenter.local"maas_admin_password: "VaultSecureMaaSAdminPassword123"
+# Network Ranges for Dynamic Commissioning Poolsmaas_pxe_interface: "enps0"maas_pxe_network: "192.168.0.0"maas_pxe_cidr: "12"                  # Matches the 192.168.255.0/125 overall schememaas_dynamic_ip_range_start: "192.168.255.30"maas_dynamic_ip_range_end: "192.168.255.120"maas_upstream_dns: "8.8.8.8"
+
+------------------------------
+```
+## Step 3: Production Helm Values Configuration Files
+MaaS requires a backing transactional database (p. 7). We configure a highly available on-cluster PostgreSQL instance, followed by a customized values matrix that exposes MaaS directly onto the PXE network bridge using Kubernetes HostNetworking.
+## 1. PostgreSQL Helm Values (roles/maas_helm_deploy/templates/postgres-values.yaml.j2)
+```
+
+architecture: replicationauth:
+  username: maas_user
+  password: SecretDatabasePassword456
+  database: maas_dbprimary:
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "ceph-rbd" # Backed by your integrated Ceph storage engine later
+
+## 2. Canonical MaaS Helm Values (roles/maas_helm_deploy/templates/maas-values.yaml.j2)
+
+image:
+  repository: canonical/maas
+  tag: "3.4-latest"
+# Bind directly to the host network interface to receive PXE DHCP broadcastshostNetwork: true
+serviceAccount:
+  create: true
+# Configures the parameters for the dynamic Rack and Region microservicesregion:
+  database:
+    host: "maas-postgres-primary.default.svc.cluster.local"
+    port: 5432
+    username: "maas_user"
+    password: "SecretDatabasePassword456"
+    name: "maas_db"
+rack:
+  # Instructs the internal DHCP daemon to respond across the virtual interface
+  interfaces:
+    - {{ maas_pxe_interface }}
+
+------------------------------
+```
+## Step 4: MaaS Deployment & Automated Commissioning Tasks
+This task engine executes sequentially on your Deployer Machine. It initiates KubeSpray (p. 7), installs Helm repositories, renders configuration layers, provisions MaaS, and drops into an intelligent loop checking the API status until the other host instances have successfully completed PXE commissioning (pp. 7-8).
+Save this script workspace to: roles/maas_helm_deploy/tasks/main.yml.
+```
+---
+- name: KubeSpray | Execute baseline Kubernetes cluster installation on HostB12_1
+  ansible.builtin.command: >-
+    ansible-playbook -i ../kubespray/inventory/mycluster/inventory.ini 
+    ../kubespray/cluster.yml --become
+  delegate_to: localhost
+  changed_when: true
+
+- name: Helm | Ensure Bitnami and Canonical repository definitions exist
+  kubernetes.core.helm_repository:
+    name: "{{ item.name }}"
+    repo_url: "{{ item.url }}"
+  loop:
+    - { name: 'bitnami', url: 'https://bitnami.com' }
+    - { name: 'canonical', url: 'https://canonical.com' }
+  delegate_to: localhost
+
+- name: Render | Compile customized transactional chart settings
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/tmp/{{ item.dest }}"
+    mode: '0600'
+  loop:
+    - { src: 'postgres-values.yaml.j2', dest: 'postgres-values.yaml' }
+    - { src: 'maas-values.yaml.j2', dest: 'maas-values.yaml' }
+  delegate_to: localhost
+
+- name: Database | Install persistent PostgreSQL storage instance via Helm
+  kubernetes.core.helm:
+    name: maas-postgres
+    chart_ref: bitnami/postgresql
+    values_file: /tmp/postgres-values.yaml
+    release_namespace: default
+  delegate_to: localhost
+
+- name: Provision | Deploy Canonical MaaS architecture across Kubernetes worker nodes
+  kubernetes.core.helm:
+    name: maas-infrastructure
+    chart_ref: canonical/maas
+    values_file: /tmp/maas-values.yaml
+    release_namespace: default
+  delegate_to: localhost
+
+- name: Bootstrap | Wait for MaaS Region APIs to initialize successfully
+  ansible.builtin.uri:
+    url: "http://{{ ansible_host }}:5240/MAAS/api/2.0/users/"
+    status_code: 401 # API is alive but requires initialization tokens
+  register: maas_api_status
+  until: maas_api_status.status == 401
+  retries: 24
+  delay: 10
+  delegate_to: localhost
+
+- name: Post-Install | Create admin administrative authentication user credentials
+  ansible.builtin.shell: |
+    kubectl exec -it deployment/maas-infrastructure-region -- \
+    maas-region createadmin \
+    --username={{ maas_admin_user }} \
+    --password={{ maas_admin_password }} \
+    --email={{ maas_admin_email }} \
+    --ssh-import=gh:canonical  delegate_to: localhost
+  register: admin_creation
+  failed_when: admin_creation.rc != 0 and "already exists" not in admin_creation.stderr
+  changed_when: "'created successfully' in admin_creation.stdout"
+
+- name: Network | Configure dynamic PXE DHCP subnets and onboarding scopes
+  ansible.builtin.shell: |
+    # Login to local MaaS API control structure
+    MAAS_API_KEY=$(kubectl exec -it deployment/maas-infrastructure-region -- maas-region apikey --username={{ maas_admin_user }})
+    maas login admin http://localhost:5240/MAAS/api/2.0/ "$MAAS_API_KEY"
+    
+    # Enable DHCP and manage the PXE booting range
+    maas admin ipranges create type=dynamic \
+      start_ip={{ maas_dynamic_ip_range_start }} \
+      end_ip={{ maas_dynamic_ip_range_end }}
+      
+    # Turn on upstream DNS forwarding lookup resolution loops
+    maas admin maas set-config name=upstream_dns value={{ maas_upstream_dns }}  delegate_to: localhost
+  changed_when: true
+
+- name: Automation | Poll MaaS API engine for fully commissioned nodes
+  ansible.builtin.shell: |
+    MAAS_API_KEY=$(kubectl exec -it deployment/maas-infrastructure-region -- maas-region apikey --username={{ maas_admin_user }})
+    maas login admin http://localhost:5240/MAAS/api/2.0/ "$MAAS_API_KEY"
+    maas admin machines read | jq -r '.[] | select(.status_name=="Ready") | .hostname'  delegate_to: localhost
+  register: maas_ready_nodes
+  until: 
+    - hostvars['Host12_1']['vm_name'] in maas_ready_nodes.stdout
+    - hostvars['Host34_1']['vm_name'] in maas_ready_nodes.stdout
+  retries: 60
+  delay: 30
+  label: "Waiting for bare-metal targets to transition into 'Ready' state via automated network boot profiles."
+
+------------------------------
+```
+## Step 5: Phase 2 Execution Playbook (phase2_maas_bootstrap.yml)
+Execute this orchestration loop from your Deployer Machine terminal. This handles bringing up your Kubernetes-backed MaaS control plane (p. 7), lighting up the network-wide PXE discovery listeners (p. 5), and pulling the rest of the target fabric infrastructure into an active state (p. 7).
+```
+---
+- name: Orchestrate Phase 2 - Deploy Kubernetes Control Plane & MaaS PXE Infrastructure
+  hosts: compute_nodes
+  gather_facts: no
+  tasks:
+    - name: Trigger MaaS deployment workflow loop on designated Master Node
+      ansible.builtin.include_role:
+        name: maas_helm_deploy
+      when: inventory_hostname == "HostB12_1"
+```
+Once Phase 2 completes, your compute nodes will have complete Ubuntu installations with active management interfaces, ready for data-plane network setup (p. 7).
+Would you like to move on to Phase 3 (The Distributed Ceph & OpenStack Blueprint) to show how the playbook dynamically discovers disks, partitions your storage arrays, and launches your containerized OpenStack Compute clusters (p. 7)?
+
+
+### The BGP/Netplan/FRR configuration, is it completely done in Phase 1? If YES provide details how it is achieved? If not, provide playbook to complete that for Spine Layer, Leaf Layer, Border Leaf Layer, Exit Router Layer and Server layer. Assume servers are multihome.
+
+No, the BGP/Netplan/FRR configurations are not done in Phase 1.
+Phase 1 strictly provisions the physical virtualization boundaries (creating OVS bridges, building Libvirt domain definitions, sequentially assigning virtual hardware interface buses to avoid naming collisions, and booting the bare VM chassis). Because the switches and servers are completely blank at that moment, they have no operating system configurations.
+Following our data-driven pipeline, the network configurations are applied in Phase 3 (after Phase 2 completes the MaaS OS provisioning layer).
+Below is the production-grade, complete automated playbook, role structures, and templates to configure BGP Unnumbered and Netplan natively across your entire 3-stage Clos fabric.
+------------------------------
+## Step 1: Expanded Variable Map Including Exit Routers
+We append the Exit-Router variables to the data-model schema, providing full upstream internet breakout context using your hardware descriptions (pp. 2, 6).
+```
+# host_vars/Exit-Router1.yml
+---bgp_asn: 64999loopback_ip: "10.255.255.1"ansible_host: "172.16.2.48" # Connected to Management Switch Port 48ansible_network_os: routeros # Automated native Mikrotik CRS326 profiles
+# Explicitly tracks connections back into the Clos border layerdownstream_interfaces:
+  - name: "ether24" # Plugs directly into Border-Leaf1 Ethernet3
+    peer_asn: 65201
+# Outbound ISP connectionsupstream_interfaces:
+  - name: "ether2"  # Admin wifi aggregation bridge
+  - name: "ether24" # ISP Link
+
+------------------------------
+```
+## Step 2: Directory Architecture Workspace
+```
+fabric-routing-orchestration/
+├── phase3_configure_routing.yml
+└── roles/
+    ├── switch_fabric_routing/
+    │   └── templates/
+    │       └── switch_frr.conf.j2
+    ├── exit_router_routing/
+    │   └── templates/
+    │       └── routeros_bgp.rsc.j2
+    └── server_fabric_routing/
+        └── templates/
+            ├── host_netplan.yaml.j2
+            └── host_frr.conf.j2
+
+------------------------------
+```
+## Step 3: Jinja2 Architectural Templates## 1. Unified Switch Core Engine (roles/switch_fabric_routing/templates/switch_frr.conf.j2)
+This blueprint generates native FRR configurations for Spines, Leafs, and Border-Leafs alike, implementing strict BGP Unnumbered link discovery and Multipath relaxation.
+```
+! SONiC Architecture Routing Template for {{ inventory_hostname }}
+frr version 8.1
+frr defaults traditional
+hostname {{ inventory_hostname }}
+!
+{% for intf in unnumbered_interfaces %}
+interface {{ intf }}
+ no ipv6 nd suppress-ra
+ ipv6 nd ra-interval 10
+exit
+!
+{% endfor %}
+!
+router bgp {{ bgp_asn }}
+ bgp router-id {{ loopback_ip }}
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ {# Setup dynamic BGP Unnumbered peer configuration rules #}
+ neighbor CLOS_FABRIC peer-group
+ neighbor CLOS_FABRIC remote-as external
+ neighbor CLOS_FABRIC capability extended-next-hop
+ !
+ {% for intf in unnumbered_interfaces %}
+ neighbor {{ intf }} peer-group CLOS_FABRIC
+ {% endfor %}
+ !
+ {# Handle legacy static IPv4 links if this node is a Border Leaf talking to Mikrotik Exit-Routers #}
+ {% if external_uplinks is defined %}
+ {% for uplink in external_uplinks %}
+ neighbor {{ uplink.ip_address | ipaddr('peer') }} remote-as {{ uplink.peer_asn }}
+ {% endfor %}
+ {% endif %}
+ !
+ address-family ipv4 unicast
+  network {{ loopback_ip }}/32
+  neighbor CLOS_FABRIC activate
+  neighbor CLOS_FABRIC send-community both
+  {% if external_uplinks is defined %}
+  {% for uplink in external_uplinks %}
+  neighbor {{ uplink.ip_address | ipaddr('peer') }} activate
+  {% endfor %}
+  {% endif %}
+ exit-address-family
+!
+
+## 2. Mikrotik RouterOS Exit-Router Provisioner (roles/exit_router_routing/templates/routeros_bgp.rsc.j2)
+Since the Exit Routers are Mikrotik CRS326 platforms (p. 2), this converts variables into standard RouterOS CLI commands.
+
+# Automated BGP Configuration Script for Mikrotik {{ inventory_hostname }}
+/routing bgp instance
+set default as={{ bgp_asn }} router-id={{ loopback_ip }} redistribute-connected=yes
+
+/interface ethernet
+{% for peer in downstream_interfaces %}
+# Configure point-to-point interface properties
+/ip address
+add address=192.168.100.1/30 interface={{ peer.name }} comment="Link to Border Leaf"
+
+/routing bgp peer
+add name=to_border_leaf remote-address=192.168.100.2 remote-as={{ peer.peer_asn }} instance=default
+{% endfor %}
+
+## 3. Server Netplan Blueprint (roles/server_fabric_routing/templates/host_netplan.yaml.j2)
+
+# Netplan configuration for Multi-Homed Host Server: {{ inventory_hostname }}network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    {{ pxe_interface }}:
+      addresses:
+        - {{ pxe_ip }}
+    {% for intf in fabric_interfaces %}
+    {{ intf.name }}:
+      # Force clean IPv6 link-local behavior to enable BGP Unnumbered discovery pathing
+      link-local: [ ipv6 ]
+      optional: true
+    {% endfor %}
+
+## 4. Server FRRouting Template (roles/server_fabric_routing/templates/host_frr.conf.j2)
+
+! Multi-Homed Host Routing Configuration for {{ inventory_hostname }}
+frr version 8.1
+frr defaults traditional
+hostname {{ inventory_hostname }}
+!
+interface lo
+ ip address {{ loopback_ip }}/32
+exit
+!
+router bgp {{ server_asn }}
+ bgp router-id {{ loopback_ip }}
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ !
+ neighbor SERVER_UPLINKS peer-group
+ neighbor SERVER_UPLINKS remote-as external
+ neighbor SERVER_UPLINKS capability extended-next-hop
+ !
+ {% for intf in fabric_interfaces %}
+ neighbor {{ intf.name }} peer-group SERVER_UPLINKS
+ {% endfor %}
+ !
+ address-family ipv4 unicast
+  network {{ loopback_ip }}/32
+  neighbor SERVER_UPLINKS activate
+ exit-address-family
+!
+
+------------------------------
+```
+## Step 4: Standalone Execution Pipeline (phase3_configure_routing.yml)
+This production playbook unrolls configurations across your fabric tiers sequentially. It configures the switches, provisions the edge routing paths, updates host server interfaces, and starts routing exchanges.
+```
+---
+- name: Phase 3 (Part A) - Provision SONiC Switch Network Layer
+  hosts: fabric_switches
+  gather_facts: no
+  serial: 2 # Updates pairs sequentially to avoid total fabric downtime loops
+  tasks:
+    - name: Switch Core | Generate and insert BGP Unnumbered routing layout matrix
+      ansible.builtin.template:
+        src: roles/switch_fabric_routing/templates/switch_frr.conf.j2
+        dest: /etc/sonic/frr/frr.conf
+      register: switch_router_config
+
+    - name: Switch Core | Commit changes and refresh internal FRR container routing loops
+      ansible.builtin.command: "vtysh -c 'write memory' && systemctl restart frr"
+      when: switch_router_config.changed
+
+- name: Phase 3 (Part B) - Provision Exit Router Boundaries
+  hosts: exit_routers
+  gather_facts: no
+  tasks:
+    - name: Exit Edge | Generate RouterOS script profile parameters
+      ansible.builtin.template:
+        src: roles/exit_router_routing/templates/routeros_bgp.rsc.j2
+        dest: "/tmp/bgp_setup_{{ inventory_hostname }}.rsc"
+      delegate_to: localhost
+      register: routeros_script
+
+    - name: Exit Edge | Push script payload to Mikrotik router endpoints via SSH
+      netcommon.net_put:
+        src: "/tmp/bgp_setup_{{ inventory_hostname }}.rsc"
+        dest: "bgp_setup.rsc"
+      when: routeros_script.changed
+
+    - name: Exit Edge | Execute RouterOS command pipeline strings
+      routeros.routeros.command:
+        commands: ["/import file-name=bgp_setup.rsc"]
+      when: routeros_script.changed
+
+- name: Phase 3 (Part C) - Provision Multi-Homed Host Server Configurations
+  hosts: compute_nodes
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: Server Fabric | Write declarative Netplan link state definitions
+      ansible.builtin.template:
+        src: roles/server_fabric_routing/templates/host_netplan.yaml.j2
+        dest: /etc/netplan/01-netcfg.yaml
+      register: server_netplan_patch
+
+    - name: Server Fabric | Apply Netplan kernel runtime updates
+      ansible.builtin.command: netplan apply
+      when: server_netplan_patch.changed
+
+    - name: Server Fabric | Write local host BGP Unnumbered FRR daemon components
+      ansible.builtin.template:
+        src: roles/server_fabric_routing/templates/host_frr.conf.j2
+        dest: /etc/frr/frr.conf
+      register: server_frr_patch
+
+    - name: Server Fabric | Restart host system routing service engine
+      ansible.builtin.service:
+        name: frr
+        state: restarted
+      when: server_frr_patch.changed
+
+- name: Phase 3 (Part D) - Fabric Verification & Convergence Checks
+  hosts: compute_nodes
+  gather_facts: no
+  tasks:
+    - name: Validate | Poll local host FRR engine for established BGP unnumbered neighbors
+      ansible.builtin.command: vtysh -c "show bgp summary json"
+      register: bgp_json_summary
+      changed_when: false
+      retries: 6
+      delay: 10
+      until: 
+        - (bgp_json_summary.stdout | from_json).peers | length > 0
+        - (bgp_json_summary.stdout | from_json).peers.values() | map(attribute='state') | select('equalto', 'Established') | list | length == (bgp_json_summary.stdout | from_json).peers | length
+```
+## Verification Flow Breakdown
+Once this playbook finishes running, you can trace packet flows downward across your layers using these diagnostic verification checkpoints:
+
+   1. On Servers: Run ip route to confirm that the default route 0.0.0.0/0 points directly to an IPv6 link-local address (fe80::...) split across both multi-homed interfaces (enps1 and enps2) via Equal-Cost Multi-Pathing (ECMP).
+   2. On Leaf Switches: Run show ip bgp summary to confirm that your Multi-Homed servers and upstream Spines have safely entered the Established operational tracking state.
+
+If you are standardizing this for your upcoming OpenStack on Kubernetes infrastructure rollout, would you like to review how to implement an automated daily backup cron task inside Ansible to cleanly export these custom frr.conf configurations out to your secure vault repository?
+
+
+
+
+
 
 
 
