@@ -513,18 +513,22 @@ Here is the automation structure, including variable definitions, Jinja2 XML tem
 Add host-specific layout properties to your inventory variable tracking files. This bridges the physical/logical breakout definitions to actual host-side components.
 ## Switch 1 Host Settings (host_vars/switch1-7050qx32.yml)
 ```
----# Append this to your existing switch1 filevm_name: "sonic-sw1-7050qx32"
+---
+# Append this to your existing switch1 file
+vm_name: "sonic-sw1-7050qx32"
 # Maps physical/logical child ports inside SONiC to target bridges on the hosthost_network_mapping:
   - switch_port: "Ethernet0"
     ovs_bridge: "br-h101-l1"
     mac_address: "52:54:00:a1:b1:10"
   - switch_port: "Ethernet1"
     ovs_bridge: "br-h102-l1"
-    mac_address: "52:54:00:a1:b1:20"
-
+    mac_address: "52:54:00:a1:b1:20
+```
 ## Switch 2 Host Settings (host_vars/switch2-7050qx32s.yml)
-
----# Append this to your existing switch2 filevm_name: "sonic-sw2-7050qx32s"
+```
+---
+# Append this to your existing switch2 file
+vm_name: "sonic-sw2-7050qx32s"
 host_network_mapping:
   - switch_port: "Ethernet0"
     ovs_bridge: "br-h201-l2"
@@ -652,7 +656,9 @@ However, to ensure your automation scales cleanly when you add more devices late
 We introduce a loop to generate stub interfaces for unassigned ports up to the hardware maximum (32 physical ports).
 ```
 # host_vars/switch1-7050qx32.yml
----hwsku: "Arista-7050QX32"vm_name: "sonic-sw1-7050qx32"total_physical_ports: 32
+---
+hwsku: "Arista-7050QX32"
+vm_name: "sonic-sw1-7050qx32"total_physical_ports: 32
 # Active lab mappingshost_network_mapping:
   - switch_port: "Ethernet0"
     ovs_bridge: "br-h101-l1"
