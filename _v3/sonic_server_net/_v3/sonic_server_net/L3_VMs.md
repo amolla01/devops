@@ -215,7 +215,8 @@ sonic_config_dir: /etc/sonic
 
 ## Switch 1 Context Profile (host_vars/switch1-7050qx32.yml)
 
----hwsku: "Arista-7050QX32"interfaces:
+---
+hwsku: "Arista-7050QX32"interfaces:
   - name: "Ethernet0"
     breakout_mode: "4x10G"
     lanes: "1,2,3,4"
@@ -231,7 +232,8 @@ sonic_config_dir: /etc/sonic
 
 ## Switch 2 Context Profile (host_vars/switch2-7050qx32s.yml)
 
----hwsku: "Arista-7050QX32S"interfaces:
+---
+hwsku: "Arista-7050QX32S"interfaces:
   - name: "Ethernet0"
     breakout_mode: "1x10G"
     lanes: "1"
@@ -393,7 +395,8 @@ breakout_topology:
 For this hardware profile, the first four physical cages are natively 10G SFP+ slots. Internally, they occupy the exact same SerDes lanes (1,2,3,4) that would normally feed a single 40G QSFP+ port. Because they are individual cages, they are treated as four discrete non-breakout parent ports tracking by 1 natively.
 
 # host_vars/switch2-7050qx32s.yml
----hwsku: "Arista-7050QX32S"
+---
+hwsku: "Arista-7050QX32S"
 # Physical Layout# SFP+ Cage 1: Ethernet0 (Lane 1) -> Maps to Server 3# SFP+ Cage 2: Ethernet1 (Lane 2) -> Maps to Server 4# SFP+ Cage 3: Ethernet2 (Lane 3) -> Unused# SFP+ Cage 4: Ethernet3 (Lane 4) -> Unused# QSFP+ Cage 5: Ethernet4 (Lanes 5,6,7,8) -> Disabled internally because SFP+ lanes are active
 breakout_topology:
   - parent_port: "Ethernet0"
@@ -931,6 +934,7 @@ When you purchase or install SONiC on bare-metal hardware, it boots into ONIE (O
    
    
 This installs the base operational image directly onto the switch flash storage.
+```
 ------------------------------
 ## Option 2: Post-Boot Console Manual Baseline
 Once SONiC is installed via ONIE and reboots, it spins up with a factory-default configuration database. Because there is no management IP, network ports are inactive. You must log in via the serial console using the default credentials (admin / YourDefaultPassword) to paste the minimal bootstrap commands: [1] 
