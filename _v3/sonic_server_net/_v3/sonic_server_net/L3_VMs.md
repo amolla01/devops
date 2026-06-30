@@ -56,7 +56,7 @@ Inside your Ubuntu emulation host, the connections are mapped via veth pipes. On
 
    1. Scenario 1 (7050QX32): Ports Ethernet0 through Ethernet3 inside SONiC represent the breakout lanes of the physical Port 1 (QSFP+). Your configuration maps Server 1 to Lane 0 (Ethernet0) and Server 2 to Lane 1 (Ethernet1).
    2. Scenario 2 (7050QX32S): Ports Ethernet0 and Ethernet1 are native 10G SFP+ cages. No splitting occurs; they connect 1:1 to Server 3 and Server 4 respectively.
-
+```
 ------------------------------
 ## Step 1: Ubuntu Linux Shell Infrastructure Configuration
 Run these commands on your Ubuntu host to build the OVS bridges, instantiate the veth pairs, and link them together.
@@ -86,7 +86,7 @@ sudo ip link set veth-h201 up
 sudo ip link set veth-sw2-p1 up
 sudo ip link set veth-h202 up
 sudo ip link set veth-sw2-p2 up
-
+```
 Note: The veth-swX-pX ends must be bound to your virtual SONiC instance runtime (e.g., passed as arguments via KVM/QEMU network flags or bound to Docker containers via a container runtime configuration).
 ------------------------------
 ## Step 2: SONiC Switch OS Breakout Configurations
