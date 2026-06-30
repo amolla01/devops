@@ -1810,7 +1810,8 @@ host_network_mapping:
 
 ---
 vm_name: "vhost-server-12-1"
-vm_cpu: 4vm_ram_mb: 8192
+vm_cpu: 4
+vm_ram_mb: 8192
 os_variant: "ubuntu22.04"
 disk_image_path: "/var/lib/libvirt/images/ubuntu-openstack-base-1.qcow2"
 
