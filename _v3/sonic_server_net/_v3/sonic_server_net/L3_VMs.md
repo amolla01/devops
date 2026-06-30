@@ -1497,7 +1497,8 @@ We strip away all point-to-point IP configurations. The interface blocks now onl
 ## Spine 1 Variable Profile (host_vars/Spine_S1.yml)
 ```
 ---
-# BGP Unnumbered interfaces towards the Leavesunnumbered_interfaces:
+# BGP Unnumbered interfaces towards the Leaves
+unnumbered_interfaces:
   - "Ethernet0"   # To Leaf_L1
   - "Ethernet4"   # To Leaf_L2
   - "Ethernet8"   # To Leaf_L3
@@ -1507,7 +1508,8 @@ We strip away all point-to-point IP configurations. The interface blocks now onl
 
 ## Leaf L1 Variable Profile (host_vars/Leaf_L1.yml)
 
----# Fabric uplinks are purely unnumbered interfacesunnumbered_interfaces:
+---# Fabric uplinks are purely unnumbered interfaces
+unnumbered_interfaces:
   - "Ethernet68"  # To Spine_S1
   - "Ethernet64"  # To Spine_S2
   - "Ethernet0"   # Downlink to Host12_1
@@ -1517,7 +1519,8 @@ We strip away all point-to-point IP configurations. The interface blocks now onl
 ## Leaf L3 Breakout & Unnumbered Profile (host_vars/Leaf_L3.yml)
 For your Arista breakout cages, we define the breakout transformation and include the final logical child ports in the unnumbered orchestration engine.
 
----breakout_topology:
+---
+breakout_topology:
   - parent_port: "Ethernet120"
     breakout_mode: "4x10G"
     child_ports:
@@ -1544,8 +1547,10 @@ unnumbered_interfaces:
 The multi-homed hosts configure their fabric links without any IPv4 addresses. Instead, IPv6 link-local capability is enabled via Netplan, allowing FRR on the host to peer dynamically using unnumbered interfaces.
 ```
 ---
-pxe_interface: "enps0"pxe_ip: "192.168.255.10/24"
-# Pure data interfaces to the Leaves - No IPv4 assignedfabric_interfaces:
+pxe_interface: "enps0"
+pxe_ip: "192.168.255.10/24"
+# Pure data interfaces to the Leaves - No IPv4 assigned
+fabric_interfaces:
   - name: "enps1" # Plugs into Leaf_L1 Ethernet0
   - name: "enps2" # Plugs into Leaf_L2 Ethernet0
 
@@ -1555,7 +1560,8 @@ pxe_interface: "enps0"pxe_ip: "192.168.255.10/24"
 In modern versions of SONiC, BGP configuration is managed natively via frr.conf directly inside the FRR container component.
 ## 1. Switch Network Operating System Config (roles/fabric_routing/templates/frr.conf.j2)
 This template sets up the switch interfaces to send IPv6 Router Advertisements, defines the BGP Unnumbered peer group, and activates Extended Next-Hop capabilities.
-```
+
+```text
 ! SONiC Routing Configuration for {{ inventory_hostname }}
 frr version 8.1
 frr defaults traditional
@@ -1718,7 +1724,7 @@ To automate the initial infrastructure orchestration phase on your Ubuntu hyperv
 This role generates the Open vSwitch (OVS) bridges, constructs the full, production-grade Libvirt domain XML files, inserts the active or stub interfaces sequentially to guarantee EthernetX mapping predictability inside SONiC, and then launches the entire virtual Clos fabric.
 ------------------------------
 ## Step 1: Directory Layout for Phase 1 Infrastructure
-
+```
 hypervisor-orchestration/
 ├── inventory.ini
 ├── group_vars/
@@ -1744,8 +1750,16 @@ hypervisor-orchestration/
 These files fully define the logical switch/server identities alongside their corresponding physical host virtualizations. Unconfigured interfaces automatically derive sequential, deterministic stub-plugs up to the designated hardware limits (32 for Arista QX models, 54 for Edge-Core AS5712, etc.).
 ## 1. Spine 1 Definition Profile (host_vars/Spine_S1.yml)
 
----# Libvirt VM Guest System Specsvm_name: "vsonic-spine-s1"total_physical_ports: 32vm_cpu: 2vm_ram_mb: 4096os_variant: "debian11"disk_image_path: "/var/lib/libvirt/images/sonic-celestica.qcow2"
-# Explicit active wiring to the Leaf Layerhost_network_mapping:
+---
+# Libvirt VM Guest System Specs
+vm_name: "vsonic-spine-s1"
+total_physical_ports: 32
+vm_cpu: 2vm_ram_mb: 4096
+os_variant: "debian11"
+disk_image_path: "/var/lib/libvirt/images/sonic-celestica.qcow2"
+
+# Explicit active wiring to the Leaf Layer
+host_network_mapping:
   - guest_interface: "Ethernet0"
     ovs_bridge: "br-s1-l1"       # Wired to Leaf_L1 Ethernet68
     mac_address: "52:54:00:a1:00:00"
@@ -1767,7 +1781,12 @@ These files fully define the logical switch/server identities alongside their co
 
 ## 2. Leaf L1 Definition Profile (host_vars/Leaf_L1.yml)
 
----vm_name: "vsonic-leaf-l1"total_physical_ports: 54         # Edge/Accton AS5712 hardware profile layoutvm_cpu: 2vm_ram_mb: 4096os_variant: "debian11"disk_image_path: "/var/lib/libvirt/images/sonic-accton.qcow2"
+---
+vm_name: "vsonic-leaf-l1"
+total_physical_ports: 54         # Edge/Accton AS5712 hardware profile layout
+vm_cpu: 2vm_ram_mb: 4096
+os_variant: "debian11"
+disk_image_path: "/var/lib/libvirt/images/sonic-accton.qcow2"
 host_network_mapping:
   - guest_interface: "Ethernet68"
     ovs_bridge: "br-s1-l1"       # Connects up to Spine_S1 Ethernet0
@@ -1787,8 +1806,14 @@ host_network_mapping:
 
 ## 3. Host Server Definition Profile (host_vars/Host12_1.yml)
 
----vm_name: "vhost-server-12-1"vm_cpu: 4vm_ram_mb: 8192os_variant: "ubuntu22.04"disk_image_path: "/var/lib/libvirt/images/ubuntu-openstack-base-1.qcow2"
-# Ubuntu multi-homed mapping layerhost_server_interfaces:
+---
+vm_name: "vhost-server-12-1"
+vm_cpu: 4vm_ram_mb: 8192
+os_variant: "ubuntu22.04"
+disk_image_path: "/var/lib/libvirt/images/ubuntu-openstack-base-1.qcow2"
+
+# Ubuntu multi-homed mapping layer
+host_server_interfaces:
   - os_dev: "enps0"
     ovs_bridge: "br-maas-pxe"    # Management, iDRAC, and MaaS network segment
     mac_address: "52:54:00:f0:12:01"
@@ -1800,8 +1825,10 @@ host_network_mapping:
     mac_address: "52:54:00:f2:12:01"
 
 ------------------------------
+```
 ## Step 4: The Dynamic Libvirt Domain XML Engines
 To maintain absolute PCI slot index predictability inside the guest operating system kernels, these templates unroll active ports directly into their targeted network structures while sweeping unassigned capacities sequentially into a common local loopback bridge (br-stub).
+```
 ## 1. Network NOS Node Engine (roles/kvm_clos_provision/templates/kvm_sonic_domain.xml.j2)
 
 <domain type='kvm'>
@@ -1908,10 +1935,11 @@ To maintain absolute PCI slot index predictability inside the guest operating sy
 </domain>
 
 ------------------------------
+```
 ## Step 5: Hypervisor Automated Execution Pipeline Task Engine
 This production engine gathers structural mappings across your switches and compute hosts. It identifies all unique target bridges, spins them up cleanly inside the OVS daemon space, builds the complete XML specifications, imports them to the local hypervisor domain registries, and starts the entire virtual framework.
 Save this script workspace to: roles/kvm_clos_provision/tasks/main.yml.
-
+```
 ---
 - name: Prep | Enforce structural runtime existence of global OVS stub tracking bridge
   openvswitch.openvswitch.openvswitch_bridge:
@@ -1977,9 +2005,10 @@ Save this script workspace to: roles/kvm_clos_provision/tasks/main.yml.
   delegate_to: localhost
 
 ------------------------------
+```
 ## Step 6: Master Ignition Playbook Runner (phase1_ignite_fabric.yml)
 Execute this master playbook runner from your deployer terminal machine. It orchestrates the host environment sequentially to lay down the underlying Layer-1 structural virtualization matrix.
-
+```
 ---
 - name: Orchestrate Phase 1 - Ignite Virtual Clos Layer 1 Infrastructure
   hosts: localhost
@@ -2011,7 +2040,7 @@ Execute this master playbook runner from your deployer terminal machine. It orch
         host_server_interfaces: "{{ hostvars[item]['host_server_interfaces'] }}"
       loop: "{{ groups['compute_nodes'] }}"
       when: hostvars[item]['vm_name'] is defined
-
+```
 Now that Phase 1 is completely automated, would you like to review how to implement Phase 2 (The Automated MaaS PXE Bootstrap) to configure your MaaS controller node and begin provisioning the Ubuntu servers automatically?
 
 ### Please do.
@@ -2043,9 +2072,22 @@ deployer-fabric-root/
 As outlined in your wiring specs, HostB12_1 functions as the Kubernetes cluster master node, housing the centralized PostgreSQL database instance and the MaaS Region/Rack controllers (p. 7).
 ```
 ---
-# Host Identity Propertiesvm_name: "vhost-server-b12-1"ansible_host: "192.168.255.15"
-# MaaS Specific Configuration Variablesmaas_admin_user: "admin"maas_admin_email: "infra-admin@datacenter.local"maas_admin_password: "VaultSecureMaaSAdminPassword123"
-# Network Ranges for Dynamic Commissioning Poolsmaas_pxe_interface: "enps0"maas_pxe_network: "192.168.0.0"maas_pxe_cidr: "12"                  # Matches the 192.168.255.0/125 overall schememaas_dynamic_ip_range_start: "192.168.255.30"maas_dynamic_ip_range_end: "192.168.255.120"maas_upstream_dns: "8.8.8.8"
+# Host Identity Properties
+vm_name: "vhost-server-b12-1"
+ansible_host: "192.168.255.15"
+
+# MaaS Specific Configuration Variables
+maas_admin_user: "admin"
+maas_admin_email: "infra-admin@datacenter.local"
+maas_admin_password: "VaultSecureMaaSAdminPassword123"
+
+# Network Ranges for Dynamic Commissioning Pools
+maas_pxe_interface: "enps0"
+maas_pxe_network: "192.168.0.0"
+maas_pxe_cidr: "12"                  # Matches the 192.168.255.0/125 overall scheme
+maas_dynamic_ip_range_start: "192.168.255.30"
+maas_dynamic_ip_range_end: "192.168.255.120"
+maas_upstream_dns: "8.8.8.8"
 
 ------------------------------
 ```
@@ -2212,11 +2254,18 @@ Below is the production-grade, complete automated playbook, role structures, and
 We append the Exit-Router variables to the data-model schema, providing full upstream internet breakout context using your hardware descriptions (pp. 2, 6).
 ```
 # host_vars/Exit-Router1.yml
----bgp_asn: 64999loopback_ip: "10.255.255.1"ansible_host: "172.16.2.48" # Connected to Management Switch Port 48ansible_network_os: routeros # Automated native Mikrotik CRS326 profiles
-# Explicitly tracks connections back into the Clos border layerdownstream_interfaces:
+---
+bgp_asn: 64999
+loopback_ip: "10.255.255.1"
+ansible_host: "172.16.2.48" # Connected to Management Switch Port 48
+ansible_network_os: routeros # Automated native Mikrotik CRS326 profiles
+
+# Explicitly tracks connections back into the Clos border layer
+downstream_interfaces:
   - name: "ether24" # Plugs directly into Border-Leaf1 Ethernet3
     peer_asn: 65201
-# Outbound ISP connectionsupstream_interfaces:
+# Outbound ISP connections
+upstream_interfaces:
   - name: "ether2"  # Admin wifi aggregation bridge
   - name: "ether24" # ISP Link
 
@@ -2242,7 +2291,7 @@ fabric-routing-orchestration/
 ```
 ## Step 3: Jinja2 Architectural Templates## 1. Unified Switch Core Engine (roles/switch_fabric_routing/templates/switch_frr.conf.j2)
 This blueprint generates native FRR configurations for Spines, Leafs, and Border-Leafs alike, implementing strict BGP Unnumbered link discovery and Multipath relaxation.
-```
+```text
 ! SONiC Architecture Routing Template for {{ inventory_hostname }}
 frr version 8.1
 frr defaults traditional
