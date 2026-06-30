@@ -93,7 +93,7 @@ Note: The veth-swX-pX ends must be bound to your virtual SONiC instance runtime 
 SONiC manages physical port mapping via its config_db.json database. Port splitting and breakouts are executed via the CLI or metadata patches.
 ## Switch 1 Configuration: Arista 7050QX32 (QSFP+ Breakout)
 To tell SONiC that the first physical 40G QSFP+ port is being broken down into 4 individual 10G logical lanes (Ethernet0, Ethernet1, Ethernet2, Ethernet3), run the following commands inside the Switch 1 CLI console:
-
+```
 # Break out the 40G Port 1 into 4x10G channels
 sudo config interface breakout Ethernet0 "4x10G"
 # Verify that the ports changed from a single 40G interface to 4 individual 10G ports
@@ -116,11 +116,11 @@ sudo config interface startup Ethernet1
 # Configure IP addressing for Server 3 and Server 4 links
 sudo config interface ip add Ethernet0 10.201.1.1/24
 sudo config interface ip add Ethernet1 10.202.1.1/24
-
+```
 ------------------------------
 ## Step 3: Troubleshooting and Verification Flow
 To verify data plane path connectivity or isolate configuration errors, use this command breakdown mapping down the interface stack:
-
+```
    1. Verify OVS State on Ubuntu Host:
    
    sudo ovs-vsctl show
@@ -129,17 +129,17 @@ To verify data plane path connectivity or isolate configuration errors, use this
    2. Verify Physical Link State inside SONiC:
    
    show interfaces status
-   
+   ```
    For Switch 1, ensure Ethernet0 and Ethernet1 display operational speeds of 10000M (10G) instead of 40000M (40G).
    3. Trace Packets mapping (Host to SONiC):
    If communication fails, check packet counters at the boundary interfaces:
-   
+   ```
    # On Ubuntu Host:
    sudo ip -s link show veth-sw1-p1
    # Inside SONiC:
    show queue counters Ethernet0
    
-   
+   ```
 To help optimize this virtual infrastructure, are you deploying these SONiC instances via Docker containers or KVM/QEMU virtual machines, and which SONiC release version are you using?
 
 
@@ -169,7 +169,7 @@ SONiC relies on standard hardware profile mappings (port_config.ini). For these 
 ## 1. Arista-7050QX32 (40G QSFP+ Breakout Profile)
 Physical QSFP+ ports use 4 internal SerDes lanes. Setting a port to 4x10G splits it into four logical interfaces.
 port_config.ini representation:
-
+```
 # ports lanes speed
 Ethernet0 1,2,3,4 10000
 Ethernet1 5,6,7,8 10000
@@ -186,7 +186,7 @@ Ethernet1 2 10000
 Ethernet2 3 10000
 Ethernet3 4 10000
 # Ethernet4 (Port 5) is skipped / unmapped if 1-4 are active
-
+```
 ------------------------------
 ## Part 3: Data-Driven Ansible Automation Design## Directory Structure
 ```mermaid
