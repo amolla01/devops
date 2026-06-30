@@ -208,7 +208,10 @@ sonic-provisioning/
 ```
 ## Variable Architecture## Global Variables (group_vars/all.yml)
 ```yaml
----ansible_user: adminansible_network_os: sonicsonic_config_dir: /etc/sonic
+---
+ansible_user: admin
+ansible_network_os: sonic
+sonic_config_dir: /etc/sonic
 
 ## Switch 1 Context Profile (host_vars/switch1-7050qx32.yml)
 
@@ -360,7 +363,8 @@ Here is the revised, highly explicit Ansible variable architecture reflecting th
 In this model, every physical cage is a 40G QSFP+ port (spaced by 4). We explicitly define the parent port, its breakout transformation, and the resulting child interfaces that map to your host servers.
 ```yaml
 # host_vars/switch1-7050qx32.yml
----hwsku: "Arista-7050QX32"
+---
+hwsku: "Arista-7050QX32"
 # Physical Breakout Map# Parent Cage Port: Ethernet0 (Physical Port 1)#   ↳ Mode 4x10G -> Generates logical child ports: Ethernet0, Ethernet1, Ethernet2, Ethernet3# Parent Cage Port: Ethernet4 (Physical Port 2)#   ↳ Mode 4x10G -> Generates logical child ports: Ethernet4, Ethernet5, Ethernet6, Ethernet7
 breakout_topology:
   - parent_port: "Ethernet0"
