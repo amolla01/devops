@@ -58,6 +58,7 @@ All three switches share a Broadcom Trident 2 ASIC, which groups four 10G intern
   }
 }
 
+
 (Note: Setting "Ethernet120": null instructs the database parser to completely delete the old 40G entry before executing the split block). [7] 
 ------------------------------
 ## Platform Driving Variables & Models Breakdown
