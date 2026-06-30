@@ -919,9 +919,10 @@ To help finalize your automation pipeline, do your production switches rely on a
 ### No ZTP at this point. exploring the options on real hardware.
 
 
-When transitioning to real hardware without Zero Touch Provisioning (ZTP), your primary challenge is bootstrapping the initial Out-of-Band (OOB) Management IP address and enabling SSH. Once that initial link is established, your existing data-driven Ansible automation framework can take over completely.
+### When transitioning to real hardware without Zero Touch Provisioning (ZTP), your primary challenge is bootstrapping the initial Out-of-Band (OOB) Management IP address and enabling SSH. Once that initial link is established, your existing data-driven Ansible automation framework can take over completely.
 Below are the industry-standard options for initializing SONiC on real Arista hardware, along with an automated strategy to handle the initial deployment.
 ------------------------------
+```
 ## Option 1: On-Box Initialization via ONIE (Best Practice)
 When you purchase or install SONiC on bare-metal hardware, it boots into ONIE (Open Network Install Environment) before the OS is active. Even without a ZTP server, ONIE provides a minimal, interactive shell accessible via the physical serial console port.
 
@@ -934,7 +935,7 @@ When you purchase or install SONiC on bare-metal hardware, it boots into ONIE (O
    
    
 This installs the base operational image directly onto the switch flash storage.
-```
+
 ------------------------------
 ## Option 2: Post-Boot Console Manual Baseline
 Once SONiC is installed via ONIE and reboots, it spins up with a factory-default configuration database. Because there is no management IP, network ports are inactive. You must log in via the serial console using the default credentials (admin / YourDefaultPassword) to paste the minimal bootstrap commands: [1] 
@@ -961,7 +962,7 @@ new_hardware
 
 ## The Automated Onboarding Tasks (roles/sonic_bootstrap/tasks/main.yml)
 You can use Ansible's raw connectivity layer or generic transport mechanisms to push the initial baseline JSON block before applying breakout configurations.
-```
+
 ---
 - name: Bootstrap | Check if Management plane is accessible via standard SSH
   wait_for:
@@ -1008,8 +1009,9 @@ If you are using terminal servers in your rack, would you like to see how to con
 
 #### For simulating a complete production level Routed to Host Leaf Spine CLOS 3 fabric, which option will have less network complexity for complete setup, creating all the vms through virsh by a script deploy/ubuntu/sonic vms and then apply port/interface configuration or the approach provided above, where virsh vm's configuration xml created from virsh bridge designed and later start vms?
 
-For simulating a production-level, 3-stage Clos fabric (Leaf-Spine Routed-to-Host) in a lab environment, the approach provided above—generating complete, declarative Libvirt XML files and then launching the VMs—is significantly less complex, less error-prone, and much closer to a real-world pipeline.
+### For simulating a production-level, 3-stage Clos fabric (Leaf-Spine Routed-to-Host) in a lab environment, the approach provided above—generating complete, declarative Libvirt XML files and then launching the VMs—is significantly less complex, less error-prone, and much closer to a real-world pipeline.
 Here is a analytical breakdown of why the declarative XML approach minimizes network complexity compared to a dynamic scripting approach, along with how it directly benefits a 3-stage Clos architecture.
+```
 ------------------------------
 ## The Two Approaches Compared## 1. The Dynamic Scripted Approach (High Complexity)
 In this method, you boot generic "blank" virtual machines first, and then use a host bash/python script or hot-plug commands (virsh attach-interface) to dynamically map OVS bridges and virtual Ethernet pairs while the system is initializing or running.
@@ -1026,7 +1028,7 @@ In this method, your Ansible playbook defines the entire hardware topology upfro
 ------------------------------
 ## Why the Declarative XML Approach Wins for a Routed-to-Host Clos Fabric
 A 3-stage Routed-to-Host Clos fabric demands precise structural mapping across three distinct layers. Managing this via dynamic scripting becomes unmaintainable quickly, whereas declarative data modeling keeps it clean:
-```
+
   [Spine Layer]      Spine-1  <=== (Fabric Links) ===>  Spine-2
                         ▲                                  ▲
                         └───┐                          ┌───┘
@@ -1037,7 +1039,7 @@ A 3-stage Routed-to-Host Clos fabric demands precise structural mapping across t
                         ▼       ▼                  ▼       ▼
   [Host Layer]       Server-1 Server-2          Server-3 Server-4
                     (Routed Links directly to Server Operating Systems)
-```
+
 ## 1. Perfect Fabric Link Alignment (Leaf to Spine)
 In a Clos network, predictable link grouping is vital for ECMP (Equal-Cost Multi-Path) routing.
 Using the declarative XML approach, your host_vars completely map the topology. For example, Leaf-1's port Ethernet28 will always plug into Spine-1's port Ethernet0 via a dedicated OVS bridge (br-l1-s1), eliminating any tracking guesswork.
@@ -1046,6 +1048,7 @@ Because you are routing all the way to the server, the virtual host servers (Ubu
 ## 3. Data-Driven Port Densities (The Stub Port Solution)
 As established earlier, an Arista switch expects 32 or 36 ports. The declarative template fills the gaps up to the hardware profile maximum using br-stub. This allows SONiC to initialize its routing protocols (like BGP) across the active ports while gracefully ignoring the rest, perfectly mirroring a true production data center deployment.
 ------------------------------
+```
 ## Recommended Pipeline Execution Workflow
 To keep complexity at a minimum, organize your deployment pipeline into three distinct, decoupled phases using the automation architecture we built:
 
