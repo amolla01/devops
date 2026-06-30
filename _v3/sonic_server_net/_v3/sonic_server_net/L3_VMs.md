@@ -1247,7 +1247,10 @@ fabric_interfaces:
     ip_address: "10.1.2.2/30"
     peer_ip: "10.1.2.1"
     peer_asn: 65102
-Use code with caution.Part 4: Jinja2 Automation Templates1. SONiC Interface DB Generation (roles/fabric_breakout/templates/config_db.json.j2)json{
+      
+Use code with caution.Part 4: Jinja2 Automation Templates1. SONiC Interface DB Generation (roles/fabric_breakout/templates/config_db.json.j2)
+```
+json{
     "PORT": {
         {% if breakout_topology is defined %}
         {% for breakout in breakout_topology %}
@@ -1272,7 +1275,10 @@ Use code with caution.Part 4: Jinja2 Automation Templates1. SONiC Interface DB G
         {% endif %}
     }
 }
-Use code with caution.2. Host Server Network Definition (roles/host_networking/templates/netplan.yaml.j2)yamlnetwork:
+```
+Use code with caution.2. Host Server Network Definition (roles/host_networking/templates/netplan.yaml.j2)
+```yaml
+network:
   version: 2
   renderer: networkd
   ethernets:
@@ -1287,7 +1293,10 @@ Use code with caution.2. Host Server Network Definition (roles/host_networking/t
         - {{ intf.ip_address }}
       critical: true
     {% endfor %}
-Use code with caution.3. Host FRRouting Daemon Config (roles/host_networking/templates/frr.conf.j2)textfrr version 8.1
+Use code with caution.3. Host FRRouting Daemon Config (roles/host_networking/templates/frr.conf.j2)
+```
+text
+frr version 8.1
 frr defaults traditional
 hostname {{ inventory_hostname }}
 !
@@ -1309,10 +1318,16 @@ router bgp {{ server_bgp_asn }}
 !
 line vty
 !
-Use code with caution.Part 5: Secure Secrets Pipeline (vault.yml)yaml---
+
+```
+Use code with caution.
+Part 5: Secure Secrets Pipeline (vault.yml)yaml---
 vault_sonic_admin_password: "$6$rounds=40000$SaltString$YourEncryptedProductionSONiCSecretKeyHash..."
 vault_ubuntu_sudo_password: "CleartextOrEncryptedSudoPasswordForHostProvisioning Tasks"
-Use code with caution.Part 6: Complete Automation Blueprint (site_deploy.yml)This production-ready execution engine applies configurations sequentially across layers, validating states before advancing to ensure fabric stability (p. 7).yaml---
+Use code with caution.
+Part 6: Complete Automation Blueprint (site_deploy.yml)This production-ready execution engine applies configurations sequentially across layers, validating states before advancing to ensure fabric stability (p. 7).
+```yaml
+---
 - name: Phase 1 - Orchestrate SONiC Fabric Layer Breakouts & Routing
   hosts: fabric_switches
   gather_facts: no
