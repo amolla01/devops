@@ -240,7 +240,7 @@ Global configuration settings for the SONiC inventory group.
 
 ## host_vars/switch-as5712.yml
 An example of an Accton AS5712-54X host profile defining a 4x10G split on physical port 49 (which correlates to Ethernet192 with SerDes lanes 192-195).
-
+```yaml
 ---ansible_host: 10.1.1.51
 # Define breakout intentbreakout_ports:
   - master_port: "Ethernet192"
@@ -392,7 +392,7 @@ This playbook encapsulates pre-validation, aggressive dependency teardown to pre
       loop: "{{ breakout_ports | subelements('sub_ports') }}"
       register: post_check_subs
       failed_when: "'10G' not in post_check_subs.results[0].stdout"
-
+```
 If you are tracking deeper infrastructure parameters, tell me if you would like to:
 
 * Expand the Jinja2 payload to handle dynamic sub-port description mappings.
@@ -431,7 +431,7 @@ Create a workspace organized into standard Ansible structures:
 ---ansible_connection: ansible.netcommon.network_cliansible_network_os: sonic.sonic.sonicansible_user: adminansible_ssh_pass: "YourSecureNetOpsPassword"sonic_mtu: 9100
 
 ## inventory/host_vars/accton-leaf1.yml
-
+```yaml
 ---ansible_host: 10.100.1.51breakout_ports:
   - master_port: "Ethernet192"
     alias_base: "Ethernet49"
@@ -467,8 +467,10 @@ Create a workspace organized into standard Ansible structures:
     base_lane: 0
 
 ------------------------------
+```
 ## 3. Production-Ready Jinja2 Patch Template
 This template generates valid JSON syntax and outputs a logical slice block for ConfigDB parsing.
+
 ## roles/sonic_breakout/templates/breakout_patch.json.j2
 ```
 {
@@ -520,7 +522,7 @@ This template generates valid JSON syntax and outputs a logical slice block for 
 ```
 ------------------------------
 ## 4. Playbook Execution Engine## deploy_breakout.yml
-
+```yaml
 ---
 - name: Automate Production Port Breakouts on SONiC
   hosts: sonic_switches
@@ -614,7 +616,7 @@ This template generates valid JSON syntax and outputs a logical slice block for 
       loop: "{{ breakout_ports }}"
       register: post_sub_verification
       failed_when: "'10G' not in post_sub_verification.results[0].stdout and '10000' not in post_sub_verification.results[0].stdout"
-
+```
 To proceed, please let me know if you would like to:
 
 * Integrate LACP/PortChannel definitions into the post-validation engine.
@@ -632,7 +634,7 @@ The dynamic mapping values are explicitly bound to the real hardware lanes, indi
 
 ------------------------------
 ## 1. Variables Data Model Blueprint## inventory/host_vars/accton-as5712.yml
-
+```yaml
 ---ansible_host: 10.100.1.51breakout_parent_ports: [] # Left empty because ports 53 and 54 are already split in your platform file
 # Directly track individual sub-interfaces for validationbreakout_sub_ports:
   - { name: "Ethernet64", alias: "tenGigE64", lane: "109", index: "53", speed: "10000" }
@@ -643,9 +645,9 @@ The dynamic mapping values are explicitly bound to the real hardware lanes, indi
   - { name: "Ethernet69", alias: "tenGigE69", lane: "78",  index: "54", speed: "10000" }
   - { name: "Ethernet70", alias: "tenGigE70", lane: "79",  index: "54", speed: "10000" }
   - { name: "Ethernet71", alias: "tenGigE71", lane: "80",  index: "54", speed: "10000" }
-
+```
 ## inventory/host_vars/arista-7050qx32.yml
-
+```yaml
 ---ansible_host: 10.100.1.52breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
 breakout_sub_ports:
@@ -653,9 +655,9 @@ breakout_sub_ports:
   - { name: "Ethernet1", alias: "Ethernet1/2", lane: "126", index: "1", speed: "10000" }
   - { name: "Ethernet2", alias: "Ethernet1/3", lane: "127", index: "1", speed: "10000" }
   - { name: "Ethernet3", alias: "Ethernet1/4", lane: "128", index: "1", speed: "10000" }
-
+```
 ## inventory/host_vars/arista-7050qx32s.yml
-
+```yaml
 ---ansible_host: 10.100.1.53breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
 breakout_sub_ports:
@@ -663,7 +665,7 @@ breakout_sub_ports:
   - { name: "Ethernet1", alias: "Ethernet5/2", lane: "10", index: "5", speed: "10000" }
   - { name: "Ethernet2", alias: "Ethernet5/3", lane: "11", index: "5", speed: "10000" }
   - { name: "Ethernet3", alias: "Ethernet5/4", lane: "12", index: "5", speed: "10000" }
-
+```
 ------------------------------
 ## 2. Precise Jinja2 Configuration Patch Template
 This template uses explicit key mappings from your hardware platform profiles. It handles the null delete pattern for the switches requiring active breakouts (Arista models).
@@ -696,7 +698,7 @@ This template uses explicit key mappings from your hardware platform profiles. I
 ```
 ------------------------------
 ## 3. Production Playbook Execution Engine## deploy_breakout.yml
-
+```yaml
 ---
 - name: Apply Hardware-Specific SONiC Port Breakouts
   hosts: sonic_switches
@@ -794,7 +796,7 @@ This template uses explicit key mappings from your hardware platform profiles. I
       loop: "{{ breakout_sub_ports }}"
       register: post_sub_verification
       failed_when: "'10G' not in post_sub_verification.results.stdout and '10000' not in post_sub_verification.results.stdout"
-
+```
 If you are tracking deeper infrastructure parameters, tell me if you would like to:
 
 * Add rollback steps that automatically revert the ConfigDB if post-validation fails.
@@ -811,7 +813,7 @@ Now that we have the exact hardware specifications, we can trace how the breakou
 Here is your complete, deployable, and production-ready automation suite mapping directly to these parameters.
 ------------------------------
 ## 1. Variables Architecture (host_vars)## inventory/host_vars/accton-as5712.yml
-
+```yaml
 ---ansible_host: 10.100.1.51# These ports are already natively defined as 10G interfaces in your hardware profile.breakout_parent_ports: []
 breakout_sub_ports:
   - { name: "Ethernet64", alias: "tenGigE64", lane: "109", index: "53", speed: "10000" }
@@ -822,9 +824,9 @@ breakout_sub_ports:
   - { name: "Ethernet69", alias: "tenGigE69", lane: "78",  index: "54", speed: "10000" }
   - { name: "Ethernet70", alias: "tenGigE70", lane: "79",  index: "54", speed: "10000" }
   - { name: "Ethernet71", alias: "tenGigE71", lane: "80",  index: "54", speed: "10000" }
-
+```
 ## inventory/host_vars/arista-7050qx32.yml
-
+```yaml
 ---ansible_host: 10.100.1.52breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
 breakout_sub_ports:
@@ -832,9 +834,9 @@ breakout_sub_ports:
   - { name: "Ethernet1", alias: "Ethernet1/2", lane: "126", index: "1", speed: "10000" }
   - { name: "Ethernet2", alias: "Ethernet1/3", lane: "127", index: "1", speed: "10000" }
   - { name: "Ethernet3", alias: "Ethernet1/4", lane: "128", index: "1", speed: "10000" }
-
+```
 ## inventory/host_vars/arista-7050qx32s.yml
-
+```yaml
 ---ansible_host: 10.100.1.53breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
 breakout_sub_ports:
@@ -842,7 +844,7 @@ breakout_sub_ports:
   - { name: "Ethernet4", alias: "Ethernet5/2", lane: "10", index: "5", speed: "10000" }
   - { name: "Ethernet8", alias: "Ethernet5/3", lane: "11", index: "5", speed: "10000" }
   - { name: "Ethernet12", alias: "Ethernet5/4", lane: "12", index: "5", speed: "10000" }
-
+```
 ------------------------------
 ## 2. Strict Jinja2 Breakout Template
 This template outputs structural changes to Redis. If breakout_parent_ports is evaluated as empty (like the Accton layout), it skips the breakout modification block safely.
@@ -875,7 +877,7 @@ This template outputs structural changes to Redis. If breakout_parent_ports is e
 ```
 ------------------------------
 ## 3. Production Playbook Execution Engine## deploy_breakout.yml
-
+```yaml
 ---
 - name: Apply Hardware-Specific SONiC Port Breakouts
   hosts: sonic_switches
@@ -973,7 +975,7 @@ This template outputs structural changes to Redis. If breakout_parent_ports is e
       loop: "{{ breakout_sub_ports }}"
       register: post_sub_verification
       failed_when: "'10G' not in post_sub_verification.results.stdout and '10000' not in post_sub_verification.results.stdout"
-
+```
 If you are tracking deeper infrastructure parameters, tell me if you would like to:
 
 * Map individual Descriptions to each sub-port directly inside the dictionary schema.
@@ -991,7 +993,7 @@ Here is the updated automation model. It includes the correct hardware mapping v
 
 ------------------------------
 ## Updated Variable Files (host_vars)## inventory/host_vars/arista-7050qx32.yml
-
+```yaml
 ---ansible_host: 10.100.1.52breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
   - { master_port: "Ethernet4", mode: "4x10G" }
@@ -1012,9 +1014,9 @@ breakout_sub_ports:
   - { name: "Ethernet9",  alias: "Ethernet3/2", lane: "14",  index: "3", speed: "10000" }
   - { name: "Ethernet10", alias: "Ethernet3/3", lane: "15",  index: "3", speed: "10000" }
   - { name: "Ethernet11", alias: "Ethernet3/4", lane: "16",  index: "3", speed: "10000" }
-
+```
 ## inventory/host_vars/arista-7050qx32s.yml
-
+```yaml
 ---ansible_host: 10.100.1.53breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
   - { master_port: "Ethernet4", mode: "4x10G" }
@@ -1035,13 +1037,13 @@ breakout_sub_ports:
   - { name: "Ethernet9",  alias: "Ethernet7/2", lane: "18",  index: "7", speed: "10000" }
   - { name: "Ethernet10", alias: "Ethernet7/3", lane: "19",  index: "7", speed: "10000" }
   - { name: "Ethernet11", alias: "Ethernet7/4", lane: "20",  index: "7", speed: "10000" }
-
+```
 (Note: On the 32S model, when Ethernet0 breaks out, it populates Ethernet0,4,8,12. When Ethernet4 breaks out, it populates sequential blocks Ethernet4,5,6,7. This is expected behavior for SONiC handling shared lanes when transitioning from 40G parent keys down to native 10G sub-interface namespaces).
 ------------------------------
 ## Complete Production Playbook
 The Jinja2 template payload (roles/sonic_breakout/templates/breakout_patch.json.j2) and the playbook logic remain identical, as they are completely driven by the updated host variables above.
 ## deploy_breakout.yml
-
+```yaml
 ---
 - name: Apply Hardware-Specific SONiC Port Breakouts
   hosts: sonic_switches
@@ -1139,7 +1141,7 @@ The Jinja2 template payload (roles/sonic_breakout/templates/breakout_patch.json.
       loop: "{{ breakout_sub_ports }}"
       register: post_sub_verification
       failed_when: "'10G' not in post_sub_verification.results.stdout and '10000' not in post_sub_verification.results.stdout"
-
+```
 To proceed, let me know if you would like to:
 
 * Add tasks to assign specific IP networks or VLANs to these newly generated sub-ports.
@@ -1160,7 +1162,7 @@ Here is the updated automation model. It includes the correct hardware mapping v
 
 ------------------------------
 ## Updated Variable Files (host_vars)## inventory/host_vars/arista-7050qx32.yml
-
+```yaml
 ---ansible_host: 10.100.1.52breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
   - { master_port: "Ethernet4", mode: "4x10G" }
@@ -1204,13 +1206,13 @@ breakout_sub_ports:
   - { name: "Ethernet9",  alias: "Ethernet7/2", lane: "18",  index: "7", speed: "10000" }
   - { name: "Ethernet10", alias: "Ethernet7/3", lane: "19",  index: "7", speed: "10000" }
   - { name: "Ethernet11", alias: "Ethernet7/4", lane: "20",  index: "7", speed: "10000" }
-
+```
 (Note: On the 32S model, when Ethernet0 breaks out, it populates Ethernet0,4,8,12. When Ethernet4 breaks out, it populates sequential blocks Ethernet4,5,6,7. This is expected behavior for SONiC handling shared lanes when transitioning from 40G parent keys down to native 10G sub-interface namespaces).
 ------------------------------
 ## Complete Production Playbook
 The Jinja2 template payload (roles/sonic_breakout/templates/breakout_patch.json.j2) and the playbook logic remain identical, as they are completely driven by the updated host variables above.
 ## deploy_breakout.yml
-
+```yaml
 ---
 - name: Apply Hardware-Specific SONiC Port Breakouts
   hosts: sonic_switches
@@ -1308,7 +1310,7 @@ The Jinja2 template payload (roles/sonic_breakout/templates/breakout_patch.json.
       loop: "{{ breakout_sub_ports }}"
       register: post_sub_verification
       failed_when: "'10G' not in post_sub_verification.results.stdout and '10000' not in post_sub_verification.results.stdout"
-
+```
 To proceed, let me know if you would like to:
 
 * Add tasks to assign specific IP networks or VLANs to these newly generated sub-ports.
@@ -1339,7 +1341,7 @@ Even though your original port_config.ini file skips Ethernet1, Ethernet2, and E
 ------------------------------
 ## Corrected Variable Block for Arista 7050QX-32S
 To break out Ethernet0, Ethernet4, and Ethernet8 simultaneously without overlaps, update your variables to this clean, distinct structural layout:
-
+```yaml
 ---ansible_host: 10.100.1.53breakout_parent_ports:
   - { master_port: "Ethernet0", mode: "4x10G" }
   - { master_port: "Ethernet4", mode: "4x10G" }
@@ -1362,7 +1364,7 @@ breakout_sub_ports:
   - { name: "Ethernet9",  alias: "Ethernet7/2", lane: "18",  index: "7", speed: "10000" }
   - { name: "Ethernet10", alias: "Ethernet7/3", lane: "19",  index: "7", speed: "10000" }
   - { name: "Ethernet11", alias: "Ethernet7/4", lane: "20",  index: "7", speed: "10000" }
-
+```
 Would you like me to help verify the mapping structure for any additional ports in that configuration file, or do you want to add custom description tracking for each of these sub-interfaces?
 
 
