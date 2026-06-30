@@ -14,7 +14,7 @@ The sonic-cfggen tool relies on a structured hierarchy in ConfigDB. To dynamical
 ## Breakout JSON Patch and Hardware Profiles
 The following unified JSON patch details how a 40GbE native master port splits into a 4x10G configuration across the requested models (Accton AS5712-54X, Arista 7050QX-32S, and Arista 7050QX-3). [12] 
 All three switches share a Broadcom Trident 2 ASIC, which groups four 10G internal SerDes lanes inside each QSFP+ cage. This uniform hardware layer means that while physical aliases might slightly vary by NOS flavor, they follow the exact same lane and speed variable architecture in SONiC. [3, 8, 13] 
-
+```
 {
   "BREAKOUT_CFG": {
     "Ethernet120": {
@@ -57,7 +57,7 @@ All three switches share a Broadcom Trident 2 ASIC, which groups four 10G intern
     }
   }
 }
-
+```
 
 (Note: Setting "Ethernet120": null instructs the database parser to completely delete the old 40G entry before executing the split block). [7] 
 ------------------------------
@@ -100,7 +100,7 @@ Would you like to build a specific SerDes lane layout map for a different port n
 
 # provide  side by side the startup original port with options it supports for breakout and later the breakout patch after performing the breakout for the example port?
 
-
+```
 
 {
   "==================== STARTUP: ORIGINAL PORT PROFILE ====================": {},
@@ -170,7 +170,7 @@ Would you like to build a specific SerDes lane layout map for a different port n
     }
   }
 }
-
+```
 ## Architectural Key Differences
 
 * Lane Disaggregation: The startup configuration binds four physical SerDes channels (120,121,122,123) into a single master logical interface. The breakout patch strips this array down, allocating exactly one discrete SerDes lane per sub-port.
@@ -258,7 +258,7 @@ An example of an Accton AS5712-54X host profile defining a 4x10G split on physic
 ------------------------------
 ## Jinja2 Configuration Template## roles/sonic_breakout/templates/breakout_patch.json.j2
 This template dynamically generates the standard sonic-cfggen compatible payload. It handles the mandatory null pointer instantiation to wipe the 40G entry out of ConfigDB before binding the 10G sub-interfaces.
-
+```
 {
   "BREAKOUT_CFG": {
 {% for port in breakout_ports %}
@@ -283,7 +283,7 @@ This template dynamically generates the standard sonic-cfggen compatible payload
 {% endfor %}
   }
 }
-
+```
 ------------------------------
 ## Production Ansible Playbook## deploy_breakout.yml
 This playbook encapsulates pre-validation, aggressive dependency teardown to prevent ConfigDB transaction deadlocks, patch deployment, a full configuration reload, and post-validation verification.
@@ -470,7 +470,7 @@ Create a workspace organized into standard Ansible structures:
 ## 3. Production-Ready Jinja2 Patch Template
 This template generates valid JSON syntax and outputs a logical slice block for ConfigDB parsing.
 ## roles/sonic_breakout/templates/breakout_patch.json.j2
-
+```
 {
   "BREAKOUT_CFG": {
 {% for port in breakout_ports %}
@@ -517,7 +517,7 @@ This template generates valid JSON syntax and outputs a logical slice block for 
 {% endfor %}
   }
 }
-
+```
 ------------------------------
 ## 4. Playbook Execution Engine## deploy_breakout.yml
 
@@ -668,7 +668,7 @@ breakout_sub_ports:
 ## 2. Precise Jinja2 Configuration Patch Template
 This template uses explicit key mappings from your hardware platform profiles. It handles the null delete pattern for the switches requiring active breakouts (Arista models).
 ## roles/sonic_breakout/templates/breakout_patch.json.j2
-
+```
 {
   "BREAKOUT_CFG": {
 {% for port in breakout_parent_ports %}
@@ -693,7 +693,7 @@ This template uses explicit key mappings from your hardware platform profiles. I
 {% endfor %}
   }
 }
-
+```
 ------------------------------
 ## 3. Production Playbook Execution Engine## deploy_breakout.yml
 
@@ -847,7 +847,7 @@ breakout_sub_ports:
 ## 2. Strict Jinja2 Breakout Template
 This template outputs structural changes to Redis. If breakout_parent_ports is evaluated as empty (like the Accton layout), it skips the breakout modification block safely.
 ## roles/sonic_breakout/templates/breakout_patch.json.j2
-
+```
 {
   "BREAKOUT_CFG": {
 {% for port in breakout_parent_ports %}
@@ -872,7 +872,7 @@ This template outputs structural changes to Redis. If breakout_parent_ports is e
 {% endfor %}
   }
 }
-
+```
 ------------------------------
 ## 3. Production Playbook Execution Engine## deploy_breakout.yml
 
