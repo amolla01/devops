@@ -796,11 +796,11 @@ If you plan to scale this simulation, would you like me to show you how to gener
 ### yes, I do. Also need a pathway to automate the configuration on real hardware following the same switch model/server wiring in place.
 
 
-## Part 1: Ansible Inventory Architecture (Lab vs. Real Hardware)
+### Part 1: Ansible Inventory Architecture (Lab vs. Real Hardware)
 To seamlessly control both your Ubuntu KVM hypervisor host and the SONiC operating systems running inside the switches, you must use a dual-layer inventory. This allows you to run host preparation tasks (like provisioning OVS bridges) on the Ubuntu machine while sending NOS configurations (like breakouts and IP addresses) straight to the switches.
 We also design this to accommodate a Real Hardware transition path by grouping switches under a shared platform type but assigning different connection variables (SSH vs. Console/Management network).
 ## Comprehensive Inventory File (inventory.ini)
-
+```
 [hypervisors]
 ubuntu-kvm-host ansible_host=192.168.1.50 ansible_connection=ssh ansible_user=labadmin
 
@@ -818,16 +818,27 @@ virtual_switches
 physical_switches
 ```
 ## Shared SONiC Configurations (group_vars/sonic_nodes.yml)
-
----ansible_user: adminansible_ssh_pass: YourSecureSonicPasswordansible_network_os: sonicsonic_config_dir: /etc/sonic
+```
+---
+ansible_user: admin
+ansible_ssh_pass: YourSecureSonicPassword
+ansible_network_os: sonic
+sonic_config_dir: /etc/sonic
 
 ## Virtual vs. Physical Connection Handling
 
 # group_vars/virtual_switches.yml
----# Instructs Ansible that these are emulated inside our target KVM hostis_virtual: truetarget_hypervisor: "ubuntu-kvm-host"
+---
+# Instructs Ansible that these are emulated inside our target KVM host
+is_virtual: true
+target_hypervisor: "ubuntu-kvm-host"
 
 # group_vars/physical_switches.yml
----# Real switches use direct out-of-band management hardware networksis_virtual: false# Real hardware might require specialized AAA tokens or individual secretsansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+---
+# Real switches use direct out-of-band management hardware networks
+is_virtual: false
+# Real hardware might require specialized AAA tokens or individual secrets
+ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
 
 ------------------------------
 ## Part 2: Unified Execution Playbook
