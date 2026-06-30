@@ -1078,8 +1078,9 @@ If you are mapping out the routing protocols for this Clos setup, would you like
 ### Attaching my complete wiring. Analyze deeply. Understand interface wiring for different switch and device models and get information from internet on SONiC and ubuntu configuration. The provide a complete Ansible var files with relevant models and group / host var details with proper interface wiring setup through ansible.
 
 
-To construct a production-ready, data-driven automation framework for this complex multi-vendor L3 Clos architecture (pp. 1-2), we must abstract the underlying hardware idiosyncrasies (such as the 40G QSFP+ breakouts (p. 2) versus standard SFP+ lanes (p. 2)) into clean, unified Ansible host variable models.Below is the production-grade blueprint, inventory scheme, and host/group variable design implementing the exact wiring topology requested (p. 1).Software Stack Requirements (Deployer Machine)To run these playbooks successfully, your Deployer Machine (p. 1) requires the following software layer:Ubuntu Linux 24.04 LTS / 22.04 LTS as the baseline OS.Ansible Core (>= 2.15) to orchestrate both Linux endpoints and network switches (p. 1).Ansible Collections:sonic.sonic_os (To push configuration to Celestica, Edge-Core, and Arista SONiC switches) (p. 2).community.libvirt & openvswitch.openvswitch (For hypervisor/simulation control if running via the KVM/OVS approach).ansible.netcommon & community.network (For core network tasks).Python Libraries: netaddr (for subnet parsing), jmespath (for complex variable filtering).FRRouting (FRR) & Netplan tools (built-in targeted dependencies for host server configurations) (p. 1).Directory Architecture Blueprinttextdeployer-fabric-root/
-```
+To construct a production-ready, data-driven automation framework for this complex multi-vendor L3 Clos architecture (pp. 1-2), we must abstract the underlying hardware idiosyncrasies (such as the 40G QSFP+ breakouts (p. 2) versus standard SFP+ lanes (p. 2)) into clean, unified Ansible host variable models.Below is the production-grade blueprint, inventory scheme, and host/group variable design implementing the exact wiring topology requested (p. 1).Software Stack Requirements (Deployer Machine)To run these playbooks successfully, your Deployer Machine (p. 1) requires the following software layer:Ubuntu Linux 24.04 LTS / 22.04 LTS as the baseline OS.Ansible Core (>= 2.15) to orchestrate both Linux endpoints and network switches (p. 1).Ansible Collections:sonic.sonic_os (To push configuration to Celestica, Edge-Core, and Arista SONiC switches) (p. 2).community.libvirt & openvswitch.openvswitch (For hypervisor/simulation control if running via the KVM/OVS approach).ansible.netcommon & community.network (For core network tasks).Python Libraries: netaddr (for subnet parsing), jmespath (for complex variable filtering).FRRouting (FRR) & Netplan tools (built-in targeted dependencies for host server configurations) (p. 1).Directory Architecture Blueprint
+```text
+deployer-fabric-root/
 ├── inventory.ini
 ├── vault.yml
 ├── group_vars/
@@ -1101,7 +1102,8 @@ To construct a production-ready, data-driven automation framework for this compl
 │   └── host_networking/
 └── site_deploy.yml
 ```
-Use code with caution.Part 1: Ansible Inventory (inventory.ini)This structured inventory groups devices cleanly by their operational tier in the Clos topology (p. 1), separating switches by hardware capability to handle distinct profile templates.ini[spines]
+Use code with caution.
+Part 1: Ansible Inventory (inventory.ini)This structured inventory groups devices cleanly by their operational tier in the Clos topology (p. 1), separating switches by hardware capability to handle distinct profile templates.ini[spines]
 ```
 Spine_S1 ansible_host=172.16.2.46 hw_model="Celestica-DX010"
 Spine_S2 ansible_host=172.16.2.45 hw_model="Celestica-DX010"
@@ -1137,14 +1139,16 @@ HostB12_1 ansible_host=192.168.255.15
 HostB12_2 ansible_host=192.168.255.16
 MonitorSrv ansible_host=192.168.255.17
 ```
-Use code with caution.Part 2: Fabric Switch Variable InfrastructureGlobal Group Configuration (group_vars/fabric_switches.yml)yaml
+Use code with caution.
+Part 2: Fabric Switch Variable InfrastructureGlobal Group Configuration (group_vars/fabric_switches.yml)yaml
 ```yaml
 ---
 ansible_user: admin
 ansible_network_os: sonic
 sonic_config_dir: /etc/sonic
 fabric_mgmt_subnet: "172.16.2.0/16"
-Use code with caution.Spine Configuration Template Context (host_vars/Spine_S1.yml)yaml---
+Use code with caution.
+Spine Configuration Template Context (host_vars/Spine_S1.yml)yaml---
 bgp_asn: 65000
 loopback_ip: "10.0.0.1/32"
 
@@ -1162,7 +1166,8 @@ fabric_ports:
     ip_address: "10.254.1.17/30"
   - name: "Ethernet20" # Connects to Border-Leaf2 Eth124
     ip_address: "10.254.1.21/30"
-Use code with caution.Leaf L1 Configuration Context (host_vars/Leaf_L1.yml)yaml---
+Use code with caution.
+Leaf L1 Configuration Context (host_vars/Leaf_L1.yml)yaml---
 bgp_asn: 65101
 loopback_ip: "10.0.1.1/32"
 
@@ -1183,7 +1188,8 @@ downstream_ports:
     ip_address: "10.1.1.5/30"
   - name: "Ethernet2" # Host12_3 enps1
     ip_address: "10.1.1.9/30"
-Use code with caution.Leaf L3 Breakout Architecture Context (host_vars/Leaf_L3.yml)Because Leaf_L3 is an Arista-7050QX-32, its uplink speeds to the Spine must be calculated using explicitly defined parent breakout configurations (p. 2).yaml---
+Use code with caution.
+Leaf L3 Breakout Architecture Context (host_vars/Leaf_L3.yml)Because Leaf_L3 is an Arista-7050QX-32, its uplink speeds to the Spine must be calculated using explicitly defined parent breakout configurations (p. 2).yaml---
 bgp_asn: 65103
 loopback_ip: "10.0.1.3/32"
 
@@ -1216,7 +1222,9 @@ downstream_ports:
     ip_address: "10.3.2.1/30"
   - name: "Ethernet3" # Storage_Server_HDD_02 enps1
     ip_address: "10.3.2.5/30"
-Use code with caution.Border-Leaf 1 Dynamic Mapping Context (host_vars/Border-Leaf1.yml)The Arista-7050QX-32S breakout profiles reflect native SFP+ port groupings (p. 2) as specified in the physical wiring requirements.yaml---
+Use code with caution.
+Border-Leaf 1 Dynamic Mapping Context (host_vars/Border-Leaf1.yml)The Arista-7050QX-32S breakout profiles reflect native SFP+ port groupings (p. 2) as specified in the physical wiring requirements.yaml
+---
 bgp_asn: 65201
 loopback_ip: "10.0.2.1/32"
 
@@ -1254,7 +1262,9 @@ downstream_ports:
     ip_address: "10.5.2.1/30"
   - name: "Ethernet3" # Storage_Server_SSD_02 enps1
     ip_address: "10.5.2.5/30"
-Use code with caution.Part 3: Host Server Configuration Context (host_vars/Host12_1.yml)The multi-homed bare-metal compute servers run both Netplan and FRR natively (p. 1), allowing BGP-to-the-Host routing to handle active-active L3 forwarding loops into the OpenStack on Kubernetes cluster infrastructure (p. 1).yaml---
+Use code with caution.
+Part 3: Host Server Configuration Context (host_vars/Host12_1.yml)The multi-homed bare-metal compute servers run both Netplan and FRR natively (p. 1), allowing BGP-to-the-Host routing to handle active-active L3 forwarding loops into the OpenStack on Kubernetes cluster infrastructure (p. 1).yaml
+---
 ansible_user: ubuntu
 ansible_network_os: linux
 
@@ -1276,9 +1286,10 @@ fabric_interfaces:
     peer_ip: "10.1.2.1"
     peer_asn: 65102
       
-Use code with caution.Part 4: Jinja2 Automation Templates1. SONiC Interface DB Generation (roles/fabric_breakout/templates/config_db.json.j2)
-```
-json{
+Use code with caution.
+Part 4: Jinja2 Automation Templates1. SONiC Interface DB Generation (roles/fabric_breakout/templates/config_db.json.j2)
+```json
+{
     "PORT": {
         {% if breakout_topology is defined %}
         {% for breakout in breakout_topology %}
@@ -1304,7 +1315,8 @@ json{
     }
 }
 ```
-Use code with caution.2. Host Server Network Definition (roles/host_networking/templates/netplan.yaml.j2)
+Use code with caution.
+2. Host Server Network Definition (roles/host_networking/templates/netplan.yaml.j2)
 ```yaml
 network:
   version: 2
@@ -1321,9 +1333,9 @@ network:
         - {{ intf.ip_address }}
       critical: true
     {% endfor %}
-Use code with caution.3. Host FRRouting Daemon Config (roles/host_networking/templates/frr.conf.j2)
-```
-text
+Use code with caution.
+3. Host FRRouting Daemon Config (roles/host_networking/templates/frr.conf.j2)
+```text
 frr version 8.1
 frr defaults traditional
 hostname {{ inventory_hostname }}
@@ -1417,7 +1429,8 @@ Part 6: Complete Automation Blueprint (site_deploy.yml)This production-ready exe
       failed_when: ping_check.rc != 0
 
 ```
-Use code with caution.Since you are running an OpenStack on Kubernetes (KubeSpray) deployment on top of this routed fabric (pp. 1, 7), would you like to see the Calico / Cilium BGP peering configuration overlay variables to map your Kubernetes CNI directly into these Leaf switches?
+Use code with caution.
+Since you are running an OpenStack on Kubernetes (KubeSpray) deployment on top of this routed fabric (pp. 1, 7), would you like to see the Calico / Cilium BGP peering configuration overlay variables to map your Kubernetes CNI directly into these Leaf switches?
 
 ### Please update everything above related with ipv4 since we will be using bgp unnumbered for the topology.
 
