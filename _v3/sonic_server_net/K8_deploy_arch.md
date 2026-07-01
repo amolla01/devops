@@ -3605,11 +3605,11 @@ This guide pulls together every logical subnet, physical touchpoint, traffic-sha
 ------------------------------
 ## 🗺️ Part 1: The Master Subnet & Interface Worksheet
 To ensure that your infrastructure remains structured and troubleshooting-friendly, all system assets utilize an explicit coordinate system matching their physical datacenter position:
-
+```
 * [ZONE]: 1 (Data Center 1, Availability Zone 1)
 * [RACK]: 12 (Physical Server Rack Number)
 * [SLOT]: 24 (Dell PowerEdge R630 Unit position inside the rack)
-
+```
 | Operational Network Plane [1, 2, 3] | Address Space Schema | Target Interface | Primary Architectural Purpose |
 |---|---|---|---|
 | iDRAC / IPMI Hardware | 10.10.241.0 - 10.10.254.254 | Dedicated iDRAC Port | Out-of-band bare-metal power cycle controls. |
@@ -3627,6 +3627,7 @@ To ensure that your infrastructure remains structured and troubleshooting-friend
 ------------------------------
 ## 📂 Part 2: Multi-File Host Netplan Configuration
 To prevent configuration errors from locking you out of your machines, split your Netplan files on each bare-metal Ubuntu worker/controller node inside /etc/netplan/:
+```
 ## 🔒 /etc/netplan/00-oob-management.yaml
 
 network:
@@ -3669,10 +3670,11 @@ network:
   dummy-devices:
     ceph-dummy0:
       addresses: [192.168.50.24/24] # 192.168.50.[SLOT]
-
+```
 ------------------------------
 ## 🛠️ Part 3: Kubespray Ansible Variable Touchpoints
 To configure Kubespray to use Calico in pass-through host-routed mode, enable your OOB load balancers, and isolate port dependencies, modify the files inside your inventory directory structure exactly as follows:
+```
 ## 📝 File Location 1: inventory/mycluster/group_vars/k8s_cluster/k8s-cluster.yml [4] 
 This file configures your base Kubernetes cluster mechanics and disables Calico's encapsulation planes. [5] 
 
@@ -3704,11 +3706,11 @@ This file activates the platform infrastructure add-ons required to expose dashb
       ip_range:
         - 10.10.100.1-10.10.100.254
       auto_assign: true
-
+```
 ------------------------------
 ## ⚙️ Part 4: Post-Kubespray Host Integrations## 1. Linux Traffic Control (HTB CPU Optimization)
 To protect your compute server CPUs and ensure Ceph data replication never starves your production workloads, execute this traffic-shaping block on your host operating systems to map your multi-homed links:
-
+```
 for DEV in enp2s0 enp3s0; do
   sudo tc qdisc del dev $DEV root 2> /dev/null || true
   sudo tc qdisc add dev $DEV root handle 1: htb default 20
@@ -3750,7 +3752,7 @@ route-map RM_FABRIC_EXPORT permit 20
  match ip address prefix-list PL_OPENSTACK_FLOATING
 !
 route-map RM_FABRIC_EXPORT deny 100
-
+```
 This cohesive blueprint completely maps out all parameters needed to build a highly available, robust container and virtualization platform with explicit network isolation and zero overlapping resource constraints.
 To ensure your cluster scaling operations run smoothly, would you like to review how to format the Kubespray inventory hosts configuration file (hosts.yaml) to mirror this node mapping schema?
 
