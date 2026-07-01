@@ -4440,7 +4440,7 @@ To track how an OpenStack floating IP routes down to a tenant’s service, how t
 You asked how an OpenStack Floating IP maps back to an "internal pod IP where the tenant's service is running."
 A critical architectural clarification first: Tenants do not deploy native Kubernetes pods directly on your underlying Kubespray cluster—they deploy Virtual Machines (VMs) using OpenStack Nova. If those VMs run their own internal tenant-owned Kubernetes clusters, the tenant's container services run inside those tenant VMs. [1] 
 Here is exactly how, when, and where a Floating IP maps to a tenant workload:
-
+```
 [ External Internet Client ] 
          │ (Targets Floating IP: 203.0.113.88)
          ▼
@@ -4461,7 +4461,7 @@ Here is exactly how, when, and where a Floating IP maps to a tenant workload:
             │ (If running a tenant-owned container cluster)
             ▼
       [ Tenant K8s Ingress / Pod IP ] (e.g., 10.244.0.15)
-
+```
 ## 1. Network Architecture Execution (Where it Happens)
 This entire mapping happens within Open vSwitch (OVS) controlled by the OVN (Open Virtual Network) database pipeline.
 
@@ -4496,6 +4496,7 @@ To stop tenants from uploading malicious binaries or running infected disk image
 Yes. To allow tenants to cleanly expose standard databases, API endpoints, or services that require raw, un-NATed external routing, you must obtain a dedicated public IP block (e.g., a /24 or /28 prefix) from your upstream ISPs. You configure this block inside OpenStack Neutron as an External Provider Network Allocation Pool. [3] 
 ## 2. Can a Single Public IP be Shared Among Multiple Tenants via FQDN?
 Yes, but only for HTTP/HTTPS web traffic. You cannot share a single raw IP across multiple tenants for generic protocols like SSH or database connections because those protocols do not include domain name tracking at the transport layer (Layer 4).
+```
 To share an IP across different tenants using Fully Qualified Domain Names (FQDNs), you deploy a Shared Multitenant Reverse Proxy Block:
 
 [ Domain: tenantA.com ] ───┐
@@ -4514,7 +4515,7 @@ To share an IP across different tenants using Fully Qualified Domain Names (FQDN
    2. Tenant A points their DNS record (://tenanta.com) to that IP. Tenant B points their DNS record (://tenantb.com) to that exact same IP.
    3. When an external client connects, the shared Octavia proxy handles the SSL handshake and inspects the HTTP "Host" Header inside the layer 7 request payload.
    4. If the header matches ://tenanta.com, Octavia routes the traffic through OVN down to Tenant A's private VM subnet (192.168.1.5). If it matches ://tenantb.com, it routes the packet to Tenant B's private subnet (172.16.5.12).
-
+```
 This approach allows you to efficiently conserve your valuable public IPv4 address space for standard web workloads, while reserving your raw public IP pool endpoints for tenants who explicitly purchase dedicated floating IPs for complex, multi-port protocol deployments.
 Would you like to examine how to write the Neutron CLI commands to initialize this public external provider network pool so it maps cleanly to your host FRR instance configurations?
 
@@ -4540,6 +4541,7 @@ Because your architecture is built on an enterprise-grade 100G SONiC BGP-Unnumbe
 ------------------------------
 ## 🎯 Part 2: Which Tool to Use Based on Tenant Cluster Requests
 To maximize your 100G network efficiency and hardware resource density, map your tenants' requests to the correct platform engine:
+```
 ## 1. Use vCluster when: [6] 
 
 * The Request: A tenant wants a quick, lightweight Kubernetes sandbox for a CI/CD pipeline, staging environment, or testing tool.
@@ -4559,11 +4561,11 @@ To maximize your 100G network efficiency and hardware resource density, map your
 
 * The Request: Advanced DevOps or platform engineering tenants demand GitOps-driven, declarative infrastructure (e.g., they want to scale a cluster from 5 to 50 nodes simply by pushing a YAML file to GitHub or triggering ArgoCD).
 * Why: CAPI treats Kubernetes clusters as simple custom resources (YAML declarations). It constantly reconciliation-loops against the OpenStack APIs, making it the most robust choice for automated production environments. [16, 17, 18, 19] 
-
+```
 ------------------------------
 ## 🛠️ Part 3: Integration Effort & Implementation for OpenStack
 To offer these tools to your tenants, you must integrate them with your existing OpenStack and network layers:
-
+```
 ┌────────────────────────────────────────────────────────┐
 │               MANAGEMENT K8S CLUSTER                   │
 │         (Kubespray / Calico / Host FRR Layer)          │
@@ -4626,7 +4628,7 @@ vcluster create tenant-a-k8s -n tenant-a-namespace
    2. Create a base secret manifest containing your OpenStack cloud credentials (clouds.yaml authentication block).
    3. Draft a CAPI cluster blueprint YAML definition that details the target control plane sizing, worker machine pools, and Neutron internal networks. [31, 32] 
 * Tenant Experience: The tenant applies a single YAML file (kubectl apply -f tenant-cluster.yaml) to the management endpoint. The CAPI operator handshakes with Nova, spins up the VMs, runs kubeadm automatically, and outputs a completed, operational cluster. [33, 34] 
-
+```
 ## Summary Strategy Recommendation
 
 * If your priority is saving hardware resource costs and CPU cycles while granting quick developers standard test environments, deploy vCluster. [35, 36] 
