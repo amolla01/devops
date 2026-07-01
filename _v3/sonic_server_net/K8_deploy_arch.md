@@ -7092,7 +7092,7 @@ Would you like to examine how to structure your Prometheus alert expressions to 
 [6] [https://community.cisco.com](https://community.cisco.com/t5/networking-knowledge-base/how-the-secure-networking-processor-is-benefiting-customers/ta-p/5302580)
 
 
-# So, SR_IOV or SR IOV with DPDK, doesn't that help in this case??
+### So, SR_IOV or SR IOV with DPDK, doesn't that help in this case??
 
 Yes, absolutely. You have hit on the exact software-defined networking (SDN) technologies that public cloud giants use to solve this exact problem.
 By implementing SR-IOV (Single Root I/O Virtualization) or DPDK (Data Plane Development Kit) on your Ubuntu + FRR Exit Routers, you can bypass the traditional Linux kernel bottlenecks [203.0.113.0/24 is used as an example public prefix earlier]. This elevates an ordinary x86 Dell server into a high-performance router capable of pushing line-rate 40G/100G traffic, rivaling the performance of expensive, proprietary hardware from Cisco or Juniper. [1, 2] 
@@ -7100,27 +7100,27 @@ Here is a deep analysis of how these technologies work and how they fix the serv
 ------------------------------
 ## 🧱 How SR-IOV and DPDK Rewrite Server Routing## 1. SR-IOV: Hardware Splitting and Hypervisor Bypass [3] 
 In a standard virtualized lab or cloud platform, network packets must cross multiple software bridges (like libvirt or Open vSwitch) before they reach your Exit Router VM. This consumes massive amounts of CPU cycles. [4] 
-
+```
 [ Standard Virtualization ]
 Physical NIC ──► Host Kernel ──► OVS Bridge ──► QEMU VirtIO Driver ──► Router VM (Slow)
 
 [ SR-IOV Virtualization ]
 Physical NIC ──► Virtual Function (VF) ASIC Chip Layer ────────────────► Router VM (Nanoseconds)
 
-
+```
 * How it works: SR-IOV allows a physical PCIe network card (like an Intel XL710 40G card) to split itself at the hardware ASIC level into multiple independent virtual network cards, called Virtual Functions (VFs). [5, 6, 7] 
 * The Benefit: You assign a hardware VF directly to your Ubuntu Exit Router VM using PCIe pass-through. The host operating system's kernel is completely bypassed. When a packet hits the physical wire, the network card's internal ASIC drops the packet straight into your Exit Router VM's RAM in nanoseconds. [8] 
 
 ## 2. DPDK: Eradicating Kernel Interrupts (Poll Mode Drivers) [9] 
 Even with SR-IOV, an ordinary Ubuntu operating system will still experience CPU bottlenecks because the standard Linux kernel relies on Interrupt-Driven Networking. Every time a batch of packets arrives, the CPU must stop execution to handle the network interrupt.
-
+```
 [ Standard Linux Kernel ]
 Packet Arrives ──► CPU Interrupted ──► Context Switch ──► Process Packet ──► Resume Apps (High CPU)
 
 [ DPDK User-Space Engine ]
 CPU Core 0/1 Locked ──► Continuously Loops & Pulls Packets Directly From Ring Buffer (0% Interrupts)
 
-
+```
 * How it works: DPDK unbinds the network card from the Linux kernel completely and hands it to a dedicated application running in User Space. It introduces a Poll Mode Driver (PMD). [10, 11, 12, 13] 
 * The Benefit: Instead of waiting to be interrupted by incoming packets, you lock one or two CPU cores to permanently stare at the network card's memory ring buffer, pulling packets out continuously. Context switching, CPU interrupts, and kernel networking code are 100% eliminated.
 
@@ -7146,11 +7146,11 @@ When you assign CPU cores to DPDK polling, those cores are permanently locked at
 ------------------------------
 ## 💡 The Ultimate Architecture Path for Your Startup
 For your current infrastructure scale, use a tiered progression model to optimize your budget and execution speeds:
-
+```
 * Phase 1 (Your Current Setup): Stick with Standard Ubuntu + FRR inside your virtual lab script, using your 10.10.1.x and 10.1.1.x network layers. It is easy to configure, handles up to 10 Gbps easily, and supports WireGuard out of the box with zero specialized knowledge.
 * Phase 2 (Growth Spark): When production tenant traffic begins to saturate your links, transition your physical Dell R630 Exit Routers from standard kernel interfaces to SR-IOV Pass-Through. This strips away the virtualization hypervisor overhead while keeping the friendly Linux configuration syntax.
 * Phase 3 (Hyper-Scale): If you scale to thousands of active tenant workloads, upgrade your edge nodes to use an open-source data plane engine like FD.io VPP (Vector Packet Processing) with DPDK. This configuration delivers true carrier-grade routing performance over standard x86 servers, completely eliminating the need to purchase proprietary Cisco or Juniper platforms.
-
+```
 Would you like to examine how to verify if your current Dell R630 motherboard BIOS settings have Intel VT-d and SR-IOV hardware virtualization extensions enabled and ready for production?
 
 [1] [https://blog-us.kioxia.com](https://blog-us.kioxia.com/post/2023/03/31/why-sr-iov-is-the-solution-to-help-efficiently-scale-your-data-center)
