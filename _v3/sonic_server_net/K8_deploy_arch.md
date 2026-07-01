@@ -8183,6 +8183,7 @@ If you are interested, we can explore how to write an automated Ansible provisio
 This production-ready Ansible Playbook is designed to automatically deploy, configure, and initialize the Prometheus node_exporter and frr_exporter services across all your Ubuntu compute hosts and virtual routers.
 It leverages the exact structure we generated in your dynamic inventory.yml file, matching your production parameters, setting up dedicated system users, and wiring up the service hooks securely under systemd. [1, 2, 3] 
 ------------------------------
+```
 ## 📂 Step 1: Create the Ansible Inventory Var Map (group_vars/all.yml)
 To ensure the exporters bind cleanly to your isolated Out-of-Band (OOB) Management network interfaces (enp1s0) instead of bleeding onto the high-speed data fabric wires, define your global variables first.
 Create a file at group_vars/all.yml: [4] 
@@ -8362,7 +8363,7 @@ Ensure your directory structure is clean:
 Execute the playbook directly from your workstation or administration node over your secure WireGuard tunnel network interface:
 
 ansible-playbook -i inventory.yml deploy_exporters.yml
-
+```
 ## 📊 What Happens Once Executed
 
    1. Ansible uses your master password (Welcome0!) to securely scale horizontally across all hosts in parallel.
