@@ -8618,7 +8618,9 @@ To finish consolidating your platform onto this dual-router high-availability to
 Because your Mattermost application server runs on Exit_Router1 (10.10.1.40) while pulling its persistent data tables from Exit_Router2 (10.10.1.39), you must configure an internal cross-over routing mesh so both Alertmanagers can dispatch notifications through a single, highly available communication gateway.
 ------------------------------
 ## 💬 Part 1: Adjusting the Mattermost Webhooks for HA Alertmanager
+```
 Since your Mattermost frontend app server runs on Exit_Router1 (10.10.1.40:8065), it acts as the primary API destination for all alerts. However, because both routers run active Alertmanager nodes (edge_alertmanager_1 and edge_alertmanager_2) in a mesh network, you need to update your alertmanager.yml file to point symmetrically to this centralized address on both nodes.
+
 ## The Synchronized Webhook Configuration (alertmanager.yml)
 Deploy this exact configuration file to both Exit_Router1 and Exit_Router2. The Alertmanager cluster mesh will handle deduplication so you only receive one notification for an incident.
 
@@ -8637,16 +8639,26 @@ receivers:
   # The OOB Management Switch (10.10.1.0/24) safely routes Router 2's alerts across to Router 1
   - url: 'http://10.10.1'
     send_resolved: true
-
+```
 ------------------------------
 ## 📂 Part 2: Adjusting the Ansible Exporter Playbook
+```
 We must update the Ansible playbook we wrote earlier to account for the fact that Exit_Router1 and Exit_Router2 are now both target production hosts (running standard node/frr exporters) and infrastructure master servers hosting your Docker-based monitoring stacks.
 We can optimize this by updating your global group_vars/all.yml file and structuring an edge-aware playbook targeting your split configuration architecture.
+
 ## 📝 Step A: Update the Global Configuration (group_vars/all.yml)
 
-# --- Infrastructure Exporter System Parameters ---node_exporter_version: "1.8.2"frr_exporter_version: "1.4.0"
-# Explicitly bind the metric collection endpoints to the local OOB Management IPexporter_bind_ip: "{{ ansible_host }}"binary_dest_dir: "/usr/local/bin"
-# --- Converged Docker Stack Flags ---# Forces the playbook to avoid container collisions by assigning unique internal labelsrouter1_mgmt_ip: "10.10.1.40"router2_mgmt_ip: "10.10.1.39"
+# --- Infrastructure Exporter System Parameters ---
+node_exporter_version: "1.8.2"
+frr_exporter_version: "1.4.0"
+
+# Explicitly bind the metric collection endpoints to the local OOB Management IP
+exporter_bind_ip: "{{ ansible_host }}"binary_dest_dir: "/usr/local/bin"
+
+# --- Converged Docker Stack Flags ---
+# Forces the playbook to avoid container collisions by assigning unique internal labels
+router1_mgmt_ip: "10.10.1.40"
+router2_mgmt_ip: "10.10.1.39"
 
 ## 📝 Step B: The Updated Ansible Playbook (deploy_exporters.yml)
 This updated playbook handles two tasks: it deploys standard operating system and routing exporters to your worker nodes, and automatically opens up the target firewall exceptions and Docker space mappings for your converged monitoring stacks on the routers. [1] 
@@ -8769,10 +8781,10 @@ This updated playbook handles two tasks: it deploys standard operating system an
       ansible.builtin.systemd:
         name: frr_exporter
         state: restarted
-
+```
 ------------------------------
 ## 🚀 Part 3: Deploying and Running the Ecosystem
-
+```
    1. Run the Ansible playbook from your management machine to register all basic metrics loops:
    
    ansible-playbook -i inventory.yml deploy_exporters.yml
@@ -8784,7 +8796,7 @@ This updated playbook handles two tasks: it deploys standard operating system an
    3. Log into Exit_Router1 (10.10.1.40) and spin up your application frontend tools:
    
    cd /opt/monitor-edge && docker compose up -d
-   
+```   
    [2] 
 
 Once the containers stabilize, you can log into Mattermost via your secure WireGuard VPN tunnel, generate your webhook token key, and drop it straight into the /opt/monitor-edge/alertmanager.yml template paths on both machines.
@@ -8794,12 +8806,13 @@ Would you like to examine how to write the final Grafana dashboard configuration
 [1] [https://networktocode.com](https://networktocode.com/blog/ansible-execution-strategies/)
 [2] [https://shoumikmahbub.medium.com](https://shoumikmahbub.medium.com/basic-of-ansible-simplifying-it-automation-c42c28a2ade4)
 
-# Yes, I do.
+### Yes, I do.
 
 To merge metrics from both Exit_Router1 and Exit_Router2 into a single, unified Grafana view, you take advantage of Grafana's native High-Availability (HA) Mixed Datasource Handling and PromQL aggregation functions.
 Because both Prometheus instances dynamically scrape identical endpoints across your 100G SONiC BGP-Unnumbered fabric, we want to build your graphs so they display a single consolidated line, but automatically failover if one database goes offline.
 ------------------------------
 ## 🛠️ Step 1: Register Both Routers as Core Datasources
+```
 Before building the dashboard panels, you must explicitly link both Prometheus databases inside your Grafana UI (Home ➔ Administration ➔ Data sources ➔ Add data source):
 
    1. Add Datasource 1:
@@ -8808,11 +8821,13 @@ Before building the dashboard panels, you must explicitly link both Prometheus d
    2. Add Datasource 2:
    * Name: Prometheus-Router-2
       * URL: http://10.10.1.39:9090
-   
+```
 ------------------------------
 ## 📊 Step 2: The High-Availability PromQL Aggregation Pattern
+```
 If you write a standard query like rate(node_network_receive_bytes_total[1m]), Grafana will print duplicate overlapping lines if you try to view both databases simultaneously.
 To merge them cleanly while accounting for the multi-homed, active-active edge links (enp2s0/enp3s0), we use max by or sum by wrappers across the structural instance and device labels.
+
 ## Panel 1: Merged Active-Active Edge Fabric Throughput
 To plot the true real-time ingress data coming from your SONiC switches down into your compute workers, use this exact configuration block inside your Timeseries panel:
 
@@ -8829,8 +8844,11 @@ sum by (instance, device) (rate(node_network_receive_bytes_total{device=~"enp2s0
 
 ## How this behaves during a production outage:
 Because both queries map to the exact same visual labels, Grafana layers them on top of each other perfectly. If Exit_Router1 undergoes a hardware reboot, Query A will drop to zero, but Query B instantly keeps the graphs alive, ensuring your operations team sees no data gaps.
+
+```
 ------------------------------
 ## 🎨 Step 3: Complete Unified High-Availability JSON Configuration
+```
 This production-grade JSON block creates a dedicated Multi-Datasource Failover Panel. It links Queries A and B together, configuring Grafana to seamlessly overlay their data points into single, easily readable paths.
 Copy this panel code block and paste it directly into your dashboard view:
 
@@ -8892,9 +8910,10 @@ Copy this panel code block and paste it directly into your dashboard view:
   "title": "⛓️ CONSOLIDATED EDGE INTERFACE CAPACITIES (ACTIVE-ACTIVE HA FABRIC)",
   "type": "timeseries"
 }
-
+```
 ------------------------------
 ## 📈 Step 4: The Ultimate Startup Dashboard Topology Flow
+
 By combining your converged software router stack with this mixed querying method, your startup infrastructure dashboard pipeline is complete:
 
    1. Symmetric Scraping: Both Exit_Router1 and Exit_Router2 scrape all your hardware switches and compute nodes concurrently over the OOB management switch loop.
