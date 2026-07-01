@@ -3944,7 +3944,8 @@ build {
 ## 📂 2. The Cloud-Init Autoinstall File (http/user-data)
 Create a subdirectory named http and place a file named user-data inside it. This provides the hands-free Ubuntu automated operating system installation commands.
 ```
-#cloud-configautoinstall:
+#cloud-config
+autoinstall:
   version: 1
   refresh-installer:
     update: no
@@ -3977,7 +3978,8 @@ Create a subdirectory named scripts and place the two required compilation tasks
 ## 📜 scripts/bootstrap.sh
 This script handles baking your exact structural layers directly into the golden image filesystem.
 ```
-#!/usr/bin/env bashset -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 echo "====================================================================="
 echo "1. PREPPING REPOSITORIES & SYSTEM SOFTWARE"
@@ -4043,7 +4045,8 @@ systemctl enable traffic-shaping.service
 ## 📜 scripts/cleanup.sh
 This strips out unique identifiers and configurations, forcing the operating system kernel to issue brand new parameters upon network booting.
 
-#!/usr/bin/env bashset -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 echo "====================================================================="
 echo "EXECUTING ABSOLUTE RACK PLATFORM SANITIZATION"
