@@ -2885,13 +2885,16 @@ To maintain absolute isolation and allow tenants to safely reuse overlapping IP 
 ## 2. Kubespray Configuration Variables (k8s-net-calico.yml)
 To strip down Calico so it acts purely as a local IPAM engine and an iptables firewall [1], configure inventory/mycluster/group_vars/k8s_cluster/k8s-net-calico.yml with the following explicit overrides:
 ```
-# Core Plugin Directiveskube_network_plugin:
-calicocalico_network_backend: "none"      # Completely eliminates BIRD; frees port 179 for FRR
+# Core Plugin Directives
+kube_network_plugin: calico
+calico_network_backend: "none"      # Completely eliminates BIRD; frees port 179 for FRR
 calico_ipip_mode: "Never"           # Strips away all double-encapsulation tunnels
 calico_vxlan_mode: "Never"          # Routes unencapsulated IP packets straight to kernel
+
 # IPAM Assignment Windows
 kube_pods_subnet: 10.233.0.0/18
 kube_service_addresses: 10.233.64.0/18
+
 # Resource Constraints & Tuning
 calico_node_cpu_limit: "500m"
 calico_node_memory_limit: "512Mi"
@@ -3108,9 +3111,10 @@ Yes, public cloud giants (like AWS, Microsoft Azure, and Google Cloud) rely heav
 To achieve this, cloud giants treat the four octets of an IPv4 address (A.B.C.D) as an hierarchical metadata matrix: [Region/DataCenter].[Availability Zone / Role].[Rack ID].[Node ID].
 Since you are running an enterprise platform using Dell PowerEdge hardware over a SONiC fabric, you can implement this exact design using a Structured 10.254.0.0/16 System Loopback Block.
 ------------------------------
+
 ## 🗺️ The Hyper-Structured Cloud-Scale Loopback Pattern
 We will break your loopback addresses into a strict, readable structure: 10. [DataCenter/Zone] . [Rack ID] . [Node ID / Device Type]
-
+```
    Octet 1          Octet 2          Octet 3          Octet 4
 ┌────────────┐   ┌────────────┐   ┌────────────┐   ┌────────────┐
 │     10     │ . │  Zone/DC   │ . │  Rack ID   │ . │ Node/Device│
@@ -3118,7 +3122,7 @@ We will break your loopback addresses into a strict, readable structure: 10. [Da
  Fixed Infra     01 = DC1 / AZ1   01 = Rack 1      01-10 = Network Switches
   Identifier     02 = DC1 / AZ2   02 = Rack 2      11-99 = Dell R630/R720 Hosts
                  11 = DC2 / AZ1   ... etc.         100+  = Baremetal Storage
-
+```
 ------------------------------
 ## 1. Granular Breakdown of the Octets## 🔹 Octet 1: The Infrastructure Flag (10)
 Keeps your infrastructure loopbacks locked inside your private 10.0.0.0/8 routing space, ensuring it never collides with external public IPs.
