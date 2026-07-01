@@ -7595,11 +7595,12 @@ Would you like to examine how to verify the real-time cryptographic packet count
 [4] [https://www.plc-hmi-scadas.com](https://www.plc-hmi-scadas.com/en/blog/vpn-home-lab-wireguard/)
 
 
-# Yes, I like to examine how to verify the real-time cryptographic packet counters inside VPP to monitor active transit pipelines from ops team laptops
+### Yes, I like to examine how to verify the real-time cryptographic packet counters inside VPP to monitor active transit pipelines from ops team laptops
 
 To verify your real-time cryptographic packet counters and ensure your vectorized data pipeline is processing your operations team's encrypted traffic smoothly, you will interact directly with the hardware-bypassed VPP execution engine.
 VPP tracks packet counters at two distinct levels: the Interface Level (tracking overall ingress/egress bytes on the tunnel) and the Cryptographic Peer Level (tracking specific cryptographic handshakes, keepalives, and individual key lifetimes).
 ------------------------------
+```
 ## 📊 1. Checking General Interface Counters (wireguard0)
 The first step is verifying that packets are physically hitting the virtual WireGuard adapter. Run the following command inside your host shell:
 
@@ -7671,7 +7672,7 @@ To track these values dynamically without running manual terminal checks, combin
 
 # Refreshes the granular cryptographic states and interface counters every 2 seconds
 watch -n 2 "vppctl show interface ; vppctl show wireguard peer"
-
+```
 If you prefer a fully automated, hands-off setup, you can deploy the open-source vpp_exporter container. This tool pulls these vector performance logs and peer metrics straight out of the /run/vpp/cli.sock runtime socket file and exposes them natively to your Prometheus server on MonitorSrv (10.10.1.10), giving your team full visibility on an operations room Grafana dashboard.
 To advance your platform's edge design, let's look at how to approach your next steps:
 
@@ -7680,10 +7681,11 @@ To advance your platform's edge design, let's look at how to approach your next 
 
 Let me know how you would like to proceed with scaling your telemetry and edge architecture!
 
-# Can you do both suggested above?
+### Can you do both suggested above?
 
 To bring your high-performance edge infrastructure into your central operations visibility plane, we will configure the Prometheus Scraper Engine to pull vectorized metrics from your accelerated routers and write the matching production-ready Grafana Dashboard JSON structures.
 ------------------------------
+```
 ## 📊 Part 1: Prometheus Scraping Configuration (prometheus.yml)
 The open-source vpp_exporter collects real-time statistics from the VPP CLI Unix socket (/run/vpp/cli.sock) and translates them into native Prometheus format on HTTP port 9436.
 Add this configuration stanza to your master Prometheus server setup file located on MonitorSrv (10.10.1.10):
@@ -7855,7 +7857,7 @@ Create a file named vpp_dashboard.json and paste this payload directly into your
   "title": "L3 CLOS Data Center - VPP Accelerated Edge Routers",
   "version": 1
 }
-
+```
 ------------------------------
 ## 🚨 Part 3: Operational Threshold Auditing Cheat Sheet
 Once data populates the dashboard panels, use this matrix to identify and triage hardware/software friction points during system load events:
@@ -7874,11 +7876,12 @@ To prepare the environment for live execution, let's explore your next steps:
 
 Let me know how you would like to proceed with your operations monitoring plane!
 
-# Let us do both. And also suggest free and opensource 'group communication channels' for notification purposes.
+### Let us do both. And also suggest free and opensource 'group communication channels' for notification purposes.
 
 Here is the complete setup to close the loop on your accelerated data center orchestration.
 First, we will review the top Free and Open-Source Software (FOSS) group communication channels that your startup can self-host to maintain total privacy over your infrastructure alerts. Then, we will configure the Prometheus Alertmanager routing blocks and look at how to automate Grafana performance snapshot baselines. [1] 
 ------------------------------
+```
 ## 💬 Part 1: Top FOSS Self-Hosted Group Communication Channels
 When you are a lean startup short on funding, paying per-user monthly fees for tools like Slack or Microsoft Teams is a drain on capital. Since you already have an isolated OOB management switch loop and a virtual/bare-metal server fleet, you can self-host these production-quality options for free: [2] 
 ## 1. Mattermost (The Open-Source Slack Alternative)
@@ -7971,7 +7974,7 @@ chmod +x capture-network-baseline.sh
 Before your platform engineering team kicks off an execution script (like spinning up a massive OpenStack tenant cluster or testing a high-capacity VPP WireGuard VPN load), run this command:
 
 ./capture-network-baseline.sh
-
+```
 Grafana will generate a unique link. When an engineer clicks that link, they see an interactive web dashboard containing the exact metrics, CPU vector loads, and traffic counters from that specific moment in time, allowing your startup team to compare and optimize performance changes with absolute accuracy. [17] 
 To advance your operational infrastructure design, let me know how you would like to proceed:
 
