@@ -1983,6 +1983,7 @@ Would you like to examine how to verify that ECMP (Equal-Cost Multi-Pathing) is 
 To verify that ECMP (Equal-Cost Multi-Pathing) is active and working correctly across your SONiC fabric, you need to check two layers: the Control Plane (to see if BGP is installing multiple valid paths for a route) and the Data Plane (to confirm the hardware ASIC is actively balancing the traffic across the physical ASIC ports).
 Since SONiC is built on top of the FRRouting (FRR) routing stack and uses the SAI (Switch Abstraction Interface) to program the underlying hardware ASIC, you will use specific validation utilities at each tier. [1] 
 ------------------------------
+```
 ## 1. Control Plane Validation (Inside FRR)
 First, verify that your BGP routing table is actively computing and storing multiple concurrent next-hops for external routes. Log into your SONiC Spines or Compute Leafs, drop into the FRR shell (vtysh), and run the following inspection steps. [2] 
 ## Step A: Verify Global Multi-Path Flags
@@ -2019,9 +2020,11 @@ default proto bgp metric 20
 	nexthop via inet6 fe80::2 dev Ethernet4 weight 1
 
 The multiple nexthop blocks listed under a single route destination prove that the Linux kernel recognizes this as an active ECMP route.
+```
 ------------------------------
 ## 2. Data Plane Validation (Hardware ASIC Verification)
 Just because the control plane knows about ECMP doesn't automatically mean the hardware chip is executing it. In SONiC, you can verify how the hardware ASIC is distributing packets using the built-in bcmcmd tool (if running Broadcom chips) or SONiC's abstraction diagnostic commands.
+```
 ## Step A: Check Hardware Next-Hop Groups
 SONiC aggregates ECMP paths into hardware groupings called Next Hop Groups (NHG). Check if your platform has provisioned them:
 
@@ -2040,7 +2043,7 @@ How to read the port matrix:
 * Find your fabric uplink ports (e.g., Ethernet0 and Ethernet4).
 * Look at the RX_DRP / TX_DRP columns (for packet integrity) and the TX_BPS (Transmit Bits Per Second) column.
 * If ECMP hashing is working correctly, as traffic flows to the internet, you will see TX_BPS climbing proportionately across both interfaces rather than one spiking to 9 Gbps while the other rests at 0 bps. [4] 
-
+```
 ------------------------------
 ## 💡 Why Traffic Might Lean to One Side (ECMP Hashing Notes)
 If you notice that individual test streams always favor one specific R630 server, do not panic. This is normal behavior for flow-based ECMP hashing.
