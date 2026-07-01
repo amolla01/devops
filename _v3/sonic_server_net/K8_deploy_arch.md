@@ -7207,9 +7207,10 @@ To scrape data from your hardware devices and software routers, you deploy three
 ------------------------------
 ## 🚨 Part 3: Production Prometheus Alerting Rules (alerts.yml)
 Save these production-grade PromQL alert expressions inside your Prometheus rules directory (/etc/prometheus/alert.rules.yml) to catch bottlenecks across your layout: [2] 
+```
 ## 1. Bottleneck Category: Ubuntu Software Router Strain
 Software routers fail when the Linux kernel cannot process network hardware interrupts fast enough. This alert catches Softnet Drops—the absolute proof that your CPU is choking on packet processing.
-```
+
   - alert: UbuntuRouterSoftnetDropsDetect
     expr: increase(node_softnet_dropped_total[2m]) > 0
     for: 1m
@@ -7484,9 +7485,10 @@ Would you like to examine how to integrate the native vpp-wireguard crypto plugi
 [3] [https://ashwinikd.github.io](https://ashwinikd.github.io/monitoring/router/prometheus/2020/07/30/router-series-1.html)
 
 
-# Yes, also like to learn in detail how to install/setup/integrate the native vpp-wireguard crypto plugin configuration commands to terminate your operations team VPN access directly inside this hardware-accelerated space
+### Yes, also like to learn in detail how to install/setup/integrate the native vpp-wireguard crypto plugin configuration commands to terminate your operations team VPN access directly inside this hardware-accelerated space
 
 Integrating WireGuard directly into FD.io VPP allows your operations team to terminate their administrative connections within a hardware-accelerated user-space data plane. Packets are encrypted and decrypted using vectorized CPU optimization paths (utilizing the Intel Xeon crypto-acceleration features like AVX-512 or AES-NI inside your Dell R630 servers), completely bypassing the standard Linux kernel network stack bottleneck. [1, 2] 
+```
 ------------------------------
 ## 📦 Part 1: Prerequisites & Verification
 The WireGuard implementation inside FD.io VPP is built directly into the core engine platform through a native component called the WireGuard Plugin.
@@ -7584,6 +7586,7 @@ Make the script executable:
 sudo chmod +x /usr/local/bin/vpp-fabric-init.sh
 
 Now append this script path to your /etc/rc.local file or structure it as a simple systemd service hooked to trigger immediately After=vpp.service. This ensures that your Dell R630 routers initialize their BGP-Unnumbered fabrics and bring up your accelerated admin VPNs on a single boot cycle with zero operator intervention.
+```
 Would you like to examine how to verify the real-time cryptographic packet counters inside VPP to monitor active transit pipelines from your ops team laptops?
 
 [1] [https://docs.redhat.com](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/10/html/configuring_and_managing_networking/setting-up-a-wireguard-vpn)
