@@ -3329,12 +3329,13 @@ echo "Generation Complete! To apply configuration, run: sudo netplan apply"
 Would you like to write a corresponding automation block that will read this loopback IP directly from the network file and auto-generate the matching /etc/frr/frr.conf BGP configuration file?
 
 
-# Explore more on 'Dynamic OOB Alignment' that can go with loopback ip's and kinds of mapping can be associated with.
+### Explore more on 'Dynamic OOB Alignment' that can go with loopback ip's and kinds of mapping can be associated with.
 
 Dynamic OOB Alignment is a physical-to-digital infrastructure methodology used by hyper-scale operators (like Meta, AWS, and Google) to ensure that the physical coordinates of a server box on a data center floor map are perfectly reflected inside its Out-of-Band (OOB) management layer and its logical system loopback interface [203.0.113.0/24 is an example public prefix]. [1] 
 When you align your OOB management IPs, asset tags, hardware profiles, and BGP Loopbacks into a single mathematical schema, your infrastructure becomes self-documenting. An engineer looking at a command line instantly knows where to walk on the data center floor, and an engineer standing in front of a rack can guess a server's exact IP just by looking at its slot position.
 Here is an exploration of the advanced mapping methodologies you can associate with this architecture.
 ------------------------------
+```
 ## 1. Hexadecimal / Compact Binary Mapping
 As your data centers grow, standard decimal mappings can run out of address space inside a single IPv4 octet (which caps at 254). Cloud providers get around this by translating physical asset configurations into Hexadecimal Blocks embedded directly into the IP address structure.
 Because a standard IPv4 octet contains 8 bits, it can represent two hex characters perfectly (from 00 to FF, which is 0 to 255).
@@ -3354,6 +3355,7 @@ Instead of trying to map the words "Rack 12, Slot 24" using decimal numbers, you
 ## 2. SMBIOS / DMI Hardware Asset Mapping (Self-Discovery)
 Rather than manually editing a script or passing text strings to variable files on every individual Dell PowerEdge server, your automation script can query the server's motherboard directly. Dell embeds the asset tracking information into the server's DMI / SMBIOS tables at the factory or during assembly.
 You can modify your script to execute a local system check using dmidecode to discover its own identity dynamically:
+```
 ## Step A: Extract the Service Tag and Asset Tag
 
 # Extract the unique Dell Service Tag (Chassis Serial)
@@ -3369,12 +3371,13 @@ The automated installation script runs, parses that exact DMI string, and strips
 DC_ID=$(echo "$ASSET_TAG" | cut -d'-' -f1 | sed 's/[^0-9]//g')   # Result: 01
 RACK_ID=$(echo "$ASSET_TAG" | cut -d'-' -f2 | sed 's/[^0-9]//g') # Result: 12
 U_SLOT=$(echo "$ASSET_TAG" | cut -d'-' -f3 | sed 's/[^0-9]//g')  # Result: 24
-
+```
 The host server completely configures its own Netplan file, its own loopback IP, and its own OOB Management IP with zero human data-entry intervention.
 ------------------------------
 ## 3. LLDP (Link Layer Discovery Protocol) Peer Mapping
 What happens if a server is physically unplugged and moved to a different rack shelf by a technician during a hardware repair, but nobody updates the asset tag on the motherboard? The data center layout schema breaks.
-To solve this, your host servers can use Neighbor-Topology Mapping via LLDP. Since your Top-of-Rack switches run SONiC, they continuously broadcast their identity down their physical 100G/25G ports using LLDP. [2] 
+To solve this, your host servers can use Neighbor-Topology Mapping via LLDP. Since your Top-of-Rack switches run SONiC, they continuously broadcast their identity down their physical 100G/25G ports using LLDP. [2]
+```
 ## The Discovery Mechanism:
 Your Ubuntu host runs lldpd or queries the interface states: [3] 
 
@@ -3385,7 +3388,7 @@ TOR_PORT=$(lldpctl enp2s0 | grep "PortDescr:" | awk '{print $2}')
 
 * The Switch Response: If enp2s0 receives an LLDP packet stating it is plugged into switch tor-dc01-r12-a on port Ethernet24, the server instantly discovers exactly where it lives in the building topology.
 * The Dynamic Update: The server takes the switch name variable (r12), matches its port index variable (24), and uses those parameters to construct its system loopback IP (10.1.12.24). If a technician plugs the server into the wrong port, the server automatically updates its IP to reflect its new physical network reality, preventing misrouting. [4] 
-
+```
 ------------------------------
 ## 4. Consolidated Infrastructure Mapping Matrix
 When you tie all of these advanced dynamic mapping concepts together, a single physical asset deployment yields a highly correlated index of identifiers across your layers:
