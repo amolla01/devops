@@ -3366,7 +3366,7 @@ ASSET_TAG=$(sudo dmidecode -s chassis-asset-tag | tr -d '[:space:]')
 ## Step B: How Cloud Giants Program the Asset Tag String
 When your data center hardware is unboxed and bolted into the rack shelf, the provisioning tech configures the Dell iDRAC or motherboard asset tag with a strict physical coordinate string (e.g., DC01-R12-U24).
 The automated installation script runs, parses that exact DMI string, and strips out the variables automatically using text parsing filters:
-
+```
 # Parses the Asset Tag "DC01-R12-U24"
 DC_ID=$(echo "$ASSET_TAG" | cut -d'-' -f1 | sed 's/[^0-9]//g')   # Result: 01
 RACK_ID=$(echo "$ASSET_TAG" | cut -d'-' -f2 | sed 's/[^0-9]//g') # Result: 12
