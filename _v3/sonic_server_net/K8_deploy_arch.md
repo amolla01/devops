@@ -7685,9 +7685,10 @@ Let me know how you would like to proceed with scaling your telemetry and edge a
 
 To bring your high-performance edge infrastructure into your central operations visibility plane, we will configure the Prometheus Scraper Engine to pull vectorized metrics from your accelerated routers and write the matching production-ready Grafana Dashboard JSON structures.
 ------------------------------
-```
+
 ## 📊 Part 1: Prometheus Scraping Configuration (prometheus.yml)
 The open-source vpp_exporter collects real-time statistics from the VPP CLI Unix socket (/run/vpp/cli.sock) and translates them into native Prometheus format on HTTP port 9436.
+```
 Add this configuration stanza to your master Prometheus server setup file located on MonitorSrv (10.10.1.10):
 
 scrape_configs:
@@ -7705,10 +7706,11 @@ scrape_configs:
       - source_labels: [__address__]
         regex: '(.*):9436'
         target_label: 'router_ip'
-
+```
 ------------------------------
 ## 🎨 Part 2: Production Grafana Dashboard Template (vpp_dashboard.json)
 This optimized JSON template builds a unified, high-density operations dashboard. It maps your VPP Interface Speeds, Intel CPU Vector Clock Cycles, and WireGuard Peer Telemetry onto clean visual elements.
+```
 Create a file named vpp_dashboard.json and paste this payload directly into your Grafana import panel (Dashboards -> New -> Import -> Paste JSON):
 
 {
@@ -7881,9 +7883,10 @@ Let me know how you would like to proceed with your operations monitoring plane!
 Here is the complete setup to close the loop on your accelerated data center orchestration.
 First, we will review the top Free and Open-Source Software (FOSS) group communication channels that your startup can self-host to maintain total privacy over your infrastructure alerts. Then, we will configure the Prometheus Alertmanager routing blocks and look at how to automate Grafana performance snapshot baselines. [1] 
 ------------------------------
-```
+
 ## 💬 Part 1: Top FOSS Self-Hosted Group Communication Channels
-When you are a lean startup short on funding, paying per-user monthly fees for tools like Slack or Microsoft Teams is a drain on capital. Since you already have an isolated OOB management switch loop and a virtual/bare-metal server fleet, you can self-host these production-quality options for free: [2] 
+When you are a lean startup short on funding, paying per-user monthly fees for tools like Slack or Microsoft Teams is a drain on capital. Since you already have an isolated OOB management switch loop and a virtual/bare-metal server fleet, you can self-host these production-quality options for free: [2]
+``` 
 ## 1. Mattermost (The Open-Source Slack Alternative)
 Mattermost is an enterprise-grade team communication platform written in Go and React. [3, 4] 
 
@@ -7895,10 +7898,11 @@ Matrix is an open standard protocol for secure, decentralized, real-time communi
 
 * Why it fits your setup: Every room can be end-to-end encrypted (E2EE). If an alert fires containing a sensitive piece of infrastructure metadata (like an IP address or interface port string), it is encrypted before leaving the monitoring server. [15] 
 * Startup Benefit: Highly resilient. It uses a lightweight Matrix-Alertmanager webhook wrapper to pipe infrastructure logs straight into your secure engineering rooms.
-
+```
 ------------------------------
 ## 🚨 Part 2: Prometheus Alertmanager Notification Routing (alertmanager.yml)
 This configuration instructs Alertmanager to intercept the VPP vector crypto and physical interface warnings we wrote earlier, bundle them together to prevent notification storms, and pipe them directly into a self-hosted Mattermost incoming webhook channel.
+```
 Create or update your /etc/prometheus/alertmanager.yml file: [16] 
 
 global:
@@ -7921,15 +7925,21 @@ global:
     target_match:
       severity: 'warning'
     equal: ['alertname', 'instance']
-
+```
 ------------------------------
 ## 📸 Part 3: Automated Grafana Performance Snapshot Baseline Script
 When your startup migrates a large batch of OpenStack tenant workloads or tests a new cluster feature, you need a snapshot of your network state to evaluate optimization differences.
 If you use manual screenshots, you lose the ability to inspect underlying raw data points later. Instead, we can write an automated bash script that calls the Grafana HTTP Dashboard API. This grabs an interactive, point-in-time, data-complete snapshot of your VPP edge router dashboard and saves it as a permanent static file.
+```
 Create a file named capture-network-baseline.sh on your monitoring node:
 
-#!/usr/bin/env bash# =====================================================================# TELEMETRY AUTOMATION: Grafana Interactive Dashboard Snapshot Engine# Captures raw data states before/after infrastructure events# =====================================================================
+#!/usr/bin/env bash
+# =====================================================================
+# TELEMETRY AUTOMATION: Grafana Interactive Dashboard Snapshot Engine
+# Captures raw data states before/after infrastructure events
+# =====================================================================
 set -euo pipefail
+
 # 1. INITIALIZATION PARAMETERS
 GRAFANA_URL="http://10.10.1.10:3000"# Generate a Service Account or Admin Token inside Grafana UI (Configuration -> API Keys)
 API_TOKEN="glsa_your_secure_grafana_api_token_here"# The specific system identification UID found inside your vpp_dashboard.json file
@@ -7940,9 +7950,12 @@ mkdir -p "$OUTPUT_DIR"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SNAPSHOT_FILE="${OUTPUT_DIR}/vpp_baseline_${TIMESTAMP}.json"
 
-echo "Extracting live dashboard data structure from local Grafana portal..."# 2. FETCH CURRENT EXPANDED DASHBOARD DATA SCHEMA
+echo "Extracting live dashboard data structure from local Grafana portal..."
+
+# 2. FETCH CURRENT EXPANDED DASHBOARD DATA SCHEMA
 DB_MODEL=$(curl -sS -H "Authorization: Bearer ${API_TOKEN}" \
   "${GRAFANA_URL}/api/dashboards/uid/${DASHBOARD_UID}" | jq '.dashboard')
+  
 # 3. COMPILE PAYLOAD BLOCK FOR THE SNAPSHOT ENGINE# Forces Grafana to freeze current time windows and lock metric queries into flat JSON data arrays
 SNAPSHOT_PAYLOAD=$(jq -n \
   --arg name "Automated Platform Baseline - ${TIMESTAMP}" \
@@ -7950,12 +7963,15 @@ SNAPSHOT_PAYLOAD=$(jq -n \
   --argjson dashboard "$DB_MODEL" \
   '{name: $name, expires: $expires, dashboard: $dashboard, external: false}')
 
-echo "Compiling frozen metrics snapshot..."# 4. TRIGGER GRAFANA SNAPSHOT ENGINE VIA REST API
+echo "Compiling frozen metrics snapshot..."
+
+# 4. TRIGGER GRAFANA SNAPSHOT ENGINE VIA REST API
 RESPONSE=$(curl -sS -X POST \
   -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
   -d "$SNAPSHOT_PAYLOAD" \
   "${GRAFANA_URL}/api/snapshots")
+  
 # 5. PARSE RESOLUTION URL FOR OPERATIONS TEAM
 SNAPSHOT_URL=$(echo "$RESPONSE" | jq -r '.url')
 echo "====================================================================="
@@ -7963,6 +7979,7 @@ echo "SUCCESS: Interactive Data Baseline Frozen Successfully!"
 echo "--> Saved Schema Path:  ${SNAPSHOT_FILE}"
 echo "--> Shareable Link:      ${SNAPSHOT_URL}"
 echo "====================================================================="
+
 # Store raw structural dump for offline git-tracking if needed
 echo "$RESPONSE" > "$SNAPSHOT_FILE"
 
@@ -8001,12 +8018,13 @@ To advance your operational infrastructure design, let me know how you would lik
 [17] [https://vlinkinfo.com](https://vlinkinfo.com/blog/guide-on-collaborative-coding-with-vs)
 
 
-# Yes, let's do that above...
+### Yes, let's do that above...
 
 To deploy this complete telemetry, observability, and communication stack on your central monitoring instance, we will use a unified Docker Compose architecture.
 This production-grade configuration spins up Mattermost, Prometheus, Alertmanager, and Grafana directly on your MonitorSrv (10.10.1.10) with a single command. It mounts persistent data volumes so your logs survive server restarts, establishes internal container network routes, and pre-configures Alertmanager to pass warnings to your self-hosted engineering communication rooms.
 ------------------------------
 ## 📂 Part 1: The Unified Docker Compose Blueprint (docker-compose.yml)
+```
 Create a directory named infra-monitoring on your monitoring server and save this file as docker-compose.yml:
 
 version: '3.8'
@@ -8097,9 +8115,10 @@ services:
       - '8065:8065'
     networks:
       - monitor-network
-
+```
 ------------------------------
 ## ⚙️ Part 2: Linking Core Config Files in the Directory
+```
 Before running the compose up trigger, ensure you drop the configuration templates we structured into the exact same folder location:
 
    1. prometheus.yml: Ensure your targets point natively to your layout addresses (10.10.1.40:9100 for your VPP routers, 10.10.1.10:9116 for the SNMP switch proxy scraper). Add this evaluation instruction line to the top of your prometheus.yml:
@@ -8109,9 +8128,10 @@ Before running the compose up trigger, ensure you drop the configuration templat
    
    2. alerts.yml: Contains your custom UbuntuRouterSoftnetDropsDetect and FabricInterfaceSaturation85 alert code blocks.
    3. alertmanager.yml: Contains your Mattermost notification destination blocks.
-
+```
 ------------------------------
 ## 🔗 Part 3: Establishing the Mattermost Webhook Pipeline
+```
 To activate the real-time link between your data center errors and your engineers' mobile devices:
 
    1. Fire up the stack: Run docker compose up -d on MonitorSrv.
@@ -8125,9 +8145,10 @@ To activate the real-time link between your data center errors and your engineer
    
    docker restart dc_alertmanager
    
-   
+```   
 ------------------------------
 ## 📱 Part 4: Paging Engineers on Mobile Devices (Zero Added Costs)
+```
 To escalate critical alarms directly to your engineers' smartphones without paying for expensive third-party notification software subscriptions, take advantage of the native open-source mobile synchronization frameworks built right into Mattermost.
 
 [ Data Center Incident Occurs ] 
@@ -8153,11 +8174,11 @@ To escalate critical alarms directly to your engineers' smartphones without payi
    2. Link the Private Server: Upon loading the app, they input your private data center site access URL: http://10.10.1.10:8065. They sign in using their standard login profile.
    3. Configure High-Priority Auditing Filters: Inside the mobile client's notification options dashboard, instruct the app to trigger push notifications instantly for all alert tags matching words like @all or any target channel activity.
    4. The End-to-End Validation: If an issue occurs (e.g., an eBGP unnumbered link flips off status or an interactive tenant router experiences line drops), your Prometheus configuration catches the incident, hands it to Alertmanager, and Mattermost pushes a push notification right down onto the engineer's lock screen within seconds.
-
+```
 This unified implementation establishes a comprehensive, zero-cost operations center for your startup. Your team gains total control over tracking metrics, freezing baseline environments, and responding to infrastructure issues before they ever expand to affect live tenant hypervisors.
 If you are interested, we can explore how to write an automated Ansible provisioning task to safely deploy the standard monitoring exporters across your computing network nodes automatically. Let me know how you would like to proceed!
 
-# I would love to have this automated through Ansible.
+### I would love to have this automated through Ansible.
 
 This production-ready Ansible Playbook is designed to automatically deploy, configure, and initialize the Prometheus node_exporter and frr_exporter services across all your Ubuntu compute hosts and virtual routers.
 It leverages the exact structure we generated in your dynamic inventory.yml file, matching your production parameters, setting up dedicated system users, and wiring up the service hooks securely under systemd. [1, 2, 3] 
