@@ -4772,17 +4772,19 @@ Would you like to review how to write a VyOS-specific Packer build block to auto
 
 When resources, time, funding, and deep networking knowledge are strained, Option 2 (Bare-Metal Ubuntu + Native FRR + Docker) is the clear, overwhelming winner for a startup.
 ## Why Ubuntu + FRR Wins for Startups:
-
+```
 * The Learning Curve: A startup rarely has a dedicated Network Engineer. Finding a Linux sysadmin who understands standard Ubuntu, systemd, and Docker is incredibly easy. VyOS has a proprietary network CLI that requires a learning curve; Ubuntu uses plain text files.
 * Unified Toolchain: By using Ubuntu on your Exit Routers, every single server in your data center runs the exact same Operating System. Your Packer golden image, your MaaS cloud-init scripts, and your monitoring frameworks can be copied and pasted between your Exit Routers and your Kubespray Compute hosts.
 * Infinite Extensibility: If a startup is short on hardware, you can easily spin up your MaaS controller, OpenBao secrets vault, or local monitoring tools as small Docker containers directly on the Ubuntu Exit Router. In VyOS, you cannot natively run regular infrastructure apps inside the network appliance easily.
-
+```
 ------------------------------
 ## 📦 Part 1: Automated Ubuntu + FRR Packer Blueprint
 To maintain a unified architecture, you can use the exact same Packer strategy we designed earlier. This shell script block handles installing FRR, mapping the sysctl properties, and prepping your interfaces without virtualization overhead.
+```
 ## scripts/ubuntu-router-bootstrap.sh
 
-#!/usr/bin/env bashset -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 echo "====================================================================="
 echo "1. SYSTEM ENGINE SETUP (UBUNTU ROUTER PROFILE)"
@@ -4807,10 +4809,11 @@ net.ipv6.conf.all.forwarding = 1
 net.ipv4.conf.all.rp_filter = 0
 net.ipv4.conf.default.rp_filter = 0
 EOF
-
+```
 ------------------------------
 ## 📦 Part 2: Automated VyOS Packer Blueprint
 If you prefer a structured, rigid network appliance model, Packer supports a custom qemu provisioner workflow using a raw VyOS Rolling ISO.
+```
 ## vyos-edge.pkr.hcl
 
 packer {
@@ -4869,7 +4872,7 @@ build {
     ]
   }
 }
-
+```
 ------------------------------
 ## 🧠 Part 3: The Startup Decision Matrix
 If your startup is evaluating these choices under tight resource constraints, consider these real-world implications:
@@ -4883,6 +4886,7 @@ If your startup is evaluating these choices under tight resource constraints, co
 
 ## Final Startup Architecture Recommendation
 For a lean startup, go with Ubuntu Bare-Metal + Native FRR.
+
 It eliminates context switching. When your team logs into an Exit Router to troubleshoot a WireGuard tunnel or checks a Compute Node to troubleshoot a Calico Pod route, they are interacting with the exact same operating system, the exact same text formatting layouts, and the exact same toolsets (ip route, vtysh, systemctl status frr). This structural symmetry drastically minimizes human errors, speeds up data center platform convergence, and costs $0 in licensing or training overhead.
 Would you like to review the unified MaaS preseed or cloud-init snippets to automate dropping the finalized frr.conf templates directly onto an Ubuntu bare-metal Exit Router host during its initial PXE bootstrap?
 
@@ -4895,15 +4899,16 @@ In the Ubuntu + FRR architecture, WireGuard is handled natively by the Ubuntu Li
 ------------------------------
 ## 🧱 How the Pieces Fit Together
 Instead of a monolithic network appliance, you combine three independent, highly optimized open-source layers inside Ubuntu:
-
+```
    1. The Tunnel Layer (WireGuard): The native Linux kernel creates a virtual interface (e.g., wg0), handles the cryptographic handshakes, and encrypts/decrypts the operations traffic. [5, 6, 7] 
    2. The Dynamic Routing Layer (FRR): FRR handles your BGP-Unnumbered session over your 10G links to talk to the SONiC switches. It learns your Kubernetes and OpenStack subnets and advertises your default internet path.
    3. The Traffic Control Layer (Linux Policy Routing / VRF): The Linux kernel bridges the gap. It takes the packets coming out of the WireGuard tunnel and safely pushes them into your isolated OOB Management VRF (mgmt-vrf). [8] 
-
+```
 ------------------------------
 ## 🛠️ How It Is Implemented on the Exit Router
 Because this is a standard Ubuntu host, you configure WireGuard using the native Linux wg-quick utility or standard Netplan systemd-networkd extensions. [9, 10, 11] 
 Here is exactly how the configuration files are cleanly separated on your physical Exit Router server to avoid any confusion:
+```
 ## 📂 File 1: The WireGuard Tunnel (/etc/wireguard/wg0.conf) [12, 13] 
 This file dictates how remote operators connect to the server. It tells the Linux kernel to create the encrypted interface but does not touch your BGP or SONiC configurations:
 
@@ -4940,15 +4945,16 @@ network:
 
 ## 📂 File 3: The Fabric BGP Control Plane (/etc/frr/frr.conf) [14] 
 Your frr.conf file remains completely clean. It contains zero references to WireGuard, VPN keys, or admin laptops. It focuses strictly on peering with your 100G SONiC fabric over BGP Unnumbered and distributing your public/floating IP allocations.
+```
 ------------------------------
 ## 🔄 The Packet Flow Journey
 When an operations staff member opens their laptop at home and connects to view the OpenStack Horizon dashboard:
-
+```
    1. The Handshake: Their laptop hits your home ISP public IP on UDP Port 51820. The modem forwards it to the Ubuntu Exit Router. The Linux kernel WireGuard module decrypts the packet. [15, 16] 
    2. The VRF Lookup: The packet emerges from the wg0 interface with a source IP of 192.168.99.2 and a destination of 10.10.100.10 (the MetalLB Dashboard IP). [17] 
    3. The Policy Match: The Linux kernel hits the Netplan Routing Policy Rule. It shifts the packet out of the default internet table and forces it into table 1000 (the mgmt-vrf).
    4. The Local Delivery: The packet leaves physical port enp1s0 untagged, crosses your CRS125 switch, hits your Kubespray master nodes, and renders the dashboard UI cleanly—completely bypassing and isolating your high-speed SONiC production fabric.
-
+```
 This clear separation of duties ensures that if your BGP routing table flaps or changes due to tenant activity, your WireGuard management path stays locked, stable, and online.
 Would you like help generating the Ansible tasks or cloud-init scripts to automatically drop these distinct configuration files onto both of your redundant R630 routers during initial setup?
 
