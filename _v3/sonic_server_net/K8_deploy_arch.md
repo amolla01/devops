@@ -3816,6 +3816,7 @@ When configuring your Packer HCL template (using the qemu or virtualbox-iso buil
 ```
 ## Rule A: Use the Official Ubuntu Server ISO as the Source
 Always base your build on the Ubuntu Server LTS Minimal ISO. The minimal profile strips away desktop components, cloud-provider layers, and unnecessary logical tools that can interfere with Kubespray's baseline execution.
+
 ## Rule B: Disable the Standard Ubuntu Network Auto-Configuration
 In your user-data / autoinstall file passed to Packer's cloud-init engine, ensure that network probing is silenced:
 
@@ -3833,6 +3834,7 @@ Since Calico's BIRD engine is eliminated via calico_network_backend: "none", ens
 sudo systemctl disable frr
 
 Why? You only want FRR to start after MaaS has finished installing the OS and your automation script has generated the correct loopback and ASN credentials.
+
 ## Rule D: Run an Absolute Image Cleanup Block
 The final step inside your Packer configuration must be a shell provisioning script that prepares the machine for image capturing. Failing to clear these paths will cause MaaS deployments to fail:
 
@@ -3868,7 +3870,7 @@ It fully automates installing FRR, adding the Kernel optimizations, prepping the
 ------------------------------
 ## 📂 1. The Packer Template File (ubuntu-edge.pkr.hcl)
 Create a file named ubuntu-edge.pkr.hcl. This handles the plugin declarations, virtualization sizing, boot commands, and references the system provisioning steps.
-
+```
 packer {
   required_plugins {
     qemu = {
@@ -3937,11 +3939,11 @@ build {
     script          = "scripts/cleanup.sh"
   }
 }
-
+```
 ------------------------------
 ## 📂 2. The Cloud-Init Autoinstall File (http/user-data)
 Create a subdirectory named http and place a file named user-data inside it. This provides the hands-free Ubuntu automated operating system installation commands.
-
+```
 #cloud-configautoinstall:
   version: 1
   refresh-installer:
@@ -3968,12 +3970,13 @@ Create a subdirectory named http and place a file named user-data inside it. Thi
     disable_root: false
 
 (Note: You must also create an empty file named http/meta-data next to it for cloud-init compliance: touch http/meta-data).
+```
 ------------------------------
 ## 📂 3. The Custom Shell Provisioners
 Create a subdirectory named scripts and place the two required compilation tasks inside it:
 ## 📜 scripts/bootstrap.sh
 This script handles baking your exact structural layers directly into the golden image filesystem.
-
+```
 #!/usr/bin/env bashset -euo pipefail
 
 echo "====================================================================="
@@ -4061,10 +4064,10 @@ truncate -s 0 /var/log/wtmp
 truncate -s 0 /var/log/lastlog
 
 echo "Image successfully hardened and prepared for MaaS loading."
-
+```
 ------------------------------
 ## 🚀 4. How to Execute the Compilation
-
+```
    1. Structurally group your files exactly like this layout on your workspace workstation:
    
    ├── ubuntu-edge.pkr.hcl
@@ -4083,7 +4086,7 @@ echo "Image successfully hardened and prepared for MaaS loading."
    
    packer build .
    
-   
+```   
 When compilation concludes, a clean, compressed output file named output-ubuntu-edge/packer-ubuntu-l3-host.qcow2 is produced. You can upload this directly to MaaS. When MaaS flashes this image onto a Dell R630, it immediately boots up with your customized system properties, ready to execute your local node identity script.
 Would you like to write the matching MaaS cloud-init customization schema that will run on top of this image to trigger the dmidecode coordinate lookup on first physical boot?
 
@@ -4095,15 +4098,19 @@ This cloud-init block runs during the cmd execution stages of the very first boo
 To make your network configuration fully dynamic and error-free, this script executes Self-Discovery. It dynamically queries the motherboard SMBIOS for physical location parameters, auto-detects the active network interface card (NIC) device names, maps them to their correct architecture profiles, and writes the final Netplan YAML blocks and FRR configurations dynamically.
 ------------------------------
 ## 🕒 The Strategic Execution Stage: Why bootcmd vs. runcmd?
-
+```
 * bootcmd (Too Early): Runs before the network stack or disk partitions are properly stabilized. We do not use this.
 * runcmd (The Perfect Stage): Runs late in the first-boot lifecycle after the kernel has finished enumerating all hardware buses (PCIe, network cards) and right before standard user applications start. This is exactly where we run our discovery script.
-
+```
 ------------------------------
 ## 📄 The MaaS Cloud-Init Template (user-data.yaml)
 Add this template directly into your MaaS Custom User Data configuration section or pass it as a custom deployment script.
-
-## template: choros#cloud-config# =====================================================================# SYSTEM LIFECYCLE: Dynamic Hardware Topology Self-Discovery & Network Setup# Runs during the first boot 'runcmd' phase on the target bare-metal node# =====================================================================
+```
+## template: choros
+#cloud-config
+# =====================================================================
+# SYSTEM LIFECYCLE: Dynamic Hardware Topology Self-Discovery & Network Setup# Runs during the first boot 'runcmd' phase on the target bare-metal node
+# =====================================================================
 runcmd:
   - |
     #!/usr/bin/env bash
@@ -4261,7 +4268,7 @@ runcmd:
     systemctl enable frr
     
     echo "Infrastructure Node self-discovery and network bootstrap completed successfully."
-
+```
 ------------------------------
 ## 🧠 How this Automation Eliminates Complex Human Errors
 
