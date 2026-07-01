@@ -1,9 +1,9 @@
-## we have few ovs bridges, br-h101-l1, br-h102-l1 where two virtual 10g server host attaching them to an arista model 7050qx32 from port1 and two more bridge called br-h201-l2, br-h202-l2 simulating connection to model 7050qx32s with again two virtual 10g server host from physical port 1 and 2 . the difference between this two arista model is in case of 7050qx32, a 40g qsfp+ breakout cable that has 4 sfp+ cage on one end, is used to connect to two servers to the qsfp+ port1. however for model 7050qx32s, port1/2/3/4 all of them are sfp+ cage but port5 is qsfp+cage and internally when sfp+ lanes are activated, port5 is not as they are internally hardwired that way. so, two sfp+ cable from port1/2 is used to connect to two host servers. sonic is running in both of these models. now break-out configuration is needed to configure the sonic switch os to work. please describe in detail how the simulation with ovs bridge and it's respective veth interfaces will connect with the host servers and switch models described above. assume all these are provisioned as virtual instances in an ubuntu machine. decribe with pictorial diagram to understand better and troubleshoot easily. provide respective sonic commands to configure respecive interfaces ovs ports etc.
+### we have few ovs bridges, br-h101-l1, br-h102-l1 where two virtual 10g server host attaching them to an arista model 7050qx32 from port1 and two more bridge called br-h201-l2, br-h202-l2 simulating connection to model 7050qx32s with again two virtual 10g server host from physical port 1 and 2 . the difference between this two arista model is in case of 7050qx32, a 40g qsfp+ breakout cable that has 4 sfp+ cage on one end, is used to connect to two servers to the qsfp+ port1. however for model 7050qx32s, port1/2/3/4 all of them are sfp+ cage but port5 is qsfp+cage and internally when sfp+ lanes are activated, port5 is not as they are internally hardwired that way. so, two sfp+ cable from port1/2 is used to connect to two host servers. sonic is running in both of these models. now break-out configuration is needed to configure the sonic switch os to work. please describe in detail how the simulation with ovs bridge and it's respective veth interfaces will connect with the host servers and switch models described above. assume all these are provisioned as virtual instances in an ubuntu machine. decribe with pictorial diagram to understand better and troubleshoot easily. provide respective sonic commands to configure respecive interfaces ovs ports etc.
 
 To simulate and configure this setup on a single Ubuntu host, you need to map Open vSwitch (OVS) bridges to the virtualized SONiC switches using Virtual Ethernet (veth) pairs.
 Here is the comprehensive guide, architectural layout, and configuration steps for both Arista hardware profiles simulated in SONiC.
 ## Network Architecture Diagram
-
+```
 ==========================================================================================
                                UBUNTU HOST (EMULATION ENVIRONMENT)
 ==========================================================================================
@@ -49,16 +49,18 @@ Here is the comprehensive guide, architectural layout, and configuration steps f
    |       SONiC Switch Instance 1     |           |       SONiC Switch Instance 2     |
    |          (Arista 7050QX32)        |           |         (Arista 7050QX32S)        |
    +-----------------------------------+           +-----------------------------------+
-
+```
 ------------------------------
 ## OVS and Host Connectivity Breakdown
+```
 Inside your Ubuntu emulation host, the connections are mapped via veth pipes. One end of the pipe plugs into the OVS bridge (representing the server layer), and the other end maps directly to the network interfaces assigned to the SONiC container or virtual machine.
 
    1. Scenario 1 (7050QX32): Ports Ethernet0 through Ethernet3 inside SONiC represent the breakout lanes of the physical Port 1 (QSFP+). Your configuration maps Server 1 to Lane 0 (Ethernet0) and Server 2 to Lane 1 (Ethernet1).
    2. Scenario 2 (7050QX32S): Ports Ethernet0 and Ethernet1 are native 10G SFP+ cages. No splitting occurs; they connect 1:1 to Server 3 and Server 4 respectively.
-
+```
 ------------------------------
 ## Step 1: Ubuntu Linux Shell Infrastructure Configuration
+```
 Run these commands on your Ubuntu host to build the OVS bridges, instantiate the veth pairs, and link them together.
 
 # 1. Create the Open vSwitch Bridges
@@ -88,19 +90,24 @@ sudo ip link set veth-h202 up
 sudo ip link set veth-sw2-p2 up
 
 Note: The veth-swX-pX ends must be bound to your virtual SONiC instance runtime (e.g., passed as arguments via KVM/QEMU network flags or bound to Docker containers via a container runtime configuration).
+```
 ------------------------------
 ## Step 2: SONiC Switch OS Breakout Configurations
+```
 SONiC manages physical port mapping via its config_db.json database. Port splitting and breakouts are executed via the CLI or metadata patches.
 ## Switch 1 Configuration: Arista 7050QX32 (QSFP+ Breakout)
 To tell SONiC that the first physical 40G QSFP+ port is being broken down into 4 individual 10G logical lanes (Ethernet0, Ethernet1, Ethernet2, Ethernet3), run the following commands inside the Switch 1 CLI console:
 
 # Break out the 40G Port 1 into 4x10G channels
 sudo config interface breakout Ethernet0 "4x10G"
+
 # Verify that the ports changed from a single 40G interface to 4 individual 10G ports
 show interface breakout
+
 # Bring the active breakout interfaces up
 sudo config interface startup Ethernet0
 sudo config interface startup Ethernet1
+
 # Configure IP addressing for Server 1 and Server 2 links
 sudo config interface ip add Ethernet0 10.101.1.1/24
 sudo config interface ip add Ethernet1 10.102.1.1/24
@@ -113,12 +120,14 @@ Run the following commands inside the Switch 2 CLI console:
 # Bring the native SFP+ ports up
 sudo config interface startup Ethernet0
 sudo config interface startup Ethernet1
+
 # Configure IP addressing for Server 3 and Server 4 links
 sudo config interface ip add Ethernet0 10.201.1.1/24
 sudo config interface ip add Ethernet1 10.202.1.1/24
-
+```
 ------------------------------
 ## Step 3: Troubleshooting and Verification Flow
+```
 To verify data plane path connectivity or isolate configuration errors, use this command breakdown mapping down the interface stack:
 
    1. Verify OVS State on Ubuntu Host:
@@ -138,7 +147,7 @@ To verify data plane path connectivity or isolate configuration errors, use this
    sudo ip -s link show veth-sw1-p1
    # Inside SONiC:
    show queue counters Ethernet0
-   
+```   
    
 To help optimize this virtual infrastructure, are you deploying these SONiC instances via Docker containers or KVM/QEMU virtual machines, and which SONiC release version are you using?
 
