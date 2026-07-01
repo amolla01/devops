@@ -4298,6 +4298,7 @@ If your Packer golden image and MaaS Cloud-Init self-discovery templates are con
 ------------------------------
 ## ⚙️ The Blueprint: How to Eliminate scale.yml Entirely
 To bypass manual Ansible scaling playbooks, you must implement three production automation patterns:
+```
 ## 1. The Autonomous Kubernetes Joining Layer (Kubeadm Join Tokens)
 Instead of relying on an external Ansible controller to run SSH loops against the new machine, the machine must push itself into the cluster.
 You add an automation step to your MaaS Cloud-Init script that pulls a pre-shared, long-lived, or dynamically generated Kubeadm Join Token from a secure vault (like the OpenBao instance running on your Exit Routers).
@@ -4322,7 +4323,7 @@ Your OpenStack Helm charts are configured to watch for new nodes matching your t
 * Kubernetes instantly schedules the local OVN Controller, Neutron OVS Agent, and Nova Compute pods to download and run on the new machine.
 * The local OVN BGP Agent spins up, hooks into the host's running FRR daemon, and links up to your multi-homed interfaces (enp2s0/enp3s0).
 * The central OpenStack controller registers this node as an active, healthy hypervisor resource block.
-
+```
 ------------------------------
 ## 🌐 The "Real Start" End-State
 Once the OpenStack control containers stabilize locally on the newly added R630, the OpenStack Nova API automatically registers the additional physical CPU cores and RAM gigabytes into your global resource scheduler pool.
