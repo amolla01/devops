@@ -3410,7 +3410,7 @@ Would you like to see how to write the host automated script wrapper that uses t
 [3] [https://packetpushers.net](https://packetpushers.net/blog/linux-bonding-lldp-and-mac-flapping/)
 [4] [https://www.come-star.com](https://www.come-star.com/blog/what-is-loopback-detection/)
 
-# Can we split netplan yaml into multiple so, OOB Managemt yaml for example comes up first for administration no matter what happens to the other.what would be a viable approach when we will have PXE, iDRAC as well as lo, ceph-dummy and eventually multi-homed physical nics? By the way, in the above subnet discussion, let us add ipmi idrac and pxe as well since net-booting of devices will happen through MaaS server.
+### Can we split netplan yaml into multiple so, OOB Managemt yaml for example comes up first for administration no matter what happens to the other.what would be a viable approach when we will have PXE, iDRAC as well as lo, ceph-dummy and eventually multi-homed physical nics? By the way, in the above subnet discussion, let us add ipmi idrac and pxe as well since net-booting of devices will happen through MaaS server.
 
 Yes, you can absolutely split your Netplan configuration into multiple, independent files. Netplan processes configuration files in alphabetical order based on their filenames, merging them into a single runtime state. By using a strict prefixing strategy (like 00-, 10-, 20-), you can guarantee that your Out-of-Band (OOB) management network boots first and stays alive for administration, completely isolated from any changes or crashes on your data plane fabric. [1] 
 To integrate PXE booting, iDRAC/IPMI management, MaaS automation, and your L3 BGP Unnumbered topology, we must map out how these layers interact during a machine's lifecycle.
@@ -3439,6 +3439,7 @@ Here is the complete network mapping, incorporating your PXE, iDRAC, and MaaS pr
 ------------------------------
 ## 3. The Multi-File Netplan Blueprint
 To ensure your OOB Management layer initializes independently of the data plane, we will split the Netplan configurations into three files inside /etc/netplan/.
+```
 ## 🔒 File 1: 00-oob-management.yaml
 This file initializes first. It handles nothing but administrative access. If your data fabric interfaces break, this file ensures you never lose SSH or MaaS access to the machine.
 
@@ -3497,7 +3498,7 @@ network:
     ceph-dummy0:
       addresses:
         - 192.168.50.24/24 # Aligned format: 192.168.50.U_SLOT
-
+```
 ------------------------------
 ## 🚀 Operational Advantages of the Multi-File Split
 
