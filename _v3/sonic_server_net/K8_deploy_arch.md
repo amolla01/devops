@@ -7188,7 +7188,7 @@ DANOS (Data Plane Network Operating System) is an open-source router platform st
 ------------------------------
 ## 📊 Part 2: Prometheus Telemetry Architecture
 To scrape data from your hardware devices and software routers, you deploy three open-source exporter engines inside your MonitorSrv (10.10.1.10) configuration files:
-
+```
 ┌─────────────────────────────────┐      ┌─────────────────────────────┐
 │    SONiC Spines & Leafs         │ ──►  │ Prometheus snmp_exporter    │ ──┐
 └─────────────────────────────────┘      └─────────────────────────────┘   │
@@ -7203,13 +7203,13 @@ To scrape data from your hardware devices and software routers, you deploy three
    1. snmp_exporter: Monitors your SONiC Spines and Leafs for hardware transceiver metrics, ASIC temperature tracking, and physical link errors.
    2. node_exporter: Monitors your Ubuntu Exit Routers for softnet drops, CPU interrupts, and interface errors.
    3. frr_exporter: Monitors BGP state changes, prefix counts, and peer state flaps across your entire architecture.
-
+```
 ------------------------------
 ## 🚨 Part 3: Production Prometheus Alerting Rules (alerts.yml)
 Save these production-grade PromQL alert expressions inside your Prometheus rules directory (/etc/prometheus/alert.rules.yml) to catch bottlenecks across your layout: [2] 
 ## 1. Bottleneck Category: Ubuntu Software Router Strain
 Software routers fail when the Linux kernel cannot process network hardware interrupts fast enough. This alert catches Softnet Drops—the absolute proof that your CPU is choking on packet processing.
-
+```
   - alert: UbuntuRouterSoftnetDropsDetect
     expr: increase(node_softnet_dropped_total[2m]) > 0
     for: 1m
@@ -7274,7 +7274,7 @@ If an eBGP Unnumbered session flaps or falls out of its Established state, your 
     annotations:
       summary: "eBGP Router Peering Down on {{ $labels.instance }}"
       description: "BGP Neighbor session with peer {{ $labels.peer }} has dropped out of Established state. Fabric routing convergence path is broken."
-
+```
 ------------------------------
 ## 🚀 Next Steps for Your Monitoring Platform
 By adding these alert matrices to your telemetry plane:
@@ -7295,6 +7295,7 @@ Would you like to examine how to structure the matching Grafana Dashboard JSON d
 
 To transition your telemetry blueprint and high-performance edge routers into reality, here is the complete installation, configuration, and setup guide for the Prometheus exporters and the FD.io VPP (DPDK) software routing stack.
 ------------------------------
+```
 ## 📊 Part 1: Setting Up Exporters Across the Topology## 1. The Ubuntu Exit Routers & Compute Server Hosts
 Every bare-metal Ubuntu host (including your compute workers and Exit Routers) runs node_exporter for OS tracking and frr_exporter to pull BGP states out of the running FRR daemon.
 ## Step A: Install and Configure node_exporter [1, 2, 3] 
@@ -7349,10 +7350,11 @@ EOF
 # 3. Start and enable the service
 sudo systemctl daemon-reload
 sudo systemctl enable --now frr_exporter
-
+```
 ------------------------------
 ## 2. The SONiC Spine & Leaf Switches
 SONiC switches run a native Linux platform under the hood, but their hardware metrics (ASIC temperature, transceiver light levels) are exposed via an internal SNMP daemon (snmpd). Instead of running individual software binaries on the switches, you collect this data by deploying the snmp_exporter container directly onto your central MonitorSrv (10.10.1.10).
+```
 ## Step A: Run the snmp_exporter via Docker on MonitorSrv
 
 # 1. Create a workspace directory
@@ -7392,10 +7394,11 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: 10.10.1.10:9116 # Targets the snmp_exporter container proxy running locally
-
+```
 ------------------------------
 ## 🚀 Part 2: Installing and Configuring FD.io VPP (DPDK)
 To scale your Ubuntu Exit Routers to handle hardware-bypassed line-rate routing, you replace the standard Linux kernel network loop with FD.io VPP.
+```
 ## 1. Hardware Prerequisite Setup (Grub Tweaks)
 To enable DPDK, you must tell the Linux kernel to lock down continuous memory structures (Hugepages) and enable PCIe pass-through virtualization.
 Edit /etc/default/grub on your physical Dell R630 routers:
@@ -7457,10 +7460,10 @@ Restart VPP to commit your configuration changes:
 
 sudo systemctl daemon-reload
 sudo systemctl restart vpp
-
+```
 ## 4. Configuring Interfaces and Subnet Parameters within VPP
 You interact with your hardware-accelerated router using the vppctl runtime shell interface tool:
-
+```
 # 1. Bring the hardware accelerated links online
 sudo vppctl set interface state GigabitEthernet2/0/0 up
 sudo vppctl set interface state GigabitEthernet2/0/1 up
@@ -7472,7 +7475,7 @@ sudo vppctl set interface ip table GigabitEthernet2/0/1 2000
 # 4. Enable IPv6 on the interfaces so they can process incoming SONiC Router Advertisements
 sudo vppctl ip6 nd address autoconf GigabitEthernet2/0/0
 sudo vppctl ip6 nd address autoconf GigabitEthernet2/0/1
-
+```
 Once this pipeline stabilizes, traffic entering your multi-homed links completely bypasses the Ubuntu OS kernel. The VPP vector network engine processes the data plane traffic at full line speed, while your host operating system remains clean, lightweight, and focused on your platform services.
 Would you like to examine how to integrate the native vpp-wireguard crypto plugin configuration commands to terminate your operations team VPN access directly inside this hardware-accelerated space?
 
