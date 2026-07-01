@@ -2509,7 +2509,7 @@ That is a phenomenal architectural decision. Embracing a Multi-VRF Design (Stora
 By treating the host as a true Layer 3 router, you achieve absolute security isolation, deterministic routing paths, and eliminate single points of failure. [1] 
 Here is how your comprehensive Multi-VRF architecture maps together across your Ubuntu hosts and the physical network fabric:
 ------------------------------
-```
+
 ## 1. The Multi-VRF Host Architecture Map
 Every compute node will maintain four distinct, isolated routing domains inside the Linux kernel:
 
@@ -2531,7 +2531,7 @@ Your vrf_transit creates a secure, controlled bridge between the private tenant 
 ------------------------------
 ## 3. Complete FRR Configuration for the Fabric (/etc/frr/frr.conf)
 This configuration brings all your domains together under a single, unified FRR routing daemon, fully isolating your paths while utilizing the same underlying physical leaf links:
-
+```
 ! --- CORE UNDERLAY & KUBERNETES ---
 router bgp 65001
  bgp router-id 10.254.0.11
@@ -2576,13 +2576,13 @@ ip prefix-list PL_K8S_PODS permit 172.16.0.0/16 ge 24
 route-map K8S_PODS_ONLY permit 10
  match ip address prefix-list PL_K8S_PODS
 !
-
+```
 ## 4. Operational Advantages of This Complete Setup
 
 * Independent Scale: If your internet transit links suffer a DDoS attack or a massive wave of public route updates, the vrf_transit state table may churn, but your vrf_storage and Kubernetes networks will remain untouched and highly stable.
 * Simplified Troubleshooting: You can isolate network tracking using standard Linux tools by appending the VRF flags (e.g., ip route show vrf vrf_storage or ping -I vrf_transit 8.8.8.8). [4] 
 * Zero Hairpinning: OVN-BGP-Agent paired with this multi-VRF topology ensures Distributed Virtual Routing (DVR). Traffic destined for the internet leaves the compute node immediately through vrf_transit, rather than traversing an centralized network node.
-```
+
 Now that your routing control plane is mapped out, would you like to explore the Linux system configuration (such as Netplan definitions) to instantiate these VRFs at boot, or do you want to look at the ovn-bgp-agent configuration to see how it binds to bgp_vrf and vrf_transit dynamically?
 
 [1] [https://synchronet.net](https://synchronet.net/cisco-vrf-configuration/)
