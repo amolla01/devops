@@ -2141,7 +2141,7 @@ This is a fully supported production pattern in Kubespray. It is specifically de
 * Calico IPAM and Data Plane remain active: Calico still handles IP Address Management (IPAM) for your pods and configures the host's Linux networking stack (e.g., cali+ interfaces, iptables, or routing tables) to send traffic out of the node. [1, 2] 
 * Calico BIRD is completely removed: The BIRD routing engine inside the calico-node daemon is disabled. No container will attempt to grab TCP port 179, entirely eliminating your port conflict. [3] 
 * Host FRR handles the network fabric: FRR on your Ubuntu host becomes the sole BGP speaker responsible for announcing your pod CIDR blocks to your Leaf switches.
-
+```
 ## Critical Requirement: Kernel Route Redistribution
 Because Calico's BIRD is disabled, Calico will not automatically tell your upstream fabric where pods are located. To make this setup work, you must instruct FRR on the host to look at the local Linux routing table and advertise those routes to the Leaf switches. [4] 
 Add the following logic to your host's /etc/frr/frr.conf file:
@@ -2157,7 +2157,7 @@ router bgp <YOUR_LOCAL_ASN>
   exit-address-family
 
 Would you like assistance crafting the Kubespray inventory variables for this backend: "none" configuration, or do you need help mapping out the automated FRR route filtering so your host only advertises the pod networks?
-
+```
 [1] [https://sigridjin.medium.com](https://sigridjin.medium.com/building-a-kubernetes-cluster-from-scratch-setting-up-etcd-and-control-plane-0719698f0182)
 [2] [https://medium.com](https://medium.com/@buraktahtacioglu/project-calico-part-i-cncf-roadmap-fd6a40740c73)
 [3] [https://github.com](https://github.com/kubernetes-sigs/kubespray/issues/8691)
