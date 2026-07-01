@@ -4339,6 +4339,7 @@ The industry-standard way to handle this without running an external Ansible scr
 ## 🔑 Step 1: Pre-Registering the Node Identity via Kubeadm
 Because you are using an unencapsulated, host-routed Calico setup paired with an external FRR daemon, the new node must explicitly tell the Kubernetes api-server its exact self-discovered IP addresses during the handshake. If it doesn't, Kubernetes will guess the wrong interface, breaking your control plane.
 We can template this configuration out inside your MaaS cloud-init engine using the JoinConfiguration schema.
+```
 ## The Kubeadm Join Configuration Template (/etc/kubernetes/kubeadm-join.yaml)
 Your first-boot automation script will generate this file dynamically right before executing the cluster join command:
 
@@ -4360,12 +4361,12 @@ apiVersion: kubeadm.k8s.io/v1beta3kind: JoinConfigurationdiscovery:
     node-ip: "${MGMT_IP}"
     # Tells the cluster scheduler that this node has a custom loopback anchor for BGP
     node-labels: "openstack-compute-node=true,topology.kubernetes.io/zone=az1,infra.loopback=${LOOPBACK_IP}"
-
+```
 ------------------------------
 ## 🛠️ Step 2: Appending the Kubelet Initialization to MaaS Cloud-Init
 To complete the end-to-end automation, append this script to the very bottom of the MaaS Cloud-Init runcmd block we designed earlier.
 This script will wait for your Netplan and FRR daemons to safely stabilize, install the matching Kubernetes node binaries (if not locked in your Packer version), pull down the join token, and execute the configuration.
-
+```
   - |
     echo "====================================================================="
     echo "STEP 5: AUTONOMOUS KUBERNETES HARDWARE JOIN SEQUENCE"
@@ -4405,18 +4406,18 @@ This script will wait for your Netplan and FRR daemons to safely stabilize, inst
     echo "====================================================================="
     echo "AUTOMATION LIFECYCLE COMPLETE: DEVICE ACTIVE ON FABRIC & PLATFORM"
     echo "====================================================================="
-
+```
 ------------------------------
 ## 🌐 Step 3: The Operator Takeover (What Happens in the Background)
 The moment the server completes the kubeadm join step, you do not need to do anything else. The system automatically chains into your declarative GitOps engine (like ArgoCD) running inside your cluster:
-
+```
    1. Calico Activation: The central Calico controller detects the node, spins up the local calico-node pod, sets its backend to none, and maps its unencapsulated IPAM blocks to the node.
    2. OpenStack Component Scheduling: Your OpenStack Operator sees the label openstack-compute-node=true apply to the new node. It instantly matches its DaemonSet nodeAffinity keys and deploys:
    * nova-compute (To control the local KVM hypervisor processor cycles).
       * ovn-controller (To link the server to your multi-homed 100G Geneve tenant tunnels).
       * ovn-bgp-agent (To monitor local open vswitch states and push floating IPs into the host's running FRR instance).
    3. Tenant Onboarding: The moment the OVN and Nova pods report healthy states back to the OpenStack control plane controllers, the node officially shows up inside your OpenStack admin panel as an active hypervisor with free VCPU and RAM buckets.
-
+```
 ## 📊 Summary of the Complete Pipeline Uptime
 
 | Step | Automation Engine | Time Elapsed | Local Network State |
