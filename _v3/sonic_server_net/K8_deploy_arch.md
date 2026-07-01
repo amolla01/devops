@@ -4589,7 +4589,7 @@ To offer these tools to your tenants, you must integrate them with your existing
 └────────────────────────────────────────────────────────┘
   ├── Option A: vCluster ──► Shares Host Kernel & Fabric 
   └── Option B: Nova VMs ──► Isolated via OVN Geneve 100G
-
+```
 ## 1. vCluster Integration Effort (Low)
 
 * How to implement: You do not integrate this with OpenStack at all. It runs directly on top of your master Kubespray cluster.
@@ -4628,7 +4628,7 @@ vcluster create tenant-a-k8s -n tenant-a-namespace
    2. Create a base secret manifest containing your OpenStack cloud credentials (clouds.yaml authentication block).
    3. Draft a CAPI cluster blueprint YAML definition that details the target control plane sizing, worker machine pools, and Neutron internal networks. [31, 32] 
 * Tenant Experience: The tenant applies a single YAML file (kubectl apply -f tenant-cluster.yaml) to the management endpoint. The CAPI operator handshakes with Nova, spins up the VMs, runs kubeadm automatically, and outputs a completed, operational cluster. [33, 34] 
-```
+
 ## Summary Strategy Recommendation
 
 * If your priority is saving hardware resource costs and CPU cycles while granting quick developers standard test environments, deploy vCluster. [35, 36] 
@@ -4682,11 +4682,11 @@ Both alternatives seamlessly support your requested architecture: handling heavy
 ## Option 1: VyOS (The Hardened Enterprise Virtual Router)
 [VyOS](https://vyos.io/) is an enterprise-grade, open-source network operating system based on Debian. It is the spiritual successor to Vyatta and is specifically built for cloud-scale routing, virtual firewalls, and VPN termination. [1, 2, 3, 4] 
 ## Why it fits your architecture:
-
+```
 * Production Quality: Built directly on the native Linux kernel network stack and FRRouting (FRR). It features a standardized, unified configuration CLI that will feel instantly recognizable if you have ever configured Cisco, Juniper, or EdgeOS devices. [1, 5, 6] 
 * Cost & Speed: While VyOS charges for corporate pre-built LTS binaries, the Rolling/Nightly release ISOs are 100% free, unthrottled, and fully featured. Unlike MikroTik CHR (which caps free trial tiers at 1 Mbps per interface), VyOS allows you to pump raw 10G or 40G line-rate traffic right out of the box with zero licenses. [1, 6] 
 * WireGuard & BGP Native Integration: It features native configuration loops for building multi-homed BGP unnumbered neighbors directly alongside highly secure, multi-tenant WireGuard interfaces.
-
+```
 ------------------------------
 ## Option 2: Standalone Ubuntu Bare-Metal + Native FRR + Docker (The DevOps Choice)
 Instead of running a dedicated router operating system inside a VM, your Exit Routers (the Dell R630/R720 boxes) can just run standard Ubuntu Server bare-metal or as a lightweight host. You use the exact same software engine that powers the data plane inside your SONiC switches and Calico clusters. [1, 7] 
@@ -4709,7 +4709,7 @@ Instead of running a dedicated router operating system inside a VM, your Exit Ro
 ------------------------------
 ## ⚙️ How to Implement BGP Unnumbered + WireGuard in VyOS
 If you choose VyOS for your Exit Routers, you deploy it as a KVM VM on your host server. The entire multi-homed configuration uses a clear, structured declarative syntax. [1] 
-
+```
 # 1. Configure the Loopback Anchor System ID
 set interfaces loopback lo address '10.1.1.42/32'
 
@@ -4745,7 +4745,7 @@ set protocols bgp neighbor eth2 capability extended-nexthop
 # Originate the default internet route into the data fabric via ECMP
 set protocols bgp address-family ipv4-unicast default-originate
 set protocols bgp address-family ipv4-unicast maximum-paths ebgp '64'
-
+```
 ------------------------------
 ## 💡 Architectural Recommendation
 
