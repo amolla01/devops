@@ -2167,6 +2167,7 @@ Would you like assistance crafting the Kubespray inventory variables for this ba
 
 This is an advanced, high-performance telecom/enterprise-grade architecture. By using BGP Unnumbered for the underlay fabric, you remove the need to manage thousands of tiny /30 or /31 subnets between your compute nodes and leaf switches. [1, 2] 
 Instead, the nodes use their Loopback IP as their primary L3 identifier, and FRR handles all control plane route redistribution for both Kubernetes (Calico) and OpenStack (via ovn-bgp-agent) into the physical leaf switches. [3, 4, 5] 
+```
 ------------------------------
 ## 1. Example Subnet Architecture Map
 To make these components work together seamlessly without overlapping, we isolate the components into distinct layers:
@@ -2244,7 +2245,7 @@ router bgp 65001 vrf bgp_vrf
   redistribute connected
  exit-address-family
 !
-
+```
 To complete your system design, do you need help writing the Ansible tasks to configure the Ubuntu loopback interfaces before Kubespray runs, or do you need the configuration details for the ovn-bgp-agent.conf file itself? [7] 
 
 [1] [https://indico.cern.ch](https://indico.cern.ch/event/1376907/contributions/5870857/attachments/2882835/5026344/Introduction%20to%20OVN%20BGP%20agent.pdf)
