@@ -644,7 +644,7 @@ Inside the MikroTik CHR VM, you will maintain the Multi-VRF Isolation design:
 │  ├──► [MetalLB IP Pool] ──► NGINX Ingress Dashboard    │
 │  └──► [Kubespray Nodes] ──► Bare-Metal Node SSH        │
 └────────────────────────────────────────────────────────┘
-
+```
 
    1. The Handshake: A remote administrator connects via WireGuard to the CHR VM's public/corporate IP address on the 10G WAN link.
    2. The Route Match: The admin attempts to load 10.10.10.200 (the Kubespray NGINX Ingress / MetalLB dashboard IP).
@@ -652,7 +652,7 @@ Inside the MikroTik CHR VM, you will maintain the Multi-VRF Isolation design:
    4. The Local Delivery: The packet leaves the CHR VM via the OOB interface, crosses your physical CRS125-24G switch, and hits the Kubespray cluster nodes locally.
 
 ------------------------------
-```
+
 ## 🚀 Hardware Recommendation (Which server to choose?)
 If you have a choice among the models you listed, deploy this on the Dell R630 or R720:
 
