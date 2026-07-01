@@ -8183,17 +8183,27 @@ If you are interested, we can explore how to write an automated Ansible provisio
 This production-ready Ansible Playbook is designed to automatically deploy, configure, and initialize the Prometheus node_exporter and frr_exporter services across all your Ubuntu compute hosts and virtual routers.
 It leverages the exact structure we generated in your dynamic inventory.yml file, matching your production parameters, setting up dedicated system users, and wiring up the service hooks securely under systemd. [1, 2, 3] 
 ------------------------------
-```
+
 ## 📂 Step 1: Create the Ansible Inventory Var Map (group_vars/all.yml)
+```
 To ensure the exporters bind cleanly to your isolated Out-of-Band (OOB) Management network interfaces (enp1s0) instead of bleeding onto the high-speed data fabric wires, define your global variables first.
 Create a file at group_vars/all.yml: [4] 
 
-# --- Infrastructure Exporter Variables ---node_exporter_version: "1.8.2"frr_exporter_version: "1.4.0"
-# Explicitly bind the metric collection endpoints to the local OOB Management IP# This prevents public tenant networks from probing infrastructure telemetry metricsexporter_bind_ip: "{{ ansible_host }}"
+# --- Infrastructure Exporter Variables
+---
+node_exporter_version: "1.8.2"
+frr_exporter_version: "1.4.0"
+
+# Explicitly bind the metric collection endpoints to the local OOB Management IP
+
+# This prevents public tenant networks from probing infrastructure telemetry metrics
+exporter_bind_ip: "{{ ansible_host }}"
+
 # System pathsbinary_dest_dir: "/usr/local/bin"
 
 ------------------------------
 ## 📂 Step 2: The Unified Deployment Playbook (deploy_exporters.yml)
+```
 Create a file named deploy_exporters.yml. This playbook will execute against your entire server fleet in parallel, using matching credentials (Welcome0!).
 
 ---
@@ -8312,9 +8322,10 @@ Create a file named deploy_exporters.yml. This playbook will execute against you
       ansible.builtin.systemd:
         name: frr_exporter
         state: restarted
-
+```
 ------------------------------
 ## 📂 Step 3: Create the Systemd Jinja2 Templates
+```
 Create a directory named templates/ inside your playbook workspace folder to store your system service layouts.
 ## 📜 templates/node_exporter.service.j2
 
@@ -8347,9 +8358,10 @@ ExecStart={{ binary_dest_dir }}/frr-exporter --web.listen-address={{ exporter_bi
 
 [Install]
 WantedBy=multi-user.target
-
+```
 ------------------------------
 ## 🚀 Step 4: Running the Orchestration Loop
+```
 Ensure your directory structure is clean:
 
 ├── deploy_exporters.yml
