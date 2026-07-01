@@ -2885,9 +2885,17 @@ To maintain absolute isolation and allow tenants to safely reuse overlapping IP 
 ## 2. Kubespray Configuration Variables (k8s-net-calico.yml)
 To strip down Calico so it acts purely as a local IPAM engine and an iptables firewall [1], configure inventory/mycluster/group_vars/k8s_cluster/k8s-net-calico.yml with the following explicit overrides:
 ```
-# Core Plugin Directiveskube_network_plugin: calicocalico_network_backend: "none"      # Completely eliminates BIRD; frees port 179 for FRRcalico_ipip_mode: "Never"           # Strips away all double-encapsulation tunnelscalico_vxlan_mode: "Never"          # Routes unencapsulated IP packets straight to kernel
-# IPAM Assignment Windowskube_pods_subnet: 10.233.0.0/18kube_service_addresses: 10.233.64.0/18
-# Resource Constraints & Tuningcalico_node_cpu_limit: "500m"calico_node_memory_limit: "512Mi"calico_manage_hosts_file: true
+# Core Plugin Directiveskube_network_plugin:
+calicocalico_network_backend: "none"      # Completely eliminates BIRD; frees port 179 for FRR
+calico_ipip_mode: "Never"           # Strips away all double-encapsulation tunnels
+calico_vxlan_mode: "Never"          # Routes unencapsulated IP packets straight to kernel
+# IPAM Assignment Windows
+kube_pods_subnet: 10.233.0.0/18
+kube_service_addresses: 10.233.64.0/18
+# Resource Constraints & Tuning
+calico_node_cpu_limit: "500m"
+calico_node_memory_limit: "512Mi"
+calico_manage_hosts_file: true
 ```
 ------------------------------
 ## 3. The Unified Host FRR Control Plane Configuration (frr.conf)
