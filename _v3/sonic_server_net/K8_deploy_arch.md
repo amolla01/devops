@@ -6308,7 +6308,7 @@ By applying these updates, you preserve the exact Multi-File Netplan / Vrf_Trans
 
 Would you like to review how to run a terminal traceroute from your virtual hosts out through this newly configured Ubuntu Vrf_Transit structure to test the active-active ECMP forwarding lines?
 
-# let's revisit this section from our context memory. We have talked in the past: System Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/24 and System Network TierAddress Block StrategyExit-Router 1 AssignmentExit-Router 2 AssignmentSystem Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/2410.10.12.41/2410.10.12.42/24 and MaaS / MetalLB VIP TargetShared Shared Broadcast Area10.10.100.1 (Virtual Gateway Pool Endpoint)10.10.100.2 (Virtual Gateway Pool Endpoint)ISP 1 Home Gateway SegmentStatic / DMZ / Bridge Link192.168.1.50/24 (via enp4s0)N/A (Cabled to Router 1 Only)ISP 2 Home Gateway SegmentStatic / DMZ / Bridge LinkN/A (Cabled to Router 2 Only)192.168.2.50/24 (via enp4s0)WireGuard Admin PoolEncrypted Transit Subnet192.168.99.1/24192.168.99.2/24eBGP Autonomous System, since these are all private block, let's go for it in our current scripts as well to make us familiar with real_hardware asubnet allocation.
+### let's revisit this section from our context memory. We have talked in the past: System Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/24 and System Network TierAddress Block StrategyExit-Router 1 AssignmentExit-Router 2 AssignmentSystem Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/2410.10.12.41/2410.10.12.42/24 and MaaS / MetalLB VIP TargetShared Shared Broadcast Area10.10.100.1 (Virtual Gateway Pool Endpoint)10.10.100.2 (Virtual Gateway Pool Endpoint)ISP 1 Home Gateway SegmentStatic / DMZ / Bridge Link192.168.1.50/24 (via enp4s0)N/A (Cabled to Router 1 Only)ISP 2 Home Gateway SegmentStatic / DMZ / Bridge LinkN/A (Cabled to Router 2 Only)192.168.2.50/24 (via enp4s0)WireGuard Admin PoolEncrypted Transit Subnet192.168.99.1/24192.168.99.2/24eBGP Autonomous System, since these are all private block, let's go for it in our current scripts as well to make us familiar with real_hardware asubnet allocation.
 
 Let's restore the true bare-metal private hardware subnet strategy exactly as we designed it.
 You are completely correct: because the WAN networks (192.168.1.50/24 and 192.168.2.50/24) and the system loopbacks are all private RFC 1918 blocks, we can safely implement them in your virtual lab script right now. Your virtual workstation's Open vSwitch (OVS) bridges will treat them as flat internal subnets, allowing your team to become completely familiar with the exact IP space they will configure on the physical data center floor.
@@ -6570,7 +6570,7 @@ Now your virtual lab environment and your physical hardware parameters map exact
 Would you like to review how to configure a corresponding Ansible playbook to automate creating these unique individual client laptop crypto keys (wg0.conf) for your staff members?
 
 
-# Here is our: System-Wide Subnet Assignment Worksheet To enforce absolute isolation, your architecture utilizes a deterministic naming and numbering convention mapping to your physical server rack variables:Data Center ID: 01 | Availability Zone ID: 1Exit-Router 1 (R630 #1): Physically installed at Rack Unit slot 41Exit-Router 2 (R630 #2): Physically installed at Rack Unit slot 42System Network TierAddress Block StrategyExit-Router 1 AssignmentExit-Router 2 AssignmentSystem Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/2410.10.12.41/2410.10.12.42/24MaaS / MetalLB VIP TargetShared Shared Broadcast Area10.10.100.1 (Virtual Gateway Pool Endpoint)10.10.100.2 (Virtual Gateway Pool Endpoint)ISP 1 Home Gateway SegmentStatic / DMZ / Bridge Link192.168.1.50/24 (via enp4s0)N/A (Cabled to Router 1 Only)ISP 2 Home Gateway SegmentStatic / DMZ / Bridge LinkN/A (Cabled to Router 2 Only)192.168.2.50/24 (via enp4s0)WireGuard Admin PoolEncrypted Transit Subnet192.168.99.1/24192.168.99.2/24eBGP Autonomous System The following is representing Mangement Subnet block: declare -A VM_MGMT_IPVM_MGMT_IP[Spine_S1]="172.16.2.11"; VM_MGMT_IP[Spine_S2]="172.16.2.12"VM_MGMT_IP[Leaf_L1]="172.16.2.21"; VM_MGMT_IP[Leaf_L2]="172.16.2.22"VM_MGMT_IP[Leaf_L3]="172.16.2.23"; VM_MGMT_IP[Leaf_L4]="172.16.2.24"VM_MGMT_IP[Border_Leaf1]="172.16.2.31"; VM_MGMT_IP[Border_Leaf2]="172.16.2.32"VM_MGMT_IP[Exit_Router1]="172.16.2.98"; VM_MGMT_IP[Exit_Router2]="172.16.2.99"I woluld prefer to follow the : Host OS Management10.10.[Rack].[U-Slot] where rack variables:Data Center ID: 01 | Availability Zone ID: 1, Go for Rack Id:1 and Switches are naturally sitting top of the rack and servers after that. So, provide me new mappings.
+### Here is our: System-Wide Subnet Assignment Worksheet To enforce absolute isolation, your architecture utilizes a deterministic naming and numbering convention mapping to your physical server rack variables:Data Center ID: 01 | Availability Zone ID: 1Exit-Router 1 (R630 #1): Physically installed at Rack Unit slot 41Exit-Router 2 (R630 #2): Physically installed at Rack Unit slot 42System Network TierAddress Block StrategyExit-Router 1 AssignmentExit-Router 2 AssignmentSystem Loopback Anchor10.[Zone].[Rack].[U-Slot]/3210.1.12.41/3210.1.12.42/32OOB Host OS Management10.10.[Rack].[U-Slot]/2410.10.12.41/2410.10.12.42/24MaaS / MetalLB VIP TargetShared Shared Broadcast Area10.10.100.1 (Virtual Gateway Pool Endpoint)10.10.100.2 (Virtual Gateway Pool Endpoint)ISP 1 Home Gateway SegmentStatic / DMZ / Bridge Link192.168.1.50/24 (via enp4s0)N/A (Cabled to Router 1 Only)ISP 2 Home Gateway SegmentStatic / DMZ / Bridge LinkN/A (Cabled to Router 2 Only)192.168.2.50/24 (via enp4s0)WireGuard Admin PoolEncrypted Transit Subnet192.168.99.1/24192.168.99.2/24eBGP Autonomous System The following is representing Mangement Subnet block: declare -A VM_MGMT_IPVM_MGMT_IP[Spine_S1]="172.16.2.11"; VM_MGMT_IP[Spine_S2]="172.16.2.12"VM_MGMT_IP[Leaf_L1]="172.16.2.21"; VM_MGMT_IP[Leaf_L2]="172.16.2.22"VM_MGMT_IP[Leaf_L3]="172.16.2.23"; VM_MGMT_IP[Leaf_L4]="172.16.2.24"VM_MGMT_IP[Border_Leaf1]="172.16.2.31"; VM_MGMT_IP[Border_Leaf2]="172.16.2.32"VM_MGMT_IP[Exit_Router1]="172.16.2.98"; VM_MGMT_IP[Exit_Router2]="172.16.2.99"I woluld prefer to follow the : Host OS Management10.10.[Rack].[U-Slot] where rack variables:Data Center ID: 01 | Availability Zone ID: 1, Go for Rack Id:1 and Switches are naturally sitting top of the rack and servers after that. So, provide me new mappings.
 
 To transition your virtual lab environment to a true production hardware profile, we must replace the legacy 172.16.2.0/24 lab subnet entirely. We will map the entire data center infrastructure to your physical 10.10.[Rack].[U-Slot] Out-of-Band (OOB) Management and 10.[Zone].[Rack].[U-Slot] Loopback schemas.
 Based on your design rules, the environment is defined by these physical constants:
@@ -6602,6 +6602,7 @@ Based on your design rules, the environment is defined by these physical constan
 ------------------------------
 ## 📂 Part 2: The Final Script Array Replacements
 To inject this physical mapping into your deployment script files, copy and overwrite the following blocks using these exact text matches:
+```
 ## 📝 Block 1: Updating the Complete Management IP Allocation Dictionary
 
 * Where to find it: Page 13, replacing the legacy declare -A VM_MGMT_IP blocks completely.
@@ -6732,7 +6733,7 @@ runcmd:
  - iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
  - touch /etc/cloud/cloud-init.disabled
 UDROUTEREOF
-
+```
 ------------------------------
 ## 🌐 The Verification Result
 By shifting the lab coordinates to Rack 1, you can accurately simulate real hardware operations:
@@ -6760,6 +6761,7 @@ Following your top-to-bottom layout schema, these nodes will occupy the lower sh
 ------------------------------
 ## 📂 Part 2: The Definitive Script Array Block
 Replace the corresponding configuration lines inside your script environment using this fully populated, completed array block on Page 13. This layout incorporates every switch, router, worker node, and bare-metal target without commenting out or dropping necessary assets:
+```
 ## 📝 Completed Management IP Code Matrix (declare -A VM_MGMT_IP)
 
 declare -A VM_MGMT_IP
@@ -6785,7 +6787,7 @@ VM_LOOPBACK[Host12_1]="10.1.1.30";     VM_LOOPBACK[Host12_2]="10.1.1.29"
 VM_LOOPBACK[Host12_3]="10.1.1.28";     VM_LOOPBACK[Host34_1]="10.1.1.27"
 VM_LOOPBACK[Host34_2]="10.1.1.26";     VM_LOOPBACK[HostB12_1]="10.1.1.25"
 VM_LOOPBACK[HostB12_2]="10.1.1.24";     VM_LOOPBACK[MonitorSrv]="10.1.1.10"
-
+```
 ------------------------------
 ## 🌐 Checking the Integration Boundaries
 With this step completed, your script maps your components to a highly realistic, production-ready environment:
@@ -6796,9 +6798,10 @@ With this step completed, your script maps your components to a highly realistic
 Would you like to review how to pass this finalized IP matrix down to Prometheus or your Monitoring Server (MonitorSrv at 10.10.1.10) to automate scraping metrics from all your switches and compute hosts?
 
 
-# Current script has the following and let's change to match with our new architecture: # --- Server Loopback IPs (announced via FRR BGP, pingable from everywhere) ---declare -A SERVER_LOOPBACK_IP SERVER_BGP_ASN SERVER_ROUTER_IDSERVER_LOOPBACK_IP[Host12_1]="10.10.255.1/32"; SERVER_ROUTER_ID[Host12_1]="10.10.255.1"SERVER_LOOPBACK_IP[Host12_2]="10.10.255.2/32"; SERVER_ROUTER_ID[Host12_2]="10.10.255.2"SERVER_LOOPBACK_IP[Host12_3]="10.10.255.3/32"; SERVER_ROUTER_ID[Host12_3]="10.10.255.3"SERVER_LOOPBACK_IP[Host34_1]="10.10.255.11/32"; SERVER_ROUTER_ID[Host34_1]="10.10.255.11"SERVER_LOOPBACK_IP[Host34_2]="10.10.255.12/32"; SERVER_ROUTER_ID[Host34_2]="10.10.255.12"SERVER_LOOPBACK_IP[HostB12_1]="10.10.255.100/32"; SERVER_ROUTER_ID[HostB12_1]="10.10.255.100"SERVER_LOOPBACK_IP[HostB12_2]="10.10.255.101/32"; SERVER_ROUTER_ID[HostB12_2]="10.10.255.101"SERVER_LOOPBACK_IP[MonitorSrv]="10.10.255.102/32"; SERVER_ROUTER_ID[MonitorSrv]="10.10.255.102"# All servers share ASN 65200for sv in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 HostB12_1 HostB12_2 MonitorSrv; do SERVER_BGP_ASN[$sv]=65200done# --- Server → Leaf peer ASN mapping ---declare -A SERVER_PEER1_ASN SERVER_PEER2_ASN SERVER_PEER1_DESC SERVER_PEER2_DESCSERVER_PEER1_ASN[Host12_1]=65011; SERVER_PEER2_ASN[Host12_1]=65012SERVER_PEER1_ASN[Host12_2]=65011; SERVER_PEER2_ASN[Host12_2]=65012SERVER_PEER1_ASN[Host12_3]=65011; SERVER_PEER2_ASN[Host12_3]=65012SERVER_PEER1_ASN[Host34_1]=65013; SERVER_PEER2_ASN[Host34_1]=65014SERVER_PEER1_ASN[Host34_2]=65013; SERVER_PEER2_ASN[Host34_2]=65014SERVER_PEER1_ASN[HostB12_1]=65021; SERVER_PEER2_ASN[HostB12_1]=65022SERVER_PEER1_ASN[HostB12_2]=65021; SERVER_PEER2_ASN[HostB12_2]=65022SERVER_PEER1_ASN[MonitorSrv]=65021; SERVER_PEER2_ASN[MonitorSrv]=65022
+### Current script has the following and let's change to match with our new architecture: # --- Server Loopback IPs (announced via FRR BGP, pingable from everywhere) ---declare -A SERVER_LOOPBACK_IP SERVER_BGP_ASN SERVER_ROUTER_IDSERVER_LOOPBACK_IP[Host12_1]="10.10.255.1/32"; SERVER_ROUTER_ID[Host12_1]="10.10.255.1"SERVER_LOOPBACK_IP[Host12_2]="10.10.255.2/32"; SERVER_ROUTER_ID[Host12_2]="10.10.255.2"SERVER_LOOPBACK_IP[Host12_3]="10.10.255.3/32"; SERVER_ROUTER_ID[Host12_3]="10.10.255.3"SERVER_LOOPBACK_IP[Host34_1]="10.10.255.11/32"; SERVER_ROUTER_ID[Host34_1]="10.10.255.11"SERVER_LOOPBACK_IP[Host34_2]="10.10.255.12/32"; SERVER_ROUTER_ID[Host34_2]="10.10.255.12"SERVER_LOOPBACK_IP[HostB12_1]="10.10.255.100/32"; SERVER_ROUTER_ID[HostB12_1]="10.10.255.100"SERVER_LOOPBACK_IP[HostB12_2]="10.10.255.101/32"; SERVER_ROUTER_ID[HostB12_2]="10.10.255.101"SERVER_LOOPBACK_IP[MonitorSrv]="10.10.255.102/32"; SERVER_ROUTER_ID[MonitorSrv]="10.10.255.102"# All servers share ASN 65200for sv in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 HostB12_1 HostB12_2 MonitorSrv; do SERVER_BGP_ASN[$sv]=65200done# --- Server → Leaf peer ASN mapping ---declare -A SERVER_PEER1_ASN SERVER_PEER2_ASN SERVER_PEER1_DESC SERVER_PEER2_DESCSERVER_PEER1_ASN[Host12_1]=65011; SERVER_PEER2_ASN[Host12_1]=65012SERVER_PEER1_ASN[Host12_2]=65011; SERVER_PEER2_ASN[Host12_2]=65012SERVER_PEER1_ASN[Host12_3]=65011; SERVER_PEER2_ASN[Host12_3]=65012SERVER_PEER1_ASN[Host34_1]=65013; SERVER_PEER2_ASN[Host34_1]=65014SERVER_PEER1_ASN[Host34_2]=65013; SERVER_PEER2_ASN[Host34_2]=65014SERVER_PEER1_ASN[HostB12_1]=65021; SERVER_PEER2_ASN[HostB12_1]=65022SERVER_PEER1_ASN[HostB12_2]=65021; SERVER_PEER2_ASN[HostB12_2]=65022SERVER_PEER1_ASN[MonitorSrv]=65021; SERVER_PEER2_ASN[MonitorSrv]=65022
 
 To seamlessly integrate your server compute nodes into your real-hardware Cloud-Giant 10.1.1.U-Slot loopback schema and your strict 32-bit private ASN structure, we must overhaul these mapping matrices.
+```
 ## The Architectural Blueprint Applied to These Variables
 
    1. SERVER_LOOPBACK_IP & SERVER_ROUTER_ID: These must use the exact /32 layout corresponding to their physical U-slot inside the Rack 1 cabinet (10.1.1.U-Slot).
@@ -6847,7 +6850,7 @@ SERVER_PEER1_ASN[Host34_2]=65003;  SERVER_PEER2_ASN[Host34_2]=65003
 SERVER_PEER1_ASN[HostB12_1]=65000; SERVER_PEER2_ASN[HostB12_1]=65000
 SERVER_PEER1_ASN[HostB12_2]=65000; SERVER_PEER2_ASN[HostB12_2]=65000
 SERVER_PEER1_ASN[MonitorSrv]=65000; SERVER_PEER2_ASN[MonitorSrv]=65000
-
+```
 ------------------------------
 ## 🌐 Checking the Clean Network State
 By structuring your script this way, you ensure your virtualized environment perfectly models your future production datacenter floor:
@@ -6859,7 +6862,7 @@ Would you like to examine how the SONiC Leaf template blocks evaluate these inco
 
 
 # Please verify that what we have suggested above in our discussion for the changes, it has all been incorporated in the attached file and verify and validate that we did not miss anything that could break our scripts.
-
+```
 To verify the integrity of the configuration changes, your script has been audited against your design rules. A major conflict has been discovered between Page 4 and your Page 12 mappings (pp. 4, 12).If left uncorrected, this conflict will cause virt-install to crash completely on deployment initialization, as libvirt will fail to bind the hypervisor's static DHCP network definitions (p. 25).🚨 Critical Vulnerability: Management Network MisalignmentOn Page 4 of your script, your global hypervisor management gateway is hardcoded as:bashMGMT_NET_GW="172.16.2.1"
 MGMT_DHCP_START="172.16.2.10"
 MGMT_DHCP_END="172.16.2.100"
@@ -6912,10 +6915,12 @@ Use code with caution.Replace With:bash # Enable NAT masquerade on hypervisor fo
 iptables -t nat -C POSTROUTING -s 10.10.1.0/24 ! -d 10.10.1.0/24 -j MASQUERADE 2>/dev/null || \
 iptables -t nat -A POSTROUTING -s 10.10.1.0/24 ! -d 10.10.1.0/24 -j MASQUERADE
 NATRULE
-Use code with caution.🔍 Verification Validation AnalysisWith these two additional alignment modifications saved alongside the changes we committed earlier for Pages 7, 11, 12, 13, and 24:Your OVS fabric network map matches your intended design (p. 11).Your arrays now match your physical datacenter geometry variables exactly (pp. 12-13).Your router configurations, WireGuard interfaces, and FRRouting paths will boot automatically into their correct VRF environments during deployment (pp. 28-29).Would you like to review how the script dynamically builds the Ansible inventory.yml file on Page 3 to verify it uses these newly assigned 10.10.1.x management endpoints (p. 3)?
+Use code with caution.
+```
+🔍 Verification Validation AnalysisWith these two additional alignment modifications saved alongside the changes we committed earlier for Pages 7, 11, 12, 13, and 24:Your OVS fabric network map matches your intended design (p. 11).Your arrays now match your physical datacenter geometry variables exactly (pp. 12-13).Your router configurations, WireGuard interfaces, and FRRouting paths will boot automatically into their correct VRF environments during deployment (pp. 28-29).Would you like to review how the script dynamically builds the Ansible inventory.yml file on Page 3 to verify it uses these newly assigned 10.10.1.x management endpoints (p. 3)?
 
 
-# Yes, please...
+### Yes, please...
 
 To verify how the inventory system processes your newly assigned 10.10.1.x out-of-band management addresses, we need to inspect the script's inventory generator logic.
 While the exact lines for the inventory generation function are located deep in the un-extracted pages of your file (implied around Pages 44–50), the foundation of this logic relies on the arrays we just modified on Page 12 and 13 (VM_MGMT_IP, VM_LOOPBACK, SERVER_BGP_ASN, and VM_USER).
@@ -6923,7 +6928,7 @@ When you invoke the script with ./deploy_lab_v13.sh deploy, it automatically exe
 ------------------------------
 ## 📂 The Expected Structure of Your Generated inventory.yml
 Because the script parses your newly updated data center geometry variables, it will dynamically format your file at $PROJECT_ROOT/inventory.yml (p. 3) to look exactly like this:
-
+```
 all:
   vars:
     ansible_user: ubuntu
@@ -6972,10 +6977,11 @@ all:
       hosts:
         MonitorSrv:
           ansible_host: 10.10.1.10   # Maps cleanly to physical slot 10
-
+```
 ------------------------------
 ## 🧠 Operational Verification Steps for Your Startup Team
 Once the deployment completes and the file is generated, your team can run two fast verification commands to ensure the environment is ready for Kubespray and platform execution:
+```
 ## Checkpoint A: Test Global Ansible Access Over the WireGuard Tunnel
 From an operations laptop connected to the WireGuard VPN server we cabled to your Vrf_Transit interface, run a native Ansible ping check against the generated inventory layout:
 
@@ -6989,19 +6995,20 @@ Run a quick parsing check to confirm that your host vars are reading the physica
 
 ansible-inventory -i ~/dc_lab_project/inventory.yml --list | grep -E "ansible_host|system_loopback"
 
-
+```
 * What Success Looks Like: The printed terminal stream will show complete alignment—where each node's ansible_host OOB control path (10.10.1.x) matches its corresponding BGP system_loopback routing marker (10.1.1.x).
 
 This clean layout completes the modifications needed for your lab configuration script. Your environment is now fully synchronized, hard-wired, and optimized to replicate a true, bare-metal hardware infrastructure deployment.
 Would you like to examine how to structure your Kubespray all.yml global variables file to ensure its internal variables point straight to these self-discovered 10.1.1.x fabric anchor endpoints?
 
 
-# Need an deep Analysis. When an Ubuntu Server with FRR installed can provide Exit Router Service along with a vpn server functionality to terminate vpn access, and possibly the efficiency can be achieved from sizable RAM and CPU core availability on that server, then what are the real benefits to use high end Router?? Such as what we have discussed above, suggest some names of Routers that can provide similar performance and functionalities of enterprise routers.
+### Need an deep Analysis. When an Ubuntu Server with FRR installed can provide Exit Router Service along with a vpn server functionality to terminate vpn access, and possibly the efficiency can be achieved from sizable RAM and CPU core availability on that server, then what are the real benefits to use high end Router?? Such as what we have discussed above, suggest some names of Routers that can provide similar performance and functionalities of enterprise routers.
 
 To understand why enterprises still buy expensive, dedicated hardware routers when a high-spec Ubuntu server running FRR and WireGuard can deliver massive throughput, we have to look past raw CPU gigahertz and inspect silicon architecture, electrical bus design, and operating system kernels.
 For your startup, an Ubuntu server is an excellent, cost-effective choice. However, as infrastructure scales to handle massive carrier-grade traffic, dedicated enterprise hardware becomes necessary.
 Here is a deep analysis of the differences between an entry-level "white-box" server and high-end enterprise routers, along with real-world hardware recommendations.
 ------------------------------
+
 ## 🧠 Part 1: Architectural Deep Analysis
 
 ┌─────────────────────────────────────────────────────────┐
