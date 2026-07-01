@@ -5012,8 +5012,9 @@ To enforce absolute isolation, your architecture utilizes a deterministic naming
 ## 📂 Part 2: Split Netplan Interface Configurations
 Create these explicit network configuration profiles inside /etc/netplan/ on your respective hosts. These files establish the mgmt-vrf layer, the public tenant Vrf_Transit engine, and the BGP-Unnumbered fabric interfaces.
 ## 🛠️ Host 1: Exit-Router 1 Netplan Matrix (/etc/netplan/) [3] 
-
-# /etc/netplan/00-oob-management.yamlnetwork:
+```
+# /etc/netplan/00-oob-management.yaml
+network:
   version: 2
   renderer: networkd
   vrfs:
@@ -5092,10 +5093,11 @@ Create these explicit network configuration profiles inside /etc/netplan/ on you
   loopbacks:
     lo:
       addresses: [10.1.12.42/32]
-
+```
 ------------------------------
 ## 🔒 Part 3: Native WireGuard Server Configurations
 To support secure operations team management, configure the WireGuard tunnels natively inside the Ubuntu kernel namespace.
+```
 ## 📝 Exit-Router 1 WireGuard Core (/etc/wireguard/wg0.conf)
 
 [Interface]
@@ -5120,9 +5122,11 @@ PublicKey = ADMIN_LAPTOP_PUBLIC_KEY_STRING
 AllowedIPs = 192.168.99.100/32, 10.10.0.0/16
 
 (Enable the interface on both routers using: sudo systemctl enable wg-quick@wg0 && sudo systemctl start wg-quick@wg0)
+```
 ------------------------------
 ## ⚙️ Part 4: Dynamic Control Plane Routing (/etc/frr/frr.conf)
 Because you are utilizing Vrf_Transit, the BGP process inside FRR must be explicitly bound to that specific routing table. This structure isolates public OpenStack tenant paths from bleeding into your physical server loops or your administrative OOB layer.
+```
 ## 📦 Exit-Router 1 FRR Config File
 
 frr version 8.x
@@ -5173,10 +5177,11 @@ router bgp 4200000000 vrf Vrf_Transit
   maximum-paths 64
  exit-address-family
 !
-
+```
 ------------------------------
 ## 🍃 Part 5: Upstream SONiC Fabric Switch Layout (frr.conf)
 To complete the end-to-end multi-homed mapping loop, update the underlying FRR configuration files inside your SONiC Border Leafs to mirror your network topology.
+```
 ## 🏙️ SONiC Border-Leaf 1 Routing Core
 
 router bgp 4200000001
@@ -5216,18 +5221,21 @@ router bgp 4200000002
   maximum-paths 64
  exit-address-family
 !
-
+```
 ------------------------------
 ## 🛡️ Part 6: Outbound Tenant NAT Edge Rules
 Since your home ISP modems do not understand internal OpenStack tenant IP spaces, you must enable IP Masquerading on the enp4s0 WAN interfaces inside your Vrf_Transit table. This translates internal traffic into the valid WAN IPs handed out by your ISP modems. [4] 
 Execute these commands on your respective Exit Routers or save them within your startup scripts:
+
+```
 
 # Execute on Exit-Router 1
 sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
 # Execute on Exit-Router 2
 sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
 
-(Note: If your system uses standard systemd-networkd, running sudo iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE directly applies the rule inside the VRF context based on the matching outbound interface). [5] 
+(Note: If your system uses standard systemd-networkd, running sudo iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE directly applies the rule inside the VRF context based on the matching outbound interface). [5]
+```
 This complete layout ensures a secure, loop-free data center edge. Public tenant data scales cleanly through Vrf_Transit using Active-Active ECMP multipathing, while your operations team maintains high-availability WireGuard access straight to the OOB management switch layer without risking configuration drift or platform lockouts.
 Would you like to examine the verification steps to confirm that paths are actively traversing your Vrf_Transit tables between your SONiC fabric and the ISP modems?
 
@@ -5245,7 +5253,7 @@ Instead, the Management Switch connects to the outside world exclusively through
 ------------------------------
 ## 🔌 Part 1: Physical Wiring to the Outside World
 The physical wiring map below demonstrates how an external administrator traverses the network to securely reach the management plane:
-
+```
 [ Remote Admin Workstation ]
              │ (WireGuard Tunnel over Internet/WAN)
              ├───► [ ISP 1 Modem ] ──► [ Exit-Router 1: `enp4s0` ]
@@ -5264,7 +5272,7 @@ The physical wiring map below demonstrates how an external administrator travers
                             ▼                         ▼
                   [ Dell R630 iDRACs ]      [ Kubespray Node Nodes ]
                     (10.10.12.124)             (10.10.12.24)
-
+```
 ## Detailed Cabling Rules:
 
    1. The Edge Boundary: Your home ISP modems plug only into the enp4s0 ports of the two Exit Routers. They are never physically cabled to the CRS125 switch.
