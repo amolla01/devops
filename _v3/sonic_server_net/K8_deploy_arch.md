@@ -1831,10 +1831,11 @@ This approach completely eliminates the need to assign or manage point-to-point 
 ## 1. MikroTik CHR v7 Configuration Script (Exit_Router 1)
 In RouterOS v7, BGP Unnumbered is achieved by creating a BGP connection that explicitly defines an interface rather than a remote IPv4 address, and setting the address-families to negotiate IPv4 routes over an IPv6 transport. [3, 4] 
 Run the following commands in the terminal of Exit_Router 1:
-
+```
 # =====================================================================
 # 1. LOOPBACK & SYSTEM IDENTITY SETUP
 # =====================================================================
+
 /interface/loopback/add name=lo0
 /ip/address/add address=192.168.254.1/32 interface=lo0 comment="Router ID & VTEP Anchor"
 
@@ -1875,7 +1876,7 @@ Run the following commands in the terminal of Exit_Router 1:
     remote.as=4200000002 \
     remote.interface=br-fabric-l2 \
     comment="BGP Unnumbered to Border Leaf 2"
-
+```
 (For Exit_Router 2, mirror this configuration exactly but change the loopback address to 192.168.254.2/32 and change the router-id inside the instance block).
 ------------------------------
 ## 2. SONiC Border Leaf Configuration (frr.conf)
