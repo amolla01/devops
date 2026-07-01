@@ -2596,7 +2596,7 @@ Now that your routing control plane is mapped out, would you like to explore the
 To implement Multi-Homed BGP with ECMP (Equal-Cost Multi-Path) and BFD (Bidirectional Forwarding Detection) directly to the host, you are building an elite, sub-second failover architecture. BFD ensures that if a physical link or an upstream Leaf switch port dies, FRR drops the path in milliseconds rather than waiting for standard BGP hold timers. [1, 2] 
 Here is the complete blueprint tying your subnets, VRFs, and interfaces together, along with critical optimizations for this specific design.
 ------------------------------
-```
+
 ## 1. Unified Subnet, VRF, and Interface Architecture
 Because you are using BGP Unnumbered, your physical interfaces (enp2s0f0 and enp2s0f1) do not carry IPv4 addresses. Instead, they handle Sub-Interface/VLAN tagging or Multi-VRF leaking to carry the different routing tables to your leaf switches over the same physical wires.
 
@@ -2613,7 +2613,7 @@ Because you are using BGP Unnumbered, your physical interfaces (enp2s0f0 and enp
 ------------------------------
 ## 2. Multi-Homed FRR Setup with BFD and ECMP (/etc/frr/frr.conf)
 This configuration turns on global ECMP (allowing up to 2 parallel paths for load sharing) and attaches a high-frequency BFD profile to the unnumbered physical interfaces.
-
+```
 !
 frr version 10.x
 frr defaults traditional
