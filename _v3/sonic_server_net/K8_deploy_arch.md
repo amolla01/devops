@@ -2804,7 +2804,7 @@ Because Calico is running with no network backend, it does not act as a BGP spea
 Instead, the global AS number belongs entirely to your host's FRR configuration (/etc/frr/frr.conf).
 Following the strict 32-bit private ASN schema we defined for your L3 Routed-to-Host CLOS topology, each server host gets its own unique individual ASN:
 ## Example Host FRR BGP Block (/etc/frr/frr.conf):
-
+```
 router bgp 4200000100  # Unique 32-bit Private ASN assigned to Server Node 1
  bgp router-id 192.168.254.11  # The host's loopback anchor IP
  no bgp default ipv4-unicast
@@ -2825,7 +2825,7 @@ router bgp 4200000100  # Unique 32-bit Private ASN assigned to Server Node 1
   maximum-paths 64
  exit-address-family
 !
-
+```
 ------------------------------
 ## 3. Formatting calico_advertise_cluster_ips
 The variable calico_advertise_cluster_ips is normally used to tell BIRD which specific CIDR blocks (like Kubernetes Pod ranges or Service Cluster IPs) to generate BGP advertisements for.
@@ -2833,7 +2833,7 @@ Because we have set the backend to "none", Calico will ignore this variable. Ins
 When a Pod spawns, Calico's Felix agent writes a local static route into the Ubuntu kernel pointing to the pod namespace interface (e.g., 10.233.64.5 via dev caliXXXX). We configure FRR to look at the kernel table, filter only the Kubernetes Pod CIDR blocks, and advertise them to your upstream TOR switches.
 ## The FRR Route-Map Filter
 Add this to the bottom of your host's /etc/frr/frr.conf file to replace the functionality of calico_advertise_cluster_ips:
-
+```
 ! Define an IP prefix-list matching your Kubespray Pod CIDR block
 ip prefix-list PL_K8S_PODS permit 10.233.0.0/18 ge 32
 !
@@ -2849,7 +2849,7 @@ route-map RM_CALICO_PODS permit 20
 !
 ! Deny everything else (prevents OOB Management or local loopbacks from bleeding into BGP)
 route-map RM_CALICO_PODS deny 100
-
+```
 ------------------------------
 ## 🌐 The Unified Control Plane Result
 By combining calico_network_backend: "none" with this FRR filter structure, you establish a streamlined pipeline:
@@ -2884,16 +2884,16 @@ To maintain absolute isolation and allow tenants to safely reuse overlapping IP 
 ------------------------------
 ## 2. Kubespray Configuration Variables (k8s-net-calico.yml)
 To strip down Calico so it acts purely as a local IPAM engine and an iptables firewall [1], configure inventory/mycluster/group_vars/k8s_cluster/k8s-net-calico.yml with the following explicit overrides:
-
+```
 # Core Plugin Directiveskube_network_plugin: calicocalico_network_backend: "none"      # Completely eliminates BIRD; frees port 179 for FRRcalico_ipip_mode: "Never"           # Strips away all double-encapsulation tunnelscalico_vxlan_mode: "Never"          # Routes unencapsulated IP packets straight to kernel
 # IPAM Assignment Windowskube_pods_subnet: 10.233.0.0/18kube_service_addresses: 10.233.64.0/18
 # Resource Constraints & Tuningcalico_node_cpu_limit: "500m"calico_node_memory_limit: "512Mi"calico_manage_hosts_file: true
-
+```
 ------------------------------
 ## 3. The Unified Host FRR Control Plane Configuration (frr.conf)
 Because Calico dropped BIRD [1], the FRR daemon running directly on your Ubuntu hosts must monitor the kernel [1], grab the Pod networks [1], grab the OVN BGP Agent's tenant interfaces [1], and push them over BGP Unnumbered to your SONiC Top-of-Rack (TOR) switches [1]. [5] 
 Place this optimized configuration on Compute/Worker Node 1 (/etc/frr/frr.conf):
-
+```
 frr version 8.x
 !
 # Ensure fast BGP Convergence over link failures
@@ -2937,11 +2937,11 @@ route-map RM_FABRIC_EXPORT permit 20
 !
 # Drop everything else explicitly (Locks out OOB Management and Ceph networks)
 route-map RM_FABRIC_EXPORT deny 100
-
+```
 ------------------------------
 ## 4. How OpenStack Tenants Safely Reuse Subnets
 A common concern in this layout is whether a tenant creating a VM on 192.168.1.5 will conflict with the rest of the datacenter. It will not, due to how the software layers isolate the traffic:
-
+```
 ┌────────────────────────────────────────────────────────┐
 │             Bare-Metal Ubuntu Host Server              │
 ├────────────────────────────────────────────────────────┤
@@ -2960,7 +2960,7 @@ A common concern in this layout is whether a tenant creating a VM on 192.168.1.5
       - Passes Pod IPs                 - Passes Geneve Tags
       - Passes Floating IPs            - Overlapping IPs Hidden
 
-
+```
 * The Tenant Isolation Layer: Tenant internal VM subnets do not touch the host's standard Linux kernel routing tables. Instead, they are entirely managed inside Open vSwitch (OVS) controlled by OVN. OVS encapsulates the tenant's data packets inside standard Geneve network tunnels. [6, 7, 8] 
 * The Hashing Key: If Tenant A and Tenant B both deploy the subnet 192.168.1.0/24, OVN automatically stamps Tenant A's packets with Geneve Virtual Network Identifier (VNI) 1001 and Tenant B's packets with VNI 1002.
 * The Role of the OVN BGP Agent: The OVN BGP Agent only leaks routes to FRR when a tenant requests a Floating IP (e.g., 203.0.113.77) or creates a public-facing load balancer [1]. The overlapping tenant private networks remain hidden inside their respective tunnels, completely safe from causing IP conflicts or network outages across your physical SONiC switches.
@@ -3011,6 +3011,7 @@ To ensure that tenant networks can reuse any private IP segment without causing 
 ------------------------------
 ## 2. How the Ceph Replication Optimization Works (HTB + Dummy Interface)
 Because Ceph storage replication can easily overwhelm network links and consume massive amounts of CPU processing power during a drive recovery or rebalance, we isolate it using a Linux dummy interface paired with traffic shaping (tc-htb).
+```
 ## Step A: Configure the Netplan Loopbacks & Dummy Interfaces
 Your Netplan configuration must set up the BGP Unnumbered interfaces, anchor the node identification IP to lo, and create a dedicated dummy interface for Ceph replication:
 
@@ -3059,13 +3060,13 @@ sudo tc class add dev enp2s0 parent 1:1 classid 1:10 htb rate 6gbit ceil 10gbit 
 sudo tc class add dev enp2s0 parent 1:1 classid 1:20 htb rate 4gbit ceil 4gbit prio 2
 # 6. Filter and map your Ceph replication subnet directly into the constrained Class 20
 sudo tc filter add dev enp2s0 parent 1:0 protocol ip prio 2 u32 match ip src 192.168.50.0/24 flowid 1:20
-
+```
 (You will duplicate these tc commands for your secondary multi-homed link enp3s0 to maintain symmetry).
 ------------------------------
 ## 3. Updating the Unified Host FRR Export Filters
 Since Ceph replication traffic should remain entirely localized to the storage backend nodes, your host FRR instance must be explicitly instructed never to advertise the 192.168.50.0/24 subnet up to your SONiC switches.
 Update your Compute Node /etc/frr/frr.conf file to strictly enforce this boundary:
-
+```
 ! Match your Kubernetes Unencapsulated Pod Subnet
 ip prefix-list PL_K8S_PODS permit 10.233.0.0/18 ge 32
 !
@@ -3081,7 +3082,7 @@ route-map RM_FABRIC_EXPORT permit 20
 !
 ! EXPLICIT DENY: Blocks Ceph Replication, OOB Management, and tenant private spaces
 route-map RM_FABRIC_EXPORT deny 100
-
+```
 ------------------------------
 ## 🧠 The Operational Workflow in Practice
 With this architecture configured:
