@@ -2264,6 +2264,7 @@ To complete your system design, do you need help writing the Ansible tasks to co
 Operating an end-to-end Layer 3 Routed-to-Host architecture—where even Ceph storage replication traffic is routed via BGP rather than a traditional L2 VLAN—is the gold standard for massive scalability, predictability, and fault isolation. [1] 
 Because you do not have Layer 2 broadcast domains, you cannot rely on traditional VLAN tagging to secure tenant traffic. Security separation must be handled entirely at Layer 3 using VRFs (Virtual Routing and Forwarding) and BGP EVPN / Multi-Protocol BGP.
 ------------------------------
+```
 ## 1. Recommended IP Blocks for OpenStack Tenants
 Since you are running a fully routed Layer 3 network, you should assign Private RFC 1918 blocks that are explicitly separated from your infrastructure underlay (Management, Loopbacks, and Ceph).
 
@@ -2332,7 +2333,7 @@ ip prefix-list PL_K8S_PODS permit 172.16.0.0/16 ge 24
 route-map K8S_PODS_ONLY permit 10
  match ip address prefix-list PL_K8S_PODS
 !
-
+```
 Would you like to review how to write the FRR route-maps to completely block communication between the K8s pod network and the Ceph storage VRF on the same host, or do you need help designing the MTU size strategy to handle the OVN network encapsulation over your L3 leaf fabric?
 
 [1] [https://www.linkedin.com](https://www.linkedin.com/pulse/deploying-ceph-storage-bgp-l3-network-satish-patel-gycne)
@@ -2349,6 +2350,7 @@ You need a vrf_storage because a dummy interface and a Jumbo Frame MTU only solv
 Without a VRF, your host has a single, global routing table. This introduces severe routing loops, security holes, and structural problems in an all-L3 routed-to-host network. [2] 
 Here is exactly why a dedicated VRF is mandatory for your Ceph replication subnet:
 ------------------------------
+```
 ## 1. The "Any-to-Any" Security Leak (The Biggest Risk)
 In Linux, if you do not use VRFs, all network interfaces belong to the default standard routing table. [3] 
 
@@ -2383,7 +2385,7 @@ When you add the VRF, the security boundaries are cleanly split into two isolate
 # ip route show (Standard Traffic & K8s)
 default dev enp2s0f0 proto bgp172.16.0.0/16 dev cali1234
 # ip route show vrf vrf_storage (Ceph Only)10.20.20.0/24 dev dummy_ceph proto kernel scope link src 10.20.20.11
-
+```
 Would you like to look at the Netplan or systemd-networkd configuration to see how to bind your jumbo-frame dummy interface to a VRF at boot, or should we map out the Leaf switch VRF configuration required to match this setup?
 
 [1] [https://www.reddit.com](https://www.reddit.com/r/networking/comments/mywpby/best_practice_for_jumbo_frames_switching/)
@@ -2395,6 +2397,7 @@ Would you like to look at the Netplan or systemd-networkd configuration to see h
 
 If you place your Ceph replication subnet directly into the host's main routing table and advertise it globally across your leaf-spine fabric, the architecture will function from a pure connectivity standpoint. Ceph nodes will successfully discover each other and replicate data.
 However, running a high-throughput storage backend in the global routing table of an all-L3 routed-to-host architecture introduces severe operational, performance, and security downsides.
+```
 ------------------------------
 ## 1. Fate Sharing during Network "Flapping" and Convergence
 In a standard routing table, all routes compete for the CPU cycles of the host’s FRR daemon and the Linux kernel routing state machine.
@@ -2441,7 +2444,7 @@ router bgp 65001 vrf vrf_storage
  address-family ipv4 unicast
   redistribute connected <-- Only grabs the local dummy interface, safely isolated
  exit-address-family
-
+```
 Given these operational risks to Ceph, would you like to explore how to implement a minimalist VRF configuration using systemd-networkd/Netplan to see how clean the setup looks, or should we look at how to tune Linux sysctl kernel parameters if you still prefer to keep everything in the main table?
 
 [1] [https://community.cisco.com](https://community.cisco.com/t5/routing/advertise-loopback-ip-and-lan-networks-via-bgp-neighbor/td-p/3774852)
@@ -2454,6 +2457,7 @@ Using an HTB (Hierarchical Token Bucket) queueing discipline (qdisc) over your d
 However, from an architecture standpoint, it is critical to separate what HTB can do from what it cannot do. HTB operates at Layer 2 (scheduling packets on an interface egress queue). It does not change Layer 3 logic (how the Linux kernel handles routing table lookups and security boundaries).
 If you combine your single global routing table with a well-configured HTB setup, here is how your operational risks shake out.
 ------------------------------
+```
 ## What HTB Successfully Solves (The Good)
 
 * Guaranteed Minima / Hard Maxima: You can create an HTB class for Ceph that guarantees it, for example, 40 Gbps of a 100 Gbps link, but caps it strictly at 70 Gbps during a rebalance. This keeps 30 Gbps completely free and open for K8s pods and OpenStack traffic. [3, 4] 
@@ -2484,6 +2488,7 @@ Because FRR handles everything in the default BGP instance, your storage paths a
 ## The Verdict: Is HTB Good Enough?
 If your environment is trusted and private (e.g., you do not host untrusted third-party tenants), and your workload scaling is predictable (low BGP route churn), then yes, an HTB setup over the main table is operationally good enough to keep the cluster stable.
 However, if you are running multi-tenant OpenStack where tenant isolation is a hard requirement, HTB must be paired with either Linux iptables/nftables firewall rules to block tenant-to-Ceph traffic, or a VRF.
+```
 Given that you are setting up HTB, would you like to look at the tc command syntax to properly map your K8s/OpenStack priorities alongside Ceph, or should we map out the kernel sysctl settings (like net.core.netdev_max_backlog) needed to handle these massive routed traffic loads? [9] 
 
 [1] [https://infosecmonkey.com](https://infosecmonkey.com/traffic-shaping-with-fortigate-firewalls/)
@@ -2504,6 +2509,7 @@ That is a phenomenal architectural decision. Embracing a Multi-VRF Design (Stora
 By treating the host as a true Layer 3 router, you achieve absolute security isolation, deterministic routing paths, and eliminate single points of failure. [1] 
 Here is how your comprehensive Multi-VRF architecture maps together across your Ubuntu hosts and the physical network fabric:
 ------------------------------
+```
 ## 1. The Multi-VRF Host Architecture Map
 Every compute node will maintain four distinct, isolated routing domains inside the Linux kernel:
 
@@ -2576,7 +2582,7 @@ route-map K8S_PODS_ONLY permit 10
 * Independent Scale: If your internet transit links suffer a DDoS attack or a massive wave of public route updates, the vrf_transit state table may churn, but your vrf_storage and Kubernetes networks will remain untouched and highly stable.
 * Simplified Troubleshooting: You can isolate network tracking using standard Linux tools by appending the VRF flags (e.g., ip route show vrf vrf_storage or ping -I vrf_transit 8.8.8.8). [4] 
 * Zero Hairpinning: OVN-BGP-Agent paired with this multi-VRF topology ensures Distributed Virtual Routing (DVR). Traffic destined for the internet leaves the compute node immediately through vrf_transit, rather than traversing an centralized network node.
-
+```
 Now that your routing control plane is mapped out, would you like to explore the Linux system configuration (such as Netplan definitions) to instantiate these VRFs at boot, or do you want to look at the ovn-bgp-agent configuration to see how it binds to bgp_vrf and vrf_transit dynamically?
 
 [1] [https://synchronet.net](https://synchronet.net/cisco-vrf-configuration/)
