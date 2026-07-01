@@ -5231,6 +5231,7 @@ Execute these commands on your respective Exit Routers or save them within your 
 
 # Execute on Exit-Router 1
 sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
+
 # Execute on Exit-Router 2
 sudo ip netns exec qcmd ip vrf exec Vrf_Transit iptables -t nat -A POSTROUTING -o enp4s0 -j MASQUERADE
 
@@ -5284,6 +5285,7 @@ The physical wiring map below demonstrates how an external administrator travers
 ## ⚙️ Part 2: Configuration Setup for the L2-to-L3 Transition
 To bridge a remote user from Layer 3 (the internet/WireGuard virtual adapter) into Layer 2 (the local 10.10.0.0/16 broadcast domain) safely, you configure an explicit Asymmetric Route Leak inside your Ubuntu Exit Routers.
 This prevents public internet traffic from sneaking into your management switch, while allowing authenticated WireGuard clients to move across the network boundaries smoothly. [1] 
+```
 ## 🛠️ Step 1: Update Netplan to Support the VRF Cross-Over
 On Exit-Router 1, we add a strict cross-over routing policy map directly inside the /etc/netplan/00-oob-management.yaml file. This tells the kernel to look inside the management switch table whenever it sees a packet originating from a WireGuard VPN tunnel:
 
@@ -5306,6 +5308,7 @@ network:
       addresses: [10.10.12.41/24]
 
 (On Exit-Router 2, mirror this exactly but adjust the address line to 10.10.12.42/24).
+
 ## 🛠️ Step 2: Injecting the Static Return Path for the Return Traffic
 When a server inside your rack (like a compute node at 10.10.12.24) receives an administration packet from a remote user (192.168.99.100), it needs to know how to send the response back.
 Since the management switch is flat Layer 2 and cannot route traffic to the internet, it sends all foreign subnets to its virtual gateway pool endpoint IPs (10.10.100.1 and 10.10.100.2) hosted on your Exit Routers. [2] 
@@ -5318,7 +5321,7 @@ sudo ip route add 192.168.99.0/24 dev wg0 table 1000
 Run this matching command on Exit-Router 2:
 
 sudo ip route add 192.168.99.0/24 dev wg0 table 1000
-
+```
 ------------------------------
 ## 🔄 The Transition Lifecycle: How an Administration Packet Moves
 When an operations team member opens their laptop at home and connects to look at your deployment tools:
@@ -5331,12 +5334,13 @@ When an operations team member opens their laptop at home and connects to look a
 
 ## Summary Security Check
 Through this precise layout, your management network has no default route that leads out to the public internet, and your physical CRS125 switch does not maintain any BGP peering sessions with your high-speed SONiC production fabric. The only way in or out of the administrative heart of your data center is via an authenticated, hardware-accelerated WireGuard handshake terminated directly inside the isolated VRF blocks of your R630 routers.
+
 Would you like to map out the corresponding iDRAC/IPMI routing checks to verify that you can power-cycle your bare-metal nodes through this WireGuard tunnel?
 
 [1] [https://documents.cdn.ifixit.com](https://documents.cdn.ifixit.com/Q6FxqxLmoj3UmJb4.pdf)
 [2] [https://community.cisco.com](https://community.cisco.com/t5/switching/accessing-the-management-interface-remotely-on-a-l3-switch/td-p/2936460)
 
-# So, identifying a connection originated from an ops team member is the packet has vpn signature, so mgmt-vrf will be acting once Vrf_Transit clears the packet, however, for Openstack Tenants, there will be nosuch vpn packet, is that the idea?
+### So, identifying a connection originated from an ops team member is the packet has vpn signature, so mgmt-vrf will be acting once Vrf_Transit clears the packet, however, for Openstack Tenants, there will be nosuch vpn packet, is that the idea?
 
 Yes, you have captured the exact core philosophy of this entire network architecture.
 That is exactly how it works. The security and separation of your datacenter rely entirely on this distinction in how packets are identified, stripped of their packaging, and steered.
@@ -5381,6 +5385,7 @@ To access and manage this architecture securely from a remote location, your ope
 Because the Ubuntu Exit Routers handle the complex task of stripping the VPN encryption and routing the raw packets into the isolated mgmt-vrf layer, the client laptop doesn't require any proprietary or heavy administrative software suites.
 Here is the exact software breakdown and configuration setup required for your ops team's laptops.
 ------------------------------
+```
 ## 1. The Core VPN Client: WireGuard
 Each administrator must install the official, lightweight WireGuard client application matching their laptop's operating system:
 
@@ -5426,6 +5431,8 @@ Used to log directly into the secure bash prompts of your bare-metal Dell R630 h
 
 ## C. The Kubernetes Control Engine (kubectl)
 Engineers managing the underlying container plane will install the standard kubectl binary tool locally. You export the cluster's secure kubeconfig file from your master nodes and save it to the engineer's laptop at ~/.kube/config. Because they are on the OOB network via WireGuard, running standard commands like kubectl get nodes will securely cross the tunnel to communicate directly with the cluster API.
+
+```
 ------------------------------
 ## 🧠 Summary of the Laptop Client Experience
 By avoiding proprietary enterprise client applications, your startup achieves maximum agility:
@@ -5436,14 +5443,15 @@ By avoiding proprietary enterprise client applications, your startup achieves ma
 
 Would you like to see how to format a quick automation helper snippet that will generate a unique client public/private key pair and produce the final laptop .conf file automatically for a new engineer?
 
-# like to review how to configure the OVN BGP Agent variables to ensure that public floating IPs are neatly bound to this exact Vrf_Transit table on OpenStack compute hosts
+### like to review how to configure the OVN BGP Agent variables to ensure that public floating IPs are neatly bound to this exact Vrf_Transit table on OpenStack compute hosts
 
 To tie your OpenStack tenant data layer into the Vrf_Transit configuration, you must align the OVN BGP Agent variables running inside your Kubernetes compute hosts. [1] 
 By default, the OVN BGP Agent attempts to manipulate the host's root Linux kernel routing table or spin up its own default VRF names. To force it to route exclusively within your custom Vrf_Transit (Kernel table 2000) and cleanly pass public Floating IPs up to your SONiC fabric, you must supply explicit variable overrides inside your OpenStack-Helm values configurations. [2, 3] 
 ------------------------------
+
 ## 📂 Part 1: The OVN BGP Agent Variable Schema (bgp-agent.ini)
 When the OVN BGP Agent is deployed as a DaemonSet across your Kubespray compute nodes, its configuration file resides inside the container at /etc/ovn-bgp-agent/bgp-agent.ini. You must override the following key parameters to point it directly into your Vrf_Transit table: [4, 5] 
-
+```
 [DEFAULT]
 # Enforce logging configurations for easy visibility
 debug = True
@@ -5464,11 +5472,11 @@ ovsdb_connection = unix:/var/run/openvswitch/db.sock
 expose_tenant_networks = False       # Hidden in Geneve tunnels; keep them safe from leaking
 expose_vips = True                  # Expose Octavia Load Balancer VIPs to the fabric
 expose_floating_ips = True           # Expose Public Tenant Floating IPs natively
-
+```
 ------------------------------
 ## 🛠️ Part 2: OpenStack-Helm Helm Value Injection
 Since you are running OpenStack on top of Kubernetes, you do not write this .ini file manually. You pass these keys into your Neutron / OVN BGP Agent Helm values overrides file (neutron-values.yaml):
-
+```
 # neutron-values.yaml overrides sectionmanifests:
   daemonset_ovn_bgp_agent: true
 pod:
@@ -5489,11 +5497,11 @@ conf:
       expose_floating_ips: true
       expose_vips: true
       expose_tenant_networks: false
-
+```
 ------------------------------
 ## 🔄 Part 3: The Architectural Lifecycle of a Tenant Floating IP
 Once these variables are applied and the containers restart, the network execution pipeline operates without human interaction during tenant usage:
-
+```
 [ Tenant Associates FIP: 203.0.113.99 ]
                  │
                  ▼
@@ -5519,11 +5527,11 @@ Once these variables are applied and the containers restart, the network executi
    [8, 9] 
    4. The Fabric Export: Your running host FRR instance is explicitly configured to watch Vrf_Transit and execute redistribute kernel. It instantly captures this new /32 record, matches it against your export route maps, and broadcasts it over BGP Unnumbered up to your SONiC Border Leafs. [8, 9] 
    5. The Inbound Flow: External internet clients targeting 203.0.113.99 hit your Exit Routers, traverse the SONiC switches via ECMP, and route directly to this specific compute node interface. When the packet hits the node, Open vSwitch (br-ex) intercepts the frame before standard Linux routing can drop it, strips the outer layer, applies OVN Destination-NAT, and drops it into the tenant VM space. [3, 9] 
-
+```
 ------------------------------
 ## 📊 Part 4: Real-Time Verification Checklist
 To prove that the OVN BGP Agent is successfully mapping tenant infrastructure parameters to your variables without configuration drift, run these verification steps directly on your compute servers:
-
+```
 * Checkpoint A: Confirm the agent is writing to Table 2000:
 
 ip route show table 2000 | grep blackhole
@@ -5534,7 +5542,7 @@ Success condition: You should see an active list of your active tenant Floating 
 vtysh -c "show ip route vrf Vrf_Transit"
 
 Success condition: The local BGP control plane should list those exact same /32 addresses flagged with a K (Kernel) marker, confirming they are ready to be sent up your BGP-Unnumbered links.
-
+```
 This configuration guarantees a secure ecosystem where your SONiC fabric dynamically tracks tenant movements across your hardware racks, while keeping the underlying OOB management switches hidden and safe.
 Would you like to examine how to structure the matching OpenStack Nova configuration keys to ensure that your compute workers allocate sufficient local performance profiles to handle these intense OVS kernel datapath mappings?
 
