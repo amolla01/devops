@@ -6995,9 +6995,9 @@ Run a quick parsing check to confirm that your host vars are reading the physica
 
 ansible-inventory -i ~/dc_lab_project/inventory.yml --list | grep -E "ansible_host|system_loopback"
 
-```
-* What Success Looks Like: The printed terminal stream will show complete alignment—where each node's ansible_host OOB control path (10.10.1.x) matches its corresponding BGP system_loopback routing marker (10.1.1.x).
 
+* What Success Looks Like: The printed terminal stream will show complete alignment—where each node's ansible_host OOB control path (10.10.1.x) matches its corresponding BGP system_loopback routing marker (10.1.1.x).
+```
 This clean layout completes the modifications needed for your lab configuration script. Your environment is now fully synchronized, hard-wired, and optimized to replicate a true, bare-metal hardware infrastructure deployment.
 Would you like to examine how to structure your Kubespray all.yml global variables file to ensure its internal variables point straight to these self-discovered 10.1.1.x fabric anchor endpoints?
 
@@ -7010,7 +7010,7 @@ Here is a deep analysis of the differences between an entry-level "white-box" se
 ------------------------------
 
 ## 🧠 Part 1: Architectural Deep Analysis
-
+```
 ┌─────────────────────────────────────────────────────────┐
 │        COORDINATED LINUX GENERAL PURPOSE SERVER        │
 ├─────────────────────────────────────────────────────────┤
@@ -7031,7 +7031,7 @@ Here is a deep analysis of the differences between an entry-level "white-box" se
 │                            ▼                            │
 │         [Line Card Bus] ──► [Switching Fabric]          │
 └─────────────────────────────────────────────────────────┘
-
+```
 ## 1. ASICs vs. General-Purpose CPUs (Hardware vs. Software Forwarding)
 
 * The Ubuntu Server: When a packet hits an interface card on an Ubuntu server, it triggers a hardware interrupt. The CPU must stop what it is doing, copy the packet from the network card over the PCIe bus into the system RAM, read the packet header using the Linux kernel network stack, consult the routing table, and push it back out of a network interface card. This is Software-Based Forwarding. No matter how many CPU cores you have, the system is bottlenecked by RAM latency and CPU interrupt processing. [1] 
@@ -7072,6 +7072,7 @@ If you want to keep using an open-source model but need true hardware-accelerate
 ------------------------------
 ## 📊 Summary Strategy for Startups
 For a startup operating under tight resource and budget constraints, stick with the Ubuntu + FRR + WireGuard architecture on your Dell R630/R720 servers.
+```
 
        [ Startup / Lean Phase ]              [ Scaling / Growth Phase ]
   Ubuntu Server + FRR + WireGuard         Dedicated Enterprise Hardware
@@ -7079,7 +7080,7 @@ For a startup operating under tight resource and budget constraints, stick with 
   • Cost: $0 (Uses spare servers)         • Cost: High ($10k - $50k+)
   • Knowledge: Standard Linux Sysadmin     • Knowledge: Specialized Network Engineer
   • Performance: Up to 10-20 Gbps         • Performance: 100 Gbps - Terabit Line-rate
-
+```
 Your physical Dell servers possess more than enough RAM and CPU compute cycles to push 10 to 20 Gbps of software-forwarded traffic without breaking a sweat. This approach saves thousands of dollars in upfront capital expenses and avoids vendor lock-in, allowing your startup to focus its engineering efforts on building your core Kubernetes and OpenStack tenant cloud services.
 Would you like to examine how to structure your Prometheus alert expressions to monitor your Ubuntu Exit Router's software packet processing metrics and catch any potential performance bottlenecks before they affect your users?
 
