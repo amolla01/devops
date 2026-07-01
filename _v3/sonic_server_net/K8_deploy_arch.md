@@ -8200,7 +8200,7 @@ frr_exporter_version: "1.4.0"
 exporter_bind_ip: "{{ ansible_host }}"
 
 # System pathsbinary_dest_dir: "/usr/local/bin"
-
+```
 ------------------------------
 ## 📂 Step 2: The Unified Deployment Playbook (deploy_exporters.yml)
 ```
@@ -8390,12 +8390,13 @@ If you are interested, we can look at how to structure an Ansible automation cle
 [4] [https://developer.cisco.com](https://developer.cisco.com/docs/nexus-as-code/nx-os-with-ansible/)
 
 
-# Recall we were discuss what software's could be installed on these Ubuntu Exit Routers. What you are suggesting for MonitorSrv, can we do these in here. If YES, how to spread among these two boxes??
+### Recall we were discuss what software's could be installed on these Ubuntu Exit Routers. What you are suggesting for MonitorSrv, can we do these in here. If YES, how to spread among these two boxes??
 
 Yes, absolutely. You can eliminate the dedicated MonitorSrv machine entirely and host your entire telemetry, observability, and communication stack directly on your two Ubuntu Exit Routers (Exit_Router1 and Exit_Router2).
 Because your routers have sizable RAM and CPU capacity, they can easily absorb these lightweight Docker containers without impacting their routing pipelines. Spreading this stack across both boxes gives you High Availability (HA), ensuring your critical chat alerts and monitoring dashboards stay online even if one router drops its ISP connection.
 ------------------------------
 ## 🗺️ Part 1: How to Spread the Software (The HA Architecture)
+```
 To split the stack perfectly while avoiding single-point-of-failure lockouts, divide the tools logically across your two exit nodes:
 
 ┌──────────────────────────────────────┐      ┌──────────────────────────────────────┐
@@ -8406,7 +8407,7 @@ To split the stack perfectly while avoiding single-point-of-failure lockouts, di
 │ • Grafana Dashboard UI (Primary)     │      │ • Grafana Dashboard UI (Secondary)   │
 │ • Mattermost App Server (Primary)    │      │ • Mattermost DB (PostgreSQL Replication)
 └──────────────────────────────────────┘      └──────────────────────────────────────┘
-
+```
 ## The Balancing Strategy:
 
 * The Telemetry Plane (Prometheus/Grafana): Runs on both routers simultaneously. Both instances independently scrape your switches, hosts, and local VPP engines. If Exit_Router1 catches fire, you open your browser to Exit_Router2's IP and have identical, uncorrupted Grafana dashboards.
@@ -8415,7 +8416,9 @@ To split the stack perfectly while avoiding single-point-of-failure lockouts, di
 
 ------------------------------
 ## 📂 Part 2: Split Docker Compose Deployment Blueprints
+```
 To implement this layout, log into each router via your secure WireGuard tunnel and deploy these tailored configuration scripts:
+
 ## 🛠️ Router 1 Stack Config (/opt/monitor-edge/docker-compose.yml)
 Log into Exit_Router1 (10.10.1.40) and drop this file:
 
@@ -8603,12 +8606,12 @@ scrape_configs:
         # Points locally to the router's own internal bridge if snmp_exporter container is run.
         # Alternatively, target '10.10.1.40:9116' or '10.10.1.39:9116' symmetrically.
         replacement: '127.0.0.1:9116' 
-
+```
 ## 🎯 Startup Advantage of This Converged Layout
 By packing your telemetry services straight into your physical edge routing hardware, your startup maximizes its asset density. You save space, save power, and eliminate an entire machine configuration from your deployment plans, while maintaining a resilient system tracking plane.
 Would you like to examine how to adjust your Mattermost webhooks or your Ansible exporter playbooks to account for this split routing system architecture?
 
-# Like both in here..."like to examine how to adjust your Mattermost webhooks and  Ansible exporter playbooks to account for this split routing system architecture"
+### Like both in here..."like to examine how to adjust your Mattermost webhooks and  Ansible exporter playbooks to account for this split routing system architecture"
 
 
 To finish consolidating your platform onto this dual-router high-availability topology, you need to adjust two final pipeline links: your Mattermost Incoming Webhooks and your Ansible Exporter Deployment Playbooks.
