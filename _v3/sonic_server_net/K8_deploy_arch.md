@@ -2596,6 +2596,7 @@ Now that your routing control plane is mapped out, would you like to explore the
 To implement Multi-Homed BGP with ECMP (Equal-Cost Multi-Path) and BFD (Bidirectional Forwarding Detection) directly to the host, you are building an elite, sub-second failover architecture. BFD ensures that if a physical link or an upstream Leaf switch port dies, FRR drops the path in milliseconds rather than waiting for standard BGP hold timers. [1, 2] 
 Here is the complete blueprint tying your subnets, VRFs, and interfaces together, along with critical optimizations for this specific design.
 ------------------------------
+```
 ## 1. Unified Subnet, VRF, and Interface Architecture
 Because you are using BGP Unnumbered, your physical interfaces (enp2s0f0 and enp2s0f1) do not carry IPv4 addresses. Instead, they handle Sub-Interface/VLAN tagging or Multi-VRF leaking to carry the different routing tables to your leaf switches over the same physical wires.
 
@@ -2713,7 +2714,7 @@ BFD can detect a link failure in less than 100 milliseconds. However, if your BF
 
 ## D. Isolate the HTB Queueing Hierarchy per VRF
 Since you are using HTB for Traffic Control (tc), do not apply a single blanket HTB shaper to the root physical interfaces.
-
+```
 * Suggestion: Implement VRF-aware Traffic Control by matching the sub-interfaces or using cgroups/iptables to mark packets based on their originating VRF. This ensures that vrf_storage traffic is explicitly clamped to your high-speed Jumbo-Frame allocations, leaving the standard default queues fully open for the Kubernetes control plane.
 
 Would you like assistance generating the Ansible configuration templates to deploy these specific sysctl and FRR configurations across your Kubespray inventory, or should we look into the upstream Leaf switch BGP configurations required to pair with this host setup?
