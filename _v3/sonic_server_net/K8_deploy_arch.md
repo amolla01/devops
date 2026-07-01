@@ -3176,7 +3176,7 @@ If a network monitoring alert pops up or an eBGP Unnumbered session flags an err
 When configuring your cluster using this structured pattern, you will map these human-readable loopbacks directly into your host setup.
 ## Update Ubuntu Netplan (/etc/netplan/01-netcfg.yaml)
 For your primary Exit Router server sitting in Data Center 1, Rack 1, at Rack Unit 42:
-
+```
 network:
   version: 2
   renderer: networkd
@@ -3184,10 +3184,10 @@ network:
     lo:
       addresses:
         - 10.1.1.42/32  # Instantly identifies: DC1, Rack 1, Node U42 (Exit Router)
-
+```
 ## Update Host FRR Daemon (/etc/frr/frr.conf)
 Your BGP routing stack will pick up this structured identifier automatically, broadcasting it across your SONiC switches so traceroutes display clean, geographic hops:
-
+```
 router bgp 4200000142  # Matching 32-bit Private ASN schema (ending in Node ID 42)
  bgp router-id 10.1.1.42  # Structured System Identification ID
  no bgp default ipv4-unicast
@@ -3195,14 +3195,14 @@ router bgp 4200000142  # Matching 32-bit Private ASN schema (ending in Node ID 4
  address-family ipv4 unicast
   redistribute kernel route-map RM_FABRIC_EXPORT
  exit-address-family
-
+```
 ## 🛠️ Cloud Giant Pro-Tip: DNS Reverse Lookup (PTR Records)
 To maximize the value of this design, public cloud providers map these structured loopbacks to local, internal DNS PTR (Reverse Lookup) records inside their monitoring stacks.
 If you set up a simple local DNS mapping rule, running a standard traceroute or looking at a Prometheus alert log will decode the raw numbers into a readable geographic string automatically:
-
+```
 * 10.1.1.42 ──► Automatically resolves to: dc01-az1-r01-u42.infra.local
 * 10.2.12.24 ──► Automatically resolves to: dc01-az2-r12-u24.infra.local
-
+```
 This layout eliminates troubleshooting complexity, allowing your operations staff to immediately know the exact data center, physical rack, server type, and shelf slot whenever an engineering metric triggers.
 Would you like to review how to write a quick automation script to auto-generate these Netplan network files based on a server's physical location variables?
 
@@ -3213,12 +3213,16 @@ Here is a production-ready Bash automation script designed to run directly on yo
 The script dynamically extracts your host variables (Data Center, Availability Zone, Rack ID, and physical U-Slot/Shelf location), calculates the structured loopback IP according to the cloud-giant pattern we defined (10.[Zone].[Rack].[Node]), and outputs a cleanly formatted, multi-homed Netplan YAML file.
 ## 🛠️ The Netplan Auto-Generator Script
 Create a file named generate-netplan.sh on your server:
-
+```
 nano generate-netplan.sh
 
 Paste the following script into it:
 
-#!/usr/bin/env bash# =====================================================================# SYSTEM AUTOMATION: Structured Netplan Config Generator for L3 CLOS# Pattern: 10.[DC/AZ].[RackID].[U-Slot]# =====================================================================
+#!/usr/bin/env bash
+# =====================================================================
+# SYSTEM AUTOMATION: Structured Netplan Config Generator for L3 CLOS
+# Pattern: 10.[DC/AZ].[RackID].[U-Slot]
+# =====================================================================
 set -euo pipefail
 # --- 1. USER INPUT VARIABLES (Modify these per physical machine) ---
 DC_ID="01"          # Data Center number (e.g., 01, 02)
@@ -3314,7 +3318,7 @@ echo "Generation Complete! To apply configuration, run: sudo netplan apply"
    
    sudo netplan apply
    
-   
+ ```  
 ------------------------------
 ## 📊 How the Automation Solves Core Operational Issues
 
