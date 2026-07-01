@@ -3763,7 +3763,7 @@ To ensure your cluster scaling operations run smoothly, would you like to review
 [5] [https://www.plural.sh](https://www.plural.sh/blog/cni-kubernetes-guide/)
 
 
-# Among all of the above describe what can be part of ubuntu packer package which will be installed through pxe to the server and if any specifics to follow to build the image.
+### Among all of the above describe what can be part of ubuntu packer package which will be installed through pxe to the server and if any specifics to follow to build the image.
 
 To automate this architecture using HashiCorp Packer, your goal is to build a golden Ubuntu cloud image that contains all the foundational software, kernel optimizations, and network configurations required for your L3 CLOS design.
 This ensures that when a server network-boots via MaaS PXE, it instantly receives an image that is fully prepared for Kubespray, pre-configured with FRR, and hardened against port conflicts.
@@ -3771,6 +3771,7 @@ Here is exactly what should be baked directly into the Packer image, what should
 ------------------------------
 ## 📦 1. What SHOULD Be Built into the Packer Image
 These components are static across all servers in your data center and should be pre-installed to speed up PXE deployment times and guarantee consistency:
+```
 ## A. Foundational Packages & Repositories
 
 * FRRouting (FRR): Add the official FRR Debian repository and pre-install the frr and frr-pythontools packages.
@@ -3800,17 +3801,19 @@ vm.max_map_count = 262144
 
 ## D. Persistent Systemd Optimization Services
 Create your custom systemd service file (e.g., /etc/systemd/system/traffic-shaping.service) containing the Linux HTB (tc) traffic control loops we designed to limit Ceph replication speeds. Enable the service (systemctl enable traffic-shaping) so that traffic shaping is pre-installed and waiting to activate the moment the server finds a ceph-dummy0 interface.
+```
 ------------------------------
 ## 🔴 2. What Must NOT Be Part of the Packer Image
 Do not pre-install any components that assign unique logical or cryptographic identifiers to a host. If you bake these into the image, every server deployed via PXE will collide:
-
+```
 * No Docker, Containerd, or Kubernetes Binaries: Let Kubespray handle installing these during cluster orchestration. This prevents old container runtimes from corrupting system registries.
 * No Host FRR Router IDs or ASNs: The /etc/frr/frr.conf file should be left empty or unconfigured.
 * No Machine IDs or SSH Keys: Clean the image paths /etc/machine-id and /var/lib/dbus/machine-id during the cleanup phase.
-
+```
 ------------------------------
 ## 🛠️ 3. Specifics and Rules to Follow When Building the Image
 When configuring your Packer HCL template (using the qemu or virtualbox-iso builders to output a .qcow2 or .raw image for MaaS), enforce these exact configurations: [1] 
+```
 ## Rule A: Use the Official Ubuntu Server ISO as the Source
 Always base your build on the Ubuntu Server LTS Minimal ISO. The minimal profile strips away desktop components, cloud-provider layers, and unnecessary logical tools that can interfere with Kubespray's baseline execution.
 ## Rule B: Disable the Standard Ubuntu Network Auto-Configuration
@@ -3843,7 +3846,7 @@ sudo truncate -s 0 /etc/machine-idif [ -f /var/lib/dbus/machine-id ]; then
 rm -f ~/.bash_history
 rm -rf /tmp/*
 rm -rf /var/tmp/*
-
+```
 ## Summary of the Lifecycle Flow
 
    1. Packer compiles the golden image containing Ubuntu, FRR, system kernel variables, and your traffic-shaping services.
