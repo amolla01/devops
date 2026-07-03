@@ -258,7 +258,9 @@ To maintain the absolute structural integrity of config_db.json, multiple interd
 | BUFFER_PORT_EGRESS_PROFILE_LIST | Manages port-level egress buffer pool restrictions. | 1 Deleted / 4 Added |
 
 ------------------------------
-## Step-by-Step Data Dissection## 1. The BREAKOUT_CFG Table
+## Step-by-Step Data Dissection
+```
+## 1. The BREAKOUT_CFG Table
 The parent port must declare its breakout status to notify SONiC's Dynamic Port Breakout (DPB) manager. [7] 
 
 * 
@@ -402,14 +404,14 @@ SONiC cannot safely write a new config_db.json file if hardware memory pools are
 }
 
 * 
-
+```
 ------------------------------
 ## Best Practice Warning
 Manually hacking Redis keys or editing config_db.json raw for dynamic breakouts often breaks background synchronization with the APPL_DB and ASIC_DB. It is highly advised to execute the changes native via the system CLI: [10, 11] 
-
+```
 config interface breakout Ethernet0 4x10G -y
 config save -y
-
+```
 This forces the backend Python framework to execute these table expansions safely, automatically referencing the true hardware profiles defined inside the device's native port_config.ini templates. [8, 9] 
 If you are writing a script or automation playbook, let me know if you would like a Jinja2 template snippet or an Ansible task structure to handle formatting these multi-sub-port expansions automatically.
 
@@ -432,6 +434,7 @@ To maintain strict configuration and transactional integrity, you absolutely mus
 The tables INTERFACE, BGP_NEIGHBOR, and BGP_NEIGHBOR_AF are not altered by the core breakout orchestration daemon (portmgrd/Dynamic Port Breakout). Instead, you are strictly required to manually or programmatically delete them before the hardware breakout takes place. [1, 2] 
 If these protocol strings still reference Ethernet0 when you execute the breakout command, the transaction will fail, throwing validation errors because you cannot bind IP services or BGP sessions to a physical port that is about to be systematically destroyed. [2, 3] 
 ------------------------------
+```
 ## Complete Transaction Workflow: L3 & BGP Tables
 When transforming Ethernet0 (1x40G) to 4x10G, the protocol tables are impacted sequentially across Deletion and Addition phases.
 ## 1. What Got DELETED (The Pre-requisite Cleanup)
@@ -487,9 +490,10 @@ Once the underlying physical framework constructs the sub-ports (Ethernet0, Ethe
         }
     }
 }
-
+```
 ------------------------------
 ## Missing Integrity Tables That Will Break Config Synchronization
+```
 If you are modifying config_db.json raw or writing custom automation, editing only the ports and protocols will trigger fatal schema inconsistencies. SONiC uses several other foundational metadata wrappers that must be balanced in the exact same transaction:
 ## A. The DEVICE_NEIGHBOR Table (LLDP Mapping) [6] 
 The LLDP engine container (lldpmgrd) monitors the physical ports to map network topology. If you do not update this, LLDP tracking crashes for that switch slot. [6] 
@@ -506,7 +510,7 @@ SONiC tracks port statistics (such as interface utilization and packet drops) us
 * Delete: "FLEX_COUNTER_TABLE|Ethernet0"
 * Add: Keys for Ethernet0, Ethernet1, Ethernet2, and Ethernet3 referencing "PORT" data polling.
 * 
-
+```
 ------------------------------
 ## Pro-Tip: Structural Behavior of config interface breakout
 If you trigger this via the SONiC CLI (config interface breakout Ethernet0 4x10G), the backend processing engine takes an explicit internal shortcut: [2, 9] 
@@ -536,6 +540,7 @@ Would you like to see how to structure an Ansible task block using the native so
 To automate this process safely, your automation layer must handle two distinct tasks: wiping dependencies (to prevent schema validation locks) and applying the breakout hardware and L3 structures.
 Below is a clean, scalable Ansible variable structure along with the exact playbook tasks required to dynamically construct and execute a SONiC breakout patch.
 ------------------------------
+```
 ## 1. The Variable Structure (vars/main.yml)
 To support clean automation, organize your variables by separating the core parent-port definitions from the sub-ports (children) they spawn. This layout makes it incredibly simple to generate corresponding config_db.json structures. [1] 
 
@@ -679,7 +684,7 @@ When your automation compiles the layout above, it cleanly yields this transacti
     "10.43.1.2|ipv4_unicast": { "admin_status": "up" }
   }
 }
-
+```
 Do you need help creating a Jinja2 template that builds this JSON patch block dynamically, or would you like to add details for VLAN / PortChannel bindings on the new sub-ports?
 
 [1] [https://docs.redhat.com](https://docs.redhat.com/en/documentation/red_hat_openstack_services_on_openshift/18.0/html/managing_networking_resources/vlan-aware-instances_rhoso-mngnet)
@@ -690,6 +695,7 @@ Do you need help creating a Jinja2 template that builds this JSON patch block dy
 To implement BGP Unnumbered over the breakout interfaces, you remove explicit IPv4 subnet allocations from both the interfaces and the BGP neighbor configurations. Instead, the BGP neighbors discover each other dynamically using IPv6 Link-Local Addresses over the unnumbered IPv4 point-to-point links. [1, 2, 3, 4] 
 To achieve this in Community SONiC, your interfaces must have IPv6 enabled, and the BGP neighbor mappings must target the physical interface names directly rather than IP strings. [5] 
 ------------------------------
+```
 ## 1. Updated Variable Structure (vars/main.yml)
 The variable structure drops ip_address and bgp_peer (IP string), replacing them with interface tracking and the dynamic remote autonomous system.
 
@@ -831,6 +837,7 @@ Once the playbook runs successfully, you can verify that the FRR routing engine 
 show ip bgp summary
 
 The remote hosts will appear identified cleanly by their interface names (e.g., Ethernet4) instead of standard IPs.
+```
 Would you like to see how to inject BGP peer-groups into this playbook to easily apply routing policies (like route-reflectors or prefix-lists) across these breakout channels?
 
 [1] [https://techdocassets.pluribusnetworks.com](https://techdocassets.pluribusnetworks.com/netvisor/nv1_702/CG/ConfiguringBGPUnnumbered.html)
@@ -850,6 +857,7 @@ To ensure Community SONiC maintains absolute data schema stability across refres
 For BGP Unnumbered, the INTERFACE table must explicitly enable IPv6 processing without hardcoding an IPv4 address, and the BGP configurations must cleanly target the physical interface keys directly. [1, 2] 
 The following comprehensive JSON patch file applies to a parent port Ethernet4 being broken down into Ethernet4, Ethernet5, Ethernet6, and Ethernet7 on an Arista 7050QX32 profile. It contains all physical breakout mappings, memory/QoS limits, and protocol structures to protect config_db.json integrity. [3, 4] 
 ------------------------------
+```
 ## Complete Transactional JSON Patch File (config_db_patch.json)
 
 {
@@ -1057,14 +1065,14 @@ The following comprehensive JSON patch file applies to a parent port Ethernet4 b
     }
   }
 }
-
+```
 ------------------------------
 ## Critical Adjustments Explained
-
+```
    1. INTERFACE Fix: The key value ipv6_use_link_local_only: "enable" is appended to the dictionaries. This acts as the anchor instructing interfaces-config and fpmsyncd to initialize IPv6 processing on the sub-interfaces without mapping a dummy IPv4 network statement. [5, 6] 
    2. BUFFER_* and QUEUE Integration: Every lane split must balance its corresponding memory block footprint. Isolating or removing entries from BUFFER_PORT_INGRESS_PROFILE_LIST or BUFFER_PORT_EGRESS_PROFILE_LIST causes swss (Switch State Service) to drop the configurations or throw a kernel exception during an unconditional warm boot or reboot. [3, 7] 
    3. FLEX_COUNTER_TABLE Entry: The "PORT:EthernetX" key sets up the tracking counters in Redis. Without this entry, the interface utilization stats (polled by the syncd container counters) fail to bind, leading to incomplete performance telemetry or errors during a warm reboot.
-
+```
 Do you want to write a Python test validation script using the sonic-cfggen library to dry-run and verify this patch against your primary master configuration file before deploying it to production?
 
 [1] [https://netbergtw.com](https://netbergtw.com/top-support/netberg-sonic/bgp-unnumbered/)
@@ -1081,6 +1089,7 @@ Do you want to write a Python test validation script using the sonic-cfggen libr
 
 The understanding of these parameters is mostly accurate, but there is a major architectural correction needed regarding how these two parameters interact.
 ## The Architectural Correction
+```
 You cannot use both at the same time because they belong to two completely opposite routing management models in SONiC: [1, 2] 
 
    1. The Modern Unified Model ("frr_mgmt_framework_config": "true"):
@@ -1090,9 +1099,10 @@ You cannot use both at the same time because they belong to two completely oppos
    2. The Legacy Split Model ("docker_routing_config_mode": "split-unified"):
    * This cuts off CONFIG_DB from your routing engine.
       * It forces SONiC to ignore your BGP_* tables entirely and completely relies on a static /etc/sonic/frr/frr.conf text file to manage reboots. [1, 6] 
-   
+ ```  
 To achieve zero-vtysh, pure database-driven automation, the choice is unified with the frr_mgmt_framework_config active. [2, 5] 
 ------------------------------
+```
 ## 1. Updated Transactional JSON Patch File (config_db_patch.json)
 The DEVICE_METADATA table is updated below to support the Unified Management Framework. The patch now includes the complete physical, QoS, layer-3, and framework parameters to prevent state engine mismatches upon a device reload. [2, 5] 
 
@@ -1251,7 +1261,7 @@ breakout_configurations:
       sonic_config:
         lines:
           - config save -y
-
+```
 Would you like to build an associated verification task block that queries the operational databases (APPL_DB) using Ansible to confirm the sub-ports have transitioned into a healthy forwarding state?
 
 [1] [https://medium.com](https://medium.com/sonic-nos/sonic-frr-split-configuration-a-step-backwards-fb4db0e181a1)
