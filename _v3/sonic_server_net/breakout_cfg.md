@@ -1722,3 +1722,784 @@ Instead, we push the rendered data payload using sonic_api to the REST interface
 
 Would you like to explore adding a pre-check task to verify that the hardware platform matches your specified Arista profile lane mappings before making these system-level alterations?
 
+### As we are incorporating: docker_routing_config_mode: "unified" and frr_mgmt_framework_config_mode: "true" and breakout ports along with already existed non-breakout pre-configured ports, how to apply the patch to the running system, so, it configures the whole device running SONiC with implemented changes synchronizes from redis db to config_db.json config cache to running memory, did we implement that task above??
+
+
+No, the tasks implemented previously did not fully complete that specific runtime synchronization workflow. [1] 
+The previous playbook strictly targeted the sonic_api module via REST or individual config commands. When modifying 13 interdependent structural tables on a running system—especially while switching global routing architectures to "unified" and turning on "frrcfgd"—applying configurations piece-by-piece can throw the orchestration agent (orchagent) into a race condition. [1, 2, 3] 
+To apply this massive patch to a running system without cutting corners, the process must:
+
+   1. Preserve existing ports (by fetching the current setup).
+   2. Merge the breakout tables seamlessly into the global configuration database.
+   3. Write the state cleanly to Redis Database 4 (CONFIG_DB).
+   4. Trigger runtime re-generation so that compiled config caches update in-memory engines immediately. [2, 4, 5, 6] 
+
+To accomplish this, the Ansible project architecture is updated here to use sonic-cfggen with full system synchronization. [2] 
+------------------------------
+## 1. Updated Jinja2 Template (roles/sonic_breakout/templates/breakout_patch.json.j2)
+To ensure the config load utility processes this safely, the template is optimized into a flat, valid JSON patch format. [2] 
+
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "docker_routing_config_mode": "{{ docker_routing_config_mode }}",
+      "frr_mgmt_framework_config": "{{ frr_mgmt_framework_config }}"
+    }
+  },
+  "BREAKOUT_CFG": {
+    {% for entry in breakout_configurations %}
+    "{{ entry.parent_port }}": { "brkout_mode": "{{ entry.breakout_mode }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "PORT": {
+    {% set port_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do port_lines.append('"' ~ child.name ~ '": { "admin_status": "up", "alias": "' ~ child.alias ~ '", "index": "' ~ child.index ~ '", "lanes": "' ~ child.lanes ~ '", "speed": "' ~ child.speed ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ port_lines | join(',\n    ') }}
+  },
+  "PORT_QOS_MAP": {
+    {% set qos_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do qos_lines.append('"' ~ child.name ~ '": { "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]", "pfc_to_queue_map": "[PFC_TO_QUEUE_MAP|AZURE]", "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]", "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ qos_lines | join(',\n    ') }}
+  },
+  "QUEUE": {
+    {% set queue_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% for q in range(0, 8) %}
+          {% do queue_lines.append('"' ~ child.name ~ '|' ~ q ~ '": { "scheduler": "[SCHEDULER|Lyra_queue_' ~ q ~ '_scheduler]" }') %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+    {{ queue_lines | join(',\n    ') }}
+  },
+  "BUFFER_QUEUE": {
+    {% set buf_q_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|0-2": { "profile": "[BUFFER_PROFILE|ingress_lossless_profile]" }') %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|3-7": { "profile": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_q_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+    {% set buf_in_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_in_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|ingress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_in_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+    {% set buf_eg_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_eg_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_eg_lines | join(',\n    ') }}
+  },
+  "INTERFACE": {
+    {% set intf_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do intf_lines.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ intf_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do bgp_lines.append('"' ~ child.name ~ '": { "asn": "' ~ child.bgp_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_lines.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_lines | join(',\n    ') }}
+  },
+  "DEVICE_NEIGHBOR": {
+    {% set dev_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do dev_lines.append('"' ~ child.name ~ '": { "name": "' ~ child.peer_name ~ '", "mgmt_addr": "", "local_port": "' ~ child.name ~ '", "port": "' ~ child.rem_port ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ dev_lines | join(',\n    ') }}
+  },
+  "FLEX_COUNTER_TABLE": {
+    {% set flex_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do flex_lines.append('"PORT:' ~ child.name ~ '": { "flex_counter_delay_status": "false" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ flex_lines | join(',\n    ') }}
+  }
+}
+
+------------------------------
+## 2. The Final Operational Playbook (roles/sonic_breakout/tasks/main.yml)
+Instead of issuing atomic network calls, this revised sequence acts as a comprehensive configuration pipeline. It dumps out the patch file, cleans up parent bindings, merges changes with existing un-touched configurations, updates Redis, and pushes the final state directly into the running systems. [2, 4] 
+
+---# ====================================================================# PHASE 1: STAGE AND PARSE TARGET INFRASTRUCTURE PATCH# ====================================================================
+- name: Render full 13-table json patch securely to the local control node
+  ansible.builtin.template:
+    src: breakout_patch.json.j2
+    dest: /tmp/breakout_patch.json
+  delegate_to: localhost
+
+- name: Securely copy compiled breakout patch matrix to the SONiC file system
+  ansible.builtin.copy:
+    src: /tmp/breakout_patch.json
+    dest: /etc/sonic/breakout_patch.json
+    mode: '0644'
+# ====================================================================# PHASE 2: DEPENDENCY PRE-CLEANUP# ====================================================================
+- name: Strip existing L3 properties from parent port to avoid dependency locks
+  sonic_config:
+    lines:
+      - no interface {{ item.parent_port }}
+    save: false
+  loop: "{{ breakout_configurations }}"
+  ignore_errors: true
+# ====================================================================# PHASE 3: THE MEMORY AND SYSTEM DB RUNTIME SYNCHRONIZATION# ====================================================================
+- name: Merge patch payload into Redis CONFIG_DB and memory caches
+  ansible.builtin.shell: |
+    sonic-cfggen -j /etc/sonic/config_db.json -j /etc/sonic/breakout_patch.json --write-to-db  args:
+    executable: /bin/bash
+
+- name: Force Config Manager to propagate DB updates to operational components
+  ansible.builtin.shell: |
+    config load /etc/sonic/config_db.json -y  args:
+    executable: /bin/bash
+# ====================================================================# PHASE 4: COMMITTING AND SAVING PERSISTENT DATA# ====================================================================
+- name: Persist consolidated running configuration back into permanent disk storage
+  sonic_config:
+    lines:
+      - config save -y
+
+------------------------------
+## Why This Specific Flow Protects Pre-Configured Interfaces
+
+* 
+* No Disruption to Existing Ports: sonic-cfggen -j base.json -j patch.json performs a precise dictionary merge. It injects your new breakout tables and updates DEVICE_METADATA while leaving all other unmentioned ports completely unaltered. [2, 6, 7, 8, 9] 
+* Forces Dynamic Routing Daemon Transitions: Calling config load forces swss to re-read database changes instantly. The engine notices "frr_mgmt_framework_config": "true" and automatically tears down the old legacy template generator, spawns the modern frrcfgd tracking daemon, and provisions the BGP Unnumbered mappings directly inside the routing container. [1, 2, 3, 10] 
+* Bulletproof Warm Reboots: Because config save -y commits the fully flattened configuration data into /etc/sonic/config_db.json, subsequent switch restarts read everything as a single unified layer. [4, 6] 
+* 
+
+Would you like to build an accompanying FRR operational validation check to verify that your active BGP state flags have transitioned out of active/idle states and into standard forwarding status?
+
+[1] [https://groups.google.com](https://groups.google.com/g/sonicproject/c/lKXpecmjduQ)
+[2] [https://www.ciscolive.com](https://www.ciscolive.com/c/dam/r/ciscolive/global-event/docs/2025/pdf/DEVNET-2990.pdf)
+[3] [https://github.com](https://github.com/sonic-net/SONiC/blob/master/doc/mgmt/SONiC_Design_Doc_Unified_FRR_Mgmt_Interface.md)
+[4] [https://www.supermicro.com](https://www.supermicro.com/manuals/network/Supermicro_Datacenter_SONiC_Configuration_Guide.pdf)
+[5] [https://www.reddit.com](https://www.reddit.com/r/homelab/comments/n5opo2/initial_configuration_of_a_celestica_dx010_100ge/)
+[6] [https://www.ciscolive.com](https://www.ciscolive.com/c/dam/r/ciscolive/global-event/docs/2025/pdf/DEVNET-1086.pdf)
+[7] [https://github.com](https://github.com/sonic-net/sonic-host-services/issues/212)
+[8] [https://github.com](https://github.com/sonic-net/sonic-mgmt/issues/22740)
+[9] [https://github.com](https://github.com/sonic-net/SONiC/blob/master/doc/config-generic-update-rollback/SONiC_Generic_Config_Update_and_Rollback_Design.md)
+[10] [https://groups.google.com](https://groups.google.com/g/sonicproject/c/1SV-1NqsidQ)
+
+
+### In the 'var', for children/sub-ports, it has bgp_asn: xxxx, since those peer devices will be joining from the var hierarchy, can we not make it dynamic, based upon the connection topology?? How to implement that to give it a dynamic nature.
+
+To make the BGP Peer ASN dynamic based on connection topology rather than hardcoding it in the host variables, you can leverage SONiC’s built-in DEVICE_NEIGHBOR table (which stores LLDP discovery data).
+In a standard spine-leaf architecture using BGP Unnumbered, a leaf switch knows its own local ASN, and the spine switches typically share a common autonomous system number (or follow a strict mathematical derivation based on their hostname or topology role). [1] 
+By structuring your automation to look up the remote device name discovered by LLDP, you can dynamically assign the neighbor's ASN using a simple lookup dictionary or a conditional naming convention inside your Jinja2 template.
+Here is how to modify your variable schema, Jinja2 template, and playbook tasks to make it fully dynamic. [2] 
+------------------------------
+## 1. Updated Host Variables (host_vars/Leaf_L3.yml)
+Notice that bgp_asn has been completely removed from the child port mappings. Instead, we define a global topology_asn_matrix that maps the remote device's structural role (derived from its hostname) to its respective Autonomous System Number.
+
+---my_local_asn: "65003"
+# Centralized topology engine blueprinttopology_asn_matrix:
+  spine: "65001"    # If the remote peer hostname contains 'Spine', use this ASN
+  leaf: "65002"     # If the remote peer hostname contains 'Leaf', use this ASN
+breakout_configurations:
+  - parent_port: "Ethernet4"
+    breakout_mode: "4x10G"
+    children:
+      - { name: "Ethernet4", index: "2", lanes: "33", speed: "10000", alias: "etp2a", peer_name: "Lab-Spine_S1", rem_port: "Ethernet1/1" }
+      - { name: "Ethernet5", index: "2", lanes: "34", speed: "10000", alias: "etp2b", peer_name: "Lab-Spine_S2", rem_port: "Ethernet1/2" }
+      - { name: "Ethernet6", index: "2", lanes: "35", speed: "10000", alias: "etp2c", peer_name: "Lab-Leaf_L4",   rem_port: "Ethernet1/3" }
+      - { name: "Ethernet7", index: "2", lanes: "36", speed: "10000", alias: "etp2d", peer_name: "Lab-Leaf_L5",   rem_port: "Ethernet1/4" }
+
+------------------------------
+## 2. The Dynamic 13-Table Template (roles/sonic_breakout/templates/breakout_patch.json.j2)
+Inside the BGP_NEIGHBOR section of the Jinja2 template, we introduce a conditional filter. It parses the string inside child.peer_name to calculate what type of device it is, matching it instantly to the topology_asn_matrix.
+
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "docker_routing_config_mode": "{{ docker_routing_config_mode }}",
+      "frr_mgmt_framework_config": "{{ frr_mgmt_framework_config }}"
+    }
+  },
+  "BREAKOUT_CFG": {
+    {% for entry in breakout_configurations %}
+    "{{ entry.parent_port }}": { "brkout_mode": "{{ entry.breakout_mode }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "PORT": {
+    {% set port_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do port_lines.append('"' ~ child.name ~ '": { "admin_status": "up", "alias": "' ~ child.alias ~ '", "index": "' ~ child.index ~ '", "lanes": "' ~ child.lanes ~ '", "speed": "' ~ child.speed ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ port_lines | join(',\n    ') }}
+  },
+  "PORT_QOS_MAP": {
+    {% set qos_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do qos_lines.append('"' ~ child.name ~ '": { "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]", "pfc_to_queue_map": "[PFC_TO_QUEUE_MAP|AZURE]", "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]", "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ qos_lines | join(',\n    ') }}
+  },
+  "QUEUE": {
+    {% set queue_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% for q in range(0, 8) %}
+          {% do queue_lines.append('"' ~ child.name ~ '|' ~ q ~ '": { "scheduler": "[SCHEDULER|Lyra_queue_' ~ q ~ '_scheduler]" }') %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+    {{ queue_lines | join(',\n    ') }}
+  },
+  "BUFFER_QUEUE": {
+    {% set buf_q_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|0-2": { "profile": "[BUFFER_PROFILE|ingress_lossless_profile]" }') %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|3-7": { "profile": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_q_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+    {% set buf_in_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_in_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|ingress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_in_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+    {% set buf_eg_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_eg_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_eg_lines | join(',\n    ') }}
+  },
+  "INTERFACE": {
+    {% set intf_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do intf_lines.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ intf_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {# Dynamic Topology Lookup Logic #}
+        {% if 'Spine' in child.peer_name %}
+          {% set derived_asn = topology_asn_matrix.spine %}
+        {% elif 'Leaf' in child.peer_name %}
+          {% set derived_asn = topology_asn_matrix.leaf %}
+        {% else %}
+          {% set derived_asn = "65000" %} {# Default Fallback ASN #}
+        {% endif %}
+        {% do bgp_lines.append('"' ~ child.name ~ '": { "asn": "' ~ derived_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_lines.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_lines | join(',\n    ') }}
+  },
+  "DEVICE_NEIGHBOR": {
+    {% set dev_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do dev_lines.append('"' ~ child.name ~ '": { "name": "' ~ child.peer_name ~ '", "mgmt_addr": "", "local_port": "' ~ child.name ~ '", "port": "' ~ child.rem_port ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ dev_lines | join(',\n    ') }}
+  },
+  "FLEX_COUNTER_TABLE": {
+    {% set flex_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do flex_lines.append('"PORT:' ~ child.name ~ '": { "flex_counter_delay_status": "false" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ flex_lines | join(',\n    ') }}
+  }
+}
+
+------------------------------
+## 3. Alternative: Completely Dynamic LLDP Discovery
+If you don't want to define the peer_name or rem_port in your host_vars at all, you can make it truly zero-touch by pulling live information from the active system state.
+In this workflow, the Ansible playbook queries the active LLDP table on the switch using an ad-hoc shell command before the template renders.
+Add this task to the beginning of your roles/sonic_breakout/tasks/main.yml file:
+
+- name: Query Active LLDP Neighbor Table from Running Kernel
+  ansible.builtin.shell: "sonic-db-cli APPL_DB hgetall 'LLDP_ENTRY_TABLE:{{ item.parent_port }}'"
+  loop: "{{ breakout_configurations }}"
+  register: lldp_raw_output
+  ignore_errors: true
+
+- name: Parse and Register Topology Context Variables
+  ansible.builtin.set_fact:
+    discovered_peer_system: "{{ (lldp_raw_output.results.0.stdout | from_json).chassis_name | default('Unknown_Spine') }}"
+
+You can then feed that parsed runtime system data straight into your template calculation block, allowing you to automatically map connections even if cables are rearranged in the physical lab.
+Would you like to write a validation step that drops the configuration deployment if the discovered LLDP hostname doesn't match an expected naming rule?
+
+[1] [https://www.reddit.com](https://www.reddit.com/r/networking/comments/1gxehx9/spineleaffw_configuration_using_ebgp_vxlan_evpn/)
+[2] [https://www.packetswitch.co.uk](https://www.packetswitch.co.uk/simple-bgp-lab-with-containerlab-and-nornir/)
+
+
+### I have this map in my all var file, can we integrate this into the above for complete ansible structure to consume: # ---- eBGP ASN assignments ----
+spine_asn: 65000
+bgp_ecmp_max_paths: "8"
+
+leaf_asn_map:
+  Leaf_L1: 65011
+  Leaf_L2: 65012
+  Leaf_L3: 65013
+  Leaf_L4: 65014
+border_leaf_asn_map:
+  Border_Leaf1: 65021
+  Border_Leaf2: 65022
+exit_router_asn_map:
+  Exit_Router1: 65253
+  Exit_Router2: 65254
+
+# ---- Server ASN assignments (UNIQUE per server — RFC 7938) ----
+server_asn_map:
+  Host12_1: 65101
+  Host12_2: 65102
+  Host12_3: 65103
+  Host34_1: 65104
+  Host34_2: 65105
+  HostB12_1: 65106
+  HostB12_2: 65107
+  MonitorSrv: 65108
+
+  Yes, you can absolutely integrate your existing eBGP ASN mapping architecture directly into the configuration engine.
+To achieve this cleanly, the Jinja2 template is designed to automatically match the peer_name string against your dynamic dictionary trees (leaf_asn_map, border_leaf_asn_map, exit_router_asn_map, or server_asn_map). If the name contains standard prefix variants like Spine, it will automatically assign your static spine_asn.
+Here is the complete, final blueprint for your entire Ansible structure.
+------------------------------
+## 1. Global Group Variables (group_vars/all.yml)
+Place your central mapping matrix here. This ensures that every switch in the data center can dynamically evaluate the ASN of whatever device is connected to its breakout channels.
+
+---# ---- Global Routing Framework ----docker_routing_config_mode: "unified"frr_mgmt_framework_config: "true"bgp_ecmp_max_paths: "8"
+# ---- eBGP ASN assignments ----spine_asn: 65000
+leaf_asn_map:
+  Leaf_L1: 65011
+  Leaf_L2: 65012
+  Leaf_L3: 65013
+  Leaf_L4: 65014
+border_leaf_asn_map:
+  Border_Leaf1: 65021
+  Border_Leaf2: 65022
+exit_router_asn_map:
+  Exit_Router1: 65253
+  Exit_Router2: 65254
+# ---- Server ASN assignments (UNIQUE per server — RFC 7938) ----server_asn_map:
+  Host12_1: 65101
+  Host12_2: 65102
+  Host12_3: 65103
+  Host34_1: 65104
+  Host34_2: 65105
+  HostB12_1: 65106
+  HostB12_2: 65107
+  MonitorSrv: 65108
+
+------------------------------
+## 2. Host Variables (host_vars/Leaf_L3.yml)
+Your local switch profiles remain remarkably clean. They only map the physical hardware constraints (lanes, speed, indexes) and declare who is plugged into the sub-ports. The automation engine handles the rest of the calculations.
+
+---# Derive local ASN dynamically from the global map using this host's inventory namemy_local_asn: "{{ leaf_asn_map[inventory_hostname] }}"
+breakout_configurations:
+  - parent_port: "Ethernet4"
+    breakout_mode: "4x10G"
+    children:
+      - { name: "Ethernet4", index: "2", lanes: "33", speed: "10000", alias: "etp2a", peer_name: "Spine_S1",      rem_port: "Ethernet1/1" }
+      - { name: "Ethernet5", index: "2", lanes: "34", speed: "10000", alias: "etp2b", peer_name: "Leaf_L4",       rem_port: "Ethernet1/2" }
+      - { name: "Ethernet6", index: "2", lanes: "35", speed: "10000", alias: "etp2c", peer_name: "Border_Leaf1",  rem_port: "Ethernet1/3" }
+      - { name: "Ethernet7", index: "2", lanes: "36", speed: "10000", alias: "etp2d", peer_name: "Host34_1",      rem_port: "eth0" }
+
+------------------------------
+## 3. The 13-Table Dynamic Template (roles/sonic_breakout/templates/breakout_patch.json.j2)
+This updated template uses Jinja2 filters to dynamically look up values from your dictionaries based on your host naming conventions.
+
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "docker_routing_config_mode": "{{ docker_routing_config_mode }}",
+      "frr_mgmt_framework_config": "{{ frr_mgmt_framework_config }}"
+    }
+  },
+  "BREAKOUT_CFG": {
+    {% for entry in breakout_configurations %}
+    "{{ entry.parent_port }}": { "brkout_mode": "{{ entry.breakout_mode }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "PORT": {
+    {% set port_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do port_lines.append('"' ~ child.name ~ '": { "admin_status": "up", "alias": "' ~ child.alias ~ '", "index": "' ~ child.index ~ '", "lanes": "' ~ child.lanes ~ '", "speed": "' ~ child.speed ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ port_lines | join(',\n    ') }}
+  },
+  "PORT_QOS_MAP": {
+    {% set qos_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do qos_lines.append('"' ~ child.name ~ '": { "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]", "pfc_to_queue_map": "[PFC_TO_QUEUE_MAP|AZURE]", "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]", "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ qos_lines | join(',\n    ') }}
+  },
+  "QUEUE": {
+    {% set queue_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% for q in range(0, 8) %}
+          {% do queue_lines.append('"' ~ child.name ~ '|' ~ q ~ '": { "scheduler": "[SCHEDULER|Lyra_queue_' ~ q ~ '_scheduler]" }') %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+    {{ queue_lines | join(',\n    ') }}
+  },
+  "BUFFER_QUEUE": {
+    {% set buf_q_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|0-2": { "profile": "[BUFFER_PROFILE|ingress_lossless_profile]" }') %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|3-7": { "profile": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_q_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+    {% set buf_in_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_in_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|ingress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_in_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+    {% set buf_eg_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_eg_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_eg_lines | join(',\n    ') }}
+  },
+  "INTERFACE": {
+    {% set intf_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do intf_lines.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ intf_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {# Dynamic Topology Matrix Evaluation Logic #}
+        {% if 'Spine' in child.peer_name or 'spine' in child.peer_name %}
+          {% set derived_asn = spine_asn %}
+        {% elif child.peer_name in leaf_asn_map %}
+          {% set derived_asn = leaf_asn_map[child.peer_name] %}
+        {% elif child.peer_name in border_leaf_asn_map %}
+          {% set derived_asn = border_leaf_asn_map[child.peer_name] %}
+        {% elif child.peer_name in exit_router_asn_map %}
+          {% set derived_asn = exit_router_asn_map[child.peer_name] %}
+        {% elif child.peer_name in server_asn_map %}
+          {% set derived_asn = server_asn_map[child.peer_name] %}
+        {% else %}
+          {% set derived_asn = "65534" %} {# Safety RFC Reserved Fallback Private ASN #}
+        {% endif %}
+        {% do bgp_lines.append('"' ~ child.name ~ '": { "asn": "' ~ derived_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_lines.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_lines | join(',\n    ') }}
+  },
+  "DEVICE_NEIGHBOR": {
+    {% set dev_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do dev_lines.append('"' ~ child.name ~ '": { "name": "' ~ child.peer_name ~ '", "mgmt_addr": "", "local_port": "' ~ child.name ~ '", "port": "' ~ child.rem_port ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ dev_lines | join(',\n    ') }}
+  },
+  "FLEX_COUNTER_TABLE": {
+    {% set flex_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do flex_lines.append('"PORT:' ~ child.name ~ '": { "flex_counter_delay_status": "false" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ flex_lines | join(',\n    ') }}
+  }
+}
+
+------------------------------
+## 4. System Deployment Tasks (roles/sonic_breakout/tasks/main.yml)
+The orchestration task sequences remain streamlined and highly efficient. The template handles the complexity of the data mapping, while the playbook tasks safely execute the file operations, database merges, and configuration loading on the running hardware.
+
+---
+- name: Compile and render structural 13-table dictionary payload to control node
+  ansible.builtin.template:
+    src: breakout_patch.json.j2
+    dest: /tmp/breakout_patch.json
+  delegate_to: localhost
+
+- name: Push compiled network matrix to the target switch asset file system
+  ansible.builtin.copy:
+    src: /tmp/breakout_patch.json
+    dest: /etc/sonic/breakout_patch.json
+    mode: '0644'
+
+- name: Scrub legacy active protocol mappings from breakout parent interface
+  sonic_config:
+    lines:
+      - no interface {{ item.parent_port }}
+    save: false
+  loop: "{{ breakout_configurations }}"
+  ignore_errors: true
+
+- name: Merge generated patch dictionary directly with running Redis CONFIG_DB cache
+  ansible.builtin.shell: |
+    sonic-cfggen -j /etc/sonic/config_db.json -j /etc/sonic/breakout_patch.json --write-to-db  args:
+    executable: /bin/bash
+
+- name: Enforce config load engine to bind structural changes to operational daemons
+  ansible.builtin.shell: |
+    config load /etc/sonic/config_db.json -y  args:
+    executable: /bin/bash
+
+- name: Synchronize running state engine safely to disk for reset stability
+  sonic_config:
+    lines:
+      - config save -y
+
+Now, when you trigger your playbook run with --limit Leaf_L3 --tags interfaces,bgp, the engine evaluates your breakout channels, maps Ethernet4 to 65000 (Spine_S1), Ethernet5 to 65014 (Leaf_L4), and Ethernet7 to 65104 (Host34_1) before committing everything safely to Redis.
+Would you like to see how to incorporate the bgp_ecmp_max_paths: "8" global variable directly into a secondary template for your global BGP configuration profile (BGP_DEVICE_GLOBAL)?
+
+### For bgp_ecmp_max_paths: "8", I would think, consuming ECMP from current patch json dynamically from a global/local var would be great, how can we do that??
+
+To scale your routing capabilities dynamically, you can append the BGP_DEVICE_GLOBAL table directly to your existing 13-table transaction patch.
+In Community SONiC (when using the Unified Management Framework), this specific table controls global BGP routing behaviors—such as maximum multipath choices, graceful restart parameters, and router IDs—and maps them straight to the FRR daemon without manual parsing. [1, 2, 3] 
+Here is how to update your Jinja2 template and variables to consume your global bgp_ecmp_max_paths: "8" setting dynamically.
+------------------------------
+## 1. The Dynamic 14-Table Jinja2 Template
+Add the "BGP_DEVICE_GLOBAL" table structure to the top of your roles/sonic_breakout/templates/breakout_patch.json.j2 file. It reads both the global ECMP count and uses your local switch ASN to build out a complete global state block:
+
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "docker_routing_config_mode": "{{ docker_routing_config_mode }}",
+      "frr_mgmt_framework_config": "{{ frr_mgmt_framework_config }}"
+    }
+  },
+  "BGP_DEVICE_GLOBAL": {
+    "localhost": {
+      "local_asn": "{{ my_local_asn }}",
+      "max_path_ibgp": "{{ bgp_ecmp_max_paths }}",
+      "max_path_ebgp": "{{ bgp_ecmp_max_paths }}",
+      "router_id": "{{ ansible_host | default('127.0.0.1') }}"
+    }
+  },
+  "BREAKOUT_CFG": {
+    {% for entry in breakout_configurations %}
+    "{{ entry.parent_port }}": { "brkout_mode": "{{ entry.breakout_mode }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "PORT": {
+    {% set port_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do port_lines.append('"' ~ child.name ~ '": { "admin_status": "up", "alias": "' ~ child.alias ~ '", "index": "' ~ child.index ~ '", "lanes": "' ~ child.lanes ~ '", "speed": "' ~ child.speed ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ port_lines | join(',\n    ') }}
+  },
+  "PORT_QOS_MAP": {
+    {% set qos_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do qos_lines.append('"' ~ child.name ~ '": { "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]", "pfc_to_queue_map": "[PFC_TO_QUEUE_MAP|AZURE]", "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]", "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ qos_lines | join(',\n    ') }}
+  },
+  "QUEUE": {
+    {% set queue_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% for q in range(0, 8) %}
+          {% do queue_lines.append('"' ~ child.name ~ '|' ~ q ~ '": { "scheduler": "[SCHEDULER|Lyra_queue_' ~ q ~ '_scheduler]" }') %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+    {{ queue_lines | join(',\n    ') }}
+  },
+  "BUFFER_QUEUE": {
+    {% set buf_q_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|0-2": { "profile": "[BUFFER_PROFILE|ingress_lossless_profile]" }') %}
+        {% do buf_q_lines.append('"' ~ child.name ~ '|3-7": { "profile": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_q_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+    {% set buf_in_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_in_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|ingress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_in_lines | join(',\n    ') }}
+  },
+  "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+    {% set buf_eg_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_eg_lines.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_eg_lines | join(',\n    ') }}
+  },
+  "INTERFACE": {
+    {% set intf_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do intf_lines.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ intf_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% if 'Spine' in child.peer_name or 'spine' in child.peer_name %}
+          {% set derived_asn = spine_asn %}
+        {% elif child.peer_name in leaf_asn_map %}
+          {% set derived_asn = leaf_asn_map[child.peer_name] %}
+        {% elif child.peer_name in border_leaf_asn_map %}
+          {% set derived_asn = border_leaf_asn_map[child.peer_name] %}
+        {% elif child.peer_name in exit_router_asn_map %}
+          {% set derived_asn = exit_router_asn_map[child.peer_name] %}
+        {% elif child.peer_name in server_asn_map %}
+          {% set derived_asn = server_asn_map[child.peer_name] %}
+        {% else %}
+          {% set derived_asn = "65534" %}
+        {% endif %}
+        {% do bgp_lines.append('"' ~ child.name ~ '": { "asn": "' ~ derived_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_lines | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_lines.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_lines | join(',\n    ') }}
+  },
+  "DEVICE_NEIGHBOR": {
+    {% set dev_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do dev_lines.append('"' ~ child.name ~ '": { "name": "' ~ child.peer_name ~ '", "mgmt_addr": "", "local_port": "' ~ child.name ~ '", "port": "' ~ child.rem_port ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ dev_lines | join(',\n    ') }}
+  },
+  "FLEX_COUNTER_TABLE": {
+    {% set flex_lines = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do flex_lines.append('"PORT:' ~ child.name ~ '": { "flex_counter_delay_status": "false" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ flex_lines | join(',\n    ') }}
+  }
+}
+
+------------------------------
+## 2. Variable Override Scenarios
+By declaring this in your template, you gain the flexibility to apply different ECMP values globally or locally depending on the role of the switch.
+
+* Global Default: It pulls the standard parameter (bgp_ecmp_max_paths: "8") from your group_vars/all.yml file for your normal leaf switches.
+* Host/Group Overrides: If you want your Border Leaf or core spine switches to have massive multi-path constraints (e.g., 16 or 32 paths), simply declare a local override inside that specific host or group file:
+
+Inside host_vars/Border_Leaf1.yml:
+
+---# Override the global value of 8 for this specific high-capacity nodebgp_ecmp_max_paths: "32"
+
+The Jinja2 rendering function will always evaluate the most specific variable available in the scope tree before running the sonic-cfggen database injection, ensuring your multi-pathing matches your lab's scale exactly.
+Would you like to add an FRR status verification command to your task list to verify that the active running memory of the FRR engine has registered the maximum-paths change after the merge?
+
+[1] [https://www.cisco.com](https://www.cisco.com/c/en/us/td/docs/security/firepower/70/fdm/fptd-fdm-config-guide-700/fptd-fdm-bgp.html)
+[2] [https://docs.nvidia.com](https://docs.nvidia.com/networking-ethernet-software/cumulus-linux-43/Layer-3/Border-Gateway-Protocol-BGP/Optional-BGP-Configuration/)
+[3] [https://arubanetworking.hpe.com](https://arubanetworking.hpe.com/techdocs/AOS-CX/10.15/HTML/ip_route_8400/Content/Chp_BGP/BGP_cmds/max-pat-10.htm)
