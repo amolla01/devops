@@ -1276,7 +1276,7 @@ Would you like to build an associated verification task block that queries the o
 To deploy this cleanly and adhere to automation best practices, the configuration is broken down below into a structured Ansible project directory. [1] 
 By separating variables by host or group and utilizing a dedicated role, you can maintain clean playbooks and scale your infrastructure seamlessly. [2, 3, 4, 5, 6] 
 ## Project Directory Structure
-
+```
 sonic-breakout-project/
 ├── inventory.ini
 ├── group_vars/
@@ -1301,13 +1301,15 @@ Leaf_L4  ansible_host=192.168.9.104
 ## 2. Group Variables (group_vars/sonic_switches.yml)
 This file sets the global infrastructure targets. It activates the Unified Management Framework across your fleet so that CONFIG_DB mutations dynamically update FRR without requiring interactive shell entries or vtysh executions. [7] 
 
----# Enable pure database-driven routing execution for all SONiC devicesdocker_routing_config_mode: "unified"frr_mgmt_framework_config: "true"
+---
+# Enable pure database-driven routing execution for all SONiC devicesdocker_routing_config_mode: "unified"frr_mgmt_framework_config: "true"
 
 ------------------------------
 ## 3. Host Variables (host_vars/Leaf_L3.yml)
 Isolate your hardware mapping parameters inside host-specific folders. This allows you to track breakout configurations, physical lanes, indexes, and BGP ASNs uniquely per switch asset.
 
----my_local_asn: "65003"
+---
+my_local_asn: "65003"
 breakout_configurations:
   - parent_port: "Ethernet4"
     breakout_mode: "4x10G"
@@ -1345,7 +1347,10 @@ breakout_configurations:
 ## 4. Breakout Execution Role (roles/sonic_breakout/tasks/main.yml)
 The role contains the granular, step-by-step logic required to transition interfaces from 40G to 4x10G and safely push the new BGP Unnumbered mappings to Redis.
 
----# ====================================================================# PHASE 1: ROUTING MODE PROVISIONING & STRIPPING DEPENDENCIES# ====================================================================
+---
+# ====================================================================
+# PHASE 1: ROUTING MODE PROVISIONING & STRIPPING DEPENDENCIES
+# ====================================================================
 - name: Ensure Unified Framework Routing Engine is Configured
   sonic_config:
     lines:
@@ -1360,14 +1365,18 @@ The role contains the granular, step-by-step logic required to transition interf
     save: false
   loop: "{{ breakout_configurations }}"
   ignore_errors: true
-# ====================================================================# PHASE 2: HARDWARE BREAKOUT EXECUTION# ====================================================================
+# ====================================================================
+# PHASE 2: HARDWARE BREAKOUT EXECUTION
+# ====================================================================
 - name: Execute Dynamic Port Breakout Slicing Daemon
   sonic_config:
     lines:
       - config interface breakout {{ item.parent_port }} {{ item.breakout_mode }} -y
     save: false
   loop: "{{ breakout_configurations }}"
-# ====================================================================# PHASE 3: PROTOCOL ENGINE PATCH (BGP UNNUMBERED INJECT)# ====================================================================
+# ====================================================================
+# PHASE 3: PROTOCOL ENGINE PATCH (BGP UNNUMBERED INJECT)
+# ====================================================================
 - name: Populate Unified Database Schema Tables via JSON REST API
   sonic_api:
     url: /restconf/data/sonic-device-metadata:sonic-device-metadata
@@ -1396,7 +1405,9 @@ The role contains the granular, step-by-step logic required to transition interf
           {% endfor %}
         }
       }    status_code: [200, 204]
-# ====================================================================# PHASE 4: COMMITTING TO PERSISTENT STORAGE# ====================================================================
+# ====================================================================
+# PHASE 4: COMMITTING TO PERSISTENT STORAGE
+# ====================================================================
 - name: Commit Running Configurations and Synchronize Redis to Disk
   sonic_config:
     lines:
@@ -1421,7 +1432,7 @@ The primary playbook remains clean and lightweight. It calls the sonic_breakout 
 To kick off your newly structured workspace against specific hosts using your exact filtering tokens, execute this string inside your virtual environment:
 
 ansible-playbook deploy_day1.yml -i inventory.ini --limit Leaf_L3 --tags interfaces,bgp
-
+```
 Would you like to build an accompanying verification role that validates the FRR state machines to confirm the IPv6 link-local peers are passing traffic after execution?
 
 [1] [https://labex.io](https://labex.io/tutorials/ansible-troubleshoot-ansible-playbooks-and-hosts-on-rhel-590577)
@@ -1439,6 +1450,7 @@ Would you like to build an accompanying verification role that validates the FRR
 To finalize the project with structural styling and production-grade validation, the inline multi-line string in the playbook is replaced by moving the JSON schema generation into a native Jinja2 configuration template file.
 This completely isolates the payload formatting logic from the operational tasks, allowing you to scale out to hundreds of breakout interfaces seamlessly. [1] 
 ------------------------------
+```
 ## Project Directory Addition
 A templates directory is added to store the Jinja2 blueprint: [2] 
 
@@ -1534,7 +1546,7 @@ ansible-playbook deploy_day1.yml -i inventory.ini --limit Leaf_L3 --tags interfa
 To ensure your BGP Unnumbered interfaces are discovering each other over IPv6 link-local and correctly exchanging routing maps without standard static IPs, log directly into the switch shell and run this troubleshooting command: [6, 7] 
 
 show ip bgp neighbors Ethernet4
-
+```
 Would you like to build a final CI/CD linting task that validates the parsed JSON schema output against a local validation checker before it is sent to the physical hardware assets?
 
 [1] [https://supportportal.juniper.net](https://supportportal.juniper.net/s/article/How-to-use-Jinja2-template-automatically-configure-BGP-on-multiple-logical-systems-across-multiple-devices)
@@ -1553,6 +1565,7 @@ You are 100% correct, and I completely validate your push for total stability. C
 The reason for the previous split was that the native config interface breakout command automatically handles the recalculation of those remaining 10 tables (like PORT, QUEUE, and BUFFER_QUEUE) in memory when executed via the CLI. However, if you want absolute stability and a bulletproof config_db.json file that survives a hard factory reboot or clean reload without relying on runtime daemon side-effects, all 13 tables must be explicitly declared and templated.
 Here is the complete, comprehensive Jinja2 template and task setup that maps out every single table required for a production-grade, transaction-safe breakout operation.
 ------------------------------
+```
 ## 1. The Complete 13-Table Jinja2 Template
 Save this as roles/sonic_breakout/templates/breakout_patch.json.j2. It dynamically tracks and builds the breakout modes, serialization lanes, QoS maps, scheduler queues, buffer pools, LLDP tracking, and BGP Unnumbered mappings.
 
@@ -1713,7 +1726,7 @@ Instead, we push the rendered data payload using sonic_api to the REST interface
   sonic_config:
     lines:
       - config save -y
-
+```
 ## Why This Architecture is the Most Stable Option
 
 * Zero Configuration Drifts: Pushing all 13 tables ensures that if the switch is un-gracefully power-cycled mid-operation, config_db.json matches exactly what you intended.
@@ -1736,6 +1749,7 @@ To apply this massive patch to a running system without cutting corners, the pro
 
 To accomplish this, the Ansible project architecture is updated here to use sonic-cfggen with full system synchronization. [2] 
 ------------------------------
+```
 ## 1. Updated Jinja2 Template (roles/sonic_breakout/templates/breakout_patch.json.j2)
 To ensure the config load utility processes this safely, the template is optimized into a flat, valid JSON patch format. [2] 
 
@@ -1859,7 +1873,10 @@ To ensure the config load utility processes this safely, the template is optimiz
 ## 2. The Final Operational Playbook (roles/sonic_breakout/tasks/main.yml)
 Instead of issuing atomic network calls, this revised sequence acts as a comprehensive configuration pipeline. It dumps out the patch file, cleans up parent bindings, merges changes with existing un-touched configurations, updates Redis, and pushes the final state directly into the running systems. [2, 4] 
 
----# ====================================================================# PHASE 1: STAGE AND PARSE TARGET INFRASTRUCTURE PATCH# ====================================================================
+---
+# ====================================================================
+# PHASE 1: STAGE AND PARSE TARGET INFRASTRUCTURE PATCH
+# ====================================================================
 - name: Render full 13-table json patch securely to the local control node
   ansible.builtin.template:
     src: breakout_patch.json.j2
@@ -1871,7 +1888,9 @@ Instead of issuing atomic network calls, this revised sequence acts as a compreh
     src: /tmp/breakout_patch.json
     dest: /etc/sonic/breakout_patch.json
     mode: '0644'
-# ====================================================================# PHASE 2: DEPENDENCY PRE-CLEANUP# ====================================================================
+# ====================================================================
+# PHASE 2: DEPENDENCY PRE-CLEANUP
+# ====================================================================
 - name: Strip existing L3 properties from parent port to avoid dependency locks
   sonic_config:
     lines:
@@ -1879,7 +1898,9 @@ Instead of issuing atomic network calls, this revised sequence acts as a compreh
     save: false
   loop: "{{ breakout_configurations }}"
   ignore_errors: true
-# ====================================================================# PHASE 3: THE MEMORY AND SYSTEM DB RUNTIME SYNCHRONIZATION# ====================================================================
+# ====================================================================
+# PHASE 3: THE MEMORY AND SYSTEM DB RUNTIME SYNCHRONIZATION
+# ====================================================================
 - name: Merge patch payload into Redis CONFIG_DB and memory caches
   ansible.builtin.shell: |
     sonic-cfggen -j /etc/sonic/config_db.json -j /etc/sonic/breakout_patch.json --write-to-db  args:
@@ -1889,12 +1910,14 @@ Instead of issuing atomic network calls, this revised sequence acts as a compreh
   ansible.builtin.shell: |
     config load /etc/sonic/config_db.json -y  args:
     executable: /bin/bash
-# ====================================================================# PHASE 4: COMMITTING AND SAVING PERSISTENT DATA# ====================================================================
+# ====================================================================
+# PHASE 4: COMMITTING AND SAVING PERSISTENT DATA
+# ====================================================================
 - name: Persist consolidated running configuration back into permanent disk storage
   sonic_config:
     lines:
       - config save -y
-
+```
 ------------------------------
 ## Why This Specific Flow Protects Pre-Configured Interfaces
 
@@ -1925,6 +1948,7 @@ In a standard spine-leaf architecture using BGP Unnumbered, a leaf switch knows 
 By structuring your automation to look up the remote device name discovered by LLDP, you can dynamically assign the neighbor's ASN using a simple lookup dictionary or a conditional naming convention inside your Jinja2 template.
 Here is how to modify your variable schema, Jinja2 template, and playbook tasks to make it fully dynamic. [2] 
 ------------------------------
+```
 ## 1. Updated Host Variables (host_vars/Leaf_L3.yml)
 Notice that bgp_asn has been completely removed from the child port mappings. Instead, we define a global topology_asn_matrix that maps the remote device's structural role (derived from its hostname) to its respective Autonomous System Number.
 
@@ -2084,7 +2108,7 @@ Add this task to the beginning of your roles/sonic_breakout/tasks/main.yml file:
 - name: Parse and Register Topology Context Variables
   ansible.builtin.set_fact:
     discovered_peer_system: "{{ (lldp_raw_output.results.0.stdout | from_json).chassis_name | default('Unknown_Spine') }}"
-
+```
 You can then feed that parsed runtime system data straight into your template calculation block, allowing you to automatically map connections even if cables are rearranged in the physical lab.
 Would you like to write a validation step that drops the configuration deployment if the discovered LLDP hostname doesn't match an expected naming rule?
 
@@ -2092,7 +2116,9 @@ Would you like to write a validation step that drops the configuration deploymen
 [2] [https://www.packetswitch.co.uk](https://www.packetswitch.co.uk/simple-bgp-lab-with-containerlab-and-nornir/)
 
 
-### I have this map in my all var file, can we integrate this into the above for complete ansible structure to consume: # ---- eBGP ASN assignments ----
+### I have this map in my all var file, can we integrate this into the above for complete ansible structure to consume:
+```
+# ---- eBGP ASN assignments ----
 spine_asn: 65000
 bgp_ecmp_max_paths: "8"
 
@@ -2118,16 +2144,25 @@ server_asn_map:
   HostB12_1: 65106
   HostB12_2: 65107
   MonitorSrv: 65108
-
+```
   Yes, you can absolutely integrate your existing eBGP ASN mapping architecture directly into the configuration engine.
 To achieve this cleanly, the Jinja2 template is designed to automatically match the peer_name string against your dynamic dictionary trees (leaf_asn_map, border_leaf_asn_map, exit_router_asn_map, or server_asn_map). If the name contains standard prefix variants like Spine, it will automatically assign your static spine_asn.
 Here is the complete, final blueprint for your entire Ansible structure.
 ------------------------------
+```
 ## 1. Global Group Variables (group_vars/all.yml)
 Place your central mapping matrix here. This ensures that every switch in the data center can dynamically evaluate the ASN of whatever device is connected to its breakout channels.
 
----# ---- Global Routing Framework ----docker_routing_config_mode: "unified"frr_mgmt_framework_config: "true"bgp_ecmp_max_paths: "8"
-# ---- eBGP ASN assignments ----spine_asn: 65000
+---
+# ---- Global Routing Framework ----
+
+docker_routing_config_mode: "unified"
+frr_mgmt_framework_config: "true"
+bgp_ecmp_max_paths: "8"
+
+# ---- eBGP ASN assignments ----
+
+spine_asn: 65000
 leaf_asn_map:
   Leaf_L1: 65011
   Leaf_L2: 65012
@@ -2153,7 +2188,10 @@ exit_router_asn_map:
 ## 2. Host Variables (host_vars/Leaf_L3.yml)
 Your local switch profiles remain remarkably clean. They only map the physical hardware constraints (lanes, speed, indexes) and declare who is plugged into the sub-ports. The automation engine handles the rest of the calculations.
 
----# Derive local ASN dynamically from the global map using this host's inventory namemy_local_asn: "{{ leaf_asn_map[inventory_hostname] }}"
+---
+# Derive local ASN dynamically from the global map using this host's inventory name
+
+my_local_asn: "{{ leaf_asn_map[inventory_hostname] }}"
 breakout_configurations:
   - parent_port: "Ethernet4"
     breakout_mode: "4x10G"
@@ -2336,7 +2374,7 @@ The orchestration task sequences remain streamlined and highly efficient. The te
   sonic_config:
     lines:
       - config save -y
-
+```
 Now, when you trigger your playbook run with --limit Leaf_L3 --tags interfaces,bgp, the engine evaluates your breakout channels, maps Ethernet4 to 65000 (Spine_S1), Ethernet5 to 65014 (Leaf_L4), and Ethernet7 to 65104 (Host34_1) before committing everything safely to Redis.
 Would you like to see how to incorporate the bgp_ecmp_max_paths: "8" global variable directly into a secondary template for your global BGP configuration profile (BGP_DEVICE_GLOBAL)?
 
@@ -2346,6 +2384,7 @@ To scale your routing capabilities dynamically, you can append the BGP_DEVICE_GL
 In Community SONiC (when using the Unified Management Framework), this specific table controls global BGP routing behaviors—such as maximum multipath choices, graceful restart parameters, and router IDs—and maps them straight to the FRR daemon without manual parsing. [1, 2, 3] 
 Here is how to update your Jinja2 template and variables to consume your global bgp_ecmp_max_paths: "8" setting dynamically.
 ------------------------------
+```
 ## 1. The Dynamic 14-Table Jinja2 Template
 Add the "BGP_DEVICE_GLOBAL" table structure to the top of your roles/sonic_breakout/templates/breakout_patch.json.j2 file. It reads both the global ECMP count and uses your local switch ASN to build out a complete global state block:
 
@@ -2495,8 +2534,10 @@ By declaring this in your template, you gain the flexibility to apply different 
 
 Inside host_vars/Border_Leaf1.yml:
 
----# Override the global value of 8 for this specific high-capacity nodebgp_ecmp_max_paths: "32"
-
+---
+# Override the global value of 8 for this specific high-capacity node
+bgp_ecmp_max_paths: "32"
+```
 The Jinja2 rendering function will always evaluate the most specific variable available in the scope tree before running the sonic-cfggen database injection, ensuring your multi-pathing matches your lab's scale exactly.
 Would you like to add an FRR status verification command to your task list to verify that the active running memory of the FRR engine has registered the maximum-paths change after the merge?
 
