@@ -1271,4 +1271,277 @@ Would you like to build an associated verification task block that queries the o
 [5] [https://github.com](https://github.com/sonic-net/sonic-buildimage/issues/18865)
 [6] [https://developer.nvidia.com](https://developer.nvidia.com/blog/exploring-sonic-on-nvidia-air/)
 
+### Let us divide the above with proper ansible structures such as group_vars/host_vars/inventory/roles/playbooks.
+
+To deploy this cleanly and adhere to automation best practices, the configuration is broken down below into a structured Ansible project directory. [1] 
+By separating variables by host or group and utilizing a dedicated role, you can maintain clean playbooks and scale your infrastructure seamlessly. [2, 3, 4, 5, 6] 
+## Project Directory Structure
+
+sonic-breakout-project/
+├── inventory.ini
+├── group_vars/
+│   └── sonic_switches.yml
+├── host_vars/
+│   └── Leaf_L3.yml
+├── roles/
+│   └── sonic_breakout/
+│       └── tasks/
+│           └── main.yml
+└── deploy_day1.yml
+
+------------------------------
+## 1. Inventory Configuration (inventory.ini)
+Define your targets and cluster them into a dedicated group (sonic_switches) so global variable attributes map cleanly.
+
+[sonic_switches]
+Leaf_L3  ansible_host=192.168.9.103
+Leaf_L4  ansible_host=192.168.9.104
+
+------------------------------
+## 2. Group Variables (group_vars/sonic_switches.yml)
+This file sets the global infrastructure targets. It activates the Unified Management Framework across your fleet so that CONFIG_DB mutations dynamically update FRR without requiring interactive shell entries or vtysh executions. [7] 
+
+---# Enable pure database-driven routing execution for all SONiC devicesdocker_routing_config_mode: "unified"frr_mgmt_framework_config: "true"
+
+------------------------------
+## 3. Host Variables (host_vars/Leaf_L3.yml)
+Isolate your hardware mapping parameters inside host-specific folders. This allows you to track breakout configurations, physical lanes, indexes, and BGP ASNs uniquely per switch asset.
+
+---my_local_asn: "65003"
+breakout_configurations:
+  - parent_port: "Ethernet4"
+    breakout_mode: "4x10G"
+    children:
+      - name: "Ethernet4"
+        index: "2"
+        lanes: "33"
+        speed: "10000"
+        bgp_asn: "65104"
+        alias: "etp2a"
+        peer_name: "Spine_S1_Port4a"
+      - name: "Ethernet5"
+        index: "2"
+        lanes: "34"
+        speed: "10000"
+        bgp_asn: "65105"
+        alias: "etp2b"
+        peer_name: "Spine_S1_Port4b"
+      - name: "Ethernet6"
+        index: "2"
+        lanes: "35"
+        speed: "10000"
+        bgp_asn: "65106"
+        alias: "etp2c"
+        peer_name: "Spine_S1_Port4c"
+      - name: "Ethernet7"
+        index: "2"
+        lanes: "36"
+        speed: "10000"
+        bgp_asn: "65107"
+        alias: "etp2d"
+        peer_name: "Spine_S1_Port4d"
+
+------------------------------
+## 4. Breakout Execution Role (roles/sonic_breakout/tasks/main.yml)
+The role contains the granular, step-by-step logic required to transition interfaces from 40G to 4x10G and safely push the new BGP Unnumbered mappings to Redis.
+
+---# ====================================================================# PHASE 1: ROUTING MODE PROVISIONING & STRIPPING DEPENDENCIES# ====================================================================
+- name: Ensure Unified Framework Routing Engine is Configured
+  sonic_config:
+    lines:
+      - config metadata profile {{ docker_routing_config_mode }}
+      - config metadata frr-management enable
+    save: false
+
+- name: Clear Pre-Existing Parent Interface L3 Data Blocks
+  sonic_config:
+    lines:
+      - no interface {{ item.parent_port }}
+    save: false
+  loop: "{{ breakout_configurations }}"
+  ignore_errors: true
+# ====================================================================# PHASE 2: HARDWARE BREAKOUT EXECUTION# ====================================================================
+- name: Execute Dynamic Port Breakout Slicing Daemon
+  sonic_config:
+    lines:
+      - config interface breakout {{ item.parent_port }} {{ item.breakout_mode }} -y
+    save: false
+  loop: "{{ breakout_configurations }}"
+# ====================================================================# PHASE 3: PROTOCOL ENGINE PATCH (BGP UNNUMBERED INJECT)# ====================================================================
+- name: Populate Unified Database Schema Tables via JSON REST API
+  sonic_api:
+    url: /restconf/data/sonic-device-metadata:sonic-device-metadata
+    method: PATCH
+    body: |
+      {
+        "INTERFACE": {
+          {% for entry in breakout_configurations %}
+            {% for child in entry.children %}
+            "{{ child.name }}": { "ipv6_use_link_local_only": "enable" }{% if not loop.last %},{% endif %}
+            {% endfor %}
+          {% endfor %}
+        },
+        "BGP_NEIGHBOR": {
+          {% for entry in breakout_configurations %}
+            {% for child in entry.children %}
+            "{{ child.name }}": { "asn": "{{ child.bgp_asn }}", "name": "{{ child.peer_name }}", "local_asn": "{{ my_local_asn }}" }{% if not loop.last %},{% endif %}
+            {% endfor %}
+          {% endfor %}
+        },
+        "BGP_NEIGHBOR_AF": {
+          {% for entry in breakout_configurations %}
+            {% for child in entry.children %}
+            "{{ child.name }}|ipv4_unicast": { "admin_status": "up" }{% if not loop.last %},{% endif %}
+            {% endfor %}
+          {% endfor %}
+        }
+      }    status_code: [200, 204]
+# ====================================================================# PHASE 4: COMMITTING TO PERSISTENT STORAGE# ====================================================================
+- name: Commit Running Configurations and Synchronize Redis to Disk
+  sonic_config:
+    lines:
+      - config save -y
+
+------------------------------
+## 5. Main Execution Playbook (deploy_day1.yml)
+The primary playbook remains clean and lightweight. It calls the sonic_breakout role against your designated inventory targets while mapping to the specific tagged execution paths you were investigating earlier.
+
+---
+- name: Day 1 Data Center Interface Breakout Playbook
+  hosts: sonic_switches
+  gather_facts: false
+  roles:
+    - role: sonic_breakout
+      tags:
+        - interfaces
+        - bgp
+
+------------------------------
+## Execution Command
+To kick off your newly structured workspace against specific hosts using your exact filtering tokens, execute this string inside your virtual environment:
+
+ansible-playbook deploy_day1.yml -i inventory.ini --limit Leaf_L3 --tags interfaces,bgp
+
+Would you like to build an accompanying verification role that validates the FRR state machines to confirm the IPv6 link-local peers are passing traffic after execution?
+
+[1] [https://labex.io](https://labex.io/tutorials/ansible-troubleshoot-ansible-playbooks-and-hosts-on-rhel-590577)
+[2] [https://blog.cloudmylab.com](https://blog.cloudmylab.com/best-practices-ansible-playbooks)
+[3] [https://medium.com](https://medium.com/@vinoji2005/day-11-organizing-playbooks-with-roles-18749ee4c1ca)
+[4] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-02-21-how-to-define-group-variables-in-ansible-inventory/view)
+[5] [https://labexio.medium.com](https://labexio.medium.com/how-to-manage-dependencies-in-ansible-roles-6148675bf4b8)
+[6] [https://iam-athirakk.medium.com](https://iam-athirakk.medium.com/mastering-ansible-roles-structuring-reusability-and-best-practices-6b593e8ac124)
+[7] [https://developer.cisco.com](https://developer.cisco.com/codeexchange/github/repo/emcnicholas/Cisco_Cloud_Native_Security_Workshop/)
+
+
+### If we have not completed j2 'templates ' parts of the above, let us finalize that with that as well.
+
+
+To finalize the project with structural styling and production-grade validation, the inline multi-line string in the playbook is replaced by moving the JSON schema generation into a native Jinja2 configuration template file.
+This completely isolates the payload formatting logic from the operational tasks, allowing you to scale out to hundreds of breakout interfaces seamlessly. [1] 
+------------------------------
+## Project Directory Addition
+A templates directory is added to store the Jinja2 blueprint: [2] 
+
+sonic-breakout-project/
+├── roles/
+│   └── sonic_breakout/
+│       ├── templates/
+│       │   └── breakout_patch.json.j2   <-- NEW TEMPLATE FILE
+│       └── tasks/
+│           └── main.yml
+
+------------------------------
+## 1. The Jinja2 Template (roles/sonic_breakout/templates/breakout_patch.json.j2)
+This file dynamically evaluates your parent-to-child data bindings. It loops through your structured host variables to generate valid, minified JSON trees matching the Community SONiC CONFIG_DB REST schema structure.
+
+{
+  "INTERFACE": {
+    {% set interface_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do interface_items.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ interface_items | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do bgp_items.append('"' ~ child.name ~ '": { "asn": "' ~ child.bgp_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_items | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_items.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_items | join(',\n    ') }}
+  }
+}
+
+(Note: The explicit trailing comma loops are handled using Jinja array appends and joins to guarantee standard JSON compliance, eliminating syntax processing warnings from the frrcfgd daemon).
+------------------------------
+## 2. Updated Breakout Role Tasks (roles/sonic_breakout/tasks/main.yml)
+The role task utilizes the lookup('template', ...) function. This renders the layout entirely inside memory on your control node right before calling the REST engine container via sonic_api. [3, 4] 
+
+---# ====================================================================# PHASE 1: ROUTING MODE PROVISIONING & STRIPPING DEPENDENCIES# ====================================================================
+- name: Ensure Unified Framework Routing Engine is Active
+  sonic_config:
+    lines:
+      - config metadata profile {{ docker_routing_config_mode }}
+      - config metadata frr-management enable
+    save: false
+
+- name: Clear Pre-Existing Parent Interface L3 Data Blocks
+  sonic_config:
+    lines:
+      - no interface {{ item.parent_port }}
+    save: false
+  loop: "{{ breakout_configurations }}"
+  ignore_errors: true
+# ====================================================================# PHASE 2: HARDWARE BREAKOUT EXECUTION# ====================================================================
+- name: Execute Dynamic Port Breakout Slicing Daemon
+  sonic_config:
+    lines:
+      - config interface breakout {{ item.parent_port }} {{ item.breakout_mode }} -y
+    save: false
+  loop: "{{ breakout_configurations }}"
+# ====================================================================# PHASE 3: PROTOCOL ENGINE PATCH (RENDER J2 TEMPLATE TO REST INTERFACE)# ====================================================================
+- name: Populate Unified Database Schema Tables via JSON Template
+  sonic_api:
+    url: /restconf/data/sonic-device-metadata:sonic-device-metadata
+    method: PATCH
+    body: "{{ lookup('template', 'breakout_patch.json.j2') | from_json }}"
+    status_code: [200, 204]
+# ====================================================================# PHASE 4: COMMITTING TO PERSISTENT STORAGE# ====================================================================
+- name: Commit Running Configurations and Synchronize Redis to Disk
+  sonic_config:
+    lines:
+      - config save -y
+
+------------------------------
+## 3. Execution Verification
+Execute your production orchestration playbook with full visibility over the newly integrated templates: [5] 
+
+ansible-playbook deploy_day1.yml -i inventory.ini --limit Leaf_L3 --tags interfaces,bgp
+
+## Validating Post-Deployment Routing State
+To ensure your BGP Unnumbered interfaces are discovering each other over IPv6 link-local and correctly exchanging routing maps without standard static IPs, log directly into the switch shell and run this troubleshooting command: [6, 7] 
+
+show ip bgp neighbors Ethernet4
+
+Would you like to build a final CI/CD linting task that validates the parsed JSON schema output against a local validation checker before it is sent to the physical hardware assets?
+
+[1] [https://supportportal.juniper.net](https://supportportal.juniper.net/s/article/How-to-use-Jinja2-template-automatically-configure-BGP-on-multiple-logical-systems-across-multiple-devices)
+[2] [https://netboxlabs.com](https://netboxlabs.com/blog/a-complete-introduction-to-using-ansible-templates/)
+[3] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-01-24-fix-jinja2-template-errors-ansible/view)
+[4] [https://llm-docs.ams3.cdn.digitaloceanspaces.com](https://llm-docs.ams3.cdn.digitaloceanspaces.com/documentation/ansible/latest-full-minified.txt)
+[5] [https://networktocode.com](https://networktocode.com/blog/config_templating_p2/)
+[6] [https://www.ciscolive.com](https://www.ciscolive.com/c/dam/r/ciscolive/global-event/docs/2025/pdf/DEVNET-2990.pdf)
+[7] [https://networktocode.com](https://networktocode.com/blog/ansible-bgp-network-troubleshooting-guide/)
 
