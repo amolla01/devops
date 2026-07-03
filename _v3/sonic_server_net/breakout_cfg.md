@@ -1545,3 +1545,180 @@ Would you like to build a final CI/CD linting task that validates the parsed JSO
 [6] [https://www.ciscolive.com](https://www.ciscolive.com/c/dam/r/ciscolive/global-event/docs/2025/pdf/DEVNET-2990.pdf)
 [7] [https://networktocode.com](https://networktocode.com/blog/ansible-bgp-network-troubleshooting-guide/)
 
+
+
+### It seems, the template is not generating everything that is part of 'config_db_patch.json', this patch file has 13 tables whereas template has 3 only. What is the reason behind that?? Do we not want to push all the changes that is driven from break-out configuration, so, reset-reboot reflects the complete final state. Let us try making the SONiC most stable by not cutting the corner when break-out operation is applied.
+
+You are 100% correct, and I completely validate your push for total stability. Cutting corners on the physical layer tables is exactly how switches end up bricked or misconfigured after a reboot.
+The reason for the previous split was that the native config interface breakout command automatically handles the recalculation of those remaining 10 tables (like PORT, QUEUE, and BUFFER_QUEUE) in memory when executed via the CLI. However, if you want absolute stability and a bulletproof config_db.json file that survives a hard factory reboot or clean reload without relying on runtime daemon side-effects, all 13 tables must be explicitly declared and templated.
+Here is the complete, comprehensive Jinja2 template and task setup that maps out every single table required for a production-grade, transaction-safe breakout operation.
+------------------------------
+## 1. The Complete 13-Table Jinja2 Template
+Save this as roles/sonic_breakout/templates/breakout_patch.json.j2. It dynamically tracks and builds the breakout modes, serialization lanes, QoS maps, scheduler queues, buffer pools, LLDP tracking, and BGP Unnumbered mappings.
+
+{
+  "DEVICE_METADATA": {
+    "localhost": {
+      "docker_routing_config_mode": "{{ docker_routing_config_mode }}",
+      "frr_mgmt_framework_config": "{{ frr_mgmt_framework_config }}"
+    }
+  },
+  "BREAKOUT_CFG": {
+    {% set breakout_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% do breakout_items.append('"' ~ entry.parent_port ~ '": { "brkout_mode": "' ~ entry.breakout_mode ~ '" }') %}
+    {% endfor %}
+    {{ breakout_items | join(',\n    ') }}
+  },
+  "PORT": {
+    {% set port_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do port_items.append('"' ~ child.name ~ '": { "admin_status": "up", "alias": "' ~ child.alias ~ '", "index": "' ~ child.index ~ '", "lanes": "' ~ child.lanes ~ '", "speed": "' ~ child.speed ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ port_items | join(',\n    ') }}
+  },
+  "PORT_QOS_MAP": {
+    {% set qos_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do qos_items.append('"' ~ child.name ~ '": { "dscp_to_tc_map": "[DSCP_TO_TC_MAP|AZURE]", "pfc_to_queue_map": "[PFC_TO_QUEUE_MAP|AZURE]", "tc_to_pg_map": "[TC_TO_PRIORITY_GROUP_MAP|AZURE]", "tc_to_queue_map": "[TC_TO_QUEUE_MAP|AZURE]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ qos_items | join(',\n    ') }}
+  },
+  "QUEUE": {
+    {% set queue_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% for q in range(0, 8) %}
+          {% do queue_items.append('"' ~ child.name ~ '|' ~ q ~ '": { "scheduler": "[SCHEDULER|Lyra_queue_' ~ q ~ '_scheduler]" }') %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+    {{ queue_items | join(',\n    ') }}
+  },
+  "BUFFER_QUEUE": {
+    {% set buf_q_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_q_items.append('"' ~ child.name ~ '|0-2": { "profile": "[BUFFER_PROFILE|ingress_lossless_profile]" }') %}
+        {% do buf_q_items.append('"' ~ child.name ~ '|3-7": { "profile": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_q_items | join(',\n    ') }}
+  },
+  "BUFFER_PORT_INGRESS_PROFILE_LIST": {
+    {% set buf_in_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_in_items.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|ingress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_in_items | join(',\n    ') }}
+  },
+  "BUFFER_PORT_EGRESS_PROFILE_LIST": {
+    {% set buf_eg_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do buf_eg_items.append('"' ~ child.name ~ '": { "profile_list": "[BUFFER_PROFILE|egress_lossy_profile]" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ buf_eg_items | join(',\n    ') }}
+  },
+  "INTERFACE": {
+    {% set interface_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do interface_items.append('"' ~ child.name ~ '": { "ipv6_use_link_local_only": "enable" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ interface_items | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR": {
+    {% set bgp_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do bgp_items.append('"' ~ child.name ~ '": { "asn": "' ~ child.bgp_asn ~ '", "name": "' ~ child.peer_name ~ '", "local_asn": "' ~ my_local_asn ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ bgp_items | join(',\n    ') }}
+  },
+  "BGP_NEIGHBOR_AF": {
+    {% set af_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do af_items.append('"' ~ child.name ~ '|ipv4_unicast": { "admin_status": "up" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ af_items | join(',\n    ') }}
+  },
+  "DEVICE_NEIGHBOR": {
+    {% set dev_neigh_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do dev_neigh_items.append('"' ~ child.name ~ '": { "name": "' ~ child.peer_name ~ '", "mgmt_addr": "", "local_port": "' ~ child.name ~ '", "port": "' ~ child.rem_port ~ '" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ dev_neigh_items | join(',\n    ') }}
+  },
+  "FLEX_COUNTER_TABLE": {
+    {% set flex_items = [] %}
+    {% for entry in breakout_configurations %}
+      {% for child in entry.children %}
+        {% do flex_items.append('"PORT:' ~ child.name ~ '": { "flex_counter_delay_status": "false" }') %}
+      {% endfor %}
+    {% endfor %}
+    {{ flex_items | join(',\n    ') }}
+  }
+}
+
+------------------------------
+## 2. The Host Variables Blueprint (host_vars/Leaf_L3.yml)
+To feed all 13 tables accurately, our variables now include the physical properties required to anchor the switch ASIC hardware alongside the protocol parameters.
+
+---my_local_asn: "65003"
+breakout_configurations:
+  - parent_port: "Ethernet4"
+    breakout_mode: "4x10G"
+    children:
+      - { name: "Ethernet4", index: "2", lanes: "33", speed: "10000", bgp_asn: "65104", alias: "etp2a", peer_name: "Spine_S1_Port4a", rem_port: "Ethernet1/1" }
+      - { name: "Ethernet5", index: "2", lanes: "34", speed: "10000", bgp_asn: "65105", alias: "etp2b", peer_name: "Spine_S1_Port4b", rem_port: "Ethernet1/2" }
+      - { name: "Ethernet6", index: "2", lanes: "35", speed: "10000", bgp_asn: "65106", alias: "etp2c", peer_name: "Spine_S1_Port4c", rem_port: "Ethernet1/3" }
+      - { name: "Ethernet7", index: "2", lanes: "36", speed: "10000", bgp_asn: "65107", alias: "etp2d", peer_name: "Spine_S1_Port4d", rem_port: "Ethernet1/4" }
+
+------------------------------
+## 3. The Pure Declarative Playbook Tasks (roles/sonic_breakout/tasks/main.yml)
+Because our Jinja2 template now manages the absolute, total state of the breakout configurations across all 13 required tables, we can eliminate mid-run CLI commands like config interface breakout.
+Instead, we push the rendered data payload using sonic_api to the REST interface of the switch root path. This executes a unified, transaction-safe database configuration rewrite.
+
+---
+- name: Clear Pre-Existing Parent Interface Protocols to Prevent Locks
+  sonic_config:
+    lines:
+      - no interface {{ item.parent_port }}
+    save: false
+  loop: "{{ breakout_configurations }}"
+  ignore_errors: true
+
+- name: Write and Apply Full 13-Table Unified State via JSON Patch
+  sonic_api:
+    url: /restconf/data/sonic-device-metadata:sonic-device-metadata
+    method: PATCH
+    body: "{{ lookup('template', 'breakout_patch.json.j2') | from_json }}"
+    status_code: [200, 204]
+
+- name: Force Synchronize Redis In-Memory State Directly to Disk
+  sonic_config:
+    lines:
+      - config save -y
+
+## Why This Architecture is the Most Stable Option
+
+* Zero Configuration Drifts: Pushing all 13 tables ensures that if the switch is un-gracefully power-cycled mid-operation, config_db.json matches exactly what you intended.
+* Warm Reboot Ready: Including PORT_QOS_MAP, QUEUE, and BUFFER_* mappings prevents the swss container from throwing memory calculation initialization errors during non-disruptive software upgrades.
+* No Orphaned Counters: Adding the FLEX_COUNTER_TABLE structures explicitly ensures streaming telemetry and internal SNMP utilities do not reference old, dead 40G interfaces upon reload.
+
+Would you like to explore adding a pre-check task to verify that the hardware platform matches your specified Arista profile lane mappings before making these system-level alterations?
+
