@@ -1090,8 +1090,8 @@ phase3_networks() {
     validate_oob_isolation_policy
 
     # --- Management network (libvirt NAT) ---
-    if ! sudo virsh net-info "$MGMT_NET_NAME" &>/dev/null; then
-        log "Defining management network ($MGMT_NET_NAME)..."
+    # Helper: (re)create the management network XML from scratch
+    _define_mgmt_net() {
         local net_xml="$TMP_DIR/net-mgmt.xml"
         cat > "$net_xml" <<XMLEOF
 <network>
@@ -1115,9 +1115,28 @@ XMLEOF
         sudo virsh net-define "$net_xml"
         sudo virsh net-start "$MGMT_NET_NAME"
         sudo virsh net-autostart "$MGMT_NET_NAME"
+    }
+
+    if ! sudo virsh net-info "$MGMT_NET_NAME" &>/dev/null; then
+        log "Defining management network ($MGMT_NET_NAME)..."
+        _define_mgmt_net
         ok "Management network created."
     else
-        sudo virsh net-start "$MGMT_NET_NAME" 2>/dev/null || true
+        # Try to start the existing network; if it fails, the definition is stale — nuke and recreate
+        if ! sudo virsh net-start "$MGMT_NET_NAME" 2>/dev/null; then
+            # Check if it's already active (net-start fails on an already-running network too)
+            if ! sudo virsh net-info "$MGMT_NET_NAME" 2>/dev/null | grep -q "Active:.*yes"; then
+                warn "Management network '$MGMT_NET_NAME' exists but cannot start (stale definition). Recreating..."
+                sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
+                sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
+                _define_mgmt_net
+                ok "Management network recreated from scratch."
+            fi
+        fi
+        # Verify the network is actually active before proceeding
+        if ! sudo virsh net-info "$MGMT_NET_NAME" 2>/dev/null | grep -q "Active:.*yes"; then
+            die "Management network '$MGMT_NET_NAME' is not active after start attempt. Manual intervention required."
+        fi
         # Sync DHCP host reservations (MACs may have changed since network was created)
         log "Syncing DHCP host reservations on existing network..."
         for vm in "${!VM_MGMT_IP[@]}"; do
@@ -1149,7 +1168,22 @@ XMLEOF
 
     # --- Libvirt network definitions for OVS bridges ---
     for br in "${FABRIC_BRIDGES[@]}"; do
-        if ! sudo virsh net-info "$br" &>/dev/null; then
+        local need_define=false
+        if sudo virsh net-info "$br" &>/dev/null; then
+            # Network definition exists — ensure it's active
+            if ! sudo virsh net-info "$br" 2>/dev/null | grep -q "Active:.*yes"; then
+                # Try to start; if it fails, the definition is stale
+                if ! sudo virsh net-start "$br" 2>/dev/null; then
+                    warn "Libvirt network '$br' stale — destroying and recreating."
+                    sudo virsh net-destroy "$br" 2>/dev/null || true
+                    sudo virsh net-undefine "$br" 2>/dev/null || true
+                    need_define=true
+                fi
+            fi
+        else
+            need_define=true
+        fi
+        if $need_define; then
             cat > "$TMP_DIR/net-${br}.xml" <<BXML
 <network>
   <name>${br}</name>
@@ -1163,7 +1197,7 @@ BXML
             sudo virsh net-autostart "$br"
         fi
     done
-    ok "All libvirt OVS networks defined."
+    ok "All libvirt OVS networks defined and active."
 
     # --- WAN/ISP bridge hypervisor-side gateway for exit router internet ---
     # br-wan1: Exit_Router1 WAN (192.168.1.0/24, hypervisor is .1 gateway + NAT)
