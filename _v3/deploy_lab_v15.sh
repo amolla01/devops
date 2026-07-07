@@ -1122,6 +1122,14 @@ XMLEOF
         sudo ip link set br-mgmt down 2>/dev/null || true
         sudo ip link delete dev br-mgmt 2>/dev/null || true
         sudo brctl delbr br-mgmt 2>/dev/null || true
+        # Kill ALL stale dnsmasq processes related to this network.
+        # Libvirt dnsmasq uses conf-file with the network name (dc-mgmt), not bridge name.
+        sudo pkill -9 -f "[d]nsmasq.*dc-mgmt" 2>/dev/null || true
+        sudo pkill -9 -f "[d]nsmasq.*br-mgmt" 2>/dev/null || true
+        # Also kill any dnsmasq bound to the management gateway IP
+        sudo pkill -9 -f "[d]nsmasq.*${MGMT_NET_GW}" 2>/dev/null || true
+        # Remove stale libvirt dnsmasq state files
+        sudo rm -f /var/lib/libvirt/dnsmasq/dc-mgmt.* 2>/dev/null || true
         # Wait for the kernel interface to actually disappear (OVS is async)
         local wait_count=0
         while ip link show br-mgmt &>/dev/null; do
@@ -1176,8 +1184,11 @@ XMLEOF
                 # Now tear down the stale network definition
                 sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-                # Kill any orphan dnsmasq bound to this bridge (use [] trick to avoid self-match)
+                # Kill ALL orphan dnsmasq (libvirt uses conf-file path with network name)
+                sudo pkill -9 -f "[d]nsmasq.*dc-mgmt" 2>/dev/null || true
                 sudo pkill -9 -f "[d]nsmasq.*br-mgmt" 2>/dev/null || true
+                sudo pkill -9 -f "[d]nsmasq.*${MGMT_NET_GW}" 2>/dev/null || true
+                sudo rm -f /var/lib/libvirt/dnsmasq/dc-mgmt.* 2>/dev/null || true
                 # Remove the stale bridge device — could be OVS, Linux bridge, or OVS port
                 sudo ovs-vsctl --if-exists del-br br-mgmt 2>/dev/null || true
                 sudo ovs-vsctl --if-exists del-port br-mgmt 2>/dev/null || true
