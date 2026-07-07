@@ -1115,11 +1115,35 @@ XMLEOF
         sudo virsh net-define "$net_xml"
         # Unconditionally remove any stale br-mgmt device before starting the network.
         # virsh net-start creates br-mgmt — if it already exists (stale), start fails.
-        # No conditional check — just force-remove; if it doesn't exist, commands harmlessly fail.
+        # Try every possible method to remove the interface (OVS, Linux bridge, raw device).
+        # OVS deletion is async (vswitchd must process it), so we verify + wait afterward.
+        sudo ovs-vsctl --timeout=10 --if-exists del-br br-mgmt 2>/dev/null || true
+        sudo ovs-vsctl --timeout=10 --if-exists del-port br-mgmt 2>/dev/null || true
         sudo ip link set br-mgmt down 2>/dev/null || true
         sudo ip link delete dev br-mgmt 2>/dev/null || true
-        # If ip link delete failed (e.g. still attached), try brctl
         sudo brctl delbr br-mgmt 2>/dev/null || true
+        # Wait for the kernel interface to actually disappear (OVS is async)
+        local wait_count=0
+        while ip link show br-mgmt &>/dev/null; do
+            wait_count=$((wait_count + 1))
+            if [[ $wait_count -ge 10 ]]; then
+                # Debug: show what br-mgmt actually is
+                warn "br-mgmt persists after 10s. Diagnostics:"
+                ip link show br-mgmt 2>&1 | sed 's/^/    /' >&2
+                sudo ovs-vsctl find interface name=br-mgmt 2>&1 | sed 's/^/    /' >&2
+                # Last resort: restart openvswitch to force cleanup
+                warn "Restarting openvswitch-switch to force interface cleanup..."
+                sudo systemctl restart openvswitch-switch
+                sleep 2
+                sudo ovs-vsctl --timeout=10 --if-exists del-br br-mgmt 2>/dev/null || true
+                sleep 2
+                break
+            fi
+            sleep 1
+        done
+        if ip link show br-mgmt &>/dev/null; then
+            die "br-mgmt interface still exists after all removal attempts. Run 'sudo ovs-vsctl show' and 'ip -d link show br-mgmt' on the hypervisor to diagnose."
+        fi
         sudo virsh net-start "$MGMT_NET_NAME"
         sudo virsh net-autostart "$MGMT_NET_NAME"
     }
@@ -1154,15 +1178,12 @@ XMLEOF
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
                 # Kill any orphan dnsmasq bound to this bridge (use [] trick to avoid self-match)
                 sudo pkill -9 -f "[d]nsmasq.*br-mgmt" 2>/dev/null || true
-                # Remove the stale bridge device (now safe — no VMs holding tap interfaces)
-                if ip link show br-mgmt &>/dev/null; then
-                    sudo ip link set br-mgmt down 2>/dev/null || true
-                    sudo ip link delete dev br-mgmt 2>/dev/null || true
-                fi
-                # Final sanity check
-                if ip link show br-mgmt &>/dev/null; then
-                    die "Cannot remove stale br-mgmt bridge after destroying all VMs. Manual: 'sudo ip link delete dev br-mgmt'"
-                fi
+                # Remove the stale bridge device — could be OVS, Linux bridge, or OVS port
+                sudo ovs-vsctl --if-exists del-br br-mgmt 2>/dev/null || true
+                sudo ovs-vsctl --if-exists del-port br-mgmt 2>/dev/null || true
+                sudo ip link set br-mgmt down 2>/dev/null || true
+                sudo ip link delete dev br-mgmt 2>/dev/null || true
+                sudo brctl delbr br-mgmt 2>/dev/null || true
                 # Also clean up disks/ISOs since VMs were destroyed
                 sudo rm -rf "$DISK_DIR"/* "$CLOUD_INIT_DIR"/*
                 _define_mgmt_net
@@ -2577,17 +2598,13 @@ teardown() {
     done
     sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
     sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-    # Remove the br-mgmt Linux bridge device (virsh net-undefine leaves it behind)
-    sudo pkill -9 -f "dnsmasq.*br-mgmt" 2>/dev/null || true
-    if ip link show br-mgmt &>/dev/null; then
-        for port in $(ls /sys/class/net/br-mgmt/brif/ 2>/dev/null); do
-            sudo ip link set "$port" nomaster 2>/dev/null || true
-            sudo ip link set "$port" down 2>/dev/null || true
-        done
-        sudo ip link set br-mgmt down 2>/dev/null || true
-        sudo ip link delete dev br-mgmt 2>/dev/null || true
-        sudo brctl delbr br-mgmt 2>/dev/null || true
-    fi
+    # Remove the br-mgmt device (could be OVS bridge, Linux bridge, or OVS port)
+    sudo pkill -9 -f "[d]nsmasq.*br-mgmt" 2>/dev/null || true
+    sudo ovs-vsctl --if-exists del-br br-mgmt 2>/dev/null || true
+    sudo ovs-vsctl --if-exists del-port br-mgmt 2>/dev/null || true
+    sudo ip link set br-mgmt down 2>/dev/null || true
+    sudo ip link delete dev br-mgmt 2>/dev/null || true
+    sudo brctl delbr br-mgmt 2>/dev/null || true
     # Catch orphan libvirt networks matching lab patterns
     local all_nets
     all_nets=$(sudo virsh net-list --all --name 2>/dev/null | grep -E '^(br-S|br-L|br-BL|br-HB|br-MS|br-wan|br-ER|dc-mgmt)' || true)
