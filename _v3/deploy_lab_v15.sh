@@ -1886,6 +1886,61 @@ phase5_validate() {
         ok "SONiC password change complete."
     fi
 
+    # --- Distribute SSH public keys from the hypervisor to all VMs ---
+    # This enables passwordless SSH from the hypervisor (and via ProxyJump from Lab-ControlNode)
+    log "Distributing SSH public keys to all VMs..."
+    local ssh_opts="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=$SSH_TIMEOUT"
+    local key_distributed=0 key_failed=0
+    # Collect all public keys from the deployer user's authorized_keys + .ssh/*.pub
+    local combined_keys=""
+    if [[ -f "$HOME/.ssh/authorized_keys" ]]; then
+        combined_keys+=$(cat "$HOME/.ssh/authorized_keys" 2>/dev/null || true)
+        combined_keys+=$'\n'
+    fi
+    for pubkey_file in "$HOME"/.ssh/*.pub; do
+        [[ -f "$pubkey_file" ]] || continue
+        combined_keys+=$(cat "$pubkey_file" 2>/dev/null || true)
+        combined_keys+=$'\n'
+    done
+    # Deduplicate keys
+    combined_keys=$(echo "$combined_keys" | sort -u | grep -v '^$' || true)
+
+    if [[ -z "$combined_keys" ]]; then
+        warn "No SSH public keys found in $HOME/.ssh/ — skipping key distribution."
+    else
+        local key_count
+        key_count=$(echo "$combined_keys" | wc -l)
+        log "Found $key_count unique public key(s) to distribute."
+        for vm in "${vm_list[@]}"; do
+            local ip="${VM_MGMT_IP[$vm]}"
+            local type="${VM_TYPE[$vm]}"
+            local user="${VM_USER[$type]}"
+            local pass_str="${VM_PASS[$type]}"
+            # Wait for SSH to be ready (up to 60s per VM)
+            local vm_ready=false
+            for i in $(seq 1 12); do
+                if sshpass -p "$pass_str" ssh $ssh_opts "$user@$ip" "echo ok" 2>/dev/null | grep -q "ok"; then
+                    vm_ready=true; break
+                fi
+                sleep 5
+            done
+            if $vm_ready; then
+                if echo "$combined_keys" | sshpass -p "$pass_str" ssh $ssh_opts "$user@$ip" \
+                    "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && sort -u -o ~/.ssh/authorized_keys ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys" 2>/dev/null; then
+                    printf "  %-18s key(s) installed ✓\n" "$vm"
+                    key_distributed=$((key_distributed + 1))
+                else
+                    printf "  %-18s key install FAILED\n" "$vm"
+                    key_failed=$((key_failed + 1))
+                fi
+            else
+                printf "  %-18s SSH not ready — skipped\n" "$vm"
+                key_failed=$((key_failed + 1))
+            fi
+        done
+        ok "SSH key distribution: $key_distributed OK, $key_failed failed."
+    fi
+
     local pass=0 fail_count=0
 
     for vm in "${vm_list[@]}"; do
