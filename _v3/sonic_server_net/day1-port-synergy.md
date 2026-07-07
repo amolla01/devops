@@ -1865,6 +1865,7 @@ To ensure your architecture deployment is fully validated and successful on your
 As noted in your structural drawings, the Arista 7050QX-32S handles its front-panel lane maps differently than the standard 32 model, and the Accton AS5712-54X implements a flat, sequential layout instead of a matrix dictionary [INDEX].
 Here are the complete, audited host variable configurations designed to align directly with our unified template.
 ------------------------------
+```
 ## 1. Accton/Edgecore Leaf Profile (inventory/host_vars/Leaf_L1.yml)
 The Accton AS5712-54X has 48 standard 10G SFP+ ports and 6 high-speed 40G QSFP+ ports. In your virtual lab wiring, the 40G ports are pre-broken out into sequential text strings (Ethernet64, Ethernet68).
 
@@ -1909,7 +1910,7 @@ switch_ports:
 fabric_vlans:
   - { id: 10, name: "Vlan10", vrf_binding: "vrf-transit" }
   - { id: 20, name: "Vlan20", vrf_binding: "vrf-storage" }
-
+```
 ------------------------------
 ## Why this guarantees a clean first-time boot
 
@@ -1933,6 +1934,7 @@ The mirroring uses a specific, structured variable translation strategy:
    4. Peer Mappings: Shift systematically from Spine_S1 connections to Spine_S2 targets.
 
 ------------------------------
+```
 ## 1. Spine 2 Variable Topology Profile (inventory/host_vars/Spine_S2.yml)
 Spine_S2 mirrors Spine_S1 exactly, but updates its internal Management IP configuration and shifts its router ID to 10.0.0.2. It handles non-breakout links down to the leaves and borders.
 
@@ -2029,7 +2031,7 @@ hostname: "Exit_Router2"mgmt_ip: "10.10.1.39"bgp_local_asn: 65102
     switch_port: "Ethernet0"
     breakout_channel: "1"          # Maps directly to sub-interface Ethernet5/2 on Border 2
     neighbor_asn: 65022
-
+```
 ------------------------------
 ## Why this eliminates human mapping errors
 
@@ -2049,6 +2051,7 @@ We still have the all_ports reference, and it is performing this exact task nati
 The approach did not change. Instead of cluttering individual host variable files with long lists of hardware metrics, the configuration was moved up into the global group variables layer (group_vars/) [INDEX] as shown in the template blueprint.
 Here is the step-by-step breakdown of how the template discovers, filters, and disables unpeered front-panel ports under this design without hardcoded inventory lines.
 ------------------------------
+```
 ## 1. How the Switch Discovers Its Hardware Map
 When Ansible runs against a device, it inherits variables from the group that the switch belongs to [INDEX]:
 
@@ -2095,6 +2098,7 @@ When your switch executes config reload -y with this file [INDEX], it configures
 * Left-Out Ports: Every remaining un-peered ASIC port slot on the chip is matched by Stage 5 and written as Admin down / Oper down [INDEX].
 
 This guarantees that un-cabled cages will never activate link lights, broadcast accidental packets, or interfere with your eBGP unnumbered neighbor discovery meshes.
+```
 ------------------------------
 ## Checklist to Confirm Your Configuration Matrix Is Ready
 To ensure that your environment processes this hardware protection gate correctly on the first try, verify that these group profile mappings exist in your repository path:
@@ -2116,6 +2120,7 @@ You have an excellent eye for detail. Having both Arista 7050QX-32 and 7050QX-32
 While they are both manufactured by Arista, the "S" model uses a completely different internally mapped lane-to-index SerDes ASIC matrix. If the 7050QX-32 group variables are applied to a 32S hardware footprint, the swss container won't be able to bind to the virtual KVM ports properly, and your background routing processes will crash immediately on boot.
 To correct this and map your Arista platforms accurately without altering a single line of your core config_db_fabric.json.j2 template, we will split your Arista devices into two distinct Ansible inventory groups.
 ------------------------------
+```
 ## Step 1: Realize the Splitting in your Inventory File (inventory/hosts.yml)
 Update your main inventory layout to separate your standard compute leaves from your perimeter border leaf nodes. This allows them to inherit unique group profiles automatically based on their exact model variation:
 
@@ -2158,7 +2163,7 @@ Remove the old arista_leaves.yml file completely, and replace it with these two 
 ## Profile 2: Perimeter Edge Borders Profile (group_vars/arista_qx32s_borders.yml)
 
 # Authoritative hardware profile mapping for the specialized Arista 7050QX-32Sall_ports: "{{ qx32s_all_ports | default({}) }}"platform_speed_fallback: "40000"
-
+```
 ------------------------------
 ## Why this correction guarantees an accurate first-time boot
 
@@ -2190,6 +2195,7 @@ These compute servers adhere to a strict Multi-Homed eBGP Unnumbered Design Matr
    3. Loopback Anycast ID Preservation: The Loopback IPv4 addresses (lo:1) act as the absolute identity for server workload processing, while lo:ceph holds the multi-VRF storage plane identity.
 
 ------------------------------
+```
 ## 1. Host Server 12/1 Variable Profile (inventory/host_vars/Host12_1.yml)
 
 hostname: "Host12_1"mgmt_ip: "10.10.1.31"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65234
@@ -2267,7 +2273,7 @@ When you execute your deploy_exit_routers.yml playbook loop wrapper (which handl
    1. Netplan Dynamic Allocation: The template compiles the active variables pool natively into /etc/netplan/10-host-fabric.yaml. It assigns the Loopback addresses to lo:1 and lo:ceph, enables explicit link-local: [ ipv6 ] packet transport tracking on enp2s0 and enp3s0, and triggers netplan apply.
    2. BGP Multipathing Alignment (ECMP): Because your servers run dual unnumbered lines pointing up to paired switches (e.g., Leaf_L1 and Leaf_L2), the FRRouting daemon establishes two parallel active unnumbered BGP paths for its address families. Traffic going down through the server interfaces automatically balances evenly across your datacenter spines.
    3. Storage Multi-VRF Isolation: The Ceph replication endpoints (192.168.20.x) initialize strictly inside the vrf-storage instance. Storage replication data travels completely separated from normal customer web transit frames.
-
+```
 Your entire environment inventory variable tree is now completed, sanitized, and structurally validated for a first-run deployment sweep.
 If you are interested, let me know if you would like to:
 
@@ -2282,6 +2288,7 @@ The playbook file deploy_exit_routers.yml does not use a separate role. Instead,
 If you are looking to refactor this playbook into a clean, reusable role directory structure inside your roles/ path, the ideal role name would be ubuntu_host_base or linux_router_base.
 ## How to Convert It Into a Reusable Role
 To convert these standalone tasks into a standardized Ansible role, follow this directory layout: [1, 2] 
+```
 ## 1. Directory Structure
 
 /mnt/c/Users/nh1221/data-center/_v3/roles/ubuntu_host_base/
@@ -2306,7 +2313,7 @@ Once the role is created, your top-level playbook file simplifies to a clean, st
 
 * Shared Logic Protection: Both your exit_routers and your standard compute host_servers run on Ubuntu. Using a single ubuntu_host_base role allows you to use the exact same logic to configure Netplan VRFs, WireGuard, and multi-instance FRR blocks across all your servers.
 * Variable-Driven Adaptation: The role automatically adapts on the fly using your host variable files. When targeting an exit router, it builds vrf-transit. When targeting a compute server, it automatically provisions vrf-storage and lo:ceph fields seamlessly.
-
+```
 Let me know if you want to map out the Anycast routing policies inside FRR next to handle traffic balancing between your new Ubuntu host roles!
 
 [1] [https://www.redhat.com](https://www.redhat.com/en/blog/developing-ansible-role)
@@ -2318,6 +2325,7 @@ Yes, you absolutely must templatize them. Hardcoding values like interface names
 To keep your codebase clean and organized, all templates must be stored inside the dedicated templates/ directory within your newly named role framework.
 Here is the exact production folder hierarchy and the complete J2 template definitions required to get this up and running on your first try.
 ------------------------------
+```
 ## 1. The Production Folder Hierarchy
 Place your files exactly like this within your playbook workspace directory:
 
@@ -2637,7 +2645,7 @@ To run this layout across your entire environment, create your top-level playboo
   gather_facts: true
   roles:
     - ubuntu_host_base
-
+```
 Fire off the execution run from your control station terminal:
 
 ansible-playbook playbooks/deploy_hosts.yml -i inventory/hosts.yml
@@ -2658,6 +2666,7 @@ Breaking your server architecture into two separate roles—linux_router_base (f
 This strict separation ensures that your compute servers stay clean, lightweight, and completely free of edge routing tools like WireGuard and NAT iptables rules that they don't need.
 Here is the exact production directory layout, task controls, and templates required to initialize both roles cleanly on your first run.
 ------------------------------
+```
 ## 1. The Production Folder Hierarchy
 Set up your files exactly like this inside your playbook workspace directory:
 
@@ -2824,9 +2833,10 @@ network:
       port: 51820
       addresses:
         - 192.168.100.1/24
-
+```
 Note: For the remaining template files (exit_frr.conf.j2 and wg0.conf.j2), copy and paste the clean code profiles we built in the previous turn straight into the /roles/linux_router_base/templates/ folder directory.
 ------------------------------
+```
 ## 3. Role 2: ubuntu_host_base (The Compute Hosts)## Tasks Profile (roles/ubuntu_host_base/tasks/main.yml)
 
 ---
@@ -2985,7 +2995,7 @@ Now your top-level playbook file becomes beautifully simple and readable. It tar
   gather_facts: true
   roles:
     - ubuntu_host_base
-
+```
 Fire off the execution run from your control station:
 
 ansible-playbook playbooks/deploy_hosts.yml -i inventory/hosts.yml
@@ -3003,6 +3013,7 @@ If you want to configure next steps, let me know:
 To complete your datacenter automation suite, let’s structure your SONiC switches configuration role into a production-grade, reusable folder hierarchy named sonic_fabric.
 This encapsulates the dual-block config_db_fabric.json.j2 switch template and your unified, brand-agnostic apply_patch.yml orchestration tasks inside a standard Ansible role framework [INDEX].
 ------------------------------
+```
 ## 1. The Production Role Directory Structure
 Structure your repository files exactly like this under your main workspace folder:
 
@@ -3024,7 +3035,10 @@ Structure your repository files exactly like this under your main workspace fold
 ## 2. The Task Entrypoint (roles/sonic_fabric/tasks/main.yml)
 This file acts as the primary task coordinator for the role. It resolves your low-level hardware ports via your Python execution tool, establishes your directories, renders your custom templates, and invokes the patching engine.
 
----# =============================================================================# roles/sonic_fabric/tasks/main.yml# Main execution flow for the SONiC Switch Fabric Configuration Role# =============================================================================
+---
+# =============================================================================
+# roles/sonic_fabric/tasks/main.yml# Main execution flow for the SONiC Switch Fabric Configuration Role
+# =============================================================================
 
 - name: "fabric | Ensure local build workspace render directory exists"
   ansible.builtin.file:
@@ -3138,7 +3152,7 @@ Now, you can define your top-level datacenter switch playbook. It maps all three
   any_errors_fatal: true
   roles:
     - sonic_fabric
-
+```
 Fire off the execution run from your control workspace station terminal:
 
 ansible-playbook playbooks/deploy_fabric.yml -i inventory/hosts.yml
@@ -3162,10 +3176,14 @@ You are completely right, and your intuition is spot on. We should not be puttin
 The whole point of splitting your servers into two distinct roles (linux_router_base and ubuntu_host_base) is to keep your compute hosts lean, lightweight, and completely isolated from edge routing components. Compute hypervisors do not act as VPN termination gateways, so loading WireGuard utilities, generating cryptographic key pairs, and injecting tunnel metadata there is completely unnecessary.
 Let's adjust the implementation to strictly isolate all WireGuard tooling to the linux_router_base role.
 ------------------------------
+```
 ## 1. Updated Compute Profile: roles/ubuntu_host_base/tasks/main.yml
 This file is now completely clean and free of WireGuard logic. It installs only standard Linux utilities, configures multi-VRF Netplan states, and fires up the core FRR routing instance.
 
----# =============================================================================# roles/ubuntu_host_base/tasks/main.yml# Stripped, high-speed task execution engine for compute hypervisors ONLY# =============================================================================
+---
+# =============================================================================
+# roles/ubuntu_host_base/tasks/main.yml# Stripped, high-speed task execution engine for compute hypervisors ONLY
+# =============================================================================
 
 - name: "host | Install bare-metal compute networking packages"
   ansible.builtin.apt:
@@ -3220,7 +3238,10 @@ This file is now completely clean and free of WireGuard logic. It installs only 
 ## 2. Isolated Edge Profile: roles/linux_router_base/tasks/main.yml
 All WireGuard key generation, directory validation, cryptographic file mapping, and iptables MASQUERADE NAT policies are housed exclusively inside this file block.
 
----# =============================================================================# roles/linux_router_base/tasks/main.yml# Dedicated edge transit gateway manager with full WireGuard isolation# =============================================================================
+---
+# =============================================================================
+# roles/linux_router_base/tasks/main.yml# Dedicated edge transit gateway manager with full WireGuard isolation
+# =============================================================================
 
 - name: "router | Install edge routing and crypto packages"
   ansible.builtin.apt:
@@ -3346,7 +3367,7 @@ Your master server playbook wrapper remains clean and organized, mapping each in
   gather_facts: true
   roles:
     - ubuntu_host_base
-
+```
 Fire off the execution run from your control workspace station terminal:
 
 ansible-playbook playbooks/deploy_hosts.yml -i inventory/hosts.yml
@@ -3376,6 +3397,7 @@ This configuration establishes strict routing security across your fabric:
    2. Dynamic Inbound Access: Automatically configures the admin client credentials on the active Exit Routers so that remote laptops connecting over the WireGuard tunnel land securely inside the out-of-band mgmt-vrf management namespace.
 
 ------------------------------
+```
 ## 1. Edge BGP Filtering & VPN Peer Templates (roles/linux_router_base/templates/)
 Update your core router templates inside the linux_router_base role folder directory.
 ## Template A: Secure BGP Transit Routing Policy (templates/exit_frr.conf.j2)
@@ -3461,7 +3483,9 @@ Add your administrator public keys and client configuration parameters directly 
 ## 3. Automated Post-Deployment Verification Task
 To confirm that your multi-VRF network planes are completely operational and isolated, add this check task block to the very bottom of roles/linux_router_base/tasks/main.yml:
 
-# =============================================================================# Automated Day-1 Verification Checkpoints# =============================================================================
+# =============================================================================
+# Automated Day-1 Verification Checkpoints
+# =============================================================================
 - name: "router | Gather live routing table for vrf-transit"
   ansible.builtin.shell: |
     ip route show vrf vrf-transit  register: _transit_routes
@@ -3482,7 +3506,7 @@ To confirm that your multi-VRF network planes are completely operational and iso
     fail_msg: "CRITICAL POLICY FAULT: Multi-VRF leak detected on the exit node!"
     success_msg: "SUCCESS: Fabric security policies verified. Traffic planes are completely isolated."
   tags: [verify, fabric]
-
+```
 ------------------------------
 ## 4. Execute Your Final Run Blueprint
 Trigger your master deployment from your workstation terminal control node:
