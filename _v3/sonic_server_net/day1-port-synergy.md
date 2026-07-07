@@ -959,6 +959,7 @@ network:
 
 Apply these files progressively using sudo netplan apply. [2] 
 ------------------------------
+```
 ## 4. The Unified FRRouting Config (/etc/frr/frr.conf)
 Since the server data interfaces (enp2s0 and enp3s0) do not have IPv4 addresses, you must configure FRRouting (FRR) inside the Ubuntu server OS to establish your eBGP unnumbered sessions.
 The configuration below enables Extended Next-Hop Encoding (RFC 8950), allowing the server to advertise its IPv4 loopback (10.0.10.1/32) and its local Ceph storage subnet over a pure IPv6 link-local connection to the leaf switches.
@@ -994,7 +995,7 @@ router bgp 65234
 !
 line vty
 !
-
+```
 ------------------------------
 ## What Happens Once Pushed and Initialized
 
