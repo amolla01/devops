@@ -1113,6 +1113,13 @@ XMLEOF
 </network>
 XMLEOF
         sudo virsh net-define "$net_xml"
+        # Unconditionally remove any stale br-mgmt device before starting the network.
+        # virsh net-start creates br-mgmt — if it already exists (stale), start fails.
+        # No conditional check — just force-remove; if it doesn't exist, commands harmlessly fail.
+        sudo ip link set br-mgmt down 2>/dev/null || true
+        sudo ip link delete dev br-mgmt 2>/dev/null || true
+        # If ip link delete failed (e.g. still attached), try brctl
+        sudo brctl delbr br-mgmt 2>/dev/null || true
         sudo virsh net-start "$MGMT_NET_NAME"
         sudo virsh net-autostart "$MGMT_NET_NAME"
     }
