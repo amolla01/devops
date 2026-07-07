@@ -46,7 +46,7 @@ switch_ports:
 ## 2. The Streamlined, High-Speed Jinja2 Template Engine
 By modeling your data following this strict, unified structural template, the Jinja template file no longer has to guess lanes or run erratic object type searches. It parses your variable object array cleanly, populating your tables and shutting down unused ports on the fly.
 ## Part 1: Top-Half Initial Setup and Port Building Block
-
+```
 {# 🧠 STAGE 1: INITIALIZE THE BASE DICTIONARY STRUCTURALLY #}{% set config_db = {
   "DEVICE_METADATA": {
     "localhost": {
@@ -151,13 +151,13 @@ By modeling your data following this strict, unified structural template, the Ji
     }) %}
   {% endif %}{% endfor %}
 {# 🧠 STAGE 5: COMPILER OUTPUT #}{{ config_db | to_nice_json }}
-
+```
 ------------------------------
 ## 3. Clean and Maintainable Playbook Workflow Strategy
 To guarantee that your playbooks compile cleanly, manage failures gracefully, and write changes straight to disk, keep your apply_patch.yml task file completely free of complex loops.
 Instead, let your Ansible playbook loop over your files exactly once, generate the clean target text files, transfer them to the switch, and force the management framework to reload.
 Replace your current apply_patch.yml file completely with this streamlined, fast execution sequence:
-
+```
 ---
 # =============================================================================
 # roles/sonic_fabric/tasks/apply_patch.yml# Safe, brand-agnostic deployment sequence for unified management state
@@ -200,7 +200,7 @@ Replace your current apply_patch.yml file completely with this streamlined, fast
   ansible.builtin.debug:
     var: _live_bgp_summary.stdout_lines
   tags: [verify, fabric]
-
+```
 ## Why This Approach Makes Your Workflow Smooth and Reliable
 
 * Zero String-vs-List Crashes: By replacing individual interface tasks with a single, comprehensive template render (config_db.json), we eliminate all quote tracking issues and loop crashes (The loop value must resolve to a list, not str) for good.
@@ -278,6 +278,7 @@ Let me know how you would like to proceed with organizing your fabric topology!
 To bring this architecture to reality, here is the complete implementation of the Unified Switch Intent Data Model.
 It includes the Global Group Variables shared architecture mappings, the complete Multi-Brand config_db_fabric.json.j2 production template, and the brand-neutral, high-speed apply_patch.yml playbook sequence designed to automatically trigger interface convergence.
 ------------------------------
+```
 ## 1. The Global Group Variables Mappings (group_vars/)
 Instead of repeating deep ASIC metadata inside every single switch file, we store the platform physical properties inside your shared group variable files. This cleanly maps the specific brand differences (such as Accton's flat sequential list names versus Arista's dictionary maps) so the template can evaluate them instantly.
 ## File A: Arista Switches Group Profile (group_vars/arista_leaves.yml)
@@ -418,11 +419,11 @@ To ensure it never hits communication size limits or gets cut off, the complete,
     {% endif %}
   {% endfor %}{% endif %}
 {# 🧠 STAGE 5: SERIALIZE AND RENDER COMPRESSED METADATA #}{{ config_db | to_nice_json }}
-
+```
 ------------------------------
 ## 3. The Brand-Agnostic Playbook Execution Script (apply_patch.yml)
 This playbook completely eliminates fragile bash scripts and loop errors [INDEX]. It generates the configuration patch locally, verifies it, copies it over, and performs a native config reload [INDEX].
-
+```
 ---
 # =============================================================================
 # roles/sonic_fabric/tasks/apply_patch.yml# High-Speed Production-Ready Deployment Blueprint for Unified Containers
@@ -468,7 +469,7 @@ This playbook completely eliminates fragile bash scripts and loop errors [INDEX]
   ansible.builtin.debug:
     var: _live_bgp_summary.stdout_lines
   tags: [verify, fabric]
-
+```
 ------------------------------
 ## How this configuration behaves across your topology
 
@@ -489,6 +490,7 @@ You are completely right to call this out. The index and lanes fields are not ju
 Omitting or hardcoding them with simple loop fallback hacks (like loop.index) on a breakout port will cause the swss container to mis-map the hardware channels and crash on boot, throwing the exact infinite-restart loops you encountered earlier.
 The avoidance was absolutely not done willingly, but rather due to size limits in the previous message window. To give you the complete, production-grade picture without short-circuiting or hacks, we must explicitly model how a Host Server's network interfaces map back to the breakout sub-ports, and how the template dynamically reads the authentic physical index and lanes variables directly from your variable structures.
 ------------------------------
+```
 ## 1. The Host Server Network Data Structure Model
 On your servers (e.g., Host12_1, Host34_1), you are breaking out a high-speed parent switch port (like a 40G QSFP+ port) into four independent 10G channels using a breakout cable. On the server side, these land as standard discrete PCIe network interfaces (like enp2s0, enp3s0).
 To automate this mapping cleanly, your host server variable file should explicitly track which parent switch port, sub-interface, and hardware lane it wires into.
@@ -523,13 +525,13 @@ switch_ports:
       - { name: "Ethernet1", alias: "Ethernet1/2", lanes: "126", index: "1", speed: "10000", neighbor: "Host34_2",   rem_port: "enp2s0" }
       - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "127", index: "1", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp2s0" }
       - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "128", index: "1", speed: "10000", admin: "down" } # Unused sub-channel
-
+```
 ------------------------------
 ## 3. The Complete, Un-Short-Circuited Template Profile
 To prevent text truncation and keep the layout perfectly clear, the complete, production-grade template is broken into two sequentially bounded parts. This version reads your explicit index and lanes variables directly without any automatic guessing loops.
 ## Part 1: Underlay Core & L3 eBGP Unnumbered Provisioning
 Save this block as the top section of your config_db_fabric.json.j2 file:
-
+```
 {# 🧠 STAGE 1: INITIALIZE THE BASE DICTIONARY STRUCTURALLY #}{% set config_db = {
   "DEVICE_METADATA": {
     "localhost": {
@@ -672,7 +674,7 @@ Paste this block directly below Part 1 to finish your template file:
     {% endif %}
   {% endfor %}{% endif %}
 {# 🧠 STAGE 5: SERIALIZE AND RENDER Authoritative CONFIG_DB JSON #}{{ config_db | to_nice_json }}
-
+```
 ------------------------------
 ## Why This Complete Implementation Is Bulletproof
 
