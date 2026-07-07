@@ -1139,6 +1139,8 @@ XMLEOF
         fi
         sudo virsh net-start "$MGMT_NET_NAME"
         sudo virsh net-autostart "$MGMT_NET_NAME"
+        # Give dnsmasq time to bind its socket before VMs start requesting DHCP
+        sleep 2
     }
 
     if ! sudo virsh net-info "$MGMT_NET_NAME" &>/dev/null; then
@@ -2448,7 +2450,7 @@ HEAD
       vars:
         device_role: spine
         ansible_user: admin
-        ansible_password: YourPaSsWoRd
+        ansible_password: Welcome0!
         sonic_platform: "x86_64-kvm_x86_64-r0"
       hosts:
         Spine_S1: { ansible_host: "${VM_MGMT_IP[Spine_S1]}", router_id: "10.0.0.1", asn: 65100 }
@@ -2457,7 +2459,7 @@ HEAD
       vars:
         device_role: leaf
         ansible_user: admin
-        ansible_password: YourPaSsWoRd
+        ansible_password: Welcome0!
         sonic_platform: "x86_64-kvm_x86_64-r0"
       hosts:
         Leaf_L1: { ansible_host: "${VM_MGMT_IP[Leaf_L1]}", router_id: "10.0.0.11", asn: 65001 }
@@ -2468,7 +2470,7 @@ HEAD
       vars:
         device_role: border_leaf
         ansible_user: admin
-        ansible_password: YourPaSsWoRd
+        ansible_password: Welcome0!
         sonic_platform: "x86_64-kvm_x86_64-r0"
       hosts:
         Border_Leaf1: { ansible_host: "${VM_MGMT_IP[Border_Leaf1]}", router_id: "10.0.0.21", asn: 65021 }
@@ -3211,7 +3213,7 @@ main() {
                     echo "Deploys a single test VM with management NIC only."
                     echo "After boot, auto-connects via SSH for exploration."
                     echo ""
-                    echo "  $0 test sonic   — SONiC switch (admin/YourPaSsWoRd)"
+                    echo "  $0 test sonic   — SONiC switch (admin/Welcome0!)"
                     echo "  $0 test ubuntu  — Ubuntu server (ubuntu/ubuntu)"
                     echo "  $0 test chr     — MikroTik CHR (admin/no password)"
                     exit 1
@@ -3224,7 +3226,7 @@ main() {
 
             case "$test_type" in
                 sonic)
-                    test_ram=$SONIC_RAM; test_user="admin"; test_pass="YourPaSsWoRd"
+                    test_ram=$SONIC_RAM; test_user="admin"; test_pass="Welcome0!"
                     mgmt_model="virtio"; test_os="ubuntu20.04"
                     if [[ "$SONIC_DISK_FORMAT" == "qcow2" ]]; then
                         test_base="$IMG_DIR/sonic-vs.qcow2"; test_fmt="qcow2"
