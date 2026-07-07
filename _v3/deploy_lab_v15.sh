@@ -1098,6 +1098,10 @@ phase3_networks() {
   <name>${MGMT_NET_NAME}</name>
   <forward mode='nat'/>
   <bridge name='br-mgmt' stp='on' delay='0'/>
+  <dns>
+    <forwarder addr='8.8.8.8'/>
+    <forwarder addr='8.8.4.4'/>
+  </dns>
   <ip address='${MGMT_NET_GW}' netmask='255.255.255.0'>
     <dhcp>
       <range start='${MGMT_DHCP_START}' end='${MGMT_DHCP_END}'/>
@@ -1406,6 +1410,8 @@ EOF
          enp1s0:
            dhcp4: false
            addresses: [${mgmt_ip}/24]
+           nameservers:
+             addresses: [8.8.8.8, 8.8.4.4]
            routes:
              - to: 10.10.1.0/24
                via: 10.10.1.1
@@ -1495,6 +1501,8 @@ UDROUTEREOF
            set-name: mgtport
            dhcp4: false
            addresses: [${target_ip}/24]
+           nameservers:
+             addresses: [8.8.8.8, 8.8.4.4]
            routes:
              - to: default
                via: 10.10.1.1
@@ -1516,6 +1524,8 @@ UDROUTEREOF
            set-name: mgtport
            dhcp4: false
            addresses: [${target_ip}/24]
+           nameservers:
+             addresses: [8.8.8.8, 8.8.4.4]
            routes:
              - to: 10.10.1.0/24
                via: 10.10.1.1
