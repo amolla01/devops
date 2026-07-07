@@ -1836,7 +1836,9 @@ phase4_deploy() {
 
     echo ""
     log "Deploy: $success OK, $failed FAILED out of $total. (autostart enabled)"
-    [[ $failed -gt 0 ]] && warn "Some VMs failed. Check errors above."
+    if [[ $failed -gt 0 ]]; then
+        warn "Some VMs failed. Check errors above."
+    fi
 }
 
 # ======================= PHASE 5: VALIDATION ================================
