@@ -5,6 +5,7 @@ To make your SONiC data center CLOS lab completely bulletproof, easily scalable,
 Instead, model your data center infrastructure following a Strict Hardware-to-Service Intent Topology Model. By standardizing a uniform, clear layout across all Spines, Leaves, and Border switches, your Jinja2 template drops complex evaluation states entirely, allowing the config_db.json patches to generate and apply flawlessly.
 Here is the blueprint to structure your variables, templates, and playbooks to achieve 100% automated eBGP unnumbered network stability.
 ------------------------------
+```
 ## 1. The Ideal, Scalable Data Structure Model
 Instead of declaring four different standalone interface list variants (uplink_interfaces, downlink_interfaces, fabric_interfaces, breakout_cfg), use a single, comprehensive master object named switch_ports.
 Every single physical cage profile on the switch ASIC front panel gets exactly one entry. The variable layout explicitly tells the engine whether it requires a breakout, what speed it must run, and whether a neighbor peer exists.
@@ -40,7 +41,7 @@ switch_ports:
       - { name: "Ethernet1", alias: "Ethernet1/2", speed: "10000", neighbor: "Host34_2",   rem_port: "enp2s0" }
       - { name: "Ethernet2", alias: "Ethernet1/3", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp2s0" }
       - { name: "Ethernet3", alias: "Ethernet1/4", speed: "10000", admin: "down" } # Unused channel slot
-
+```
 ------------------------------
 ## 2. The Streamlined, High-Speed Jinja2 Template Engine
 By modeling your data following this strict, unified structural template, the Jinja template file no longer has to guess lanes or run erratic object type searches. It parses your variable object array cleanly, populating your tables and shutting down unused ports on the fly.
@@ -157,7 +158,10 @@ To guarantee that your playbooks compile cleanly, manage failures gracefully, an
 Instead, let your Ansible playbook loop over your files exactly once, generate the clean target text files, transfer them to the switch, and force the management framework to reload.
 Replace your current apply_patch.yml file completely with this streamlined, fast execution sequence:
 
----# =============================================================================# roles/sonic_fabric/tasks/apply_patch.yml# Safe, brand-agnostic deployment sequence for unified management state# =============================================================================
+---
+# =============================================================================
+# roles/sonic_fabric/tasks/apply_patch.yml# Safe, brand-agnostic deployment sequence for unified management state
+# =============================================================================
 
 - name: "apply | Ensure target switch render directory exists"
   ansible.builtin.file:
@@ -245,7 +249,7 @@ The reason multi-vendor switches like Accton (Accton-AS5712-54X) or Arista (Aris
 ## How the Unified Template Solves This Brand Variance Automatically
 Because our new data structure maps breakout configurations using an explicit loop conditional block ({% elif port_meta.breakout == "4x10G" %}), the template adapts its output format dynamically based on how you structure your host variables.
 If it runs against your Arista switch, it reads your Arista host file keys and writes sub-port records to the database matching their alias entries. If it runs against your Accton Leaf, it reads your Accton variable array, skips the alias translations, and loops through the flat text keys sequentially:
-
+```
 # Inside inventory/host_vars/Leaf_L1.yml (Accton Leaf)# The variable structure maps the flat sequential names used by the Accton hardware profile:Ethernet64:
   breakout: "4x10G"
   role: "access"
@@ -254,7 +258,7 @@ If it runs against your Arista switch, it reads your Arista host file keys and w
     - { name: "Ethernet65", speed: "10000", admin: "down" }
     - { name: "Ethernet66", speed: "10000", admin: "down" }
     - { name: "Ethernet67", speed: "10000", admin: "down" }
-
+```
 By standardizing your data model to align with this structured layout, you remove all hardcoded platform strings and brand-specific hacks from your code. Your playbooks and templates remain completely clean, and your data center fabric can scale seamlessly across any hardware vendor or switch model you introduce to the lab.
 If you are interested, we can:
 
@@ -419,7 +423,10 @@ To ensure it never hits communication size limits or gets cut off, the complete,
 ## 3. The Brand-Agnostic Playbook Execution Script (apply_patch.yml)
 This playbook completely eliminates fragile bash scripts and loop errors [INDEX]. It generates the configuration patch locally, verifies it, copies it over, and performs a native config reload [INDEX].
 
----# =============================================================================# roles/sonic_fabric/tasks/apply_patch.yml# High-Speed Production-Ready Deployment Blueprint for Unified Containers# =============================================================================
+---
+# =============================================================================
+# roles/sonic_fabric/tasks/apply_patch.yml# High-Speed Production-Ready Deployment Blueprint for Unified Containers
+# =============================================================================
 
 - name: "apply | Ensure target switch configuration folder exists"
   ansible.builtin.file:
@@ -747,6 +754,7 @@ Since your architecture relies on eBGP Unnumbered (using IPv6 Link-Local Peer Di
 | Border Leafs $\leftrightarrow$ Host Servers | eBGP Unnumbered | Border: 6502x Edge Servers: Unique (65301+) | Dedicated perimeter compute layer attachment (e.g., Monitoring Server, Bare-Metal security blocks). |
 
 ------------------------------
+```
 ## 2. Complete Host Variable Infrastructure Profiles
 Here is how to map this complete peering matrix inside your individual host variable files following your clean, structured Unified Switch Intent Data Model.
 ## Profile A: Spine Switch Variables (inventory/host_vars/Spine_S1.yml)
@@ -862,7 +870,7 @@ This is the hidden link-state toggle. It instructs the underlying Linux kernel i
         "ipv6_use_link_local_only": "enable"
     }
 }
-
+```
 ------------------------------
 ## 4. Direct Operational Lifecycle on Reload
 Once these database blocks are saved (config save -y) and the system initializes (config reload -y), the following sequence occurs automatically:
@@ -1195,6 +1203,7 @@ router bgp 65234 vrf vrf-storage
 !
 
 ------------------------------
+```
 ## 3. SONiC Border Leaf Configuration (Border_Leaf1 / Border_Leaf2)
 To tie your network together, update your Border_Leaf1.yml host variables to support both tenant VRF namespaces simultaneously. The updated template we built earlier will parse this layout automatically to create a clean config_db.json file.
 
@@ -1220,7 +1229,7 @@ switch_ports:
 # Bind your transit networks and storage subnets securely to their respective VRFsfabric_vlans:
   - { id: 10, name: "Vlan10", vrf_binding: "vrf-transit" }
   - { id: 20, name: "Vlan20", vrf_binding: "vrf-storage" }
-
+```
 ------------------------------
 ## What Happens Once Pushed and Reloaded
 
@@ -1607,7 +1616,10 @@ This single, production-grade template handles all switch brands (Arista, Celest
 This playbook has been redesigned to run without complex tasks or fragile string manipulations. It generates the configuration layout locally, transfers it to the switch, and triggers a clean, system-level cold reload.
 ## Part 1: Top Section (Variable Normalization through Configuration Move)
 
----# =============================================================================# roles/sonic_fabric/tasks/apply_patch.yml# Part 1 of 2: Variable Type Enforcement and Config Deployment# =============================================================================
+---
+# =============================================================================
+# roles/sonic_fabric/tasks/apply_patch.yml# Part 1 of 2: Variable Type Enforcement and Config Deployment
+# =============================================================================
 
 - name: "apply | Normalize fabric links data type once and for all"
   ansible.builtin.set_fact:
@@ -1652,7 +1664,9 @@ This playbook has been redesigned to run without complex tasks or fragile string
 
 ## Part 2: Bottom Section (Modern Topology Assessment Checking)
 
-# =============================================================================# Part 2 of 2: Telemetry Gathering and Clean Topology Verification# =============================================================================
+# =============================================================================
+# Part 2 of 2: Telemetry Gathering and Clean Topology Verification
+# =============================================================================
 
 - name: "apply | Read all BGP neighbors from ConfigDB (full topology)"
   ansible.builtin.shell: |
