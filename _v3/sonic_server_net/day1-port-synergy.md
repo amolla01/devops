@@ -891,6 +891,7 @@ To support this multi-phase Netplan deployment strategy, the host servers must f
 By placing your Out-of-Band (OOB) management port inside a dedicated Linux VRF (mgmt-vrf), you completely isolate management traffic from your data plane. If your data interfaces (enp2s0/enp3s0) loop, crash, or lose their BGP sessions during testing, your SSH connection to enp1s0 remains completely stable and unaffected.
 Here is the complete, multi-phase Netplan and FRRouting strategy for your Ubuntu servers.
 ------------------------------
+```
 ## Phase 1: The Boot-Time Core Management Profile
 This file is baked directly onto the virtual disk image before the VM boots (using your updated create_cloud_init_iso or host disk-injection recovery scripts). It isolates enp1s0 inside routing table 1000 so it never conflicts with data-plane defaults.
 ## File: /etc/netplan/00-oob-management.yaml
@@ -956,7 +957,7 @@ network:
       routes:
         - to: 192.168.20.0/24
           scope: link
-
+```
 Apply these files progressively using sudo netplan apply. [2] 
 ------------------------------
 ```
@@ -1025,6 +1026,7 @@ This layout establishes three strictly isolated traffic planes:
    3. vrf-storage (Table 200): Isolated, high-speed Ceph NVMe storage replication. [1] 
 
 ------------------------------
+```
 ## 1. Ubuntu Exit Router Setup (Exit_Router1 / Exit_Router2)
 The Exit Routers sit at the absolute boundary of your topology. They act as the default gateway for the entire underlay fabric via vrf-transit while providing a secure management entry point via WireGuard in mgmt-vrf.
 ## Phase 1: Consolidated Core Netplan Configuration
@@ -1206,7 +1208,7 @@ router bgp 65234 vrf vrf-storage
 !
 
 ------------------------------
-```
+
 ## 3. SONiC Border Leaf Configuration (Border_Leaf1 / Border_Leaf2)
 To tie your network together, update your Border_Leaf1.yml host variables to support both tenant VRF namespaces simultaneously. The updated template we built earlier will parse this layout automatically to create a clean config_db.json file.
 
@@ -1254,6 +1256,7 @@ Let me know how you would like to proceed with configuring your multi-VRF enviro
 To make the Exit_Router cluster fully operational, we must provision two critical networking pieces inside the Ubuntu OS: Automatic WireGuard Cryptographic Key Management and iptables NAT/Masquerade Policies to ensure the fabric workloads can actually reach the internet through the transit VRF.
 Here is the complete implementation playbook and configuration architecture to finalize the exit node functionality.
 ------------------------------
+```
 ## Step 1: The Automation Playbook (deploy_exit_routers.yml)
 Save this file as playbooks/reused/deploy_exit_routers.yml. This playbook installs the required binaries, dynamically generates private and public WireGuard keys locally on each node, creates the Netplan network layers, and configures the multi-VRF FRR routing service.
 
@@ -1471,7 +1474,7 @@ Once the tasks complete with a clean success banner, verify your end-to-end inte
    
    sudo vtysh -c "show bgp vrf vrf-transit summary"
    
-   
+```   
 The unnumbered sessions will read Established. Traffic from internal workload servers will now flow dynamically through your leaves and spines, pass out via vrf-transit on the exit nodes, hit the masquerade NAT engine, and reach the public internet perfectly.
 If you'd like, let me know how the final verification outputs look, or if you are ready to trace a live ping packet sweep from your hosts out to an external public IP!
 
@@ -1481,6 +1484,7 @@ To ensure your advanced multi-tenant datacenter CLOS fabric boots cleanly and wo
 When transitioning to SONiC's modern "docker_routing_config_mode": "unified" and "frr_mgmt_framework_config": "true", the absolute most common cause of boot loops and failed BGP sessions is a hidden mismatch between the variable keys inside your host inventory files and the syntax expectations of the Jinja2 rendering engine.
 Below is the complete, audited, and verified structural layout for every file across your repository.
 ------------------------------
+```
 ## 1. Unified SONiC Switch Template (config_db_fabric.json.j2)
 This single, production-grade template handles all switch brands (Arista, Celestica, Accton Edgecore) natively. It implements strict type-checking to prevent unhashable lazy-dictionary errors and enforces precise multi-tenant VLAN/VRF boundary partitioning.
 ## Part 1: Top Section (Base Settings & Underlay BGP Unnumbered)
@@ -1840,8 +1844,8 @@ This playbook configures your new Ubuntu-based exit routers. It handles WireGuar
         state: restarted
         enabled: true
       when: _frr_daemon_trigger.changed or _frr_config_trigger.changed
-
-------------------------------
+```
+----------------------------
 ## 4. Summary Checklist for Your First Run
 To guarantee success when you run your playbooks, verify these three environment checks before executing:
 
