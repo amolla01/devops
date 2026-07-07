@@ -2440,27 +2440,118 @@ PLAYBOOK
 
 # ======================= TEARDOWN ==========================================
 teardown() {
-    header "TEARDOWN: Destroy All Lab Resources"
-    echo -e "${RED}WARNING: This destroys ALL lab VMs, disks, and networks!${RST}"
+    header "TEARDOWN: Destroy All Lab Resources (Full Clean)"
+    echo -e "${RED}WARNING: This destroys ALL lab VMs, disks, networks, OVS bridges, and iptables rules!${RST}"
+    echo -e "${RED}Only base images in $IMG_DIR are preserved.${RST}"
     read -p "Type 'DESTROY' to confirm: " confirm
     [[ "$confirm" != "DESTROY" ]] && { log "Aborted."; exit 0; }
 
+    # ─── Step 1: Destroy and undefine ALL known VMs ───────────────────────────
+    log "Step 1/6: Destroying all lab VMs..."
     for vm in "${VM_DEPLOY_ORDER[@]}"; do
-        force_delete_vm "$vm"
+        if sudo virsh dominfo "$vm" &>/dev/null; then
+            sudo virsh destroy "$vm" 2>/dev/null || true
+            sudo virsh undefine "$vm" --nvram 2>/dev/null || \
+                sudo virsh undefine "$vm" 2>/dev/null || true
+        fi
     done
-    ok "All VMs removed."
+    # Catch orphan VMs that may not be in VM_DEPLOY_ORDER (e.g. leftover from previous versions)
+    local all_domains
+    all_domains=$(sudo virsh list --all --name 2>/dev/null | grep -E '^(Spine_|Leaf_|Border_Leaf|Exit_Router|Host|MonitorSrv)' || true)
+    for orphan in $all_domains; do
+        if sudo virsh dominfo "$orphan" &>/dev/null; then
+            log "  Removing orphan VM: $orphan"
+            sudo virsh destroy "$orphan" 2>/dev/null || true
+            sudo virsh undefine "$orphan" --nvram 2>/dev/null || \
+                sudo virsh undefine "$orphan" 2>/dev/null || true
+        fi
+    done
+    ok "All VMs destroyed and undefined."
 
+    # ─── Step 2: Remove ALL OVS ports and bridges ─────────────────────────────
+    log "Step 2/6: Removing all OVS bridges and ports..."
+    # First remove all ports from each bridge (catches vnet*, patch, custom ports)
+    for br in "${FABRIC_BRIDGES[@]}"; do
+        if sudo ovs-vsctl br-exists "$br" 2>/dev/null; then
+            local ports
+            ports=$(sudo ovs-vsctl list-ports "$br" 2>/dev/null || true)
+            for port in $ports; do
+                sudo ovs-vsctl --if-exists del-port "$br" "$port" 2>/dev/null || true
+            done
+            sudo ovs-vsctl --if-exists del-br "$br" 2>/dev/null || true
+        fi
+    done
+    # Catch any orphan OVS bridges matching lab naming patterns
+    local all_ovs_br
+    all_ovs_br=$(sudo ovs-vsctl list-br 2>/dev/null || true)
+    for br in $all_ovs_br; do
+        if [[ "$br" == br-S* || "$br" == br-L* || "$br" == br-BL* || \
+              "$br" == br-HB* || "$br" == br-MS* || "$br" == br-wan* || \
+              "$br" == br-ER* ]]; then
+            log "  Removing orphan OVS bridge: $br"
+            local ports
+            ports=$(sudo ovs-vsctl list-ports "$br" 2>/dev/null || true)
+            for port in $ports; do
+                sudo ovs-vsctl --if-exists del-port "$br" "$port" 2>/dev/null || true
+            done
+            sudo ovs-vsctl --if-exists del-br "$br" 2>/dev/null || true
+        fi
+    done
+    ok "All OVS bridges and ports removed."
+
+    # ─── Step 3: Destroy and undefine ALL libvirt networks ────────────────────
+    log "Step 3/6: Removing all libvirt network definitions..."
     for br in "${FABRIC_BRIDGES[@]}"; do
         sudo virsh net-destroy "$br" 2>/dev/null || true
         sudo virsh net-undefine "$br" 2>/dev/null || true
-        sudo ovs-vsctl --if-exists del-br "$br" 2>/dev/null || true
     done
     sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
     sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-    ok "All networks removed."
+    # Catch orphan libvirt networks matching lab patterns
+    local all_nets
+    all_nets=$(sudo virsh net-list --all --name 2>/dev/null | grep -E '^(br-S|br-L|br-BL|br-HB|br-MS|br-wan|br-ER|dc-mgmt)' || true)
+    for net in $all_nets; do
+        log "  Removing orphan libvirt network: $net"
+        sudo virsh net-destroy "$net" 2>/dev/null || true
+        sudo virsh net-undefine "$net" 2>/dev/null || true
+    done
+    ok "All libvirt networks removed."
 
-    sudo rm -rf "$DISK_DIR"/* "$CLOUD_INIT_DIR"/*
-    ok "Teardown complete. Images in $IMG_DIR preserved."
+    # ─── Step 4: Clean WAN bridge iptables NAT rules ──────────────────────────
+    log "Step 4/6: Removing WAN NAT iptables rules..."
+    for wan_idx in 1 2; do
+        sudo iptables -t nat -D POSTROUTING -s "192.168.${wan_idx}.0/24" \
+            ! -d "192.168.${wan_idx}.0/24" -j MASQUERADE 2>/dev/null || true
+    done
+    ok "WAN NAT iptables rules removed."
+
+    # ─── Step 5: Remove all disks, cloud-init ISOs, and temp files ────────────
+    log "Step 5/6: Cleaning disk images, cloud-init ISOs, and temp files..."
+    sudo rm -rf "$DISK_DIR"/* "$CLOUD_INIT_DIR"/* "$TMP_DIR"/*
+    ok "All disks, ISOs, and temp files removed."
+
+    # ─── Step 6: Remove stale libvirt XML fragments from /etc/libvirt ─────────
+    log "Step 6/6: Purging stale libvirt XML definitions..."
+    # virsh undefine should handle this, but race conditions can leave fragments
+    for vm in "${VM_DEPLOY_ORDER[@]}"; do
+        sudo rm -f "/etc/libvirt/qemu/${vm}.xml" 2>/dev/null || true
+        sudo rm -f "/etc/libvirt/qemu/autostart/${vm}.xml" 2>/dev/null || true
+    done
+    # Purge network XML fragments
+    for br in "${FABRIC_BRIDGES[@]}"; do
+        sudo rm -f "/etc/libvirt/qemu/networks/${br}.xml" 2>/dev/null || true
+        sudo rm -f "/etc/libvirt/qemu/networks/autostart/${br}.xml" 2>/dev/null || true
+    done
+    sudo rm -f "/etc/libvirt/qemu/networks/${MGMT_NET_NAME}.xml" 2>/dev/null || true
+    sudo rm -f "/etc/libvirt/qemu/networks/autostart/${MGMT_NET_NAME}.xml" 2>/dev/null || true
+    # Restart libvirtd to flush any cached state
+    sudo systemctl restart libvirtd 2>/dev/null || true
+    ok "Stale libvirt XML purged; libvirtd restarted."
+
+    echo ""
+    ok "═══ TEARDOWN COMPLETE ═══"
+    ok "Everything destroyed. Base images in $IMG_DIR preserved for next deploy."
+    ok "Run with 'deploy' to recreate the full lab from scratch."
 }
 
 # ======================= STATUS REPORT ======================================
