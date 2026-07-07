@@ -132,3 +132,150 @@ Network dc-mgmt marked as autostarted
 [ERROR ] Management network 'dc-mgmt' is not active after start attempt. Manual intervention required.
 Connection to 192.168.9.198 closed.
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
+
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./'push_lab_keys copy.sh'
+==========================================================
+Starting Parallel SSH Public Key Distribution Loop
+Target Key: /mnt/c/Users/nh1221/.ssh/id_dc_lab.pub
+==========================================================
+  ✓ Leaf_L3         (10.10.1.44 ): SUCCESS
+  ✓ Spine_S1        (10.10.1.48 ): SUCCESS
+  ✓ Leaf_L4         (10.10.1.43 ): SUCCESS
+  ✓ Leaf_L1         (10.10.1.46 ): SUCCESS
+  ✓ Spine_S2        (10.10.1.47 ): SUCCESS
+  ✓ HostB12_1       (10.10.1.25 ): SUCCESS
+  ✓ HostB12_2       (10.10.1.24 ): SUCCESS
+  ✓ Host34_2        (10.10.1.26 ): SUCCESS
+  ✓ Host34_1        (10.10.1.27 ): SUCCESS
+  ✓ Host12_2        (10.10.1.29 ): SUCCESS
+  ✓ MonitorSrv      (10.10.1.10 ): SUCCESS
+  ✓ Exit_Router2    (10.10.1.39 ): SUCCESS
+  ✓ Host12_1        (10.10.1.30 ): SUCCESS
+  ✓ Host12_3        (10.10.1.28 ): SUCCESS
+  ✓ Exit_Router1    (10.10.1.40 ): SUCCESS
+  ✗ Border_Leaf2    (10.10.1.41 ): FAILED
+  ✗ Leaf_L2         (10.10.1.45 ): FAILED
+  ✗ Border_Leaf1    (10.10.1.42 ): FAILED
+==========================================================
+Distribution Sweeps Complete!
+==========================================================
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ cat 'push_lab_keys copy.sh'
+#!/usr/bin/env bash
+# ============================================================================
+# push_lab_keys.sh — Distribute SSH Public Key to Data Center CLOS Lab VMs
+# ============================================================================
+set -euo pipefail
+
+# --- Configuration Sources ---
+PUB_KEY_PATH="/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub"
+SSH_TIMEOUT=5
+
+# Verify local public key existence before proceeding
+if [[ ! -f "$PUB_KEY_PATH" ]]; then
+    echo "[ERROR] Local public key file not found at: $PUB_KEY_PATH"
+    exit 1
+fi
+
+# --- Ordered VM List ---
+VM_DEPLOY_ORDER=(
+    Spine_S1 Spine_S2
+    Leaf_L1 Leaf_L2 Leaf_L3 Leaf_L4
+    Border_Leaf1 Border_Leaf2
+    Exit_Router1 Exit_Router2
+    Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 MonitorSrv HostB12_1 HostB12_2
+)
+
+# --- Management IP Catalog ---
+declare -A VM_MGMT_IP=(
+    [Spine_S1]="10.10.1.48"    [Spine_S2]="10.10.1.47"
+    [Leaf_L1]="10.10.1.46"     [Leaf_L2]="10.10.1.45"
+    [Leaf_L3]="10.10.1.44"     [Leaf_L4]="10.10.1.43"
+    [Border_Leaf1]="10.10.1.42" [Border_Leaf2]="10.10.1.41"
+    [Exit_Router1]="10.10.1.40" [Exit_Router2]="10.10.1.39"
+    [Host12_1]="10.10.1.30"    [Host12_2]="10.10.1.29"
+    [Host12_3]="10.10.1.28"    [Host34_1]="10.10.1.27"
+    [Host34_2]="10.10.1.26"    [HostB12_1]="10.10.1.25"
+    [HostB12_2]="10.10.1.24"   [MonitorSrv]="10.10.1.10"
+)
+
+# --- VM Metadata Resolution ---
+declare -A VM_TYPE VM_USER VM_PASS
+for sw in Spine_S1 Spine_S2 Leaf_L1 Leaf_L2 Leaf_L3 Leaf_L4 Border_Leaf1 Border_Leaf2; do
+    VM_TYPE[$sw]="sonic";   VM_USER[$sw]="admin";  VM_PASS[$sw]="Welcome0!"
+done
+for er in Exit_Router1 Exit_Router2; do
+    VM_TYPE[$er]="ubuntu";  VM_USER[$er]="ubuntu"; VM_PASS[$er]="Welcome0!"
+done
+for sv in Host12_1 Host12_2 Host12_3 Host34_1 Host34_2 MonitorSrv HostB12_1 HostB12_2; do
+    VM_TYPE[$sv]="ubuntu";  VM_USER[$sv]="ubuntu"; VM_PASS[$sv]="Welcome0!"
+done
+
+echo "=========================================================="
+echo "Starting Parallel SSH Public Key Distribution Loop"
+echo "Target Key: $PUB_KEY_PATH"
+echo "=========================================================="
+
+KEY_CONTENT=$(cat "$PUB_KEY_PATH")
+R810_HYPERVISOR="nh1221@192.168.9.198"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=$SSH_TIMEOUT"
+
+# Use an explicit subshell tracking loop to handle output asynchronously
+for vm in "${VM_DEPLOY_ORDER[@]}"; do
+    ip="${VM_MGMT_IP[$vm]}"
+    user="${VM_USER[$vm]}"
+    pass="${VM_PASS[$vm]}"
+
+    if [[ -z "$pass" ]]; then
+        continue
+    fi
+
+    current_pass="$pass"
+    if [[ "${VM_TYPE[$vm]}" == "sonic" ]]; then
+        current_pass="YourPaSsWoRd"
+    fi
+
+    # Run the SSH injection task in the background for high speed execution
+    (
+        if sshpass -p "$current_pass" ssh $SSH_OPTS -J "$R810_HYPERVISOR" "${user}@${ip}" \
+            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${KEY_CONTENT}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys" &>/dev/null; then
+            printf "  \e[32m✓\e[0m %-15s (%-11s): SUCCESS\n" "$vm" "$ip"
+        else
+            printf "  \e[31m✗\e[0m %-15s (%-11s): FAILED\n" "$vm" "$ip"
+        fi
+    ) &
+done
+
+# Wait for all background injection threads to complete
+wait
+
+echo "=========================================================="
+echo "Distribution Sweeps Complete!"
+echo "=========================================================="
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$ ./'push_lab_keys copy.sh'
+==========================================================
+Starting Parallel SSH Public Key Distribution Loop
+Target Key: /mnt/c/Users/nh1221/.ssh/id_dc_lab.pub
+==========================================================
+  ✓ Leaf_L4         (10.10.1.43 ): SUCCESS
+  ✓ Spine_S1        (10.10.1.48 ): SUCCESS
+  ✓ Spine_S2        (10.10.1.47 ): SUCCESS
+  ✓ Leaf_L1         (10.10.1.46 ): SUCCESS
+  ✓ Leaf_L3         (10.10.1.44 ): SUCCESS
+  ✓ HostB12_1       (10.10.1.25 ): SUCCESS
+  ✓ HostB12_2       (10.10.1.24 ): SUCCESS
+  ✓ Exit_Router1    (10.10.1.40 ): SUCCESS
+  ✓ Exit_Router2    (10.10.1.39 ): SUCCESS
+  ✓ Host34_1        (10.10.1.27 ): SUCCESS
+  ✓ MonitorSrv      (10.10.1.10 ): SUCCESS
+  ✓ Host12_3        (10.10.1.28 ): SUCCESS
+  ✓ Host34_2        (10.10.1.26 ): SUCCESS
+  ✓ Host12_1        (10.10.1.30 ): SUCCESS
+  ✓ Host12_2        (10.10.1.29 ): SUCCESS
+  ✗ Leaf_L2         (10.10.1.45 ): FAILED
+  ✗ Border_Leaf1    (10.10.1.42 ): FAILED
+  ✗ Border_Leaf2    (10.10.1.41 ): FAILED
+==========================================================
+Distribution Sweeps Complete!
+==========================================================
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/_v3$
