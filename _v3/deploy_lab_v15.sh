@@ -1855,6 +1855,37 @@ phase5_validate() {
     fi
     sleep $boot_wait
 
+    # --- Change SONiC default password from image default to desired password ---
+    # SONiC VS image ships with admin/YourPaSsWoRd (hardcoded, no cloud-init support).
+    # Change it to match VM_PASS[sonic] so subsequent SSH/Ansible connections work.
+    local sonic_image_default_pass="YourPaSsWoRd"
+    local desired_sonic_pass="${VM_PASS[sonic]}"
+    if [[ "$desired_sonic_pass" != "$sonic_image_default_pass" ]]; then
+        log "Changing SONiC password from image default to '${desired_sonic_pass}'..."
+        local ssh_opts="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=$SSH_TIMEOUT"
+        for vm in "${vm_list[@]}"; do
+            [[ "${VM_TYPE[$vm]}" == "sonic" ]] || continue
+            local ip="${VM_MGMT_IP[$vm]}"
+            # Wait for SSH to come up on this switch (retries for up to 60s)
+            local ready=false
+            for i in $(seq 1 12); do
+                if sshpass -p "$sonic_image_default_pass" ssh $ssh_opts "admin@${ip}" "echo ok" 2>/dev/null | grep -q "ok"; then
+                    ready=true; break
+                fi
+                sleep 5
+            done
+            if $ready; then
+                sshpass -p "$sonic_image_default_pass" ssh $ssh_opts "admin@${ip}" \
+                    "echo 'admin:${desired_sonic_pass}' | sudo chpasswd" 2>/dev/null && \
+                    printf "  %-18s password changed ✓\n" "$vm" || \
+                    printf "  %-18s password change FAILED\n" "$vm"
+            else
+                printf "  %-18s SSH not ready — skipped password change\n" "$vm"
+            fi
+        done
+        ok "SONiC password change complete."
+    fi
+
     local pass=0 fail_count=0
 
     for vm in "${vm_list[@]}"; do
