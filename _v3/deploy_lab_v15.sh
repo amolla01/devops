@@ -1127,30 +1127,39 @@ XMLEOF
             # Check if it's already active (net-start fails on an already-running network too)
             if ! sudo virsh net-info "$MGMT_NET_NAME" 2>/dev/null | grep -q "Active:.*yes"; then
                 warn "Management network '$MGMT_NET_NAME' exists but cannot start (stale definition). Recreating..."
+                # Running VMs have tap/vnet interfaces enslaved to br-mgmt, which prevents
+                # bridge deletion. Since the mgmt network is broken, those VMs are useless.
+                # Destroy ALL lab VMs first so their tap interfaces are released.
+                warn "Destroying all lab VMs (their mgmt NICs hold br-mgmt open)..."
+                for vm in "${VM_DEPLOY_ORDER[@]}"; do
+                    sudo virsh destroy "$vm" 2>/dev/null || true
+                    sudo virsh undefine "$vm" 2>/dev/null || true
+                done
+                # Also catch orphans not in VM_DEPLOY_ORDER
+                local stale_doms
+                stale_doms=$(sudo virsh list --all --name 2>/dev/null | grep -E '^(Spine_|Leaf_|Border_Leaf|Exit_Router|Host|MonitorSrv)' || true)
+                for orphan in $stale_doms; do
+                    sudo virsh destroy "$orphan" 2>/dev/null || true
+                    sudo virsh undefine "$orphan" 2>/dev/null || true
+                done
+                # Now tear down the stale network definition
                 sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-                # Kill any orphan dnsmasq that was bound to this network
-                sudo pkill -9 -f "dnsmasq.*br-mgmt" 2>/dev/null || true
-                # Remove the stale bridge device left behind (virsh undefine does not remove it)
-                # First detach all ports from the bridge
+                # Kill any orphan dnsmasq bound to this bridge (use [] trick to avoid self-match)
+                sudo pkill -9 -f "[d]nsmasq.*br-mgmt" 2>/dev/null || true
+                # Remove the stale bridge device (now safe — no VMs holding tap interfaces)
                 if ip link show br-mgmt &>/dev/null; then
-                    for port in $(ls /sys/class/net/br-mgmt/brif/ 2>/dev/null); do
-                        sudo ip link set "$port" nomaster 2>/dev/null || true
-                        sudo ip link set "$port" down 2>/dev/null || true
-                    done
                     sudo ip link set br-mgmt down 2>/dev/null || true
                     sudo ip link delete dev br-mgmt 2>/dev/null || true
-                    # Fallback: brctl if ip link delete didn't work
-                    if ip link show br-mgmt &>/dev/null; then
-                        sudo brctl delbr br-mgmt 2>/dev/null || true
-                    fi
                 fi
-                # Final sanity check — if bridge STILL exists, something is very wrong
+                # Final sanity check
                 if ip link show br-mgmt &>/dev/null; then
-                    die "Cannot remove stale br-mgmt bridge. Manual intervention: 'sudo ip link delete dev br-mgmt'"
+                    die "Cannot remove stale br-mgmt bridge after destroying all VMs. Manual: 'sudo ip link delete dev br-mgmt'"
                 fi
+                # Also clean up disks/ISOs since VMs were destroyed
+                sudo rm -rf "$DISK_DIR"/* "$CLOUD_INIT_DIR"/*
                 _define_mgmt_net
-                ok "Management network recreated from scratch."
+                ok "Management network recreated from scratch (all VMs will be redeployed)."
             fi
         fi
         # Verify the network is actually active before proceeding
