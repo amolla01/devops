@@ -1129,11 +1129,26 @@ XMLEOF
                 warn "Management network '$MGMT_NET_NAME' exists but cannot start (stale definition). Recreating..."
                 sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-                # Remove the stale bridge device left behind (virsh undefine does not remove it)
-                sudo ip link set br-mgmt down 2>/dev/null || true
-                sudo ip link delete br-mgmt type bridge 2>/dev/null || true
                 # Kill any orphan dnsmasq that was bound to this network
-                sudo pkill -f "dnsmasq.*br-mgmt" 2>/dev/null || true
+                sudo pkill -9 -f "dnsmasq.*br-mgmt" 2>/dev/null || true
+                # Remove the stale bridge device left behind (virsh undefine does not remove it)
+                # First detach all ports from the bridge
+                if ip link show br-mgmt &>/dev/null; then
+                    for port in $(ls /sys/class/net/br-mgmt/brif/ 2>/dev/null); do
+                        sudo ip link set "$port" nomaster 2>/dev/null || true
+                        sudo ip link set "$port" down 2>/dev/null || true
+                    done
+                    sudo ip link set br-mgmt down 2>/dev/null || true
+                    sudo ip link delete dev br-mgmt 2>/dev/null || true
+                    # Fallback: brctl if ip link delete didn't work
+                    if ip link show br-mgmt &>/dev/null; then
+                        sudo brctl delbr br-mgmt 2>/dev/null || true
+                    fi
+                fi
+                # Final sanity check — if bridge STILL exists, something is very wrong
+                if ip link show br-mgmt &>/dev/null; then
+                    die "Cannot remove stale br-mgmt bridge. Manual intervention: 'sudo ip link delete dev br-mgmt'"
+                fi
                 _define_mgmt_net
                 ok "Management network recreated from scratch."
             fi
@@ -2547,9 +2562,16 @@ teardown() {
     sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
     sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
     # Remove the br-mgmt Linux bridge device (virsh net-undefine leaves it behind)
-    sudo ip link set br-mgmt down 2>/dev/null || true
-    sudo ip link delete br-mgmt type bridge 2>/dev/null || true
-    sudo pkill -f "dnsmasq.*br-mgmt" 2>/dev/null || true
+    sudo pkill -9 -f "dnsmasq.*br-mgmt" 2>/dev/null || true
+    if ip link show br-mgmt &>/dev/null; then
+        for port in $(ls /sys/class/net/br-mgmt/brif/ 2>/dev/null); do
+            sudo ip link set "$port" nomaster 2>/dev/null || true
+            sudo ip link set "$port" down 2>/dev/null || true
+        done
+        sudo ip link set br-mgmt down 2>/dev/null || true
+        sudo ip link delete dev br-mgmt 2>/dev/null || true
+        sudo brctl delbr br-mgmt 2>/dev/null || true
+    fi
     # Catch orphan libvirt networks matching lab patterns
     local all_nets
     all_nets=$(sudo virsh net-list --all --name 2>/dev/null | grep -E '^(br-S|br-L|br-BL|br-HB|br-MS|br-wan|br-ER|dc-mgmt)' || true)
