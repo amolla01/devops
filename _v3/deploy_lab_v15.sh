@@ -1129,6 +1129,11 @@ XMLEOF
                 warn "Management network '$MGMT_NET_NAME' exists but cannot start (stale definition). Recreating..."
                 sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
+                # Remove the stale bridge device left behind (virsh undefine does not remove it)
+                sudo ip link set br-mgmt down 2>/dev/null || true
+                sudo ip link delete br-mgmt type bridge 2>/dev/null || true
+                # Kill any orphan dnsmasq that was bound to this network
+                sudo pkill -f "dnsmasq.*br-mgmt" 2>/dev/null || true
                 _define_mgmt_net
                 ok "Management network recreated from scratch."
             fi
@@ -2541,6 +2546,10 @@ teardown() {
     done
     sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
     sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
+    # Remove the br-mgmt Linux bridge device (virsh net-undefine leaves it behind)
+    sudo ip link set br-mgmt down 2>/dev/null || true
+    sudo ip link delete br-mgmt type bridge 2>/dev/null || true
+    sudo pkill -f "dnsmasq.*br-mgmt" 2>/dev/null || true
     # Catch orphan libvirt networks matching lab patterns
     local all_nets
     all_nets=$(sudo virsh net-list --all --name 2>/dev/null | grep -E '^(br-S|br-L|br-BL|br-HB|br-MS|br-wan|br-ER|dc-mgmt)' || true)
