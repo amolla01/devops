@@ -1113,36 +1113,19 @@ XMLEOF
 </network>
 XMLEOF
         sudo virsh net-define "$net_xml"
-        # Unconditionally remove any stale br-mgmt device before starting the network.
-        # virsh net-start creates br-mgmt — if it already exists (stale), start fails.
-        # Try every possible method to remove the interface (OVS, Linux bridge, raw device).
-        # OVS deletion is async (vswitchd must process it), so we verify + wait afterward.
+        # Ensure no stale br-mgmt device exists before virsh net-start (it creates one).
+        # The caller is responsible for killing dnsmasq — here we just handle the interface.
         sudo ovs-vsctl --timeout=10 --if-exists del-br br-mgmt 2>/dev/null || true
         sudo ovs-vsctl --timeout=10 --if-exists del-port br-mgmt 2>/dev/null || true
         sudo ip link set br-mgmt down 2>/dev/null || true
         sudo ip link delete dev br-mgmt 2>/dev/null || true
         sudo brctl delbr br-mgmt 2>/dev/null || true
-        # Kill ALL dnsmasq processes on this system — this is a dedicated lab hypervisor.
-        # Pattern-based pkill is unreliable (libvirt dnsmasq uses various cmdline formats).
-        sudo killall -9 dnsmasq 2>/dev/null || true
-        # Also kill whatever holds port 53 on the management gateway IP (belt + suspenders)
-        sudo fuser -k 53/udp 2>/dev/null || true
-        sudo fuser -k 53/tcp 2>/dev/null || true
-        sudo fuser -k "${MGMT_NET_GW}:53/udp" 2>/dev/null || true
-        # Remove stale libvirt dnsmasq state/lease/pid files
-        sudo rm -f /var/lib/libvirt/dnsmasq/dc-mgmt.* 2>/dev/null || true
-        sudo rm -f /run/libvirt/network/dc-mgmt.pid 2>/dev/null || true
         # Wait for the kernel interface to actually disappear (OVS is async)
         local wait_count=0
         while ip link show br-mgmt &>/dev/null; do
             wait_count=$((wait_count + 1))
             if [[ $wait_count -ge 10 ]]; then
-                # Debug: show what br-mgmt actually is
-                warn "br-mgmt persists after 10s. Diagnostics:"
-                ip link show br-mgmt 2>&1 | sed 's/^/    /' >&2
-                sudo ovs-vsctl find interface name=br-mgmt 2>&1 | sed 's/^/    /' >&2
-                # Last resort: restart openvswitch to force cleanup
-                warn "Restarting openvswitch-switch to force interface cleanup..."
+                warn "br-mgmt persists after 10s. Restarting openvswitch-switch..."
                 sudo systemctl restart openvswitch-switch
                 sleep 2
                 sudo ovs-vsctl --timeout=10 --if-exists del-br br-mgmt 2>/dev/null || true
@@ -1186,7 +1169,6 @@ XMLEOF
                 # Now tear down the stale network definition
                 sudo virsh net-destroy "$MGMT_NET_NAME" 2>/dev/null || true
                 sudo virsh net-undefine "$MGMT_NET_NAME" 2>/dev/null || true
-                # Kill ALL orphan dnsmasq (libvirt uses conf-file path with network name)
                 # Kill ALL dnsmasq — dedicated lab hypervisor, pattern pkill is unreliable
                 sudo killall -9 dnsmasq 2>/dev/null || true
                 sudo fuser -k 53/udp 2>/dev/null || true
@@ -1201,8 +1183,11 @@ XMLEOF
                 sudo brctl delbr br-mgmt 2>/dev/null || true
                 # Also clean up disks/ISOs since VMs were destroyed
                 sudo rm -rf "$DISK_DIR"/* "$CLOUD_INIT_DIR"/*
+                # Recreate the network from scratch — DHCP entries are embedded in the XML
                 _define_mgmt_net
                 ok "Management network recreated from scratch (all VMs will be redeployed)."
+                # Skip verification and DHCP sync — network was just freshly created with correct config
+                return 0
             fi
         fi
         # Verify the network is actually active before proceeding
