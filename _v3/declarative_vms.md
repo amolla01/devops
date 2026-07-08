@@ -220,22 +220,24 @@ fabric_vlans:
 ```
 hostname: "Exit_Router1"
 mgmt_ip: "10.10.1.40"
+mgmt_gateway: "10.10.1.1"
 bgp_local_asn: 65101
 
-# Documents the server's local interfaces wiring back into the Border Leaf block
+# 🧠 TRANSPORT WIRING MATRIX — MULTI-HOMED TO EDGE BORDERS
 server_interfaces:
   enp2s0:
-    speed: "10000"          # Maps directly to sub-interface Ethernet5/1
+    speed: "10000"
     connected_to: "Border_Leaf1"
     switch_port: "Ethernet0"
-    breakout_channel: "1"
+    breakout_channel: "0"          # Maps directly to Border_Leaf1's Ethernet5/1 sub-interface
     neighbor_asn: 65021
   enp3s0:
     speed: "10000"
     connected_to: "Border_Leaf2"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps directly to sub-interface Ethernet5/2 on Border 2
+    breakout_channel: "0"          # Maps directly to Border_Leaf2's Ethernet5/1 sub-interface
     neighbor_asn: 65022
+
 ```
 ---
 ```
@@ -333,24 +335,28 @@ ceph_storage_ip: "192.168.20.13/32"
 ---
 ```
 hostname: "Host34_1"
-mgmt_ip: "10.10.1.27/24"
+mgmt_ip: "10.10.1.27"
 mgmt_gateway: "10.10.1.1"
+bgp_local_asn: 65237
 
-# ➡️ PHYSICAL TOPOLOGY TRANSIT HOOK
-# Documents exactly where this server's data cards plug into the network fabric
+# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA LEAVES
 server_interfaces:
   enp2s0:
     speed: "10000"
     connected_to: "Leaf_L3"
-    switch_port: "Ethernet0"        # Parent port on the switch
-    breakout_channel: "0"           # First sub-port (lane 125)
-    neighbor_asn: 65013             # Connects to Leaf_L3's ASN
+    switch_port: "Ethernet0"
+    breakout_channel: "0"          # Maps to sub-interface key Ethernet1/1 on Leaf_L3
+    neighbor_asn: 65013
   enp3s0:
     speed: "10000"
     connected_to: "Leaf_L4"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "0"          # Maps to sub-interface key Ethernet1/1 on Leaf_L4
     neighbor_asn: 65014
+
+loopback_ip: "10.0.20.1/32"
+ceph_storage_ip: "192.168.20.21/32"
+
 ```
 ---
 ```
@@ -381,74 +387,77 @@ ceph_storage_ip: "192.168.20.22/32"
 ---
 ```
 hostname: "MonitorSrv"
-mgmt_ip: "10.10.1.29"
+mgmt_ip: "10.10.1.10"
 mgmt_gateway: "10.10.1.1"
-bgp_local_asn: 65238
+bgp_local_asn: 65301
 
-# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA BREAKOUT FABRICS
+# 🧠 MONITORING WIRE MECHANICS — DUAL-HOMED TO FABRIC
 server_interfaces:
   enp2s0:
     speed: "10000"
     connected_to: "Leaf_L3"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "2"          # Target sub-port Ethernet1/3 on Leaf_L3
     neighbor_asn: 65013
   enp3s0:
     speed: "10000"
     connected_to: "Leaf_L4"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "2"          # Target sub-port Ethernet1/3 on Leaf_L4
     neighbor_asn: 65014
 
-# 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
-loopback_ip: "10.0.20.2/32"
-ceph_storage_ip: "192.168.20.22/32"
+loopback_ip: "10.0.30.1/32"
+
 ```
 ---
 ```
 hostname: "HostB12_1"
-mgmt_ip: "10.10.1.25/24"
+mgmt_ip: "10.10.1.25"
 mgmt_gateway: "10.10.1.1"
+bgp_local_asn: 65250
 
-# ➡️ PHYSICAL TOPOLOGY TRANSIT HOOK
-# Documents exactly where this server's data cards plug into the network fabric
+# 🧠 STORAGE FABRIC ATTACHMENT TIER
 server_interfaces:
   enp2s0:
     speed: "10000"
     connected_to: "Border_Leaf1"
-    switch_port: "Ethernet0"        # Parent port on the switch
-    breakout_channel: "0"           # First sub-port (lane 125)
-    neighbor_asn: 65021             # Connects to Border_Leaf1's ASN
+    switch_port: "Ethernet0"
+    breakout_channel: "2"          # Maps directly to sub-interface Ethernet5/3 on Border 1
+    neighbor_asn: 65021
   enp3s0:
     speed: "10000"
     connected_to: "Border_Leaf2"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "2"          # Maps directly to sub-interface Ethernet5/3 on Border 2
     neighbor_asn: 65022
+
+loopback_ip: "10.0.40.1/32"
+ceph_storage_ip: "192.168.20.51/32"
+
 ```
 ---
 ```
 hostname: "HostB12_2"
 mgmt_ip: "10.10.1.24"
 mgmt_gateway: "10.10.1.1"
-bgp_local_asn: 65238
+bgp_local_asn: 65251
 
-# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA BREAKOUT FABRICS
+# 🧠 STORAGE FABRIC ATTACHMENT TIER
 server_interfaces:
   enp2s0:
     speed: "10000"
     connected_to: "Border_Leaf1"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "3"          # Maps directly to sub-interface Ethernet5/4 on Border 1
     neighbor_asn: 65021
   enp3s0:
     speed: "10000"
     connected_to: "Border_Leaf2"
     switch_port: "Ethernet0"
-    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    breakout_channel: "3"          # Maps directly to sub-interface Ethernet5/4 on Border 2
     neighbor_asn: 65022
 
-# 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
-loopback_ip: "10.0.20.2/32"
-ceph_storage_ip: "192.168.20.22/32"
+loopback_ip: "10.0.40.2/32"
+ceph_storage_ip: "192.168.20.52/32"
+
 ```
