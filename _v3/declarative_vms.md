@@ -19,9 +19,9 @@ switch_ports:
 
 # Safe empty array fallback to satisfy the template engine pipeline
 breakout_configurations: {}
-```
+
 ---
-```
+
 hostname: "Spine_S2"
 router_id: "10.0.0.2"
 bgp_local_asn: 65000
