@@ -1,4 +1,5 @@
 ---
+```
 hostname: "Spine_S1"
 router_id: "10.0.0.1"
 bgp_local_asn: 65000
@@ -18,8 +19,9 @@ switch_ports:
 
 # Safe empty array fallback to satisfy the template engine pipeline
 breakout_configurations: {}
-
+```
 ---
+```
 hostname: "Spine_S2"
 router_id: "10.0.0.2"
 bgp_local_asn: 65000
@@ -41,8 +43,9 @@ switch_ports:
   Ethernet20: { breakout: "none", speed: "40000", lanes: "37,38,39,40", index: "6", neighbor: "Border_Leaf2", rem_port: "Ethernet120" }
 
 breakout_configurations: {}
-
+```
 ---
+```
 hostname: "Leaf_L1"
 router_id: "10.0.1.1"
 bgp_local_asn: 65011
@@ -66,8 +69,9 @@ switch_ports:
 
 # Tells Stage 4 to pull the flat string list configuration inherited via group_vars
 breakout_configurations: {}
-
+```
 ---
+```
 hostname: "Leaf_L2"
 router_id: "10.0.1.2"
 bgp_local_asn: 65012
@@ -88,8 +92,9 @@ switch_ports:
   Ethernet2: { breakout: "none", speed: "10000", lanes: "15", index: "3", role: "access", neighbor: "Host12_3", rem_port: "enp3s0", neighbor_asn: 65236 }
 
 breakout_configurations: {}
-
+```
 ---
+```
 hostname: "Leaf_L3"
 router_id: "10.0.1.3"
 bgp_local_asn: 65013
@@ -111,8 +116,9 @@ switch_ports:
       - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "127", index: "1", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp2s0", neighbor_asn: 65301 }
       - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "128", index: "1", speed: "10000", admin: "down" } # Unused cage track
 
-
-----
+```
+---
+```
 hostname: "Leaf_L4"
 router_id: "10.0.1.4"
 bgp_local_asn: 65014
@@ -136,8 +142,9 @@ switch_ports:
       - { name: "Ethernet1", alias: "Ethernet1/2", lanes: "126", index: "1", speed: "10000", neighbor: "Host34_2",   rem_port: "enp3s0", neighbor_asn: 65235 }
       - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "127", index: "1", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp3s0", neighbor_asn: 65301 }
       - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "128", index: "1", speed: "10000", admin: "down" }
-
+```
 ---
+```
 hostname: "Border_Leaf1"
 router_id: "10.0.2.1"
 bgp_local_asn: 65021
@@ -172,8 +179,9 @@ fabric_vrfs:
 fabric_vlans:
   - { id: 10, name: "Vlan10", vrf_binding: "vrf-transit" }
   - { id: 20, name: "Vlan20", vrf_binding: "vrf-storage" }
-
+```
 ---
+```
 hostname: "Border_Leaf2"
 router_id: "10.0.2.2"
 bgp_local_asn: 65022
@@ -207,8 +215,9 @@ fabric_vrfs:
 fabric_vlans:
   - { id: 10, name: "Vlan10", vrf_binding: "vrf-transit" }
   - { id: 20, name: "Vlan20", vrf_binding: "vrf-storage" }
-
+```
 ---
+```
 hostname: "Exit_Router1"
 mgmt_ip: "10.10.1.40"
 bgp_local_asn: 65101
@@ -221,8 +230,9 @@ server_interfaces:
     switch_port: "Ethernet0"
     breakout_channel: "0"          # Maps directly to sub-interface Ethernet5/1
     neighbor_asn: 65021
-
+```
 ---
+```
 hostname: "Exit_Router2"
 mgmt_ip: "10.10.1.39"
 bgp_local_asn: 65102
@@ -241,8 +251,9 @@ server_interfaces:
     switch_port: "Ethernet0"
     breakout_channel: "1"          # Maps directly to sub-interface Ethernet5/2 on Border 2
     neighbor_asn: 65022
-
+```
 ---
+```
 hostname: "Host12_1"
 mgmt_ip: "10.10.1.31"
 mgmt_gateway: "10.10.1.1"
@@ -264,8 +275,9 @@ server_interfaces:
 # 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
 loopback_ip: "10.0.10.1/32"
 ceph_storage_ip: "192.168.20.11/32"
-
+```
 ---
+```
 hostname: "Host12_2"
 mgmt_ip: "10.10.1.32"
 mgmt_gateway: "10.10.1.1"
@@ -287,8 +299,9 @@ server_interfaces:
 # 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
 loopback_ip: "10.0.10.2/32"
 ceph_storage_ip: "192.168.20.12/32"
-
+```
 ---
+```
 hostname: "Host12_3"
 mgmt_ip: "10.10.1.33"
 mgmt_gateway: "10.10.1.1"
@@ -310,8 +323,9 @@ server_interfaces:
 # 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
 loopback_ip: "10.0.10.3/32"
 ceph_storage_ip: "192.168.20.13/32"
-
+```
 ---
+```
 hostname: "Host34_1"
 mgmt_ip: "10.10.1.27/24"
 mgmt_gateway: "10.10.1.1"
@@ -325,8 +339,9 @@ server_interfaces:
     switch_port: "Ethernet0"        # Parent port on the switch
     breakout_channel: "0"           # First sub-port (lane 125)
     neighbor_asn: 65013             # Connects to Leaf_L3's ASN
-
+```
 ---
+```
 hostname: "Host34_2"
 mgmt_ip: "10.10.1.28"
 mgmt_gateway: "10.10.1.1"
@@ -350,6 +365,6 @@ server_interfaces:
 # 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
 loopback_ip: "10.0.20.2/32"
 ceph_storage_ip: "192.168.20.22/32"
-
+```
 ---
 
