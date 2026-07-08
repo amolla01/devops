@@ -201,8 +201,8 @@ switch_ports:
     breakout: "4x10G"
     role: "access"
     children:
-      - { name: "Ethernet0", alias: "Ethernet5/1", lanes: "9",  index: "5", speed: "10000", neighbor: "Exit_Router1", rem_port: "enp3s0", neighbor_asn: 65101 }
-      - { name: "Ethernet1", alias: "Ethernet5/2", lanes: "10", index: "5", speed: "10000", neighbor: "Exit_Router2", rem_port: "enp3s0", neighbor_asn: 65102 }
+      - { name: "Ethernet0", alias: "Ethernet5/1", lanes: "9",  index: "5", speed: "10000", neighbor: "Exit_Router2", rem_port: "enp3s0", neighbor_asn: 65102 }
+      - { name: "Ethernet1", alias: "Ethernet5/2", lanes: "10", index: "5", speed: "10000", neighbor: "Exit_Router1", rem_port: "enp3s0", neighbor_asn: 65101 }
       - { name: "Ethernet2", alias: "Ethernet5/3", lanes: "11", index: "5", speed: "10000", neighbor: "HostB12_1",    rem_port: "enp3s0", neighbor_asn: 65250 }
       - { name: "Ethernet3", alias: "Ethernet5/4", lanes: "12", index: "5", speed: "10000", neighbor: "HostB12_2",    rem_port: "enp3s0", neighbor_asn: 65251 }
 
@@ -225,11 +225,17 @@ bgp_local_asn: 65101
 # Documents the server's local interfaces wiring back into the Border Leaf block
 server_interfaces:
   enp2s0:
-    speed: "10000"
+    speed: "10000"          # Maps directly to sub-interface Ethernet5/1
     connected_to: "Border_Leaf1"
     switch_port: "Ethernet0"
-    breakout_channel: "0"          # Maps directly to sub-interface Ethernet5/1
+    breakout_channel: "1"
     neighbor_asn: 65021
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps directly to sub-interface Ethernet5/2 on Border 2
+    neighbor_asn: 65022
 ```
 ---
 ```
@@ -339,6 +345,12 @@ server_interfaces:
     switch_port: "Ethernet0"        # Parent port on the switch
     breakout_channel: "0"           # First sub-port (lane 125)
     neighbor_asn: 65013             # Connects to Leaf_L3's ASN
+  enp3s0:
+    speed: "10000"
+    connected_to: "Leaf_L4"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65014
 ```
 ---
 ```
@@ -365,6 +377,78 @@ server_interfaces:
 # 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
 loopback_ip: "10.0.20.2/32"
 ceph_storage_ip: "192.168.20.22/32"
+``
+---
+```
+hostname: "MonitorSrv"
+mgmt_ip: "10.10.1.29"
+mgmt_gateway: "10.10.1.1"
+bgp_local_asn: 65238
+
+# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA BREAKOUT FABRICS
+server_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Leaf_L3"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65013
+  enp3s0:
+    speed: "10000"
+    connected_to: "Leaf_L4"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65014
+
+# 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
+loopback_ip: "10.0.20.2/32"
+ceph_storage_ip: "192.168.20.22/32"
 ```
 ---
+```
+hostname: "HostB12_1"
+mgmt_ip: "10.10.1.25/24"
+mgmt_gateway: "10.10.1.1"
 
+# ➡️ PHYSICAL TOPOLOGY TRANSIT HOOK
+# Documents exactly where this server's data cards plug into the network fabric
+server_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Border_Leaf1"
+    switch_port: "Ethernet0"        # Parent port on the switch
+    breakout_channel: "0"           # First sub-port (lane 125)
+    neighbor_asn: 65021             # Connects to Border_Leaf1's ASN
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65022
+```
+---
+```
+hostname: "HostB12_2"
+mgmt_ip: "10.10.1.24"
+mgmt_gateway: "10.10.1.1"
+bgp_local_asn: 65238
+
+# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA BREAKOUT FABRICS
+server_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Border_Leaf1"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65021
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "1"          # Maps cleanly to Arista sub-interface key Ethernet1/2
+    neighbor_asn: 65022
+
+# 🧠 MULTI-VRF INTENT AND CORE WORKLOAD ADDRESS IDENTITIES
+loopback_ip: "10.0.20.2/32"
+ceph_storage_ip: "192.168.20.22/32"
+```
