@@ -1,4 +1,408 @@
 ---
+inventory/hosts.yml
+---
+# =============================================================================
+# L3 CLOS Fabric Inventory (MERGED SSOT)
+# =============================================================================
+# Topology: 2 Spines → 4 Leaves + 2 Border Leaves → Exit Router
+#           6 Multi-Homed Ubuntu Host Servers (dual-connected to leaf pairs)
+#           4 Dedicated Ceph Storage Servers (HDD + SSD tiers)
+#           1 Monitoring Server
+#
+# Switch Hardware:
+#   Spine:        Celestica DX010 (Seastone)   - 32x100G QSFP28, Broadcom Tomahawk
+#   Leaf_L1/L2:  Edgecore/Accton AS5712-54X   - 48x10G SFP+ + 6x40G QSFP+, Trident II
+#   Leaf_L3/L4:  Arista 7050QX-32S            - 32x40G QSFP+, Broadcom Trident II
+#   Border-Leaf: Arista 7050QX-32S            - 32x40G QSFP+, Broadcom Trident II
+#
+# Networks:
+#   Management:   172.16.2.0/24  (libvirt NAT in KVM, reachable from hypervisor)
+#   iDRAC / PXE:  192.168.255.0/25  (OOB server management)
+#   Loopback (switches): 10.0.0.0/24 (spines), 10.0.1.0/24 (leaves), 10.0.2.0/24 (border)
+#   Loopback (servers):  10.10.255.0/24 (announced via FRR BGP)
+#   Fabric P2P:          IPv6 link-local with BGP unnumbered
+# =============================================================================
+all:
+  # 🧠 THE DEFINITIVE INVENTORY OVERRIDE:
+  vars:
+    ansible_ssh_private_key_file: "/mnt/c/Users/nh1221/.ssh/id_dc_lab"
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+  children:
+    # =================================================================
+    # Management / Observability (service-tier groups)
+    # =================================================================
+    management_services:
+      hosts:
+        HostB12_1:
+
+    observability:
+      hosts:
+        MonitorSrv:
+
+    # =================================================================
+    # SONiC Network Switches
+    # =================================================================
+    spines:
+      hosts:
+        Spine_S1: { ansible_host: 10.10.1.48 }
+        Spine_S2: { ansible_host: 10.10.1.47 }
+
+    accton_leaves:
+      hosts:
+        Leaf_L1:  { ansible_host: 10.10.1.46 }
+        Leaf_L2:  { ansible_host: 10.10.1.45 }
+
+    # Group 1 for standard 7050QX-32 platform profiles
+    arista_qx32_leaves:
+      hosts:
+        Leaf_L3:  { ansible_host: 10.10.1.44 }
+        Leaf_L4:  { ansible_host: 10.10.1.43 }
+
+    # Group 2 for specialized 7050QX-32S border platforms
+    arista_qx32s_borders:
+      hosts:
+        Border_Leaf1: { ansible_host: 10.10.1.42 }
+        Border_Leaf2: { ansible_host: 10.10.1.41 }
+
+    exit_routers:
+      hosts:
+        Exit_Router1: { ansible_host: 10.10.1.40 }
+        Exit_Router2: { ansible_host: 10.10.1.39 }
+
+    # sonic_switches:
+    #   children:
+    #     spines:
+    #       hosts:
+    #         Spine_S1:
+    #           ansible_host: 10.10.1.48
+    #         Spine_S2:
+    #           ansible_host: 10.10.1.47
+    #     leaves:
+    #       children:
+    #         leaf_accton:       # Accton/Edgecore AS5712-54X — serves host pair 12
+    #           hosts:
+    #             Leaf_L1:
+    #               ansible_host: 10.10.1.46
+    #             Leaf_L2:
+    #               ansible_host: 10.10.1.45
+    #         leaf_arista:       # Arista 7050QX-32S — serves host pair 34
+    #           hosts:
+    #             Leaf_L3:
+    #               ansible_host: 10.10.1.44
+    #             Leaf_L4:
+    #               ansible_host: 10.10.1.43
+    #     border_leaves:
+    #       hosts:
+    #         Border_Leaf1:
+    #           ansible_host: 10.10.1.42
+    #         Border_Leaf2:
+    #           ansible_host: 10.10.1.41
+
+    # =================================================================
+    # Exit Routers (Now Ubuntu VMs - not SONiC/Mikrotik managed)
+    # =================================================================
+    # exit_routers:
+    #   hosts:
+    #     Exit_Router1:
+    #       ansible_host: 10.10.1.40
+    #       # 🧠 FORCE HIGH-PRECEDENCE HOST VARIABLE PINNING:
+    #       # ansible_user: ubuntu
+    #     Exit_Router2:
+    #       ansible_host: 10.10.1.39
+    #       # ansible_user: ubuntu
+
+    # =================================================================
+    # Ubuntu Host Servers (bare-metal, MaaS-commissioned)
+    # =================================================================
+    servers:
+      vars:
+        ansible_user: ubuntu
+        ansible_password: "{{ vault_ansible_password | default('Welcome0!') }}"
+        ansible_become: true
+      children:
+        servers_leaf_pair_12:
+          hosts:
+            Host12_1:
+              ansible_host: 10.10.1.30
+              idrac_pxe_ip: 192.168.255.11
+            Host12_2:
+              ansible_host: 10.10.1.29
+              idrac_pxe_ip: 192.168.255.12
+            Host12_3:
+              ansible_host: 10.10.1.28
+              idrac_pxe_ip: 192.168.255.13
+        servers_leaf_pair_34:
+          hosts:
+            Host34_1:
+              ansible_host: 10.10.1.27
+              idrac_pxe_ip: 192.168.255.21
+            Host34_2:
+              ansible_host: 10.10.1.26
+              idrac_pxe_ip: 192.168.255.22
+            MonitorSrv:
+              ansible_host: 10.10.1.10
+              idrac_pxe_ip: 192.168.255.33              
+        servers_border:
+          hosts:
+            HostB12_1:
+              ansible_host: 10.10.1.25
+              idrac_pxe_ip: 192.168.255.31
+            HostB12_2:
+              ansible_host: 10.10.1.24
+              idrac_pxe_ip: 192.168.255.32
+
+    # =================================================================
+    # Kubernetes Roles
+    # =================================================================
+    kube_controllers:
+      hosts:
+        Host12_1:
+          kube_node_name: "host12-1"
+          etcd_member_name: "host12-1"
+        Host34_1:
+          kube_node_name: "host34-1"
+          etcd_member_name: "host34-1"
+        HostB12_1:
+          kube_node_name: "hostb12-1"
+          etcd_member_name: "hostb12-1"
+    kube_workers:
+      hosts:
+        Host12_2:
+          kube_node_name: "host12-2"
+        Host12_3:
+          kube_node_name: "host12-3"
+        Host34_2:
+          kube_node_name: "host34-2"
+
+    # Parent group: all Kubernetes nodes (controllers + workers)
+    kube_nodes:
+      children:
+        kube_controllers:
+        kube_workers:
+
+    # Aliases — some playbooks use k8_ prefix
+    k8_controllers:
+      children:
+        kube_controllers:
+    k8_workers:
+      children:
+        kube_workers:
+    k8_nodes:
+      children:
+        kube_nodes:
+
+    # =================================================================
+    # Ceph Storage Roles
+    # =================================================================
+    ceph_mon:
+      hosts:
+        Host12_1:
+          monitor_address: "10.10.1.30"
+        Host34_1:
+          monitor_address: "10.10.1.27"
+        HostB12_1:
+          monitor_address: "10.10.1.25"        
+    ceph_osd:
+      hosts:
+        Host12_1:
+          ceph_osd_devices: ["/dev/vdb", "/dev/vdc"]
+        Host12_2:
+          ceph_osd_devices: ["/dev/vdb", "/dev/vdc"]
+        Host12_3:
+          ceph_osd_devices: ["/dev/vdb", "/dev/vdc"]
+        Host34_1:
+          ceph_osd_devices: ["/dev/vdb", "/dev/vdc"]
+        Host34_2:
+          ceph_osd_devices: ["/dev/vdb", "/dev/vdc"]
+        HostB12_1:
+          ceph_osd_devices: ["/dev/vdb"]
+        # -----------------------------------------------------------
+        # Real-hardware storage servers (commented out for KVM lab)
+        # Uncomment when deploying on real_hardware profile
+        # -----------------------------------------------------------
+        # Storage_Server_HDD_01:
+        #   ceph_osd_devices: ["/dev/sda", "/dev/sdb", "/dev/sdc", "/dev/sdd"]
+        #   ceph_crush_device_class: "hdd"
+        # Storage_Server_HDD_02:
+        #   ceph_osd_devices: ["/dev/sda", "/dev/sdb", "/dev/sdc", "/dev/sdd"]
+        #   ceph_crush_device_class: "hdd"
+        # Storage_Server_SSD_01:
+        #   ceph_osd_devices: ["/dev/nvme0n1", "/dev/nvme1n1", "/dev/nvme2n1", "/dev/nvme3n1"]
+        #   ceph_crush_device_class: "ssd"
+        # Storage_Server_SSD_02:
+        #   ceph_osd_devices: ["/dev/nvme0n1", "/dev/nvme1n1", "/dev/nvme2n1", "/dev/nvme3n1"]
+        #   ceph_crush_device_class: "ssd"
+
+    # Convenience aliases used in _v3 playbooks
+    ceph_controllers:
+      children:
+        ceph_mon:
+    ceph_storage:
+      children:
+        ceph_osd:
+
+    # =================================================================
+    # OpenStack Roles
+    # =================================================================
+    openstack_controllers:
+      hosts:
+        Host12_1:
+          os_controller_priority: 100
+        Host34_1:
+          os_controller_priority: 90
+    openstack_computes:
+      hosts:
+        Host12_2:
+          os_availability_zone: "az-pod12"
+        Host12_3:
+          os_availability_zone: "az-pod12"
+        Host34_2:
+          os_availability_zone: "az-pod34"
+    openstack_gateways:
+      hosts:
+        HostB12_1:
+          os_gateway_role: "primary"
+        HostB12_2:
+          os_gateway_role: "secondary"
+
+    # Parent group: all OpenStack nodes (controllers + computes + gateways)
+    openstack_nodes:
+      children:
+        openstack_controllers:
+        openstack_computes:
+        openstack_gateways:
+
+    # Aliases — some playbooks use singular
+    openstack_compute:
+      children:
+        openstack_computes:
+
+    premium_firewall_nodes:
+      hosts:
+        HostB12_1:
+        HostB12_2:
+
+    # =================================================================
+    # EVPN Hypervisors (BGP/EVPN-to-the-Host)
+    # =================================================================
+    # Servers participating in EVPN overlay (FRR + VXLAN + VRF).
+    # Phase 1: Static VRF/VNI provisioned by Ansible
+    # Phase 2: Dynamic route advertisement via OVN BGP Agent
+    # =================================================================
+    evpn_hypervisors:
+      hosts:
+        Host12_1:
+          evpn_vtep_ip: "10.10.255.1"
+          evpn_server_id: 1
+        Host12_2:
+          evpn_vtep_ip: "10.10.255.2"
+          evpn_server_id: 2
+        Host12_3:
+          evpn_vtep_ip: "10.10.255.3"
+          evpn_server_id: 3
+        Host34_1:
+          evpn_vtep_ip: "10.10.255.11"
+          evpn_server_id: 4
+        Host34_2:
+          evpn_vtep_ip: "10.10.255.12"
+          evpn_server_id: 5
+        HostB12_1:
+          evpn_vtep_ip: "10.10.255.100"
+          evpn_server_id: 6
+
+    # =================================================================
+    # Centralized Monitoring & Syslog Server
+    # =================================================================
+    monitoring_servers:
+      hosts:
+        MonitorSrv:
+          syslog_listen_ip: "10.10.255.102"
+          grafana_port: 3000
+          loki_port: 3100
+          prometheus_port: 9090
+          alertmanager_port: 9093
+# =================================================================
+# QoS Performance Verification Meta-Group (Target Footprint)
+# =================================================================
+    qos_test_group:
+      hosts:
+        Host12_1:
+          ansible_host: 10.10.1.30 # Your standard SSH management IP
+          loopback_ip: "10.10.255.1"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.12.1" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        Host12_2:
+          ansible_host: 10.10.1.29 # Your standard SSH management IP
+          loopback_ip: "10.10.255.2"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.12.2" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        Host12_3:
+          ansible_host: 10.10.1.28 # Your standard SSH management IP
+          loopback_ip: "10.10.255.3"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.12.3" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        Host34_1:
+          ansible_host: 10.10.1.27 # Your standard SSH management IP
+          loopback_ip: "10.10.255.11"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.34.1" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        Host34_2:
+          ansible_host: 10.10.1.26 # Your standard SSH management IP
+          loopback_ip: "10.10.255.12"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.34.2" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        HostB12_1:
+          ansible_host: 10.10.1.25 # Your standard SSH management IP
+          loopback_ip: "10.10.255.100"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.56.1" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        HostB12_2:
+          ansible_host: 10.10.1.24 # Your standard SSH management IP
+          loopback_ip: "10.10.255.101"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.56.2" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+        MonitorSrv:
+          ansible_host: 10.10.1.10 # Your standard SSH management IP
+          loopback_ip: "10.10.255.102"  # Maps to your 'lo' workload subnet identity
+          ceph_data_replication_ip: "20.0.56.3" # Maps to your 'dummy ceph' subnet identity
+          fabric_interfaces: [{name: "enp2s0"}, {name: "enp3s0"}] # The physical multi-homed interface where 'tc' shaping runs
+
+    metallb_l2:
+      children:
+        servers:
+        border_leaves:
+        exit_routers:
+
+---
+group_vars/accton_leaves.yml
+# Authoritative mapping structure for Accton flat string lists
+all_ports: "{{ as5712_sfp_ports + as5712_qsfp_ports }}"
+platform_speed_fallback: "10000"
+---
+group_vars/arista_qx32_leaves.yml
+# Authoritative hardware profile mapping for the base Arista 7050QX-32
+all_ports: "{{ qx32_all_ports | default({}) }}"
+platform_speed_fallback: "40000"
+---
+group_vars/arista_qx32s_borders.yml
+# Authoritative hardware profile mapping for the specialized Arista 7050QX-32S
+all_ports: "{{ qx32s_all_ports | default({}) }}"
+platform_speed_fallback: "40000"
+---
+group_vars/exit_routers.yml
+wireguard_peers:
+  - name: "Admin_Laptop_Primary"
+    public_key: "PASTE_YOUR_LAPTOP_PUBLIC_KEY_HERE="
+    allowed_ips: "192.168.100.10/32"
+
+  - name: "Admin_Laptop_Backup"
+    public_key: "PASTE_SECONDARY_LAPTOP_PUBLIC_KEY_HERE="
+    allowed_ips: "192.168.100.11/32"
+---
+group_vars/spines.yml
+# Authoritative mapping structure for Celestica Spine dict arrays
+all_ports: "{{ dx010_all_ports | default({}) }}"
+platform_speed_fallback: "100000"
 ```
 hostname: "Spine_S1"
 router_id: "10.0.0.1"
