@@ -208,6 +208,7 @@ apply_profile_settings() {
         ubuntu_r810_kvm)
             AUTOMATION_PROFILE_LABEL="QEMU/KVM on Ubuntu for Dell R810 (256GB/64CPU/5TB)"
             PROFILE_IS_LAB=true
+            PROXY_MODE="direct"  # R810 has direct internet via NAT — no corporate proxy
             SONIC_RAM=4096;   SONIC_VCPU=2
             # Role-tiered server resources (differentiated by workload)
             SERVER_CONTROLLER_RAM=32768; SERVER_CONTROLLER_VCPU=10
@@ -2074,12 +2075,18 @@ configure_server_networking() {
     fab1_name=$(sshpass -p "$pass" ssh $ssh_opts "$user@$ip" \
         "ip -o link show | grep -v lo | grep -v enp1s0 | awk -F': ' 'NR==2{print \$2}'" 2>/dev/null || echo "enp3s0")
 
-    # Configure proxy for apt (corporate network)
-    sshpass -p "$pass" ssh $ssh_opts "$user@$ip" "sudo bash -c '
-        mkdir -p /etc/apt/apt.conf.d
-        echo \"Acquire::http::Proxy \\\"$HTTP_PROXY\\\";\" > /etc/apt/apt.conf.d/90proxy
-        echo \"Acquire::https::Proxy \\\"$HTTPS_PROXY\\\";\" >> /etc/apt/apt.conf.d/90proxy
-    '" 2>/dev/null || true
+    # Configure proxy for apt (only if a proxy is actually configured)
+    if [[ "$PROXY_MODE" != "direct" && -n "${HTTP_PROXY:-}" ]]; then
+        sshpass -p "$pass" ssh $ssh_opts "$user@$ip" "sudo bash -c '
+            mkdir -p /etc/apt/apt.conf.d
+            echo \"Acquire::http::Proxy \\\"$HTTP_PROXY\\\";\" > /etc/apt/apt.conf.d/90proxy
+            echo \"Acquire::https::Proxy \\\"$HTTPS_PROXY\\\";\" >> /etc/apt/apt.conf.d/90proxy
+        '" 2>/dev/null || true
+    else
+        # Ensure no stale proxy config exists (direct internet via NAT)
+        sshpass -p "$pass" ssh $ssh_opts "$user@$ip" \
+            "sudo rm -f /etc/apt/apt.conf.d/90proxy" 2>/dev/null || true
+    fi
 
     # Install FRR
     sshpass -p "$pass" ssh $ssh_opts "$user@$ip" "
@@ -2273,7 +2280,9 @@ QEMUHOOK
 
     echo ""
     log "Server config: $configured OK, $failed FAILED out of ${#server_list[@]}."
-    [[ $failed -gt 0 ]] && warn "Some servers failed configuration. Run: $0 validate servers"
+    if [[ $failed -gt 0 ]]; then
+        warn "Some servers failed configuration. Run: $0 validate servers"
+    fi
 }
 
 # ======================= PHASE 5.6: KUBERNETES NODE PREPARATION =============
@@ -2324,6 +2333,11 @@ configure_server_k8s_proxy() {
             # Dell R620: direct corporate proxy access
             proxy_url="http://cso.proxy.att.com:8080"
             no_proxy_addrs="localhost,127.0.0.1,172.16.2.0/24,10.233.0.0/18,10.233.64.0/18"
+            ;;
+        ubuntu_r810_kvm)
+            # Dell R810: direct internet via NAT masquerade — no proxy needed
+            log "    [$vm_name] No proxy needed (direct NAT internet)"
+            return 0
             ;;
         real_hardware)
             # Physical infra: proxy handled externally
@@ -2527,7 +2541,9 @@ phase5_6_k8s_prep() {
         log "Next step: Run Kubespray to install K8s on prepared nodes."
         log "  cd ~/kubespray && ansible-playbook -i inventory/dc-lab/hosts.yml cluster.yml"
     fi
-    [[ $failed -gt 0 ]] && warn "Some servers failed K8s prep. Check SSH and proxy connectivity."
+    if [[ $failed -gt 0 ]]; then
+        warn "Some servers failed K8s prep. Check SSH and proxy connectivity."
+    fi
 }
 
 # ======================= PHASE 6: ANSIBLE INVENTORY =========================
@@ -3158,6 +3174,8 @@ main() {
     else
         prompt_for_profile
     fi
+    # Re-apply proxy after profile selection (profile may override PROXY_MODE)
+    configure_proxy
     initialize_vm_catalog
     print_profile_summary
     require_lab_profile "$action"
