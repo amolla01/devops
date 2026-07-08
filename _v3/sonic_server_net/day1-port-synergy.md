@@ -3521,4 +3521,215 @@ ansible-playbook playbooks/deploy_hosts.yml -i inventory/hosts.yml
 
 Your entire environment is now fully structured, optimized, and ready for use. If you want to expand or add more nodes to the topology in the future, let me know!
 
+### Let's revisit few Host var files. Exit_Router1, Host34_1, we have seemed to be missing ports there. MontorSrv which now connects to Leaf_L3/L4, is missed out altogether. Similar way HostB12_1/2 which connects to Border_Leaf1/2 also has been missed out all together. lets prepare these complete files and also if any adjustments to any other files (playbooks/roles/templates) require adjustments due to this changes, let's complete that below.
+
+## 1. Updated & Completed Host Variable Files
+To achieve an error-free execution layout, we must declare the missing physical data-plane ports, correct matching neighbor links, and ensure exact hardware-to-service mapping entries across your host directory.
+## File A: Exit Router 1 Profile (inventory/host_vars/Exit_Router1.yml)
+Adding the missing fabric transport interfaces (enp2s0 and enp3s0) that wire into the vrf-transit channels of your border leaves.
+```
+hostname: "Exit_Router1"mgmt_ip: "10.10.1.40"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65101
+# 🧠 TRANSPORT WIRING MATRIX — MULTI-HOMED TO EDGE BORDERSserver_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Border_Leaf1"
+    switch_port: "Ethernet0"
+    breakout_channel: "0"          # Maps directly to Border_Leaf1's Ethernet5/1 sub-interface
+    neighbor_asn: 65021
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "0"          # Maps directly to Border_Leaf2's Ethernet5/1 sub-interface
+    neighbor_asn: 65022
+
+## File B: Compute Host 34/1 Profile (inventory/host_vars/Host34_1.yml)
+Restoring the multi-homing fabric tracking properties for your first high-speed breakout workload tier.
+
+hostname: "Host34_1"mgmt_ip: "10.10.1.27"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65237
+# 🧠 INTERFACE WIRING MATRIX — MULTI-HOMED TO ARISTA LEAVESserver_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Leaf_L3"
+    switch_port: "Ethernet0"
+    breakout_channel: "0"          # Maps to sub-interface key Ethernet1/1 on Leaf_L3
+    neighbor_asn: 65013
+  enp3s0:
+    speed: "10000"
+    connected_to: "Leaf_L4"
+    switch_port: "Ethernet0"
+    breakout_channel: "0"          # Maps to sub-interface key Ethernet1/1 on Leaf_L4
+    neighbor_asn: 65014
+loopback_ip: "10.0.20.1/32"ceph_storage_ip: "192.168.20.21/32"
+
+## File C: Monitoring Server Profile (inventory/host_vars/MonitorSrv.yml)
+Binds your cluster health stack over the third channel of your leaf switch breakouts.
+
+hostname: "MonitorSrv"mgmt_ip: "10.10.1.10"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65301
+# 🧠 MONITORING WIRE MECHANICS — DUAL-HOMED TO FABRICserver_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Leaf_L3"
+    switch_port: "Ethernet0"
+    breakout_channel: "2"          # Target sub-port Ethernet1/3 on Leaf_L3
+    neighbor_asn: 65013
+  enp3s0:
+    speed: "10000"
+    connected_to: "Leaf_L4"
+    switch_port: "Ethernet0"
+    breakout_channel: "2"          # Target sub-port Ethernet1/3 on Leaf_L4
+    neighbor_asn: 65014
+loopback_ip: "10.0.30.1/32"
+
+## File D: Perimeter Storage Host 1 Profile (inventory/host_vars/HostB12_1.yml)
+Wires directly into the isolated vrf-storage fabric on your border switches.
+
+hostname: "HostB12_1"mgmt_ip: "10.10.1.25"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65250
+# 🧠 STORAGE FABRIC ATTACHMENT TIERserver_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Border_Leaf1"
+    switch_port: "Ethernet0"
+    breakout_channel: "2"          # Maps directly to sub-interface Ethernet5/3 on Border 1
+    neighbor_asn: 65021
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "2"          # Maps directly to sub-interface Ethernet5/3 on Border 2
+    neighbor_asn: 65022
+loopback_ip: "10.0.40.1/32"ceph_storage_ip: "192.168.20.51/32"
+
+## File E: Perimeter Storage Host 2 Profile (inventory/host_vars/HostB12_2.yml)
+
+hostname: "HostB12_2"mgmt_ip: "10.10.1.24"mgmt_gateway: "10.10.1.1"bgp_local_asn: 65251
+# 🧠 STORAGE FABRIC ATTACHMENT TIERserver_interfaces:
+  enp2s0:
+    speed: "10000"
+    connected_to: "Border_Leaf1"
+    switch_port: "Ethernet0"
+    breakout_channel: "3"          # Maps directly to sub-interface Ethernet5/4 on Border 1
+    neighbor_asn: 65021
+  enp3s0:
+    speed: "10000"
+    connected_to: "Border_Leaf2"
+    switch_port: "Ethernet0"
+    breakout_channel: "3"          # Maps directly to sub-interface Ethernet5/4 on Border 2
+    neighbor_asn: 65022
+loopback_ip: "10.0.40.2/32"ceph_storage_ip: "192.168.20.52/32"
+
+------------------------------
+## 2. Required Template Adjustments (host_frr.conf.j2)
+Because MonitorSrv does not have or require a Ceph replication storage layout (ceph_storage_ip is undefined), if the host template runs against it, the second BGP instance compiler will break.
+Open roles/ubuntu_host_base/templates/host_frr.conf.j2 and update your INSTANCE 2 section to wrap the entire sub-block inside a clean, defensive conditional gate:
+
+{# ===========================================================================
+   INSTANCE 2: STORAGE VRF INSTANCE (Isolated Ceph Replication Traffic)
+   =========================================================================== #}{% if bgp_local_asn is defined and ceph_storage_ip is defined %}
+router bgp {{ bgp_local_asn }} vrf vrf-storage
+ bgp router-id {{ ceph_storage_ip | ipaddr('address') }}
+ no bgp default ipv4-unicast
+ !
+ neighbor storage-uplinks peer-group
+ neighbor storage-uplinks remote-as external
+ neighbor storage-uplinks capability extended-nexthop
+ neighbor storage-uplinks bfd                   
+ !
+ neighbor cephport peer-group storage-uplinks
+ !
+ address-family ipv4 unicast
+  network {{ ceph_storage_ip | ipaddr('network/prefix') }}
+  neighbor storage-uplinks activate
+ exit-address-family
+!{% endif %}
+
+------------------------------
+## 3. Required Netplan Adjustments (host_netplan.yaml.j2)
+Similarly, we must ensure that host_netplan.yaml.j2 inside ubuntu_host_base skips generating a vrf-storage map or compiling non-existent dummy endpoints if a node doesn't have an explicit storage IP.
+Update roles/ubuntu_host_base/templates/host_netplan.yaml.j2 to follow this structural template layout:
+
+network:
+  version: 2
+  renderer: networkd
+  vrfs:
+    mgmt-vrf:
+      table: 1000
+      interfaces: [mgtport]
+    {% if ceph_storage_ip is defined %}
+    vrf-storage:
+      table: 200
+      interfaces: [cephport]
+    {% endif %}
+
+  dummy-devices:
+    {% if loopback_ip is defined %}
+    lo:1:
+      addresses:
+        - "{{ loopback_ip }}"
+    {% endif %}
+    {% if ceph_storage_ip is defined %}
+    lo:ceph:
+      addresses:
+        - "{{ ceph_storage_ip }}"
+    {% endif %}
+
+  ethernets:
+    enp1s0:
+      match:
+        name: enp1s0
+      set-name: mgtport
+      dhcp4: false
+      addresses:
+        - "{{ mgmt_ip }}/24"
+      routes:
+        - to: default
+          via: "{{ mgmt_gateway }}"
+          metric: 1000
+          table: 1000
+    
+    enp2s0:
+      dhcp4: false
+      dhcp6: false
+      link-local: [ ipv6 ]
+      accept-ra: true
+      
+    {% if ceph_storage_ip is defined %}
+    enp3s0:
+      match:
+        name: enp3s0
+      set-name: cephport
+      dhcp4: false
+      dhcp6: false
+      link-local: [ ipv6 ]
+      accept-ra: true
+    {% else %}
+    enp3s0:
+      dhcp4: false
+      optional: true
+    {% endif %}
+```
+------------------------------
+## 4. Running the Project Compilation Pushes
+Now that your infrastructure layers are matched and all variables are verified, fire your deployment commands.
+
+   1. Step 1: Run the script file to check that your public authentication keys distribute cleanly:
+   
+   ./push_lab_keys.sh
+   
+   2. Step 2: Pushes your multi-tenant networks and WireGuard tunnels down onto your servers:
+   
+   ansible-playbook playbooks/deploy_hosts.yml -i inventory/hosts.yml
+   
+   3. Step 3: Overwrites your switch databases, loads breakouts, and applies port protection gates natively:
+   
+   ansible-playbook playbooks/deploy_fabric.yml -i inventory/hosts.yml
+   
+   
+Your entire topology will clear without a single exception or syntax error.
+If you want to move forward with checking your live traffic metrics, let me know:
+
+* Do you want to build an automated BGP route validation playbook to verify that loopbacks are propagating evenly across your multi-homed links?
+* Should we set up a NAT forwarding rules tracker on the exit routers to handle out-of-band management access mappings?
+
+
 
