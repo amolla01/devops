@@ -1,4 +1,5 @@
 ## provide scripts to test nested virtualization (KVM)??
+
 Here are the standard verification steps and automated bash scripts to check nested virtualization (KVM) capabilities on your remote PowerEdge R810 server.
 ## 1. Quick Ad-Hoc Check (From WSL Terminal)
 Run this single command from your laptop to check CPU flags and module support on the remote server (192.168.9.198):
@@ -14,7 +15,7 @@ ssh -t nh1221@192.168.9.198 "egrep -c '(vmx|svm)' /proc/cpuinfo && kvm-ok && cat
 ------------------------------
 ## 2. Comprehensive Remote Bash Script (verify_kvm.sh)
 If you want a professional, colored shell script to execute directly on the R810 or via SSH, use this code. It checks the BIOS flags, kernel module status, and /dev/kvm permissions, providing clear error remediation steps if anything is missing.
-
+```
 #!/usr/bin/env bash# verify_kvm.sh - Comprehensive KVM and Nested Virtualization Check
 
 RED='\033[0;31m'
@@ -24,6 +25,7 @@ NC='\033[0m' # No Color
 echo "====================================================="
 echo "  PowerEdge R810 KVM & Nested Virtualization Status  "
 echo "====================================================="
+
 # 1. Check Hardware Capabilities
 CPU_COUNT=$(egrep -c '(vmx|svm)' /proc/cpuinfo)if [ "$CPU_COUNT" -gt 0 ]; then
     echo -e "[${GREEN} OK ${NC}] CPU Hardware Virtualization Extensions detected (${CPU_COUNT} threads)."else
@@ -87,14 +89,14 @@ To ensure your environment is automatically checked every time you run your prim
           - (nested_param.content | b64decode | trim) in ['Y', '1']
         fail_msg: "Nested KVM virtualization is disabled! SONiC virtual switch QEMU instances will drop packets or freeze."
         success_msg: "Nested KVM is healthy. PowerEdge R810 is ready to handle 21 containerized network nodes."
-
+```
 Once your KVM validation checks out clean, let me know:
 
 * Would you like me to show you how to write the Ansible task to clean out old container instances if a previous clab deploy run gets hung up?
 * Do you want help verifying the sysctl network memory thresholds on the R810 to support your 21 leaf-spine instances?
 
 
-
+```
 
 ## (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/containerlab/sonic-clab$ ssh -t nh1221@192.168.9.198 "egrep -c '(vmx|svm)' /proc/cpuinfo && kvm-ok && cat /sys/module/kvm_intel/parameters/nested"
 128
@@ -133,11 +135,12 @@ switch_ports:
       - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "127", index: "1", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp2s0", neighbor_asn: 65301 }
       - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "128", index: "1", speed: "10000", admin: "down" }
 
-
+```
 That KVM output looks perfect. Your PowerEdge R810 is running a massive 128 logical threads with nested virtualization (Y) completely active and ready.
 Your translation matrix approach is an elegant solution. By keeping the raw, unmodified physical port_config.ini files inside your profile directories and building an abstraction layer via virtual_port_translation, you keep your configurations pristine for production deployment.
 However, your topology.clab.yml and your virtual_port_translation map currently have a critical interface mapping mismatch.
 ## 🚨 The Problem: Mapping Mismatch
+```
 Containerlab builds endpoints strictly based on the order they are written in the links: block of your topology.clab.yml file. Let's compare your Leaf-L3 variables to the links block:
 Your Variable Translation Map:
 
@@ -160,7 +163,7 @@ Your Current topology.clab.yml Link Wiring Ordering:
     - endpoints: ["Leaf-L3:eth3", "Host34-1:eth1"]  # <-- This becomes eth3 inside Leaf-L3 container (Matches Matrix)
     - endpoints: ["Leaf-L3:eth4", "Host34-2:eth1"]  # <-- This becomes eth4 inside Leaf-L3 container (Matches Matrix)
     - endpoints: ["Leaf-L3:eth5", "MonitorSrv:eth1"] # <-- This becomes eth5 inside Leaf-L3 container (Matches Matrix)
-
+```
 As long as the sequential list in your topology.clab.yml matches the assignment sequence (eth1 to eth5), Containerlab will map them properly.
 ## ⚠️ The Catch: Virtual Switch Driver Core Limitation
 The translation matrix fixes things for Ansible when it generates configuration templates, but it does not change how the underlying virtual switch (sonic-vs) reads the hardware abstraction layer during boot.
@@ -174,6 +177,7 @@ When Leaf-L3 fires up inside KVM:
 But according to your true physical database architecture variables (switch_ports), Ethernet124 is supposed to be the uplink to Spine-S1, while Ethernet0 is supposed to be an access port breakout to your compute hosts.
 If you push a patch or configuration that maps BGP neighbors to Ethernet124 using your true physical layout, the virtual switch will try to send those routing packets out of what it thinks is index 32 (which maps to eth32—a dead, unplumbed virtual interface container slot). Your control plane will not establish adjacencies.
 ------------------------------
+```
 ## 🛠️ The Fix: Dynamic port_config.ini Generation Task
 Since you want the virtual lab to precisely mimic the real production hardware behavior without modifying your pristine source repositories, you can use Ansible to dynamically generate the virtual runtime port_config.ini file on the fly based on your host variables.
 Add this task to your configuration setup flow (roles/sonic_provision/tasks/main.yml or your central configuration loop). It uses your translation matrix to dynamically re-index the file layout so that physical naming conventions match virtual slot locations exactly:
@@ -194,7 +198,7 @@ Add this task to your configuration setup flow (roles/sonic_provision/tasks/main
 {% set virt_index = virt_nic | replace('eth', '') | int %}
 {{ phys_port }}   {{ port_data.lanes | default('1') }}   {{ port_data.alias | default(phys_port) }}   {{ virt_index }}   {{ port_data.speed | default('40000') }}
 {% endfor %}
-
+```
 ## 🎯 What This Achieves:
 
 * Your source code databases and variables remain 100% production-ready for real-world deployment.
@@ -204,6 +208,7 @@ Add this task to your configuration setup flow (roles/sonic_provision/tasks/main
 Would you like me to generate the corresponding translation tables for your Celestica Spine nodes to verify how their downlinks map against your leaf layer setups?
 
 ## What we do, we want his to be intuitive to understand. Can we not re-arrange virtual port mapping inside host var files so that we match with real hardware port_config.ini?? Provide me a corrected mapping for the following: for 7050QX32: # The Virtual Mapping Matrix: Tells Ansible how physical ports map to Containerlab endpoints
+```
 virtual_port_translation:
   "Ethernet124": "eth1" # Wired to Spine-S1
   "Ethernet120": "eth2" # Wired to Spine-S2
@@ -225,12 +230,13 @@ switch_ports:
       - { name: "Ethernet1", alias: "Ethernet1/2", lanes: "126", index: "1", speed: "10000", neighbor: "Host34-2", rem_port: "enp2s0", neighbor_asn: 65238 }
       - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "127", index: "1", speed: "10000", neighbor: "MonitorSrv", rem_port: "enp2s0", neighbor_asn: 65301 }
       - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "128", index: "1", speed: "10000", admin: "down" }
-
+```
 Yes, absolutely! Rearranging the virtual-to-physical port map to align completely with the real hardware's stock port_config.ini file is a much better, cleaner solution. It keeps everything intuitive and avoids the need to dynamically rewrite system config files during execution.
 To do this, we need to look at your real hardware port_config.ini index for each physical port, and assign the corresponding Containerlab ethN interface using a simple calculation:
 $$\text{Containerlab Interface (ethN)} = \text{Hardware Index Number}$$ 
 Here are the corrected mapping matrix configurations for your Arista variations and your topology.clab.yml update.
 ------------------------------
+```
 ## 1️⃣ Corrected Host Variables Matrix (host_vars/Leaf-L3.yml)
 Based on the real Arista 7050QX-32 file you provided, the hardware indices are:
 
@@ -242,7 +248,8 @@ Based on the real Arista 7050QX-32 file you provided, the hardware indices are:
 
 This configuration maps your variables to match your physical hardware file exactly:
 
----is_virtual_lab: true
+---
+is_virtual_lab: true
 hostname: "Leaf-L3"router_id: "10.0.1.3"bgp_local_asn: 65013mgmt_ip: "172.16.2.23/24"
 # 🎯 FIXED INTUITIVE MATRIX: Matches real-world port_config.ini indices directly!virtual_port_translation:
   "Ethernet0": "eth1"     # Index 1 -> Breakout Child 1 -> Host34-1
@@ -302,7 +309,7 @@ Update your links block to use the exact interface IDs dictated by your hardware
     - endpoints: ["Leaf-L4:eth1", "Host34-1:eth2"]    # <-- Changed to eth1 to match Index 1
     - endpoints: ["Leaf-L4:eth1", "Host34-2:eth2"]    # <-- Shared Breakout context over eth1
     - endpoints: ["Leaf-L4:eth1", "MonitorSrv:eth2"]   # <-- Shared Breakout context over eth1
-
+```
 ## 💡 Why this is easier to manage:
 
 * Production Ready: Your variable files map directly to real-world deployment scripts without any transformation.
@@ -310,7 +317,9 @@ Update your links block to use the exact interface IDs dictated by your hardware
 
 Let me know if you would like me to review the link configurations for the Celestica Spines or the Accton Leaves to confirm their index-to-interface maps are fully aligned!
 
-## Let's go one by one, so, I do not loose track: ---
+## Let's go one by one, so, I do not loose track: 
+```
+---
 is_virtual_lab: true
 
 hostname: "Leaf-L4"
@@ -338,7 +347,7 @@ switch_ports:
   Ethernet3: { speed: "10000", role: "access", lanes: "9", index: "1", neighbor: "Host34-1", rem_port: "eth2", neighbor_asn: 65237 }
   Ethernet4: { speed: "10000", role: "access", lanes: "10", index: "2", neighbor: "Host34-2", rem_port: "eth2", neighbor_asn: 65238 }
   Ethernet5: { speed: "10000", role: "access", lanes: "11", index: "3", neighbor: "MonitorSrv", rem_port: "eth2", neighbor_asn: 65301 }
-
+```
 Looking closely at your Leaf-L4 host variable file and comparing it directly to the unmodified Arista 7050QX-32 port_config.ini file, your virtual port mapping has two index mismatches.
 If you leave it like this, your virtual connections will not bind to the correct interfaces when the node boots. Let's look at the mapping one by one to keep it simple.
 ## 🔍 Mapping Check: Leaf-L4 vs. Stock Arista 7050QX-32
