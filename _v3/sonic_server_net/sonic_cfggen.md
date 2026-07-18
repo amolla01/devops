@@ -493,3 +493,121 @@ Would you like assistance in generating an Ansible playbook template to automate
 [5] [https://github.com](https://github.com/sonic-net/SONiC/wiki/Configuration)
 [6] [https://github.com](https://github.com/sonic-net/SONiC/blob/master/doc/config-generic-update-rollback/SONiC_Generic_Config_Update_and_Rollback_Design.md)
 [7] [https://www.supermicro.com](https://www.supermicro.com/manuals/network/Supermicro_Datacenter_SONiC_Configuration_Guide.pdf)
+
+
+## what is the company default startup configuration of SONiC for Celestica DX010
+
+The default company startup configuration of SONiC on the Celestica DX010 is fundamentally a Layer 3 fabric configuration featuring pre-configured BGP peers on each interface. [1] 
+## Default Credentials & Access
+
+* Username: admin
+* Password: YourPaSsWoRd
+* Console Baud Rate: 9600 [2, 3] 
+
+## Configuration File Location
+The system stores its baseline startup settings inside the primary JSON configuration database file: [4] 
+
+* /etc/sonic/config_db.json [4] 
+
+## Pre-configured Keys
+When the switch boots up using the factory profile, the config_db.json automatically populates with hardware-specific database keys, which include: [4] 
+
+* DEVICE_METADATA (Hostname, platform type)
+* PORT (Default 32 x 100GbE configurations mapping to Broadcom ASICs)
+* DEVICE_NEIGHBOR (Layer 3 neighbor profiles)
+* NTP_SERVER
+* CABLE_LENGTH
+* MGMT_INTERFACE (Set to obtain a management IP via DHCP by default)
+* QoS and Buffer Profiles: PORT_QOS_MAP, BUFFER_QUEUE, BUFFER_PROFILE, WRED_PROFILE, DSCP_TO_TC_MAP, TC_TO_QUEUE_MAP [4, 5, 6, 7] 
+
+## Viewing or Resetting the Configuration
+
+* View current config: Run show runningconfiguration all from the CLI.
+* Revert to default: Execute config-setup factory via the Linux shell to recreate the original company setup template. [4, 8] 
+
+Are you looking to reconfigure this switch into Layer 2 mode for your network topology?
+
+[1] [https://www.reddit.com](https://www.reddit.com/r/homelab/comments/n5opo2/initial_configuration_of_a_celestica_dx010_100ge/)
+[2] [https://github.com](https://github.com/sonic-net/SONiC/wiki/Quick-Start)
+[3] [https://documentationportal.celestica.com](https://documentationportal.celestica.com/en/software/sonic/user-manual/introduction)
+[4] [https://documentationportal.celestica.com](https://documentationportal.celestica.com/en/software/sonic/user-manual/basic-configuration-and-show/startup-configuration/default-startup-configuration)
+[5] [https://github.com](https://github.com/sonic-net/sonic-buildimage/blob/master/device/celestica/x86_64-cel_seastone-r0/Celestica-DX010-C32/th-seastone-dx010-32x100G-t0.config.bcm)
+[6] [https://github.com](https://github.com/sonic-net/SONiC/blob/master/doc/user-manual/SONiC-User-Manual.md)
+[7] [https://www.celestica.com](https://www.celestica.com/SONiC_user_manual-v1)
+[8] [https://github.com](https://github.com/sonic-net/SONiC/blob/master/doc/ztp/SONiC-config-setup.md)
+
+
+## Provide me a complete default factory setup config_db.json for the all discussed model below: Arista 7050QX-32, Arista 7050QX-32S, Accton AS5712-X54, Celestica-DX010
+
+In SONiC (Software for Open Networking in the Cloud), the config_db.json layout dictates the system setup. A single static file cannot be universally shared across all four switches. Each hardware platform maps interfaces, port IDs, lane distributions, and internal Broadcom ASIC pipelines completely differently. [1] 
+Instead of a generic template, SONiC generates optimized, model-specific config_db.json files on the device using its internal host and platform profiles. Below are the structural templates, unique key configurations, and precise platform generation commands required to build or recover the exact factory-default startup settings for each of these switch models. [2, 3] 
+------------------------------
+## 1. Unified Base Startup Structure
+While port speeds and lane mappings differ, all four platforms generate the exact same basic config_db.json block for default Layer 3 factory behavior. Any custom setup starts with this framework:
+
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "bgp_asn": "65100",
+            "buffer_model": "traditional",
+            "hostname": "sonic",
+            "hwsku": "<MODEL_SPECIFIC_HWSKU>",
+            "mac": "00:01:02:03:04:05",
+            "platform": "<MODEL_SPECIFIC_PLATFORM_DIR>",
+            "type": "Leaf"
+        }
+    },
+    "MGMT_INTERFACE": {
+        "eth0|192.168.1.2/24": {
+            "gwaddr": "192.168.1.1"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "alias": "et1",
+            "lanes": "<MODEL_SPECIFIC_LANES>",
+            "speed": "<MODEL_SPECIFIC_SPEED>",
+            "index": "1",
+            "admin_status": "up"
+        }
+    }
+}
+
+------------------------------
+## 2. Platform-Specific Variations & Generating Commands
+Rather than writing thousand-line JSON mappings manually, you should trigger SONiC's hardware compiler sonic-cfggen using the default HWSKU flags to generate the complete, production-ready config_db.json: [2, 3] 
+
+| Switch Model | Platform Directory (-p) | Hardware SKU (-v) | Default Port Mapping Profile | Factory Database Generation Command |
+|---|---|---|---|---|
+| Arista 7050QX-32 | x86_64-arista_7050_qx32 | Arista-7050QX-32 | 32 Ports × 40GbE (QSFP+) | sudo sonic-cfggen -H -p x86_64-arista_7050_qx32 -v Arista-7050QX-32 > /etc/sonic/config_db.json |
+| Arista 7050QX-32S | x86_64-arista_7050_qx32s | Arista-7050QX-32S | 32 Ports × 40GbE + 4x10GbE SFP+ | sudo sonic-cfggen -H -p x86_64-arista_7050_qx32s -v Arista-7050QX-32S > /etc/sonic/config_db.json |
+| Accton AS5712-X54 | x86_64-accton_as5712_54x-r0 | Accton-AS5712-54X | 48 Ports × 10GbE + 6x40GbE QSFP+ | sudo sonic-cfggen -H -p x86_64-accton_as5712_54x-r0 -v Accton-AS5712-54X > /etc/sonic/config_db.json |
+| Celestica DX010 | x86_64-cel_seastone-r0 | Celestica-DX010 | 32 Ports × 100GbE (QSFP28) | sudo sonic-cfggen -H -p x86_64-cel_seastone-r0 -v Celestica-DX010 > /etc/sonic/config_db.json |
+
+------------------------------
+## 3. Recovering Factory Defaults on an Existing Device
+If you have broken configs or missing keys on any of these four specific units, you can entirely bypass template syntax issues by forcing SONiC to regenerate its factory baseline setup profile directly out of its system memory: [3] 
+
+   1. Purge Existing Changes:
+   
+   sudo config factory-default -y
+   
+   2. Verify or Manually Generate Layer 2 Presets (Optional for Homelabs):
+   If your environment requires standard bridging rather than the default BGP fabric mode, inject the standard L2 switch profile during the rebuild:
+   
+   sudo sonic-cfggen -H -k Celestica-DX010 --preset=l2 > /etc/sonic/config_db.json
+   sudo config reload /etc/sonic/config_db.json -y
+   
+   (Swap Celestica-DX010 for Arista-7050QX-32 or Accton-AS5712-54X based on the targeted machine).
+   3. Commit the Validated JSON Configuration State to Flash:
+   
+   sudo config save -y
+   
+   [3, 4] 
+
+Would you like the specific port lane assignments or breakout configuration syntax for any of these individual models?
+
+[1] [https://forums.servethehome.com](https://forums.servethehome.com/index.php?threads/azure-sonic-on-the-arista-7050qx-32.17206/)
+[2] [https://forums.servethehome.com](https://forums.servethehome.com/index.php?threads/psa-new-builds-of-older-sonic-versions-no-longer-work-on-the-celestica-dx010.41603/page-2)
+[3] [https://forums.servethehome.com](https://forums.servethehome.com/index.php?threads/celestica-seastone-dx010-sonic-in-l2-mode-need-your-help.32209/)
+[4] [https://www.reddit.com](https://www.reddit.com/r/homelab/comments/n5opo2/initial_configuration_of_a_celestica_dx010_100ge/)
