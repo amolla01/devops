@@ -190,7 +190,7 @@ Would you like a production-grade template for Anycast Gateway / EVPN-VXLAN, or 
 No, the examples provided above represent only a small subset of core networking features. SONiC is a modular, enterprise-grade network operating system that supports a broad range of data center and campus features. [1, 2, 3, 4] 
 Below is an expanded list of SONiC features along with their corresponding Redis CONFIG_DB table structures. [5] 
 ## Data Center & Layer 3 Routing Features
-
+```
 * EVPN-VXLAN: Multi-tenant data center virtualization.
 * Tables: VXLAN_TUNNEL, EVPN_NVO [6] 
 * MCLAG (Multi-Chassis Link Aggregation): Active-active dual-homing to two distinct switches.
@@ -232,7 +232,7 @@ You can extract the full inventory of valid config structures by dumping all val
 
 # View every single active CONFIG_DB table key currently loaded
 sonic-db-cli CONFIG_DB KEYS "*" | cut -d'|' -f1 | sort -u
-
+```
 Are you building configurations for a Data Center (Leaf/Spine BGP/VXLAN) deployment or a Campus (802.1X/PoE) environment? I can provide the explicit JSON and DB schemas for those specific features.
 
 [1] [https://stordis.com](https://stordis.com/sonic-cheat-sheet/)
