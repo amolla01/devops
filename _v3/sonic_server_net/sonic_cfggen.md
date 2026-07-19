@@ -60,7 +60,7 @@ Would you like to know how to restore factory defaults, or do you have a specifi
 To configure core network features in SONiC, you execute CLI commands or apply JSON configuration files. These inputs instantly rewrite keys in Redis Instance 4 (CONFIG_DB). Once modified, you must explicitly save the running config to /etc/sonic/config_db.json to persist the data across device reboots. [1, 2, 3, 4, 5] 
 ------------------------------
 ## Core Configuration Flow
-
+```
    [ Method A: CLI Commands ] ---------> [  Redis DB 4  ] <--------- [ Method B: Custom JSON ]
   (e.g., config vlan add 10)            | (CONFIG_DB)  |            (via sonic-cfggen / config load)
                                         +--------------+
@@ -173,7 +173,7 @@ sudo config save -y
 sonic-db-cli CONFIG_DB HGETALL "VLAN|Vlan100"
 
 [6] 
-
+```
 Would you like a production-grade template for Anycast Gateway / EVPN-VXLAN, or do you need the exact syntax to configure ACL Rules via JSON?
 
 [1] [https://netbergtw.com](https://netbergtw.com/top-support/netberg-sonic/configuring-sonic-using-cli-or-editing-json/)
