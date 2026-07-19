@@ -292,7 +292,9 @@ Follow this exact pattern for every feature listed below: [2, 3]
 
 (Note: For complex multi-container adjustments like BGP/EVPN, you can alternative deploy configurations via sudo config load -y /tmp/feature.json to instantly trigger systemic container refreshes.) [1, 3] 
 ------------------------------
-## Data Center & Layer 3 Routing Features## 1. EVPN-VXLAN
+```
+## Data Center & Layer 3 Routing Features
+## 1. EVPN-VXLAN
 Maps Layer 2/3 virtual networks into network virtualization overlay tunnels.
 
 {
@@ -483,7 +485,7 @@ Captures and forwards targeted traffic flows to security or analytical monitorin
         }
     }
 }
-
+```
 Would you like assistance in generating an Ansible playbook template to automate updating these exact JSON fragments across multiple switches, or do you need a bash verification script to query the status of these entries in the Redis database?
 
 [1] [https://www.ciscolive.com](https://www.ciscolive.com/c/dam/r/ciscolive/global-event/docs/2025/pdf/DEVNET-2990.pdf)
