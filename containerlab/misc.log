@@ -1,0 +1,144 @@
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | sudo tee /etc/sonic/config_db.json && sudo config reload -y
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Spine-S1" "platform" "x86_64-kvm_x86_64-r0" "hwsku" "Seastone-DX010" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Leaf-L3" "platform" "x86_64-arista_7050_qx32" "hwsku" "Arista-7050-QX32" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+admin@Leaf-L3:~$ sudo sonic-cfggen -H -k Arista-7050-QX-32S -p /usr/share/sonic/device/x86_64-arista_7050_qx32s/Arista-7050-QX-32S/port_config.ini --preset t1 | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Border-Leaf1" "platform" "x86_64-arista_7050_qx32s" "hwsku" "Arista-7050-QX-32S" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+redis-cli -n 4 --json HGETALL "DEVICE_METADATA|localhost" | jq .
+
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Border-Leaf1" "platform" "x86_64-kvm_x86_64-r0" "hwsku" "Arista-7050-QX-32S" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+redis-cli -n 4 --json HGETALL "DEVICE_METADATA|localhost" | jq .
+sonic-db-cli STATE_DB HGETALL "BGP_NEIGHBOR_STATE_TABLE|localhost"
+sonic-db-cli CONFIG_DB HGETALL "BGP_DEVICE_METADATA|localhost"
+
+sudo tail -n 100 -f /var/log/sonic/sonic.log | grep -i "cfggen"
+
+
+sudo systemctl stop sonic.target
+redis-cli -n 4 flushdb
+sudo sonic-cfggen -j /etc/sonic/config_db.json --write-to-db
+sudo systemctl start sonic.target
+
+sonic-cfggen \
+  -a "{\"DEVICE_METADATA\": {\"localhost\": {\"platform\": \"x86_64-cel_seastone-r0\", \"hwsku\": \"Seastone-DX010\"}}}" \
+  -p /usr/share/sonic/device/x86_64-cel_seastone-r0/ \
+  -t /tmp/init_cfg.json.j2 > ./etc/sonic/init_cfg.json
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 -a "{\"DEVICE_METADATA\": {\"localhost\": {\"hostname\": \"Spine-S2\"}}}" | sudo tee /etc/sonic/config_db.json && sudo config reload -y
+
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 -a "{\"DEVICE_METADATA\": {\"localhost\": {\"hostname\": \"Spine-S2\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\"}}}" | sudo tee /etc/sonic/config_db.json && sudo config reload -y
+
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | sonic-cfggen -j - -a "{\"DEVICE_METADATA\": {\"localhost\": {\"hostname\": \"Spine-S2\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\"}}}" | sudo tee /etc/sonic/config_db.json && sudo config reload -y
+
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault("DEVICE_METADATA", {}).setdefault("localhost", {}).update({"hostname": "Spine-S1", "docker_routing_config_mode": "unified", "frr_mgmt_framework_config": "true"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json && sudo config reload -y -f
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault("DEVICE_METADATA", {}).setdefault("localhost", {}).update({"hostname": "Spine-S1", "docker_routing_config_mode": "unified", "frr_mgmt_framework_config": "true"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault("DEVICE_METADATA", {}).setdefault("localhost", {}).update({"hostname": "Spine-S2", "docker_routing_config_mode": "unified", "frr_mgmt_framework_config": "true"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+
+
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Leaf-L3" "platform" "x86_64-arista_7050_qx32" "hwsku" "Arista-7050-QX32" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+
+
+sudo sonic-cfggen -H -k Arista-7050-QX32 -p /usr/share/sonic/device/x86_64-arista_7050_qx32/Arista-7050-QX32/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault("DEVICE_METADATA", {}).setdefault("localhost", {}).update({"hostname": "Leaf-L3", "docker_routing_config_mode": "unified", "frr_mgmt_framework_config": "true"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+
+
+
+sudo sonic-cfggen -H -k Arista-7050-QX-32S -p /usr/share/sonic/device/x86_64-arista_7050_qx32s/Arista-7050-QX-32S/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault("DEVICE_METADATA", {}).setdefault("localhost", {}).update({"hostname": "Border-Leaf1", "docker_routing_config_mode": "unified", "frr_mgmt_framework_config": "true"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+
+
+
+subprocess.CalledProcessError: Command '/backup.sh -u admin -p admin restore' returned non-zero exit status 2.
+nh1221@PowerEdge-R810:~$ sudo cat /opt/containerlab/sheba/clab-sheba/Spine-S1/log
+cat: /opt/containerlab/sheba/clab-sheba/Spine-S1/log: No such file or directory
+nh1221@PowerEdge-R810:~$ sudo docker logs Spine-S1
+
+ssh -N -L 2211:172.16.2.11:22 -L 2212:172.16.2.12:22 -L 2221:172.16.2.21:22 -L 2222:172.16.2.22:22 -L 2223:172.16.2.23:22 -L 2224:172.16.2.24:22 -L 2231:172.16.2.31:22 -L 2232:172.16.2.32:22 nh1221@192.168.9.198
+
+ssh -N -D 1080 nh1221@192.168.9.198
+
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault(\"DEVICE_METADATA\", {}).setdefault(\"localhost\", {}).update({\"hostname\": \"Spine-S1\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo sonic-db-cli CONFIG_DB HMSET \"DEVICE_METADATA|localhost\" \"hostname\" \"Spine-S1\" \"platform\" \"x86_64-kvm_x86_64-r0\" \"hwsku\" \"Seastone-DX010\" \"docker_routing_config_mode\" \"unified\" \"frr_mgmt_framework_config\" \"true\" && sudo config reload -y -f
+
+nh1221@PowerEdge-R810:~$ sudo docker exec -i Spine-S2 sshpass -p "admin" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.12 "sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault(\"DEVICE_METADATA\", {}).setdefault(\"localhost\", {}).update({\"hostname\": \"Spine-S2\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo sonic-db-cli CONFIG_DB HMSET \"DEVICE_METADATA|localhost\" \"hostname\" \"Spine-S2\" \"platform\" \"x86_64-kvm_x86_64-r0\" \"hwsku\" \"Seastone-DX010\" \"docker_routing_config_mode\" \"unified\" \"frr_mgmt_framework_config\" \"true\" && sudo config reload -y -f && sudo config save -y"
+
+sudo docker exec -i Spine-S2 sshpass -p "admin" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.12 "sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault(\"DEVICE_METADATA\", {}).setdefault(\"localhost\", {}).update({\"hostname\": \"Spine-S2\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\", \"platform\": \"x86_64-kvm_x86_64-r0\", \"hwsku\": \"Seastone-DX010\"}); d.setdefault(\"USER\", {}).setdefault(\"admin\", {}).update({\"password\": \"\$6\$rounds=5000\$g7E8uX2y\$S8m3K7M1VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR==\", \"status\": \"enabled\"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f"
+sudo docker exec -i Spine-S2 sshpass -p "admin" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.12 "sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | python3 -c 'import sys, json; d=json.load(sys.stdin); d.setdefault(\"DEVICE_METADATA\", {}).setdefault(\"localhost\", {}).update({\"hostname\": \"Spine-S2\", \"docker_routing_config_mode\": \"unified\", \"frr_mgmt_framework_config\": \"true\", \"platform\": \"x86_64-kvm_x86_64-r0\", \"hwsku\": \"Seastone-DX010\"}); d.setdefault(\"USER\", {}).setdefault(\"admin\", {}).update({\"password\": \"\$6\$rounds=5000\$g7E8uX2y\$S8m3K7M1VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR==\", \"status\": \"enabled\"}); d.setdefault(\"MGMT_PORT\", {}).setdefault(\"eth0\", {}).update({\"admin_status\": \"up\", \"autoneg\": \"true\", \"description\": \"Production Management Port\", \"mtu\": \"1500\", \"speed\": \"1000\"}); d.setdefault(\"MGMT_INTERFACE\", {}).setdefault(\"eth0|172.16.2.12/24\", {}).update({\"gwaddr\": \"172.16.2.254\"}); json.dump(d, sys.stdout, indent=4)' | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f"
+
+
+ redis-cli -n 4 --json HGETALL "DEVICE_METADATA|localhost" | jq .
+ redis-cli -n 4 --json HGETALL "USER" | jq .
+ redis-cli -n 4 --json HGETALL "MGMT_INTERFACE" | jq .
+ redis-cli -n 4 --json HGETALL "MGMT_PORT" | jq .
+ redis-cli -n 4 --json HGETALL "PORT" | jq .
+ redis-cli -n 4 --json HGETALL "INTERFACE" | jq .
+ sonic-cfggen -d
+ sonic-cfggen -d -v DEVICE_METADATA
+redis-cli -n 4 --json HGETALL "DEVICE_METADATA" | jq .; redis-cli -n 4 --json HGETALL "USER" | jq .; redis-cli -n 4 --json HGETALL "MGMT_INTERFACE" | jq .; redis-cli -n 4 --json HGETALL "MGMT_PORT" | jq .
+
+sonic-cfggen -d -v DEVICE_METADATA | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+sonic-cfggen -d -v MGMT_INTERFACE | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+sonic-cfggen -d -v MGMT_PORT | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+sonic-cfggen -d -v PORT | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+sonic-cfggen -d -v INTERFACE | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+admin@Spine-S1:~$ sonic-cfggen -d --print-data | python3 -c 'import sys, ast, json; print(json.dumps(ast.literal_eval(sys.stdin.read()), indent=4))'
+
+
+    "MGMT_INTERFACE": {
+        "eth0|192.168.0.73/24": {
+            "gwaddr": "192.168.0.1"
+        }
+    },
+	
+    "MGMT_PORT": {
+        "eth0": {
+            "admin_status": "up",
+            "alias": "eth0"
+        }
+    },	
+	
+    "PASSW_HARDENING": {
+        "POLICIES": {
+            "digits_class": "true",
+            "expiration": "180",
+            "expiration_warning": "15",
+            "history_cnt": "10",
+            "len_min": "8",
+            "lower_class": "true",
+            "reject_user_passw_match": "true",
+            "special_class": "true",
+            "state": "disabled",
+            "upper_class": "true"
+        }
+    },	
+	
+    "MGMT_VRF_CONFIG": {
+        "vrf_global": {
+            "mgmtVrfEnabled": "true"
+        }
+    },	
+	
+	
+	# 1. Force tear down any hanging container bridges
+sudo containerlab destroy -t /opt/containerlab/sheba/topology.clab.yml --cleanup
+
+# 2. Hard-purge the persistent volume caches holding the corrupted json config files
+sudo rm -rf /opt/containerlab/sheba/clab-sheba/
+
+# 3. Double-check that your base topology directory layout has no hidden mounts
+sudo rm -f /opt/containerlab/sheba/profiles/*/*_config_db.json
