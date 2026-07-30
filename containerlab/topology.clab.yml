@@ -1,0 +1,237 @@
+# ==========================================================
+# CONTAINERLAB UNIFIED STARTUP-CONFIG MOUNT MATRIX BLUEPRINT
+# ==========================================================
+name: sheba
+prefix: ""
+
+mgmt:
+  network: dec_oob_mgmt
+  ipv4-subnet: 172.16.2.0/24
+
+topology:
+  defaults:
+    env:
+      SONIC_CONFIG_MODE: "unified"
+  kinds:
+    sonic-vm:
+      image: vrnetlab/sonic_sonic-vs:202605
+      env:
+        RAM: "8192"
+        VIRSH_MEM: 8192
+        VIRSH_CPUS: 4
+    linux:
+      image: local-ubuntu:26.04
+      
+  nodes:
+    Spine-S1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.11
+      env: { SONIC_PLATFORM: "x86_64-cel_seastone-r0" }
+      # startup-config: /opt/containerlab/sheba/profiles/cel_seastone/Spine-S1_config_db.json
+
+    Spine-S2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.12
+      env: { SONIC_PLATFORM: "x86_64-cel_seastone-r0" }
+      # startup-config: /opt/containerlab/sheba/profiles/cel_seastone/Spine-S2_config_db.json
+
+    Leaf-L1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.21
+      env: { SONIC_PLATFORM: "x86_64-accton_as5712_54x-r0" }
+      # startup-config: /opt/containerlab/sheba/profiles/accton_as5712/Leaf-L1_config_db.json
+
+    Leaf-L2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.22
+      env: { SONIC_PLATFORM: "x86_64-accton_as5712_54x-r0" }
+      # startup-config: /opt/containerlab/sheba/profiles/accton_as5712/Leaf-L2_config_db.json
+
+    Leaf-L3:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.23
+      env: { SONIC_PLATFORM: "x86_64-arista_7050_qx32" }
+      # startup-config: /opt/containerlab/sheba/profiles/arista_7050qx32/Leaf-L3_config_db.json
+
+    Leaf-L4:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.24
+      env: { SONIC_PLATFORM: "x86_64-arista_7050_qx32" }
+      # startup-config: /opt/containerlab/sheba/profiles/arista_7050qx32/Leaf-L4_config_db.json
+
+    Border-Leaf1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.31
+      env: { SONIC_PLATFORM: "x86_64-arista_7050_qx32s" }
+      # startup-config: /opt/containerlab/sheba/profiles/arista_7050qx32s/Border-Leaf1_config_db.json
+
+    Border-Leaf2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.32
+      env: { SONIC_PLATFORM: "x86_64-arista_7050_qx32s" }
+      # startup-config: /opt/containerlab/sheba/profiles/arista_7050qx32s/Border-Leaf2_config_db.json
+
+    # ==========================================
+    # EXIT ROUTERS (2 Nodes)
+    # ==========================================
+    Exit-Router1:
+      kind: linux
+      mgmt-ipv4: 172.16.2.41
+      labels: { ansible_group: exit_routers }
+    Exit-Router2:
+      kind: linux
+      mgmt-ipv4: 172.16.2.42
+      labels: { ansible_group: exit_routers }
+
+    # ==========================================
+    # ISP ROUTERS (2 Nodes)
+    # ==========================================
+    ISP1:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.61
+      labels: { ansible_group: isp_routers }
+    ISP2:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.62
+      labels: { ansible_group: isp_routers }
+
+    # ==========================================
+    # UBUNTU COMPUTE/MONITORING WORKLOAD SERVERS (9 Nodes)
+    # ==========================================
+    Host12-1:
+      kind: linux
+      mgmt-ipv4: 172.16.2.51
+      labels: { ansible_group: compute_hosts }
+    Host12-2:
+      kind: linux
+      mgmt-ipv4: 172.16.2.52
+      labels: { ansible_group: compute_hosts }
+    Host12-3:
+      kind: linux
+      mgmt-ipv4: 172.16.2.53
+      labels: { ansible_group: compute_hosts }
+    Host34-1:
+      kind: linux
+      mgmt-ipv4: 172.16.2.54
+      labels: { ansible_group: compute_hosts }
+    Host34-2:
+      kind: linux
+      mgmt-ipv4: 172.16.2.55
+      labels: { ansible_group: compute_hosts }
+    MonitorSrv:
+      kind: linux
+      mgmt-ipv4: 172.16.2.56
+      labels: { ansible_group: monitoring_hosts }
+    HostB12-1:
+      kind: linux
+      mgmt-ipv4: 172.16.2.57
+      labels: { ansible_group: compute_hosts }
+    HostB12-2:
+      kind: linux
+      mgmt-ipv4: 172.16.2.58
+      labels: { ansible_group: compute_hosts }
+    oob-mgmt-node:
+      kind: linux
+      mgmt-ipv4: 172.16.2.254
+      labels: { ansible_group: management_nodes }
+
+# ==========================================================================================
+# CONTAINERLAB UNIFIED MULTI-VENDOR FABRIC LINK INTERCONNECTS
+# ==========================================================================================
+  links:
+    # ------------------------------------------------------
+    # CELESTICA DX010 SPINES NATIVE CORE FABRIC UPLINKS
+    # ------------------------------------------------------
+    - endpoints: ["Spine-S1:eth1", "Leaf-L1:eth54"]       # Spine 1 -> Accton Leaf 1 QSFP Uplink
+    - endpoints: ["Spine-S1:eth2", "Leaf-L2:eth54"]       # Spine 1 -> Accton Leaf 2 QSFP Uplink
+    - endpoints: ["Spine-S1:eth3", "Leaf-L3:eth32"]       # Spine 1 -> Arista Leaf 3 QSFP Uplink (Ethernet124)
+    - endpoints: ["Spine-S1:eth4", "Leaf-L4:eth32"]       # Spine 1 -> Arista Leaf 4 QSFP Uplink (Ethernet124)
+    - endpoints: ["Spine-S1:eth5", "Border-Leaf1:eth32"] # Spine 1 -> Arista Border 1 QSFP Uplink (Ethernet124)
+    - endpoints: ["Spine-S1:eth6", "Border-Leaf2:eth32"] # Spine 1 -> Arista Border 2 QSFP Uplink (Ethernet124)
+
+    - endpoints: ["Spine-S2:eth1", "Leaf-L1:eth53"]       # Spine 2 -> Accton Leaf 1 QSFP Uplink
+    - endpoints: ["Spine-S2:eth2", "Leaf-L2:eth53"]       # Spine 2 -> Accton Leaf 2 QSFP Uplink
+    - endpoints: ["Spine-S2:eth3", "Leaf-L3:eth31"]       # Spine 2 -> Arista Leaf 3 QSFP Uplink (Ethernet120)
+    - endpoints: ["Spine-S2:eth4", "Leaf-L4:eth31"]       # Spine 2 -> Arista Leaf 4 QSFP Uplink (Ethernet120)
+    - endpoints: ["Spine-S2:eth5", "Border-Leaf1:eth31"] # Spine 2 -> Arista Border 1 QSFP Uplink (Ethernet120)
+    - endpoints: ["Spine-S2:eth6", "Border-Leaf2:eth31"] # Spine 2 -> Arista Border 2 QSFP Uplink (Ethernet120)
+
+    # ------------------------------------------------------
+    # ACCTON LEAF SWITCHES ACCESS/COMPUTE DOWNLINKS 
+    # ------------------------------------------------------
+    - endpoints: ["Leaf-L1:eth2", "Host12-1:eth1"]        # Accton Leaf 1 -> Compute Host 1 Path A
+    - endpoints: ["Leaf-L1:eth3", "Host12-2:eth1"]        # Accton Leaf 1 -> Compute Host 2 Path A
+    - endpoints: ["Leaf-L1:eth4", "Host12-3:eth1"]        # Accton Leaf 1 -> Compute Host 3 Path A
+    
+    - endpoints: ["Leaf-L2:eth2", "Host12-1:eth2"]        # Accton Leaf 2 -> Compute Host 1 Path B
+    - endpoints: ["Leaf-L2:eth3", "Host12-2:eth2"]        # Accton Leaf 2 -> Compute Host 2 Path B
+    - endpoints: ["Leaf-L2:eth4", "Host12-3:eth2"]        # Accton Leaf 2 -> Compute Host 3 Path B
+
+    # ------------------------------------------------------
+    # ARISTA 7050QX-32 LEAF SWITCHES ACCESS/COMPUTE DOWNLINKS
+    # ------------------------------------------------------
+    - endpoints: ["Leaf-L3:eth1", "Host34-1:eth1"]        # Arista Leaf 3 (Ethernet0) -> Host 1 Path A
+    - endpoints: ["Leaf-L3:eth2", "Host34-2:eth1"]        # Arista Leaf 3 (Ethernet4) -> Host 2 Path A
+    - endpoints: ["Leaf-L3:eth3", "MonitorSrv:eth1"]       # Arista Leaf 3 (Ethernet8) -> Monitoring Server Path A
+    
+    - endpoints: ["Leaf-L4:eth1", "Host34-1:eth2"]        # Arista Leaf 4 (Ethernet0) -> Host 1 Path B
+    - endpoints: ["Leaf-L4:eth2", "Host34-2:eth2"]        # Arista Leaf 4 (Ethernet4) -> Host 2 Path B
+    - endpoints: ["Leaf-L4:eth3", "MonitorSrv:eth2"]       # Arista Leaf 4 (Ethernet8) -> Monitoring Server Path B
+
+    # ------------------------------------------------------
+    # FIX: ARISTA 7050QX-32S BORDER LEAF EDGE/ROUTER DOWNLINKS
+    # ------------------------------------------------------
+    # Move edge links to eth1, eth2, eth3, eth4 to map to Ethernet0, Ethernet4, Ethernet8, Ethernet12 breakouts
+    - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:eth1"] # Border 1 (Ethernet0) -> Exit Router 1 Path A
+    - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"] # Border 1 (Ethernet4) -> Exit Router 2 Path A
+    - endpoints: ["Border-Leaf1:eth3", "HostB12-1:eth1"]    # Border 1 (Ethernet8) -> DMZ Host 1 Path A
+    - endpoints: ["Border-Leaf1:eth4", "HostB12-2:eth1"]    # Border 1 (Ethernet12) -> DMZ Host 2 Path A
+
+    - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"] # Border 2 (Ethernet0) -> Exit Router 2 Path B
+    - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:eth2"] # Border 2 (Ethernet4) -> Exit Router 1 Path B
+    - endpoints: ["Border-Leaf2:eth3", "HostB12-1:eth2"]    # Border 2 (Ethernet8) -> DMZ Host 1 Path B
+    - endpoints: ["Border-Leaf2:eth4", "HostB12-2:eth2"]    # Border 2 (Ethernet12) -> DMZ Host 2 Path B
+
+    # ------------------------------------------------------
+    # OUTSIDE EDGE WAN / ISP PEERING LINKS
+    # ------------------------------------------------------
+    - endpoints: ["ISP1:eth1", "Exit-Router1:eth3"]         # ISP 1 Uplink -> Exit Router 1 Facing Port
+    - endpoints: ["ISP2:eth1", "Exit-Router2:eth3"]         # ISP 2 Uplink -> Exit Router 2 Facing Port
+
+
+    # - endpoints: ["Spine-S1:eth1", "Leaf-L1:eth54"]   
+    # - endpoints: ["Spine-S1:eth2", "Leaf-L2:eth54"]   
+    # - endpoints: ["Spine-S1:eth3", "Leaf-L3:eth32"]   
+    # - endpoints: ["Spine-S1:eth4", "Leaf-L4:eth32"]   
+    # - endpoints: ["Spine-S1:eth5", "Border-Leaf1:eth32"] 
+    # - endpoints: ["Spine-S1:eth6", "Border-Leaf2:eth32"] 
+    # - endpoints: ["Spine-S2:eth1", "Leaf-L1:eth53"]   
+    # - endpoints: ["Spine-S2:eth2", "Leaf-L2:eth53"]   
+    # - endpoints: ["Spine-S2:eth3", "Leaf-L3:eth31"]   
+    # - endpoints: ["Spine-S2:eth4", "Leaf-L4:eth31"]   
+    # - endpoints: ["Spine-S2:eth5", "Border-Leaf1:eth31"] 
+    # - endpoints: ["Spine-S2:eth6", "Border-Leaf2:eth31"] 
+    # - endpoints: ["Leaf-L1:eth2", "Host12-1:eth1"]    
+    # - endpoints: ["Leaf-L1:eth3", "Host12-2:eth1"]    
+    # - endpoints: ["Leaf-L1:eth4", "Host12-3:eth1"]    
+    # - endpoints: ["Leaf-L2:eth2", "Host12-1:eth2"]    
+    # - endpoints: ["Leaf-L2:eth3", "Host12-2:eth2"]    
+    # - endpoints: ["Leaf-L2:eth4", "Host12-3:eth2"]    
+    # - endpoints: ["Leaf-L3:eth1", "Host34-1:eth1"]    
+    # - endpoints: ["Leaf-L3:eth2", "Host34-2:eth1"]    
+    # - endpoints: ["Leaf-L3:eth3", "MonitorSrv:eth1"]   
+    # - endpoints: ["Leaf-L4:eth1", "Host34-1:eth2"]    
+    # - endpoints: ["Leaf-L4:eth2", "Host34-2:eth2"]    
+    # - endpoints: ["Leaf-L4:eth3", "MonitorSrv:eth2"]   
+    # - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:eth1"]  
+    # - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"]  
+    # - endpoints: ["Border-Leaf1:eth3", "HostB12-1:eth1"]    
+    # - endpoints: ["Border-Leaf1:eth4", "HostB12-2:eth1"]    
+    # - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"]  
+    # - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:eth2"]  
+    # - endpoints: ["Border-Leaf2:eth3", "HostB12-1:eth2"]    
+    # - endpoints: ["Border-Leaf2:eth4", "HostB12-2:eth2"]    
+    # - endpoints: ["ISP1:eth1", "Exit-Router1:eth3"]
+    # - endpoints: ["ISP2:eth1", "Exit-Router2:eth3"]
