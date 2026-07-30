@@ -1,0 +1,31 @@
+#!/bin/sh
+# ==========================================================================================
+# AUTOMATED NATIVE ON-BOX PLATFORM BREAKOUT PARSING ENGINE (FIXED HASH MATRICES)
+# ==========================================================================================
+
+# Standard SHA-512 hash format string for user 'admin'
+PASSWORD="\$6\$rounds=5000\$g7E8uX2y\$S8m3K7M1VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR1wS6vY9tE5m2K8VvF9dQzN5Kx4PzR=="
+
+# 1. COMPILE HARDWARE BREAKOUT MATRICES NATIVELY
+sonic-cfggen -H -k {{ hostvars[item]['hwsku'] }} -p /usr/share/sonic/device/{{ hostvars[item]['sonic_platform_string'] }}/{{ hostvars[item]['port_config_path_suffix'] }} --preset t1 > /tmp/factory_ports.json
+
+# 2. MERGE PARAMETERS INTO UNIFIED BASE LAYOUT FILE
+python3 -c "
+import sys, json
+d = json.load(open('/tmp/factory_ports.json'))
+d.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {}).update({
+    'hostname': '{{ item }}',
+    'docker_routing_config_mode': 'unified',
+    'frr_mgmt_framework_config': 'true',
+    'platform': 'x86_64-kvm_x86_64-r0',
+    'hwsku': '{{ hostvars[item]['hwsku'] }}'
+})
+d.setdefault('USER', {}).setdefault('admin', {}).update({'password': '$PASSWORD', 'status': 'enabled'})
+d.setdefault('MGMT_PORT', {}).setdefault('eth0', {}).update({'admin_status': 'up', 'autoneg': 'true', 'description': 'Management', 'mtu': '1500', 'speed': '1000'})
+d.setdefault('MGMT_INTERFACE', {}).setdefault('eth0|172.16.2.{{ hostvars[item]['ansible_host'].split('.')[-1] }}/24', {}).update({'gwaddr': '172.16.2.254'})
+d.pop('COPP_TABLE', None)
+json.dump(d, open('/etc/sonic/config_db.json', 'w'), indent=4)
+"
+
+# 3. TRIGGER INTERNAL RECONSTRUCTION LOOPS
+nohup sh -c 'sleep 2 && config reload -y -f' > /dev/null 2>&1 &
