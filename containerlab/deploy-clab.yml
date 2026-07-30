@@ -1,0 +1,123 @@
+---
+- name: End-to-End Containerlab Deployment and Script-Driven Customization Pipeline
+  hosts: poweredge_r810
+  become: true
+  gather_facts: true
+
+  vars:
+    remote_lab_dir: "/opt/containerlab/sheba"
+    remote_topo_file: "/opt/containerlab/sheba/topology.clab.yml"
+    local_project_root: "{{ playbook_dir }}/../"
+
+  tasks:
+    # ==========================================================================================
+    # PHASE 1: ENVIRONMENT PURGE AND VANILLA TOPOLOGY LAUNCH
+    # ==========================================================================================
+    - name: Automatically flush old cryptographic host keys from laptop memory
+      known_hosts:
+        name: "{{ item }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      loop:
+        - "172.16.2.11"
+        - "172.16.2.12"
+        - "172.16.2.21"
+        - "172.16.2.22"
+        - "172.16.2.23"
+        - "172.16.2.24"
+        - "172.16.2.31"
+        - "172.16.2.32"
+      tags: [ redeploy ]
+
+    - name: Check if existing topology file exists on R810 before teardown
+      stat:
+        path: "{{ remote_topo_file }}"
+      register: remote_topo_file_stat
+      tags: [ redeploy ]
+
+    - name: Completely destroy active Containerlab topology running wrapper blocks
+      command: "containerlab destroy -t {{ remote_topo_file }} --cleanup"
+      when: remote_topo_file_stat.stat.exists
+      failed_when: false
+      tags: [ redeploy ]
+
+    - name: Force delete persistent volume caches and disk state memories on R810
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ remote_lab_dir }}/clab-sheba"
+        - "/root/clab-sheba"
+        - "/home/nh1221/clab-sheba"
+      tags: [ redeploy ]
+
+    - name: Sync entire local configuration directory tree over to PowerEdge R810
+      synchronize:
+        src: "{{ local_project_root }}/"
+        dest: "{{ remote_lab_dir }}/"
+        recursive: yes
+        delete: yes
+      become: false
+      tags: [ redeploy ]
+
+    - name: Dynamically generate target configuration scripts directly on the PowerEdge R810 filesystem
+      template:
+        src: templates/configure_sonic.sh.j2
+        dest: "{{ remote_lab_dir }}/profiles/{{ hostvars[item]['profile_subdir'] }}/{{ item }}_configure.sh"
+        mode: '0755'
+      loop: "{{ groups['sonic_vs'] }}"
+      tags: [ redeploy ]
+
+    - name: Deploy plain vanilla Containerlab topology matrix directly on remote host
+      command: "containerlab deploy -t {{ remote_topo_file }} --reconfigure"
+      tags: [ redeploy ]
+
+    - name: Wait for internal switch QEMU SSH control planes to accept TCP connections
+      shell: "docker exec -i {{ item }} bash -c 'cat < /dev/null > /dev/tcp/172.16.2.{{ hostvars[item]['ansible_host'].split('.')[-1] }}/22'"
+      loop: "{{ groups['sonic_vs'] }}"
+      register: qemu_mgmt_gate
+      until: qemu_mgmt_gate.rc == 0
+      retries: 45
+      delay: 10
+      changed_when: false
+      tags: [ redeploy ]
+
+    # ==========================================================================================
+    # PHASE 2: HOST-LEVEL CONTAINER INJECTION AND EXECUTION LOOPS
+    # ==========================================================================================
+    - name: Push the pre-compiled shell script files directly into the switch container file trees
+      shell: |
+        docker cp {{ remote_lab_dir }}/profiles/{{ hostvars[item]['profile_subdir'] }}/{{ item }}_configure.sh {{ item }}:/tmp/configure_sonic.sh
+      loop: "{{ groups['sonic_vs'] }}"
+      tags: [ redeploy ]
+
+    - name: Execute the staged script on-box to handle breakout mapping and trigger reload
+      shell: |
+        docker exec -i {{ item }} sh -c "/bin/sh /tmp/configure_sonic.sh"
+      loop: "{{ groups['sonic_vs'] }}"
+      tags: [ redeploy ]
+
+    # ==========================================================================================
+    # PHASE 3: TELEMETRY VERIFICATION GATES AND PERSISTENT STORAGE
+    # ==========================================================================================
+    - name: Pause playbook while background reloads re-initialize interface lane matrices
+      ansible.builtin.pause:
+        minutes: 2
+      tags: [ redeploy ]
+
+    - name: Poll control planes until all switches settle back online after the reloads
+      shell: "docker exec -i {{ item }} bash -c 'cat < /dev/null > /dev/tcp/172.16.2.{{ hostvars[item]['ansible_host'].split('.')[-1] }}/22'"
+      loop: "{{ groups['sonic_vs'] }}"
+      register: post_reload_mgmt_gate
+      until: post_reload_mgmt_gate.rc == 0
+      retries: 30
+      delay: 10
+      changed_when: false
+      tags: [ redeploy ]
+
+    - name: Commit running memory configurations securely back into physical storage
+      shell: |
+        docker exec -i {{ item }} sshpass -p "admin" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.{{ hostvars[item]['ansible_host'].split('.')[-1] }} "sudo config save -y"
+      loop: "{{ groups['sonic_vs'] }}"
+      tags: [ redeploy ]
