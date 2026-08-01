@@ -26,24 +26,22 @@
   until: configdb_probe.rc == 0
   when: switch_ports is defined
 
-- name: Generate platform-specific config_db.json from hwsku port_config.ini
+- name: Generate platform-specific config_db.json via sonic-cfggen preset
   ansible.builtin.shell: |
     sonic-cfggen -H -k {{ hwsku }} \
-      -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini \
-      | python3 -c "
-    import json, sys
-    db = json.load(sys.stdin)
-    m = db.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})
-    m['hostname'] = '{{ hostname }}'
-    m['type'] = '{{ device_type }}'
-    m['router_id'] = '{{ router_id }}'
-    m['bgp_asn'] = '{{ bgp_local_asn }}'
-    m['frr_mgmt_framework_config'] = 'true'
-    m['docker_routing_config_mode'] = 'unified'
+      -p /usr/share/sonic/device/x86_64-kvm_x86_64-r0/Force10-S6000/port_config.ini \
+      --preset t1 \
+      -a '{"DEVICE_METADATA": {"localhost": {"hostname": "{{ hostname }}", "type": "{{ device_type }}", "router_id": "{{ router_id }}", "bgp_asn": "{{ bgp_local_asn }}", "frr_mgmt_framework_config": "true", "docker_routing_config_mode": "unified"}}}' \
+      > /tmp/config_db_raw.json && \
+    python3 -c "
+    import json
+    with open('/tmp/config_db_raw.json') as f:
+        db = json.load(f)
     for p in db.get('PORT', {}):
         db['PORT'][p]['admin_status'] = 'down'
-    json.dump(db, sys.stdout, indent=4)
-    " > /etc/sonic/config_db.json
+    with open('/etc/sonic/config_db.json', 'w') as f:
+        json.dump(db, f, indent=4)
+    "
   become: true
   when: switch_ports is defined
 
