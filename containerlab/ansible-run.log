@@ -1,89 +1,306 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/provision.yml
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/lab/preflight.yml
 
-PLAY [Provision SONiC leaf-spine fabric] *******************************************************************************************************************
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
 
-TASK [sonic_provision : Assert access_ports do not overlap fabric switch_ports] ****************************************************************************
-skipping: [Spine-S1]
-skipping: [Spine-S2]
-ok: [Leaf-L2] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-ok: [Leaf-L1] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-ok: [Leaf-L3] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-ok: [Leaf-L4] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-ok: [Border-Leaf1] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-ok: [Border-Leaf2] => {
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
     "changed": false,
     "msg": "All assertions passed"
 }
 
-TASK [sonic_provision : Wait for SONiC DB metadata file to be available] ***********************************************************************************
-[WARNING]: Host 'Spine-S1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Spine-S1]
-[WARNING]: Host 'Leaf-L1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Leaf-L1]
-[WARNING]: Host 'Spine-S2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Spine-S2]
-[WARNING]: Host 'Leaf-L2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Leaf-L2]
-[WARNING]: Host 'Leaf-L3' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Leaf-L3]
-[WARNING]: Host 'Leaf-L4' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Leaf-L4]
-[WARNING]: Host 'Border-Leaf1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Border-Leaf1]
-[WARNING]: Host 'Border-Leaf2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
-ok: [Border-Leaf2]
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+[WARNING]: Host 'localhost' is using the discovered Python interpreter at '/mnt/c/Users/nh1221/data-center/venv/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
 
-TASK [sonic_provision : Wait for CONFIG_DB access to become available] *************************************************************************************
-ok: [Spine-S1]
-ok: [Spine-S2]
-ok: [Leaf-L2]
-ok: [Leaf-L3]
-ok: [Leaf-L1]
-ok: [Leaf-L4]
-ok: [Border-Leaf1]
-ok: [Border-Leaf2]
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
 
-TASK [sonic_provision : Generate config and map raw PORT structure to production file] *********************************************************************
-[ERROR]: Task failed: Module failed: non-zero return code
-Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/sonic_provision/tasks/main.yml:70:3
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+ok: [localhost]
 
-68 #   when: switch_ports is defined
-69
-70 - name: Generate config and map raw PORT structure to production file
-     ^ column 3
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+ok: [localhost]
 
-fatal: [Spine-S1]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Seastone-DX010  -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Spine-S1',\n    'type': 'SpineRouter',\n    'router_id': '10.0.0.1',\n    'bgp_asn': '65000',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.006079", "end": "2026-08-01 21:31:22.751458", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:22.745379", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Spine-S2]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Seastone-DX010  -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Spine-S2',\n    'type': 'SpineRouter',\n    'router_id': '10.0.0.2',\n    'bgp_asn': '65000',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.006009", "end": "2026-08-01 21:31:24.189989", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:24.183980", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Leaf-L1]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Accton-AS5712-54X  -p /usr/share/sonic/device/x86_64-accton_as5712_54x-r0/Accton-AS5712-54X/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Leaf-L1',\n    'type': 'LeafRouter',\n    'router_id': '10.0.1.1',\n    'bgp_asn': '65011',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.007024", "end": "2026-08-01 21:31:23.889260", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:23.882236", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Leaf-L2]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Accton-AS5712-54X  -p /usr/share/sonic/device/x86_64-accton_as5712_54x-r0/Accton-AS5712-54X/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Leaf-L2',\n    'type': 'LeafRouter',\n    'router_id': '10.0.1.2',\n    'bgp_asn': '65012',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.006511", "end": "2026-08-01 21:31:24.020155", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:24.013644", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Leaf-L3]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Arista-7050-QX32  -p /usr/share/sonic/device/x86_64-arista_7050_qx32/Arista-7050-QX32/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Leaf-L3',\n    'type': 'LeafRouter',\n    'router_id': '10.0.1.3',\n    'bgp_asn': '65013',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.005731", "end": "2026-08-01 21:31:25.318215", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:25.312484", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Leaf-L4]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Arista-7050-QX32  -p /usr/share/sonic/device/x86_64-arista_7050_qx32/Arista-7050-QX32/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Leaf-L4',\n    'type': 'LeafRouter',\n    'router_id': '10.0.1.4',\n    'bgp_asn': '65014',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.006335", "end": "2026-08-01 21:31:29.797276", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:29.790941", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Border-Leaf2]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Arista-7050-QX-32S  -p /usr/share/sonic/device/x86_64-arista_7050_qx32s/Arista-7050-QX-32S/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Border-Leaf2',\n    'type': 'LeafRouter',\n    'router_id': '10.0.2.2',\n    'bgp_asn': '65032',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.008339", "end": "2026-08-01 21:31:30.482180", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:30.473841", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
-fatal: [Border-Leaf1]: FAILED! => {"changed": true, "cmd": "sonic-cfggen -H -k Arista-7050-QX-32S  -p /usr/share/sonic/device/x86_64-arista_7050_qx32s/Arista-7050-QX-32S/port_config.ini  --preset t1  > /tmp/config_db_raw.json && python3 -c \"\nimport json, os\n\n# 1. Load the pristine raw config we just generated\nwith open('/tmp/config_db_raw.json') as f:\n    raw_db = json.load(f)\n\n# 2. Load the existing production config if it exists, otherwise initialize an empty structure\nif os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:\n    with open('/etc/sonic/config_db.json') as f:\n        try:\n            db = json.load(f)\n        except json.JSONDecodeError:\n            db = {}\nelse:\n    db = {}\n\n# 3. Completely replace the PORT structure with the one from config_db_raw.json\ndb['PORT'] = raw_db.get('PORT', {})\n\n# 4. Enforce administrative shutdown on all replaced ports for safety\nfor p in db['PORT']:\n    db['PORT'][p]['admin_status'] = 'down'\n\n# 5. Ensure metadata exists and patch custom parameters\ndb.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})\ndb['DEVICE_METADATA']['localhost'].update({\n    'hostname': 'Border-Leaf1',\n    'type': 'LeafRouter',\n    'router_id': '10.0.2.1',\n    'bgp_asn': '65031',\n    'frr_mgmt_framework_config': 'true',\n    'docker_routing_config_mode': 'unified'\n})\n\n# 6. Write the finalized clean object out to your switch startup location\nwith open('/etc/sonic/config_db.json', 'w') as f:\n    json.dump(db, f, indent=4)\n\"\n", "delta": "0:00:00.007412", "end": "2026-08-01 21:31:31.458463", "msg": "non-zero return code", "rc": 2, "start": "2026-08-01 21:31:31.451051", "stderr": "/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied", "stderr_lines": ["/bin/sh: 1: cannot create /tmp/config_db_raw.json: Permission denied"], "stdout": "", "stdout_lines": []}
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+ok: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
 
 PLAY RECAP *************************************************************************************************************************************************
-Border-Leaf1               : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Border-Leaf2               : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Leaf-L1                    : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Leaf-L2                    : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Leaf-L3                    : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Leaf-L4                    : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-Spine-S1                   : ok=2    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
-Spine-S2                   : ok=2    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+localhost                  : ok=5    changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/lab/deploy.yml
+
+PLAY [Deploy containerlab topology on R810] ****************************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Host 'poweredge_r810' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Wait for SONiC management SSH from R810 side] ********************************************************************************************************
+ok: [poweredge_r810] => (item=Spine-S1 -> 172.16.2.11)
+ok: [poweredge_r810] => (item=Spine-S2 -> 172.16.2.12)
+ok: [poweredge_r810] => (item=Leaf-L1 -> 172.16.2.21)
+ok: [poweredge_r810] => (item=Leaf-L2 -> 172.16.2.22)
+ok: [poweredge_r810] => (item=Leaf-L3 -> 172.16.2.23)
+ok: [poweredge_r810] => (item=Leaf-L4 -> 172.16.2.24)
+ok: [poweredge_r810] => (item=Border-Leaf1 -> 172.16.2.31)
+ok: [poweredge_r810] => (item=Border-Leaf2 -> 172.16.2.32)
+
+PLAY RECAP *************************************************************************************************************************************************
+poweredge_r810             : ok=8    changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/preflight.yml
+
+PLAY [Preflight - wait for SONiC nodes to be ready] ********************************************************************************************************
+
+TASK [Wait for SSH transport] ******************************************************************************************************************************
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.11: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Spine-S1]: FAILED! => {"changed": false, "elapsed": 301, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.11: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.21: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L1]: FAILED! => {"changed": false, "elapsed": 303, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.21: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.22: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L2]: FAILED! => {"changed": false, "elapsed": 303, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.22: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.23: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L3]: FAILED! => {"changed": false, "elapsed": 304, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.23: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.12: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Spine-S2]: FAILED! => {"changed": false, "elapsed": 306, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.12: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.24: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L4]: FAILED! => {"changed": false, "elapsed": 301, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.24: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.32: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Border-Leaf2]: FAILED! => {"changed": false, "elapsed": 304, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.32: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.31: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Border-Leaf1]: FAILED! => {"changed": false, "elapsed": 308, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.31: Permission denied (publickey,password)."}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Border-Leaf2               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L2                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L3                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L4                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Spine-S1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Spine-S2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/preflight.yml =k
+[ERROR]: the playbook: =k could not be found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/preflight.yml -k
+SSH password:
+
+PLAY [Preflight - wait for SONiC nodes to be ready] ********************************************************************************************************
+
+TASK [Wait for SSH transport] ******************************************************************************************************************************
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.12: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Spine-S2]: FAILED! => {"changed": false, "elapsed": 303, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.12: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.22: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L2]: FAILED! => {"changed": false, "elapsed": 305, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.22: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.23: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L3]: FAILED! => {"changed": false, "elapsed": 307, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.23: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.11: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Spine-S1]: FAILED! => {"changed": false, "elapsed": 308, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.11: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.21: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L1]: FAILED! => {"changed": false, "elapsed": 308, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.21: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.24: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Leaf-L4]: FAILED! => {"changed": false, "elapsed": 302, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.24' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.24: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.32: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Border-Leaf2]: FAILED! => {"changed": false, "elapsed": 304, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.32: Permission denied (publickey,password)."}
+[ERROR]: Task failed: Action failed: timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@172.16.2.31: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/preflight.yml:16:7
+
+14       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p...
+15   tasks:
+16     - name: Wait for SSH transport
+         ^ column 7
+
+fatal: [Border-Leaf1]: FAILED! => {"changed": false, "elapsed": 305, "msg": "timed out waiting for ping module test: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l\n\nadmin@172.16.2.31: Permission denied (publickey,password)."}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Border-Leaf2               : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L2                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L3                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Leaf-L4                    : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Spine-S1                   : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Spine-S2                   : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
