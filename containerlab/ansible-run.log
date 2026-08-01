@@ -1,115 +1,91 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/containerlab/sonic-clab$ ansible-playbook -i hosts.yml playbooks/deploy_clab.yml --tags redeploy --ask-become-pass
-BECOME password:
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/provision.yml -k
+SSH password:
 
-PLAY [End-to-End Containerlab Deployment and Script-Driven Customization Pipeline] *************************************************************************
+PLAY [Provision SONiC leaf-spine fabric] *******************************************************************************************************************
 
-TASK [Gathering Facts] *************************************************************************************************************************************
-ok: [poweredge_r810]
+TASK [sonic_provision : Assert access_ports do not overlap fabric switch_ports] ****************************************************************************
+skipping: [Spine-S1]
+skipping: [Spine-S2]
+ok: [Leaf-L1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Leaf-L2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Leaf-L3] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Leaf-L4] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Border-Leaf1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Border-Leaf2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
 
-TASK [Automatically flush old cryptographic host keys from laptop memory] **********************************************************************************
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.11)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.12)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.21)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.22)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.23)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.24)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.31)
-ok: [poweredge_r810 -> localhost] => (item=172.16.2.32)
+TASK [sonic_provision : Wait for SONiC DB metadata file to be available] ***********************************************************************************
+[WARNING]: Host 'Leaf-L3' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Leaf-L3]
+[WARNING]: Host 'Spine-S1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Spine-S1]
+[WARNING]: Host 'Leaf-L2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Leaf-L2]
+[WARNING]: Host 'Spine-S2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Spine-S2]
+[WARNING]: Host 'Leaf-L1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Leaf-L1]
+[WARNING]: Host 'Leaf-L4' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Leaf-L4]
+[WARNING]: Host 'Border-Leaf2' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Border-Leaf2]
+[WARNING]: Host 'Border-Leaf1' is using the discovered Python interpreter at '/usr/bin/python3.13', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Border-Leaf1]
 
-TASK [Check if existing topology file exists on R810 before teardown] **************************************************************************************
-ok: [poweredge_r810]
+TASK [sonic_provision : Wait for CONFIG_DB access to become available] *************************************************************************************
+ok: [Spine-S1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L1]
+ok: [Spine-S2]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+ok: [Leaf-L4]
 
-TASK [Completely destroy active Containerlab topology running wrapper blocks] ******************************************************************************
-changed: [poweredge_r810]
+TASK [sonic_provision : Render platform-specific JSON configuration patch] *********************************************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.
+admin@localhost: Permission denied (publickey,password).
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/sonic_provision/tasks/main.yml:29:3
 
-TASK [Force delete persistent volume caches and disk state memories on R810] *******************************************************************************
-ok: [poweredge_r810] => (item=/opt/containerlab/sheba/clab-sheba)
-ok: [poweredge_r810] => (item=/root/clab-sheba)
-ok: [poweredge_r810] => (item=/home/nh1221/clab-sheba)
+27   when: switch_ports is defined
+28
+29 - name: Render platform-specific JSON configuration patch
+     ^ column 3
 
-TASK [Sync entire local configuration directory tree over to PowerEdge R810] *******************************************************************************
-changed: [poweredge_r810]
-
-TASK [Dynamically generate target configuration scripts directly on the PowerEdge R810 filesystem] *********************************************************
-changed: [poweredge_r810] => (item=Spine-S1)
-changed: [poweredge_r810] => (item=Spine-S2)
-changed: [poweredge_r810] => (item=Leaf-L1)
-changed: [poweredge_r810] => (item=Leaf-L2)
-changed: [poweredge_r810] => (item=Leaf-L3)
-changed: [poweredge_r810] => (item=Leaf-L4)
-changed: [poweredge_r810] => (item=Border-Leaf1)
-changed: [poweredge_r810] => (item=Border-Leaf2)
-
-TASK [Deploy plain vanilla Containerlab topology matrix directly on remote host] ***************************************************************************
-changed: [poweredge_r810]
-
-TASK [Wait for internal switch QEMU SSH control planes to accept TCP connections] **************************************************************************
-ok: [poweredge_r810] => (item=Spine-S1)
-ok: [poweredge_r810] => (item=Spine-S2)
-ok: [poweredge_r810] => (item=Leaf-L1)
-ok: [poweredge_r810] => (item=Leaf-L2)
-ok: [poweredge_r810] => (item=Leaf-L3)
-ok: [poweredge_r810] => (item=Leaf-L4)
-ok: [poweredge_r810] => (item=Border-Leaf1)
-ok: [poweredge_r810] => (item=Border-Leaf2)
-
-TASK [Push the pre-compiled shell script files directly into the switch container file trees] **************************************************************
-changed: [poweredge_r810] => (item=Spine-S1)
-changed: [poweredge_r810] => (item=Spine-S2)
-changed: [poweredge_r810] => (item=Leaf-L1)
-[WARNING]: sftp transfer mechanism failed on [192.168.9.198]. Use ANSIBLE_DEBUG=1 to see detailed information
-changed: [poweredge_r810] => (item=Leaf-L2)
-changed: [poweredge_r810] => (item=Leaf-L3)
-changed: [poweredge_r810] => (item=Leaf-L4)
-changed: [poweredge_r810] => (item=Border-Leaf1)
-changed: [poweredge_r810] => (item=Border-Leaf2)
-
-TASK [Execute the staged script on-box to handle breakout mapping and trigger reload] **********************************************************************
-changed: [poweredge_r810] => (item=Spine-S1)
-changed: [poweredge_r810] => (item=Spine-S2)
-changed: [poweredge_r810] => (item=Leaf-L1)
-changed: [poweredge_r810] => (item=Leaf-L2)
-changed: [poweredge_r810] => (item=Leaf-L3)
-changed: [poweredge_r810] => (item=Leaf-L4)
-changed: [poweredge_r810] => (item=Border-Leaf1)
-changed: [poweredge_r810] => (item=Border-Leaf2)
-
-TASK [Pause playbook while background reloads re-initialize interface lane matrices] ***********************************************************************
-Pausing for 120 seconds
-(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
-ok: [poweredge_r810]
-
-TASK [Poll control planes until all switches settle back online after the reloads] *************************************************************************
-ok: [poweredge_r810] => (item=Spine-S1)
-ok: [poweredge_r810] => (item=Spine-S2)
-ok: [poweredge_r810] => (item=Leaf-L1)
-ok: [poweredge_r810] => (item=Leaf-L2)
-ok: [poweredge_r810] => (item=Leaf-L3)
-ok: [poweredge_r810] => (item=Leaf-L4)
-ok: [poweredge_r810] => (item=Border-Leaf1)
-ok: [poweredge_r810] => (item=Border-Leaf2)
-
-TASK [Commit running memory configurations securely back into physical storage] ****************************************************************************
-changed: [poweredge_r810] => (item=Spine-S1)
-changed: [poweredge_r810] => (item=Spine-S2)
-changed: [poweredge_r810] => (item=Leaf-L1)
-changed: [poweredge_r810] => (item=Leaf-L2)
-changed: [poweredge_r810] => (item=Leaf-L3)
-[ERROR]: Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange
-Connection to 192.168.9.198 port 22 timed out
-Origin: /mnt/c/Users/nh1221/data-center/containerlab/sonic-clab/playbooks/deploy_clab.yml:119:7
-
-117       tags: [ redeploy ]
-118
-119     - name: Commit running memory configurations securely back into physical storage
-          ^ column 7
-
-failed: [poweredge_r810] (item=Leaf-L4) => {"ansible_loop_var": "item", "changed": false, "item": "Leaf-L4", "msg": "Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange\r\nConnection to 192.168.9.198 port 22 timed out", "unreachable": true}
-changed: [poweredge_r810] => (item=Border-Leaf1)
-changed: [poweredge_r810] => (item=Border-Leaf2)
-fatal: [poweredge_r810]: UNREACHABLE! => {"changed": true, "msg": "All items completed", "results": [{"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Spine-S1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.11 \"sudo config save -y\"\n", "delta": "0:00:01.410236", "end": "2026-07-29 21:22:14.436052", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Spine-S1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.11 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Spine-S1", "msg": "", "rc": 0, "start": "2026-07-29 21:22:13.025816", "stderr": "Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Spine-S2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.12 \"sudo config save -y\"\n", "delta": "0:00:01.329984", "end": "2026-07-29 21:22:24.349956", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Spine-S2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.12 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Spine-S2", "msg": "", "rc": 0, "start": "2026-07-29 21:22:23.019972", "stderr": "Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.12' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Leaf-L1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.21 \"sudo config save -y\"\n", "delta": "0:00:01.397948", "end": "2026-07-29 21:22:33.548778", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Leaf-L1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.21 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Leaf-L1", "msg": "", "rc": 0, "start": "2026-07-29 21:22:32.150830", "stderr": "Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.21' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Leaf-L2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.22 \"sudo config save -y\"\n", "delta": "0:00:01.327800", "end": "2026-07-29 21:22:43.226261", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Leaf-L2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.22 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Leaf-L2", "msg": "", "rc": 0, "start": "2026-07-29 21:22:41.898461", "stderr": "Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.22' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Leaf-L3 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.23 \"sudo config save -y\"\n", "delta": "0:00:01.395300", "end": "2026-07-29 21:22:49.669693", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Leaf-L3 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.23 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Leaf-L3", "msg": "", "rc": 0, "start": "2026-07-29 21:22:48.274393", "stderr": "Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.23' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": false, "exception": "(traceback unavailable)", "item": "Leaf-L4", "msg": "Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange\r\nConnection to 192.168.9.198 port 22 timed out", "unreachable": true}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Border-Leaf1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.31 \"sudo config save -y\"\n", "delta": "0:00:01.421246", "end": "2026-07-29 21:24:14.338832", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Border-Leaf1 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.31 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Border-Leaf1", "msg": "", "rc": 0, "start": "2026-07-29 21:24:12.917586", "stderr": "Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.31' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}, {"ansible_loop_var": "item", "changed": true, "cmd": "docker exec -i Border-Leaf2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.32 \"sudo config save -y\"\n", "delta": "0:00:01.391838", "end": "2026-07-29 21:24:37.364961", "failed": false, "invocation": {"module_args": {"_raw_params": "docker exec -i Border-Leaf2 sshpass -p \"admin\" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no admin@172.16.2.32 \"sudo config save -y\"\n", "_uses_shell": true, "argv": null, "chdir": null, "cmd": null, "creates": null, "executable": null, "expand_argument_vars": true, "removes": null, "stdin": null, "stdin_add_newline": true, "strip_empty_ends": true}}, "item": "Border-Leaf2", "msg": "", "rc": 0, "start": "2026-07-29 21:24:35.973123", "stderr": "Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.\r\nDebian GNU/Linux 13 \\n \\l", "stderr_lines": ["Warning: Permanently added '172.16.2.32' (RSA) to the list of known hosts.", "Debian GNU/Linux 13 \\n \\l"], "stdout": "Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json", "stdout_lines": ["Running command: /usr/local/bin/sonic-cfggen -d --print-data > /etc/sonic/config_db.json"]}], "unreachable": true}
+fatal: [Spine-S1 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Leaf-L2 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Spine-S2 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Leaf-L1 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Leaf-L3 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Border-Leaf1 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Leaf-L4 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
+fatal: [Border-Leaf2 -> localhost]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added 'localhost' (ED25519) to the list of known hosts.\r\nadmin@localhost: Permission denied (publickey,password).", "unreachable": true}
 
 PLAY RECAP *************************************************************************************************************************************************
-poweredge_r810             : ok=13   changed=6    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Border-Leaf1               : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Border-Leaf2               : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L2                    : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L3                    : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L4                    : ok=3    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Spine-S1                   : ok=2    changed=0    unreachable=1    failed=0    skipped=1    rescued=0    ignored=0
+Spine-S2                   : ok=2    changed=0    unreachable=1    failed=0    skipped=1    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/data-center/containerlab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
