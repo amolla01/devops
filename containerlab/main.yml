@@ -1,0 +1,87 @@
+---
+- name: Assert access_ports do not overlap fabric switch_ports
+  ansible.builtin.assert:
+    that:
+      - (access_ports.keys() | list | intersect(switch_ports.keys() | list) | length) == 0
+    fail_msg: "access_ports and switch_ports overlap"
+  when:
+    - switch_ports is defined
+    - access_ports is defined
+
+- name: Wait for SONiC DB metadata file to be available
+  ansible.builtin.shell: "test -s /var/run/redis/sonic-db/database_config.json"
+  register: db_cfg
+  changed_when: false
+  retries: 40
+  delay: 3
+  until: db_cfg.rc == 0
+  when: switch_ports is defined
+
+- name: Wait for CONFIG_DB access to become available
+  ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" hostname
+  register: configdb_probe
+  changed_when: false
+  retries: 40
+  delay: 3
+  until: configdb_probe.rc == 0
+  when: switch_ports is defined
+
+- name: Generate platform-specific config_db.json from hwsku port_config.ini
+  ansible.builtin.shell: |
+    sonic-cfggen -H -k {{ hwsku }} \
+      -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini \
+      | python3 -c "
+    import json, sys
+    db = json.load(sys.stdin)
+    m = db.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})
+    m['hostname'] = '{{ hostname }}'
+    m['type'] = '{{ device_type }}'
+    m['router_id'] = '{{ router_id }}'
+    m['bgp_asn'] = '{{ bgp_local_asn }}'
+    m['frr_mgmt_framework_config'] = 'true'
+    m['docker_routing_config_mode'] = 'unified'
+    for p in db.get('PORT', {}):
+        db['PORT'][p]['admin_status'] = 'down'
+    json.dump(db, sys.stdout, indent=4)
+    " > /etc/sonic/config_db.json
+  become: true
+  when: switch_ports is defined
+
+- name: Reload configuration (async to survive SSH disruption)
+  ansible.builtin.shell: "nohup bash -c 'sleep 2 && config reload -y' &"
+  become: true
+  when: switch_ports is defined
+
+- name: Wait for SONiC to come back after config reload
+  ansible.builtin.wait_for_connection:
+    delay: 15
+    timeout: 180
+  when: switch_ports is defined
+
+- name: Render configuration overlay
+  ansible.builtin.template:
+    src: sonic_patch.json.j2
+    dest: "/tmp/{{ inventory_hostname }}_patch.json"
+  delegate_to: localhost
+  vars:
+    ansible_connection: local
+  when: switch_ports is defined
+
+- name: Copy rendered overlay to target SONiC node
+  ansible.builtin.copy:
+    src: "/tmp/{{ inventory_hostname }}_patch.json"
+    dest: "/var/tmp/patch.json"
+  when: switch_ports is defined
+
+- name: Apply configuration overlay to CONFIG_DB
+  ansible.builtin.command: "sonic-cfggen -j /var/tmp/patch.json --write-to-db"
+  become: true
+  register: db_write
+  when: switch_ports is defined
+
+- name: Save running configuration to startup config
+  ansible.builtin.command: "config save -y"
+  become: true
+  when:
+    - switch_ports is defined
+    - db_write.rc == 0
