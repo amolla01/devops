@@ -33,145 +33,29 @@
   become: true
   when: switch_ports is defined
 
-- name: Copy platform port_config.ini to target
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../hwsku_port_configs/{{ platform }}/{{ hwsku }}/port_config.ini"
-    dest: /tmp/port_config.ini
+- name: Generate config_db.json from platform port_config.ini via sonic-cfggen
+  ansible.builtin.shell: >
+    sonic-cfggen -H -k {{ hwsku }}
+    -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini
+    --preset t1 > /etc/sonic/config_db.json
   become: true
   when: switch_ports is defined
 
-- name: Generate config_db.json with PORT ordered to match topology ethN
-  ansible.builtin.shell: |
-    python3 << 'PYEOF'
-    import json, os
-    from collections import defaultdict, OrderedDict
+- name: Copy customization script to target
+  ansible.builtin.copy:
+    src: customize_config_db.py
+    dest: /tmp/customize_config_db.py
+    mode: '0755'
+  become: true
+  when: switch_ports is defined
 
-    with open('/tmp/port_data.json') as f:
-        data = json.load(f)
-
-    switch_ports = data['switch_ports']
-    access_ports = data['access_ports']
-    meta = data['metadata']
-
-    # Parse port_config.ini for ALL ports in this hwsku
-    all_ports = OrderedDict()
-    with open('/tmp/port_config.ini') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            parts = line.split()
-            if len(parts) >= 5:
-                all_ports[parts[0]] = {
-                    'lanes': parts[1], 'alias': parts[2],
-                    'index': parts[3], 'speed': parts[4]
-                }
-
-    if os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:
-        with open('/etc/sonic/config_db.json') as f:
-            try:
-                db = json.load(f)
-            except json.JSONDecodeError:
-                db = {}
-    else:
-        db = {}
-
-    # Detect breakout groups: multiple access_ports sharing the same index
-    idx_groups = defaultdict(list)
-    for port_name, cfg in access_ports.items():
-        idx_groups[str(cfg['index'])].append(port_name)
-
-    breakout_parents = set()
-    breakout_cfg = {}
-    for idx, ports in idx_groups.items():
-        if len(ports) > 1:
-            for pname, pcfg in all_ports.items():
-                if pcfg['index'] == idx:
-                    breakout_parents.add(pname)
-                    break
-            parent = sorted(ports, key=lambda x: int(x.replace('Ethernet', '')))[0]
-            child_speed = access_ports[ports[0]].get('speed', '10000')
-            speed_g = int(child_speed) // 1000
-            breakout_cfg[parent] = {
-                'brkout_mode': '{}x{}G[{}G]'.format(len(ports), speed_g, speed_g)
-            }
-
-    # Build PORT: full range from port_config.ini, breakout parents replaced by children
-    port_table = OrderedDict()
-    for port_name, pcfg in all_ports.items():
-        if port_name in breakout_parents:
-            # Replace parent with breakout children from access_ports
-            children = sorted(idx_groups[pcfg['index']], key=lambda x: int(x.replace('Ethernet', '')))
-            for child in children:
-                ccfg = access_ports[child]
-                port_table[child] = {
-                    'lanes': str(ccfg.get('lanes', '')),
-                    'speed': str(ccfg.get('speed', '10000')),
-                    'index': pcfg['index'],
-                    'admin_status': 'down',
-                    'alias': child
-                }
-        elif port_name in switch_ports:
-            sp = switch_ports[port_name]
-            port_table[port_name] = {
-                'lanes': str(sp.get('lanes', pcfg['lanes'])),
-                'speed': str(sp.get('speed', pcfg['speed'])),
-                'index': str(sp.get('index', pcfg['index'])),
-                'admin_status': 'down',
-                'alias': pcfg['alias']
-            }
-        elif port_name in access_ports:
-            ap = access_ports[port_name]
-            port_table[port_name] = {
-                'lanes': str(ap.get('lanes', pcfg['lanes'])),
-                'speed': str(ap.get('speed', pcfg['speed'])),
-                'index': str(ap.get('index', pcfg['index'])),
-                'admin_status': 'down',
-                'alias': pcfg['alias']
-            }
-        else:
-            port_table[port_name] = {
-                'lanes': pcfg['lanes'],
-                'speed': pcfg['speed'],
-                'index': pcfg['index'],
-                'admin_status': 'down',
-                'alias': pcfg['alias']
-            }
-
-    db['PORT'] = port_table
-
-    if breakout_cfg:
-        db['BREAKOUT_CFG'] = breakout_cfg
-    else:
-        db.pop('BREAKOUT_CFG', None)
-
-    # Override INTERFACE to prevent init_cfg.json defaults from leaking in
-    db['INTERFACE'] = {}
-
-    # Platform must be x86_64-kvm_x86_64-r0 for KVM VS
-    db.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})
-    db['DEVICE_METADATA']['localhost'].update({
-        'hostname': meta['hostname'],
-        'type': meta['type'],
-        'router_id': meta['router_id'],
-        'bgp_asn': meta['bgp_asn'],
-        'hwsku': meta['hwsku'],
-        'platform': 'x86_64-kvm_x86_64-r0',
-        'frr_mgmt_framework_config': 'true',
-        'docker_routing_config_mode': 'unified'
-    })
-
-    for key in ['BGP_NEIGHBOR', 'DEVICE_NEIGHBOR']:
-        db.pop(key, None)
-
-    with open('/etc/sonic/config_db.json', 'w') as f:
-        json.dump(db, f, indent=4)
-    PYEOF
+- name: Customize config_db.json for this node
+  ansible.builtin.command: python3 /tmp/customize_config_db.py
   become: true
   when: switch_ports is defined
 
 - name: Reload configuration (async to survive SSH disruption)
-  ansible.builtin.shell: "nohup bash -c 'sleep 2 && sudo config reload -y' &"
+  ansible.builtin.shell: "nohup bash -c 'sleep 2 && sudo config reload -y -f' &"
   become: true
   when: switch_ports is defined
 
