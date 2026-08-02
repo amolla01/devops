@@ -33,11 +33,11 @@
   become: true
   when: switch_ports is defined
 
-- name: Generate config_db.json from platform port_config.ini via sonic-cfggen
+- name: Generate raw config_db from platform port_config.ini
   ansible.builtin.shell: >
     sonic-cfggen -H -k {{ hwsku }}
     -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini
-    --preset t1 > /etc/sonic/config_db.json
+    --preset t1 > /tmp/raw_config_db.json
   become: true
   when: switch_ports is defined
 
@@ -49,17 +49,21 @@
   become: true
   when: switch_ports is defined
 
-- name: Customize config_db.json for this node
+- name: Customize raw_config_db.json for this node
   ansible.builtin.command: python3 /tmp/customize_config_db.py
   become: true
   when: switch_ports is defined
 
-- name: Reload configuration (async to survive SSH disruption)
-  ansible.builtin.shell: "nohup bash -c 'sleep 2 && sudo config reload -y -f' &"
+- name: Load config into Redis (stop → flush → load → start)
+  ansible.builtin.shell: |
+    sudo systemctl stop sonic.target
+    redis-cli -n 4 flushdb
+    sudo sonic-cfggen -j /tmp/raw_config_db.json --write-to-db
+    sudo systemctl start sonic.target
   become: true
   when: switch_ports is defined
 
-- name: Wait for SONiC to come back after config reload
+- name: Wait for SONiC to come back after config load
   ansible.builtin.wait_for_connection:
     delay: 30
     timeout: 300

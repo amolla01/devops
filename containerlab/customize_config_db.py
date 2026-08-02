@@ -10,7 +10,7 @@ switch_ports = data['switch_ports']
 access_ports = data['access_ports']
 meta = data['metadata']
 
-with open('/etc/sonic/config_db.json') as f:
+with open('/tmp/raw_config_db.json') as f:
     db = json.load(f)
 
 # Set our DEVICE_METADATA (keep platform as x86_64-kvm_x86_64-r0 from sonic-cfggen)
@@ -65,5 +65,5 @@ for idx, ports in idx_groups.items():
 if breakout_cfg:
     db['BREAKOUT_CFG'] = breakout_cfg
 
-with open('/etc/sonic/config_db.json', 'w') as f:
+with open('/tmp/raw_config_db.json', 'w') as f:
     json.dump(db, f, indent=4)
