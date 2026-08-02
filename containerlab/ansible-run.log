@@ -1,3 +1,32 @@
+sudo sonic-cfggen -H -k Seastone-DX010 -p /usr/share/sonic/device/x86_64-cel_seastone-r0/Seastone-DX010/port_config.ini --preset t1 | sudo tee /etc/sonic/config_db.json && sudo config reload -y
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Spine-S1" "platform" "x86_64-kvm_x86_64-r0" "hwsku" "Seastone-DX010" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Leaf-L3" "platform" "x86_64-arista_7050_qx32" "hwsku" "Arista-7050-QX32" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+admin@Leaf-L3:~$ sudo sonic-cfggen -H -k Arista-7050-QX-32S -p /usr/share/sonic/device/x86_64-arista_7050_qx32s/Arista-7050-QX-32S/port_config.ini --preset t1 | sudo tee /etc/sonic/config_db.json > /dev/null && sudo config reload -y -f
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Border-Leaf1" "platform" "x86_64-arista_7050_qx32s" "hwsku" "Arista-7050-QX-32S" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+redis-cli -n 4 --json HGETALL "DEVICE_METADATA|localhost" | jq .
+
+
+sonic-db-cli CONFIG_DB HMSET "DEVICE_METADATA|localhost" "hostname" "Border-Leaf1" "platform" "x86_64-kvm_x86_64-r0" "hwsku" "Arista-7050-QX-32S" "docker_routing_config_mode" "unified" "frr_mgmt_framework_config" "true"
+
+redis-cli -n 4 --json HGETALL "DEVICE_METADATA|localhost" | jq .
+sonic-db-cli STATE_DB HGETALL "BGP_NEIGHBOR_STATE_TABLE|localhost"
+sonic-db-cli CONFIG_DB HGETALL "BGP_DEVICE_METADATA|localhost"
+
+sudo tail -n 100 -f /var/log/sonic/sonic.log | grep -i "cfggen"
+
+
+sudo systemctl stop sonic.target
+redis-cli -n 4 flushdb
+sudo sonic-cfggen -j /etc/sonic/config_db.json --write-to-db
+sudo systemctl start sonic.target
+
+
+
 nh1221@PowerEdge-R810:~$ ssh Spine-S1
 Warning: Permanently added 'spine-s1' (RSA) to the list of known hosts.
 Debian GNU/Linux 13 \n \l
