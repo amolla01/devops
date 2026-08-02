@@ -26,56 +26,110 @@
   until: configdb_probe.rc == 0
   when: switch_ports is defined
 
-# portsyncd resolves hwsku under the VM's actual platform (x86_64-kvm_x86_64-r0)
-- name: Symlink platform hwsku into VM device directory
-  ansible.builtin.file:
-    src: "/usr/share/sonic/device/{{ platform }}/{{ hwsku }}"
-    dest: "/usr/share/sonic/device/x86_64-kvm_x86_64-r0/{{ hwsku }}"
-    state: link
-    force: true
+- name: Write port data for config generation
+  ansible.builtin.copy:
+    content: "{{ {'switch_ports': switch_ports, 'access_ports': access_ports | default({}), 'metadata': {'hostname': hostname, 'type': device_type, 'router_id': router_id, 'bgp_asn': bgp_local_asn | string, 'hwsku': hwsku, 'platform': platform}} | to_nice_json }}"
+    dest: /tmp/port_data.json
   become: true
-  when:
-    - switch_ports is defined
-    - platform != "x86_64-kvm_x86_64-r0"
+  when: switch_ports is defined
 
-- name: Generate platform-specific config_db.json via sonic-cfggen preset
+- name: Generate config_db.json with PORT ordered to match topology ethN
   ansible.builtin.shell: |
-    sonic-cfggen -H -k {{ hwsku }} \
-      -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini \
-      --preset t1 \
-      > /tmp/config_db_raw.json && \
-    python3 -c "
-    import json
-    with open('/tmp/config_db_raw.json') as f:
-        db = json.load(f)
-    # --preset t1 overrides -a flags; set metadata after generation
-    m = db['DEVICE_METADATA']['localhost']
-    m['hostname'] = '{{ hostname }}'
-    m['type'] = '{{ device_type }}'
-    m['router_id'] = '{{ router_id }}'
-    m['bgp_asn'] = '{{ bgp_local_asn }}'
-    m['frr_mgmt_framework_config'] = 'true'
-    m['docker_routing_config_mode'] = 'unified'
-    # Strip preset T1 topology cruft; overlay sets our actual BGP/interfaces
-    for key in ['BGP_NEIGHBOR', 'DEVICE_NEIGHBOR', 'INTERFACE', 'LOOPBACK_INTERFACE']:
+    python3 << 'PYEOF'
+    import json, os
+    from collections import defaultdict, OrderedDict
+
+    with open('/tmp/port_data.json') as f:
+        data = json.load(f)
+
+    switch_ports = data['switch_ports']
+    access_ports = data['access_ports']
+    meta = data['metadata']
+
+    if os.path.exists('/etc/sonic/config_db.json') and os.path.getsize('/etc/sonic/config_db.json') > 0:
+        with open('/etc/sonic/config_db.json') as f:
+            try:
+                db = json.load(f)
+            except json.JSONDecodeError:
+                db = {}
+    else:
+        db = {}
+
+    # Build PORT: switch_ports first (eth1/eth2 fabric), access_ports second (eth3+)
+    # vrnetlab assigns QEMU NICs positionally, so NIC N → Nth PORT entry.
+    port_table = OrderedDict()
+
+    for port_name, cfg in switch_ports.items():
+        port_table[port_name] = {
+            'lanes': str(cfg.get('lanes', '')),
+            'speed': str(cfg.get('speed', '40000')),
+            'index': str(cfg.get('index', '0')),
+            'admin_status': 'down',
+            'alias': port_name
+        }
+
+    # Detect breakout groups: multiple ports sharing same index
+    idx_groups = defaultdict(list)
+    for port_name, cfg in access_ports.items():
+        idx_groups[str(cfg['index'])].append(port_name)
+
+    breakout_cfg = {}
+    for port_name, cfg in access_ports.items():
+        lanes = str(cfg.get('lanes', ''))
+        idx = str(cfg['index'])
+        speed = str(cfg.get('speed', '10000'))
+
+        port_table[port_name] = {
+            'lanes': lanes,
+            'speed': speed,
+            'index': idx,
+            'admin_status': 'down',
+            'alias': port_name
+        }
+
+        if len(idx_groups[idx]) > 1:
+            parent = sorted(idx_groups[idx], key=lambda x: int(x.replace('Ethernet', '')))[0]
+            if parent not in breakout_cfg:
+                speed_g = int(speed) // 1000
+                breakout_cfg[parent] = {
+                    'brkout_mode': '4x{}G[{}G]'.format(speed_g, speed_g)
+                }
+
+    db['PORT'] = port_table
+
+    if breakout_cfg:
+        db['BREAKOUT_CFG'] = breakout_cfg
+
+    db.setdefault('DEVICE_METADATA', {}).setdefault('localhost', {})
+    db['DEVICE_METADATA']['localhost'].update({
+        'hostname': meta['hostname'],
+        'type': meta['type'],
+        'router_id': meta['router_id'],
+        'bgp_asn': meta['bgp_asn'],
+        'hwsku': meta['hwsku'],
+        'platform': meta['platform'],
+        'frr_mgmt_framework_config': 'true',
+        'docker_routing_config_mode': 'unified'
+    })
+
+    for key in ['BGP_NEIGHBOR', 'DEVICE_NEIGHBOR']:
         db.pop(key, None)
-    for p in db.get('PORT', {}):
-        db['PORT'][p]['admin_status'] = 'down'
+
     with open('/etc/sonic/config_db.json', 'w') as f:
         json.dump(db, f, indent=4)
-    "
+    PYEOF
   become: true
   when: switch_ports is defined
 
 - name: Reload configuration (async to survive SSH disruption)
-  ansible.builtin.shell: "nohup bash -c 'sleep 2 && config reload -y' &"
+  ansible.builtin.shell: "nohup bash -c 'sleep 2 && sudo config reload -y' &"
   become: true
   when: switch_ports is defined
 
 - name: Wait for SONiC to come back after config reload
   ansible.builtin.wait_for_connection:
-    delay: 15
-    timeout: 180
+    delay: 30
+    timeout: 300
   when: switch_ports is defined
 
 - name: Render configuration overlay
