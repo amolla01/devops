@@ -1,0 +1,497 @@
+We have in last run explained the issues still un-resolved in the current run as well after implementing your suggestion:
+admin@Spine-S1:~$ show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.0.1, local AS number 65000 vrf-id 0
+BGP table version 3
+RIB entries 4, using 512 bytes of memory
+Peers 6, using 144432 KiB of memory
+Peer groups 0, using 0 bytes of memory
+
+
+Neighbhor      V     AS    MsgRcvd    MsgSent    TblVer    InQ    OutQ  Up/Down    State/PfxRcd    NeighborName
+-----------  ---  -----  ---------  ---------  --------  -----  ------  ---------  --------------  --------------
+Ethernet0      4  65011         22         23         3      0       0  00:18:35   0               Leaf-L1
+Ethernet4      4  65012         22         23         3      0       0  00:18:33   0               Leaf-L2
+Ethernet8      4      0          0          0         0      0       0  never      Idle            Leaf-L3
+Ethernet12     4      0          0          0         0      0       0  never      Idle            Leaf-L4
+Ethernet16     4  65031         22         22         3      0       0  00:18:22   0               Border-Leaf1
+Ethernet20     4  65032         22         22         3      0       0  00:18:22   0               Border-Leaf2
+
+Total number of neighbors 6
+admin@Spine-S1:~$
+Why 'Oper is not still coming up with so many iterations we have been through?' Are we not understanding the issues at all??
+
+admin@Leaf-L3:~$ show interfaces status
+  Interface            Lanes    Speed    MTU    FEC         Alias    Vlan    Oper    Admin    Type    Asym PFC
+-----------  ---------------  -------  -----  -----  ------------  ------  ------  -------  ------  ----------
+  Ethernet0              125      10G   9100    N/A   Ethernet1/1  routed    down       up     N/A         N/A
+  Ethernet1              126      10G   9100    N/A   Ethernet1/2  routed    down       up     N/A         N/A
+  Ethernet2              127      10G   9100    N/A   Ethernet1/3  routed    down       up     N/A         N/A
+  Ethernet3              128      10G   9100    N/A   Ethernet1/4  routed      up     down     N/A         N/A
+  Ethernet4  121,122,123,124      40G   9100    N/A   Ethernet2/1  routed    down     down     N/A         N/A
+  Ethernet8      13,14,15,16      40G   9100    N/A   Ethernet3/1  routed    down     down     N/A         N/A
+ :
+ :
+ Ethernet120          5,6,7,8      40G   9100    N/A    Ethernet31  routed      up       up     N/A         N/A
+ Ethernet124          1,2,3,4      40G   9100    N/A    Ethernet32  routed      up       up     N/A         N/A
+admin@Leaf-L3:~$
+Moreover Ethernet120/124 is Oper/Admin 'UP', however not connecting or exchanging mesages to Spines, that is also weired. Why is that please troubleshoot.
+
+And update troubleshooting documents. And provide fix of this issue once and for all.
+
+admin@Leaf-L3:~$ show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.1.3, local AS number 65021 vrf-id 0
+BGP table version 3
+RIB entries 5, using 640 bytes of memory
+Peers 5, using 120360 KiB of memory
+Peer groups 0, using 0 bytes of memory
+
+
+Neighbhor      V    AS    MsgRcvd    MsgSent    TblVer    InQ    OutQ  Up/Down    State/PfxRcd    NeighborName
+-----------  ---  ----  ---------  ---------  --------  -----  ------  ---------  --------------  --------------
+Ethernet0      4     0          9         18         0      0       0  never      Idle            Host34-1
+Ethernet1      4     0         11         20         0      0       0  never      Idle            Host34-2
+Ethernet2      4     0          9         18         0      0       0  never      Idle            MonSrv
+Ethernet120    4     0          0          0         0      0       0  never      Idle            Spine-S2
+Ethernet124    4     0          0          0         0      0       0  never      Idle            Spine-S1
+
+Total number of neighbors 5
+admin@Leaf-L3:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Leaf-L3# show bgp neighbors Ethernet120
+BGP neighbor on Ethernet120: (unspec), remote AS 0, local AS 65021, external link
+  Local Role: undefined
+  Remote Role: undefined
+ Description: Spine-S2
+  BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.1.3
+  BGP state = Idle
+  Last read 00:06:34, Last write never
+  Hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured tcp-mss is 0, synced tcp-mss is 0
+  Configured conditional advertisements interval is 60 seconds
+  Graceful restart information:
+    Local GR Mode: Helper*
+    Remote GR Mode: NotApplicable
+
+    R bit: False
+    N bit: False
+    Timers:
+      Configured Restart Time(sec): 120
+      Received Restart Time(sec): 0
+      Configured LLGR Stale Path Time(sec): 0
+  Message statistics:
+    Inq depth is 0
+    Outq depth is 0
+                         Sent       Rcvd
+    Opens:                  0          0
+    Notifications:          0          0
+    Updates:                0          0
+    Keepalives:             0          0
+    Route Refresh:          0          0
+    Capability:             0          0
+    Total:                  0          0
+
+  Prefix statistics:
+    Inbound filtered: 0
+    AS-PATH loop: 0
+    Originator loop: 0
+    Cluster loop: 0
+    Invalid next-hop: 0
+    Withdrawn: 0
+    Attributes discarded: 0
+
+  Minimum time between advertisement runs is 0 seconds
+  Update delay timer is 0 seconds (remaining: 0)
+
+ For address family: IPv4 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  Inbound updates discarded due to missing policy
+  Outbound updates discarded due to missing policy
+  0 accepted prefixes
+
+ For address family: IPv6 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  Inbound updates discarded due to missing policy
+  Outbound updates discarded due to missing policy
+  0 accepted prefixes
+
+  Connections established 0; dropped 0
+  Last reset 00:06:34,  Address family activated (n/a)
+  External BGP neighbor may be up to 1 hops away.
+BGP Connect Retry Timer in Seconds: 30
+Read thread: off  Write thread: off  FD used: -1
+
+
+Leaf-L3# show bgp neighbors Ethernet124
+BGP neighbor on Ethernet124: (unspec), remote AS 0, local AS 65021, external link
+  Local Role: undefined
+  Remote Role: undefined
+ Description: Spine-S1
+  BGP version 4, remote router ID 0.0.0.0, local router ID 10.0.1.3
+  BGP state = Idle
+  Last read 00:06:39, Last write never
+  Hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured hold time is 180 seconds, keepalive interval is 60 seconds
+  Configured tcp-mss is 0, synced tcp-mss is 0
+  Configured conditional advertisements interval is 60 seconds
+  Graceful restart information:
+    Local GR Mode: Helper*
+    Remote GR Mode: NotApplicable
+
+    R bit: False
+    N bit: False
+    Timers:
+      Configured Restart Time(sec): 120
+      Received Restart Time(sec): 0
+      Configured LLGR Stale Path Time(sec): 0
+  Message statistics:
+    Inq depth is 0
+    Outq depth is 0
+                         Sent       Rcvd
+    Opens:                  0          0
+    Notifications:          0          0
+    Updates:                0          0
+    Keepalives:             0          0
+    Route Refresh:          0          0
+    Capability:             0          0
+    Total:                  0          0
+
+  Prefix statistics:
+    Inbound filtered: 0
+    AS-PATH loop: 0
+    Originator loop: 0
+    Cluster loop: 0
+    Invalid next-hop: 0
+    Withdrawn: 0
+    Attributes discarded: 0
+
+  Minimum time between advertisement runs is 0 seconds
+  Update delay timer is 0 seconds (remaining: 0)
+
+ For address family: IPv4 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  Inbound updates discarded due to missing policy
+  Outbound updates discarded due to missing policy
+  0 accepted prefixes
+
+ For address family: IPv6 Unicast
+  Not part of any update group
+  Community attribute sent to this neighbor(all)
+  Inbound updates discarded due to missing policy
+  Outbound updates discarded due to missing policy
+  0 accepted prefixes
+
+  Connections established 0; dropped 0
+  Last reset 00:06:39,  Address family activated (n/a)
+  External BGP neighbor may be up to 1 hops away.
+BGP Connect Retry Timer in Seconds: 30
+Read thread: off  Write thread: off  FD used: -1
+
+
+Leaf-L3#
+
+And lastly logging in to access pots server, the playbooks are failing as it did before and Host**, 
+logging is failing. Exit-Router with 'ubuntu/ubuntu' was successfll, however netplan yml and frr 
+installion everything is failing. Are we not able to establish connectivity from there??
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/linux-netplan-stages.yml
+
+PLAY [Stage 1 - Linux management subnet netplan] ***********************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.
+nh1221@172.16.2.53: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.
+nh1221@172.16.2.53: Permission denied (publickey,password).
+
+fatal: [Host12-3]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.53: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
+nh1221@172.16.2.51: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
+nh1221@172.16.2.51: Permission denied (publickey,password).
+
+fatal: [Host12-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.51: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.
+nh1221@172.16.2.55: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.
+nh1221@172.16.2.55: Permission denied (publickey,password).
+
+fatal: [Host34-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.55: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.
+nh1221@172.16.2.54: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.
+nh1221@172.16.2.54: Permission denied (publickey,password).
+
+fatal: [Host34-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.54: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.
+nh1221@172.16.2.52: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.
+nh1221@172.16.2.52: Permission denied (publickey,password).
+
+fatal: [Host12-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.52: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.
+nh1221@172.16.2.56: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.
+nh1221@172.16.2.56: Permission denied (publickey,password).
+
+fatal: [MonSrv]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.56: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.
+nh1221@172.16.2.57: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.
+nh1221@172.16.2.57: Permission denied (publickey,password).
+
+fatal: [HostB12-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.57: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.
+nh1221@172.16.2.58: Permission denied (publickey,password).
+
+Task failed.
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.
+nh1221@172.16.2.58: Permission denied (publickey,password).
+
+fatal: [HostB12-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.58: Permission denied (publickey,password).", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Host12-1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12-2                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12-3                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host34-1                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host34-2                   : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-1                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-2                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/linux-bgp.yml
+
+PLAY [Configure eBGP unnumbered on Linux endpoint servers via FRR] *****************************************************************************************
+
+TASK [linux_frr_bgp : Assert BGP vars are present] *********************************************************************************************************
+ok: [Host12-2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Host12-1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Host12-3] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Host34-1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Host34-2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [MonSrv] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [HostB12-1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [HostB12-2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_frr_bgp : Install FRR] *************************************************************************************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.
+nh1221@172.16.2.55: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.
+nh1221@172.16.2.55: Permission denied (publickey,password).
+
+fatal: [Host34-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.55' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.55: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.
+nh1221@172.16.2.54: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.
+nh1221@172.16.2.54: Permission denied (publickey,password).
+
+fatal: [Host34-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.54' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.54: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
+nh1221@172.16.2.51: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
+nh1221@172.16.2.51: Permission denied (publickey,password).
+
+fatal: [Host12-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.51: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.
+nh1221@172.16.2.53: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.
+nh1221@172.16.2.53: Permission denied (publickey,password).
+
+fatal: [Host12-3]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.53' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.53: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.
+nh1221@172.16.2.52: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.
+nh1221@172.16.2.52: Permission denied (publickey,password).
+
+fatal: [Host12-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.52' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.52: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.
+nh1221@172.16.2.56: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.
+nh1221@172.16.2.56: Permission denied (publickey,password).
+
+fatal: [MonSrv]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.56' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.56: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.
+nh1221@172.16.2.57: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.
+nh1221@172.16.2.57: Permission denied (publickey,password).
+
+fatal: [HostB12-1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.57' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.57: Permission denied (publickey,password).", "unreachable": true}
+[ERROR]: Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.
+nh1221@172.16.2.58: Permission denied (publickey,password).
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/linux_frr_bgp/tasks/main.yml:10:3
+
+ 8     fail_msg: "bgp_local_asn, loopback_ip, and server_interfaces must all be defined"
+ 9
+10 - name: Install FRR
+     ^ column 3
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.
+nh1221@172.16.2.58: Permission denied (publickey,password).
+
+fatal: [HostB12-2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Warning: Permanently added '172.16.2.58' (ED25519) to the list of known hosts.\r\nnh1221@172.16.2.58: Permission denied (publickey,password).", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Host12-1                   : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12-2                   : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12-3                   : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host34-1                   : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host34-2                   : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-1                  : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-2                  : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
