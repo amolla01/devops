@@ -1,0 +1,140 @@
+---
+all:
+  children:
+    lab_control:
+      hosts:
+        localhost:
+          ansible_connection: local
+    lab_servers:
+      hosts:
+        poweredge_r810:
+          ansible_host: 192.168.9.198
+          ansible_user: nh1221
+
+    linux_endpoints:
+      hosts:
+        Host12-1: { ansible_host: 172.16.2.51 }
+        Host12-2: { ansible_host: 172.16.2.52 }
+        Host12-3: { ansible_host: 172.16.2.53 }
+        Host34-1: { ansible_host: 172.16.2.54 }
+        Host34-2: { ansible_host: 172.16.2.55 }
+        MonSrv: { ansible_host: 172.16.2.56 }
+        HostB12-1: { ansible_host: 172.16.2.57 }
+        HostB12-2: { ansible_host: 172.16.2.58 }
+    # ==========================================================
+    # PHASE 3 - EDGE WIREGUARD GATEWAYS (Group: exit_routers)
+    # ==========================================================
+    exit_routers:
+      hosts:
+        Exit-Router1:
+          ansible_host: 172.16.2.41
+        Exit-Router2:
+          ansible_host: 172.16.2.42
+
+    # ==========================================================
+    # PHASE 4 - UPSTREAM ISP GATEWAYS (Group: isp_routers)
+    # ==========================================================
+    isp_routers:
+      hosts:
+        ISP-1:
+          ansible_host: 172.16.2.61
+        ISP-2:
+          ansible_host: 172.16.2.62
+
+    linux_netplan_hosts:
+      children:
+        linux_endpoints:
+
+    # All generic_vm nodes share lab credentials (created by bootstrap)
+    generic_vm_nodes:
+      children:
+        linux_endpoints:
+        exit_routers:
+      vars:
+        ansible_user: nh1221
+        ansible_password: Welcome01!
+        ansible_become: true
+        ansible_become_password: Welcome01!
+
+    # ISP routers are plain Linux containers (kind: linux), not VMs
+    isp_routers_config:
+      children:
+        isp_routers:
+      vars:
+        ansible_user: root
+
+    sonic_switches:
+      children:
+        spines:
+          hosts:
+            Spine-S1:
+              ansible_host: 172.16.2.11
+            Spine-S2:
+              ansible_host: 172.16.2.12
+        leaves:
+          hosts:
+            Leaf-L1:
+              ansible_host: 172.16.2.21
+            Leaf-L2:
+              ansible_host: 172.16.2.22
+            Leaf-L3:
+              ansible_host: 172.16.2.23
+            Leaf-L4:
+              ansible_host: 172.16.2.24
+        border_leaves:
+          hosts:
+            Border-Leaf1:
+              ansible_host: 172.16.2.31
+            Border-Leaf2:
+              ansible_host: 172.16.2.32
+
+    # ==========================================================
+    # PHASE 3 - KUBERNETES CLUSTER (kubespray allocation)
+    # ==========================================================
+    kube_control_plane:
+      hosts:
+        Host12-1:
+        Host12-2:
+        Host34-1:
+
+    etcd:
+      hosts:
+        Host12-1:
+        Host12-2:
+        Host34-1:
+
+    kube_node:
+      hosts:
+        Host12-3:
+        Host34-2:
+        MonSrv:
+        HostB12-1:
+        HostB12-2:
+
+    k8s_cluster:
+      children:
+        kube_control_plane:
+        kube_node:
+
+    # ==========================================================
+    # PHASE 4 - ROOK-CEPH OSD NODES
+    # ==========================================================
+    ceph_osd_nodes:
+      hosts:
+        MonSrv:
+        HostB12-1:
+        HostB12-2:
+
+    # ==========================================================
+    # PHASE 5 - OPENSTACK HELM NODE ROLES
+    # ==========================================================
+    openstack_control:
+      hosts:
+        Host12-1:
+        Host12-2:
+        Host34-1:
+
+    openstack_compute:
+      hosts:
+        Host12-3:
+        Host34-2:
