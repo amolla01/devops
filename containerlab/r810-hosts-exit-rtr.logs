@@ -1,0 +1,781 @@
+nh1221@PowerEdge-R810:~$ sudo clab ins -a
++----+------------------------------------------------+----------+-----------------+--------------+---------------------------------+------------+---------+-----------------+--------------+
+| #  |                   Topo Path                    | Lab Name |      Name       | Container ID |              Image              |    Kind    |  State  |  IPv4 Address   | IPv6 Address |
++----+------------------------------------------------+----------+-----------------+--------------+---------------------------------+------------+---------+-----------------+--------------+
+|  1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | Border-Leaf1    | 5ad41ba7fc14 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.31/24  | N/A          |
+|  2 |                                                |          | Border-Leaf2    | 3b786efe5077 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.32/24  | N/A          |
+|  3 |                                                |          | Exit-Router1    | 18da361da0ca | local-ubuntu:26.04              | generic_vm | running | 172.16.2.41/24  | N/A          |
+|  4 |                                                |          | Exit-Router2    | 599584ccedbd | local-ubuntu:26.04              | generic_vm | running | 172.16.2.42/24  | N/A          |
+|  5 |                                                |          | External-Router | f685df3c9e0c | quay.io/frrouting/frr:10.0.1    | linux      | running | 172.16.2.252/24 | N/A          |
+|  6 |                                                |          | Host12-1        | fc80608c87f4 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.51/24  | N/A          |
+|  7 |                                                |          | Host12-2        | c23cee6dc338 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.52/24  | N/A          |
+|  8 |                                                |          | Host12-3        | a615d0ccb7ba | local-ubuntu:26.04              | generic_vm | running | 172.16.2.53/24  | N/A          |
+|  9 |                                                |          | Host34-1        | 9c2ff2139e4f | local-ubuntu:26.04              | generic_vm | running | 172.16.2.54/24  | N/A          |
+| 10 |                                                |          | Host34-2        | faf8e24c3bfe | local-ubuntu:26.04              | generic_vm | running | 172.16.2.55/24  | N/A          |
+| 11 |                                                |          | HostB12-1       | f81d80a80680 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.57/24  | N/A          |
+| 12 |                                                |          | HostB12-2       | 5fa50260ee53 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.58/24  | N/A          |
+| 13 |                                                |          | ISP-1           | f1002c1c4fad | quay.io/frrouting/frr:10.0.1    | linux      | running | 172.16.2.61/24  | N/A          |
+| 14 |                                                |          | ISP-2           | f43f61e2745e | quay.io/frrouting/frr:10.0.1    | linux      | running | 172.16.2.62/24  | N/A          |
+| 15 |                                                |          | Leaf-L1         | a85213f6c4a0 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.21/24  | N/A          |
+| 16 |                                                |          | Leaf-L2         | 2defcf089b6a | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.22/24  | N/A          |
+| 17 |                                                |          | Leaf-L3         | d11101e5aa71 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.23/24  | N/A          |
+| 18 |                                                |          | Leaf-L4         | 1ea6e6181bb2 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.24/24  | N/A          |
+| 19 |                                                |          | Mgmt-Switch     | 1bb3a897ab10 | ghcr.io/hellt/network-multitool | linux      | running | 172.16.2.253/24 | N/A          |
+| 20 |                                                |          | MonSrv          | d41ec95f46d7 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.56/24  | N/A          |
+| 21 |                                                |          | Spine-S1        | e5fbb68b0133 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.11/24  | N/A          |
+| 22 |                                                |          | Spine-S2        | 7ab4456efea9 | vrnetlab/sonic_sonic-vs:202605  | sonic-vm   | running | 172.16.2.12/24  | N/A          |
+| 23 |                                                |          | oob-mgmt-node   | 8f757132cd09 | local-ubuntu:26.04              | generic_vm | running | 172.16.2.254/24 | N/A          |
++----+------------------------------------------------+----------+-----------------+--------------+---------------------------------+------------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$ cat /etc/hosts
+127.0.0.1 localhost
+127.0.1.1 PowerEdge-R810
+
+# The following lines are desirable for IPv6 capable hosts
+::1     ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+# ─── SONiC Switches — Spines (Celestica DX010) ──────────────────
+10.10.1.48         spine-s1       Spine_S1
+10.10.1.47         spine-s2       Spine_S2
+
+# ─── SONiC Switches — Leafs (Accton AS5712 + Arista 7050QX) ─────
+10.10.1.46         leaf-l1        Leaf_L1
+10.10.1.45         leaf-l2        Leaf_L2
+10.10.1.44         leaf-l3        Leaf_L3
+10.10.1.43         leaf-l4        Leaf_L4
+
+# ─── SONiC Switches — Border Leafs (Arista 7050QX-32S) ──────────
+10.10.1.42         border-leaf1   Border_Leaf1
+10.10.1.41         border-leaf2   Border_Leaf2
+
+# ─── Exit Routers (MikroTik CHR CRS326) ─────────────────────────
+10.10.1.40         exit-router1   Exit_Router1
+10.10.1.39         exit-router2   Exit_Router2
+
+# ─── Compute Servers (Ubuntu — K8s controllers/workers) ──────────
+10.10.1.30         host12-1       Host12_1
+10.10.1.29         host12-2       Host12_2
+10.10.1.28         host12-3       Host12_3
+10.10.1.27         host34-1       Host34_1
+10.10.1.26         host34-2       Host34_2
+10.10.1.25         hostb12-1      HostB12_1    k8s-master
+10.10.1.24         hostb12-2      HostB12_2
+10.10.1.10         monitorsrv    MonitorSrv
+
+# ─── Monitoring Server ───────────────────────────────────────────
+10.10.1.10         monitor-srv    MonitorSrv
+
+# ─── Dedicated Ceph Storage Servers ──────────────────────────────
+# 172.16.2.50         storage-hdd-01  Storage_Server_HDD_01
+# 172.16.2.51         storage-hdd-02  Storage_Server_HDD_02
+# 172.16.2.52         storage-ssd-01  Storage_Server_SSD_01
+# 172.16.2.53         storage-ssd-02  Storage_Server_SSD_02
+###### CLAB-sheba-START ######
+172.16.2.57     HostB12-1
+172.16.2.58     HostB12-2
+172.16.2.21     Leaf-L1
+172.16.2.32     Border-Leaf2
+172.16.2.41     Exit-Router1
+172.16.2.11     Spine-S1
+172.16.2.24     Leaf-L4
+172.16.2.253    Mgmt-Switch
+172.16.2.52     Host12-2
+172.16.2.53     Host12-3
+172.16.2.54     Host34-1
+172.16.2.62     ISP-2
+172.16.2.22     Leaf-L2
+172.16.2.23     Leaf-L3
+172.16.2.31     Border-Leaf1
+172.16.2.51     Host12-1
+172.16.2.56     MonSrv
+172.16.2.254    oob-mgmt-node
+172.16.2.55     Host34-2
+172.16.2.61     ISP-1
+172.16.2.12     Spine-S2
+172.16.2.42     Exit-Router2
+172.16.2.252    External-Router
+###### CLAB-sheba-END ######
+nh1221@PowerEdge-R810:~$ getent hosts Exit-Router1
+10.10.1.40      exit-router1 Exit_Router1 Exit-Router1
+172.16.2.41     exit-router1 Exit_Router1 Exit-Router1
+nh1221@PowerEdge-R810:~$ grep -in exit-router /etc/hosts
+25:10.10.1.40         exit-router1   Exit_Router1
+26:10.10.1.39         exit-router2   Exit_Router2
+51:172.16.2.41  Exit-Router1
+68:172.16.2.42  Exit-Router2
+nh1221@PowerEdge-R810:~$ sudo docker inspect -f '{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' Exit-Router1
+/Exit-Router1 172.16.2.41
+nh1221@PowerEdge-R810:~$ ssh ubuntu@172.16.2.41
+The authenticity of host '172.16.2.41 (172.16.2.41)' can't be established.
+ED25519 key fingerprint is: SHA256:wH/lTWKRiPX9G+WfF1y4ChNPP30VDleOcR8YN4uoMts
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '172.16.2.41' (ED25519) to the list of known hosts.
+ubuntu@172.16.2.41's password:
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Tue Aug 11 16:59:09 CEST 2026
+
+  System load:             0.08
+  Usage of /:              94.7% of 2.73GB
+  Memory usage:            54%
+  Swap usage:              0%
+  Processes:               140
+  Users logged in:         0
+  IPv4 address for enp1s0: 10.0.0.15
+  IPv6 address for enp1s0: fec0::e00:26ff:fe77:1500
+
+  => / is using 94.7% of 2.73GB
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+18 updates can be applied immediately.
+11 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+ubuntu@Exit-Router1:~$ ip a sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet 10.255.255.1/32 brd 10.255.255.1 scope global lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 0c:00:26:77:15:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c0026771500
+    inet 10.0.0.15/24 brd 10.0.0.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fec0::e00:26ff:fe77:1500/64 scope site dynamic mngtmpaddr noprefixroute
+       valid_lft 85965sec preferred_lft 13965sec
+    inet6 fe80::e00:26ff:fe77:1500/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:fa:b5:03 brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1abfab503
+    inet6 fe80::a8c1:abff:fefa:b503/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:f4:06:14 brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1abf40614
+    inet6 fe80::a8c1:abff:fef4:614/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+5: ens4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master vrf-internet state UP group default qlen 1000
+    link/ether aa:c1:ab:d5:5f:56 brd ff:ff:ff:ff:ff:ff
+    altname enp1s4
+    altname enxaac1abd55f56
+    inet 192.0.2.2/30 brd 192.0.2.3 scope global ens4
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fed5:5f56/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+6: ens5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master vrf-internet state UP group default qlen 1000
+    link/ether aa:c1:ab:2f:64:dd brd ff:ff:ff:ff:ff:ff
+    altname enp1s5
+    altname enxaac1ab2f64dd
+    inet 198.51.100.2/30 brd 198.51.100.3 scope global ens5
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fe2f:64dd/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+7: vrf-internet: <NOARP,MASTER,UP,LOWER_UP> mtu 65575 qdisc noqueue state UP group default qlen 1000
+    link/ether 3a:6e:ee:ca:b8:ee brd ff:ff:ff:ff:ff:ff
+8: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none
+    inet 10.254.0.1/24 scope global wg0
+       valid_lft forever preferred_lft forever
+ubuntu@Exit-Router1:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Exit-Router1# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 172.16.2.41, local AS number 65251 VRF default vrf-id 0
+BGP table version 21
+RIB entries 25, using 3200 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031     17720     17730       21    0    0 14:45:56            0       14 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032     17721     17731       21    0    0 14:46:00            0       14 To-Border-Leaf2-Ethe
+
+Total number of neighbors 2
+Exit-Router1# show running-config bgp
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname Exit-Router1
+service integrated-vtysh-config
+!
+vrf vrf-internet
+exit-vrf
+!
+router bgp 65251
+ bgp router-id 172.16.2.41
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65031
+ neighbor ens2 description To-Border-Leaf1-Ethernet0
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65032
+ neighbor ens3 description To-Border-Leaf2-Ethernet1
+ no neighbor ens3 capability link-local
+ !
+ address-family ipv4 unicast
+  network 10.255.255.1/32
+  neighbor ens2 activate
+  neighbor ens2 default-originate
+  neighbor ens3 activate
+  neighbor ens3 default-originate
+  maximum-paths 2
+  import vrf vrf-internet
+ exit-address-family
+exit
+!
+router bgp 65251 vrf vrf-internet
+ bgp router-id 172.16.2.41
+ no bgp default ipv4-unicast
+ neighbor ens4 interface remote-as 65401
+ neighbor ens4 description To-ISP_1
+ no neighbor ens4 capability link-local
+ neighbor ens5 interface remote-as 65402
+ neighbor ens5 description To-ISP_2
+ no neighbor ens5 capability link-local
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  redistribute static
+  neighbor ens4 activate
+  neighbor ens5 activate
+  import vrf default
+ exit-address-family
+exit
+!
+end
+Exit-Router1# show bgp ipv4 unicast summary
+BGP router identifier 172.16.2.41, local AS number 65251 VRF default vrf-id 0
+BGP table version 21
+RIB entries 25, using 3200 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031     17774     17783       21    0    0 14:48:37            0       14 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032     17775     17784       21    0    0 14:48:41            0       14 To-Border-Leaf2-Ethe
+
+Total number of neighbors 2
+Exit-Router1# show bgp ipv4 unicast
+BGP table version is 21, local router ID is 172.16.2.41, vrf id 0
+Default local pref 100, local AS 65251
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  0.0.0.0/0        192.0.2.1(Exit-Router1)@7<
+                                               0         32768 ?
+ *                    192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 i
+ *                    198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 i
+ *>  10.255.255.1/32  0.0.0.0(Exit-Router1)
+                                               0         32768 i
+ *>  10.255.255.2/32  198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65252 i
+ *=                   192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65252 i
+ *>  10.255.255.11/32 192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *                    198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65252 65401 ?
+ *>  10.255.255.12/32 198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *                    192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65252 65402 ?
+ *>  10.255.255.21/32 198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65100 ?
+ *=                   192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65100 ?
+ *>  100.64.0.0/30    192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *                    198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65100 ?
+ *>  100.64.0.4/30    198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *                    192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65100 ?
+ *>  172.16.2.0/24    198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *=                   192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *>  192.0.2.0/30     0.0.0.0(Exit-Router1)@7<
+                                               0         32768 ?
+ *                    192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *>  192.0.2.4/30     192.0.2.1(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *                    198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65252 ?
+ *>  198.51.100.0/30  0.0.0.0(Exit-Router1)@7<
+                                               0         32768 ?
+ *                    198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *>  198.51.100.4/30  198.51.100.1(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *                    192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65252 ?
+ *>  203.0.113.0/24   198.51.100.1(Exit-Router1)@7<
+                                                             0 65402 65100 i
+ *=                   192.0.2.1(Exit-Router1)@7<
+                                                             0 65401 65100 i
+
+Displayed 14 routes and 28 total paths
+Exit-Router1#
+Exit-Router1#
+Exit-Router1# show bgp ipv4 unicast neighbors ens2 advertised-routes
+BGP table version is 21, local router ID is 172.16.2.41, vrf id 0
+Default local pref 100, local AS 65251
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+Originating default network 0.0.0.0/0
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  10.255.255.1/32  ::(Exit-Router1)
+                                               0         32768 i
+ *>  10.255.255.2/32  ::(Exit-Router1)@7<
+                                                             0 65402 65252 i
+ *=  10.255.255.2/32  ::(Exit-Router1)@7<
+                                                             0 65402 65252 i
+ *>  10.255.255.11/32 ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *   10.255.255.11/32 ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *>  10.255.255.12/32 ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *   10.255.255.12/32 ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *>  10.255.255.21/32 ::(Exit-Router1)@7<
+                                                             0 65402 65100 ?
+ *=  10.255.255.21/32 ::(Exit-Router1)@7<
+                                                             0 65402 65100 ?
+ *>  100.64.0.0/30    ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *   100.64.0.0/30    ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *>  100.64.0.4/30    ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *   100.64.0.4/30    ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *>  172.16.2.0/24    ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *=  172.16.2.0/24    ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *>  192.0.2.0/30     ::(Exit-Router1)@7<
+                                               0         32768 ?
+ *   192.0.2.0/30     ::(Exit-Router1)@7<
+                                               0         32768 ?
+ *>  192.0.2.4/30     ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *   192.0.2.4/30     ::(Exit-Router1)@7<
+                                               0             0 65401 ?
+ *>  198.51.100.0/30  ::(Exit-Router1)@7<
+                                               0         32768 ?
+ *   198.51.100.0/30  ::(Exit-Router1)@7<
+                                               0         32768 ?
+ *>  198.51.100.4/30  ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *   198.51.100.4/30  ::(Exit-Router1)@7<
+                                               0             0 65402 ?
+ *>  203.0.113.0/24   ::(Exit-Router1)@7<
+                                                             0 65402 65100 i
+ *=  203.0.113.0/24   ::(Exit-Router1)@7<
+                                                             0 65402 65100 i
+
+Total number of prefixes 14
+Exit-Router1# show bgp ipv4 unicast neighbors ens2 received-routes
+% Inbound soft reconfiguration not enabled
+Exit-Router1# exit
+ubuntu@Exit-Router1:~$ exit
+logout
+Connection to 172.16.2.41 closed.
+nh1221@PowerEdge-R810:~$ ssh ubuntu@172.16.2.42
+The authenticity of host '172.16.2.42 (172.16.2.42)' can't be established.
+ED25519 key fingerprint is: SHA256:JTHasQH4BjVX4Nh7p0699U9gL57cJTlqroP+7w70Jr4
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '172.16.2.42' (ED25519) to the list of known hosts.
+ubuntu@172.16.2.42's password:
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Tue Aug 11 17:04:57 CEST 2026
+
+  System load:             0.18
+  Usage of /:              94.5% of 2.73GB
+  Memory usage:            56%
+  Swap usage:              0%
+  Processes:               142
+  Users logged in:         0
+  IPv4 address for enp1s0: 10.0.0.15
+  IPv6 address for enp1s0: fec0::e00:b0ff:fee5:5200
+
+  => / is using 94.5% of 2.73GB
+
+ * Strictly confined Kubernetes makes edge and IoT secure. Learn how MicroK8s
+   just raised the bar for easy, resilient and secure K8s cluster deployment.
+
+   https://ubuntu.com/engage/secure-kubernetes-at-the-edge
+
+Expanded Security Maintenance for Applications is not enabled.
+
+22 updates can be applied immediately.
+15 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+ubuntu@Exit-Router2:~$ ip a sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet 10.255.255.2/32 brd 10.255.255.2 scope global lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 0c:00:b0:e5:52:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c00b0e55200
+    inet 10.0.0.15/24 brd 10.0.0.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fec0::e00:b0ff:fee5:5200/64 scope site dynamic mngtmpaddr noprefixroute
+       valid_lft 86205sec preferred_lft 14205sec
+    inet6 fe80::e00:b0ff:fee5:5200/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:29:3d:c9 brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1ab293dc9
+    inet6 fe80::a8c1:abff:fe29:3dc9/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:1a:3a:32 brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1ab1a3a32
+    inet6 fe80::a8c1:abff:fe1a:3a32/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+5: ens4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master vrf-internet state UP group default qlen 1000
+    link/ether aa:c1:ab:8c:98:db brd ff:ff:ff:ff:ff:ff
+    altname enp1s4
+    altname enxaac1ab8c98db
+    inet 192.0.2.6/30 brd 192.0.2.7 scope global ens4
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fe8c:98db/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+6: ens5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast master vrf-internet state UP group default qlen 1000
+    link/ether aa:c1:ab:62:40:46 brd ff:ff:ff:ff:ff:ff
+    altname enp1s5
+    altname enxaac1ab624046
+    inet 198.51.100.6/30 brd 198.51.100.7 scope global ens5
+       valid_lft forever preferred_lft forever
+    inet6 fe80::a8c1:abff:fe62:4046/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+7: vrf-internet: <NOARP,MASTER,UP,LOWER_UP> mtu 65575 qdisc noqueue state UP group default qlen 1000
+    link/ether be:5b:59:7f:8c:65 brd ff:ff:ff:ff:ff:ff
+8: wg0: <POINTOPOINT,NOARP,UP,LOWER_UP> mtu 1420 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/none
+    inet 10.254.0.2/24 scope global wg0
+       valid_lft forever preferred_lft forever
+ubuntu@Exit-Router2:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Exit-Router2# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 172.16.2.42, local AS number 65252 VRF default vrf-id 0
+BGP table version 15
+RIB entries 25, using 3200 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031     17837     17844       15    0    0 14:51:47            0       14 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032     17839     17846       15    0    0 14:51:52            0       14 To-Border-Leaf2-Ethe
+
+Total number of neighbors 2
+Exit-Router2# show bgp ipv4 unicast
+BGP table version is 15, local router ID is 172.16.2.42, vrf id 0
+Default local pref 100, local AS 65252
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  0.0.0.0/0        192.0.2.5(Exit-Router2)@7<
+                                               0         32768 ?
+ *                    192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 i
+ *                    198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 i
+ *>  10.255.255.1/32  192.0.2.5(Exit-Router2)@7<
+                                                             0 65401 65251 i
+ *=                   198.51.100.5(Exit-Router2)@7<
+                                                             0 65402 65251 i
+ *>  10.255.255.2/32  0.0.0.0(Exit-Router2)
+                                               0         32768 i
+ *>  10.255.255.11/32 192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 ?
+ *>  10.255.255.12/32 198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 ?
+ *>  10.255.255.21/32 192.0.2.5(Exit-Router2)@7<
+                                                             0 65401 65100 ?
+ *=                   198.51.100.5(Exit-Router2)@7<
+                                                             0 65402 65100 ?
+ *>  100.64.0.0/30    192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 ?
+ *                    198.51.100.5(Exit-Router2)@7<
+                                                             0 65402 65100 ?
+ *>  100.64.0.4/30    198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 ?
+ *                    192.0.2.5(Exit-Router2)@7<
+                                                             0 65401 65100 ?
+ *>  172.16.2.0/24    198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 ?
+ *=                   192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 ?
+ *>  192.0.2.0/30     192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 ?
+ *                    198.51.100.5(Exit-Router2)@7<
+                                                             0 65402 65251 ?
+ *>  192.0.2.4/30     0.0.0.0(Exit-Router2)@7<
+                                               0         32768 ?
+ *                    192.0.2.5(Exit-Router2)@7<
+                                               0             0 65401 ?
+ *>  198.51.100.0/30  198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 ?
+ *                    192.0.2.5(Exit-Router2)@7<
+                                                             0 65401 65251 ?
+ *>  198.51.100.4/30  0.0.0.0(Exit-Router2)@7<
+                                               0         32768 ?
+ *                    198.51.100.5(Exit-Router2)@7<
+                                               0             0 65402 ?
+ *>  203.0.113.0/24   192.0.2.5(Exit-Router2)@7<
+                                                             0 65401 65100 i
+ *=                   198.51.100.5(Exit-Router2)@7<
+                                                             0 65402 65100 i
+
+Displayed 14 routes and 26 total paths
+Exit-Router2# show running-config bgpd
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname Exit-Router2
+service integrated-vtysh-config
+!
+vrf vrf-internet
+exit-vrf
+!
+router bgp 65252
+ bgp router-id 172.16.2.42
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65031
+ neighbor ens2 description To-Border-Leaf1-Ethernet1
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65032
+ neighbor ens3 description To-Border-Leaf2-Ethernet0
+ no neighbor ens3 capability link-local
+ !
+ address-family ipv4 unicast
+  network 10.255.255.2/32
+  neighbor ens2 activate
+  neighbor ens2 default-originate
+  neighbor ens3 activate
+  neighbor ens3 default-originate
+  maximum-paths 2
+  import vrf vrf-internet
+ exit-address-family
+exit
+!
+router bgp 65252 vrf vrf-internet
+ bgp router-id 172.16.2.42
+ no bgp default ipv4-unicast
+ neighbor ens4 interface remote-as 65401
+ neighbor ens4 description To-ISP_1
+ no neighbor ens4 capability link-local
+ neighbor ens5 interface remote-as 65402
+ neighbor ens5 description To-ISP_2
+ no neighbor ens5 capability link-local
+ !
+ address-family ipv4 unicast
+  redistribute connected
+  redistribute static
+  neighbor ens4 activate
+  neighbor ens5 activate
+  import vrf default
+ exit-address-family
+exit
+!
+end
+Exit-Router2#
+
+
+Exit-Router2# show bgp vrf vrf-internet ipv4 unicast summary
+BGP router identifier 172.16.2.42, local AS number 65252 VRF vrf-internet vrf-id 7
+BGP table version 14
+RIB entries 25, using 3200 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+ISP-1(ens4)     4      65401     17919     17915       14    0    0 14:55:16           11       14 To-ISP_1
+ISP-2(ens5)     4      65402     17919     17915       14    0    0 14:55:16           11       14 To-ISP_2
+
+Total number of neighbors 2
+Exit-Router2# show bgp vrf vrf-internet ipv4 unicast
+BGP table version is 14, local router ID is 172.16.2.42, vrf id 7
+Default local pref 100, local AS 65252
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  0.0.0.0/0        192.0.2.5(Exit-Router2)
+                                               0         32768 ?
+ *                    192.0.2.5(ISP-1)
+                                               0             0 65401 i
+ *                    198.51.100.5(ISP-2)
+                                               0             0 65402 i
+ *>  10.255.255.1/32  192.0.2.5(ISP-1)
+                                                             0 65401 65251 i
+ *                    198.51.100.5(ISP-2)
+                                                             0 65402 65251 i
+ *>  10.255.255.2/32  0.0.0.0(Exit-Router2)@0<
+                                               0         32768 i
+ *>  10.255.255.11/32 192.0.2.5(ISP-1)
+                                               0             0 65401 ?
+ *>  10.255.255.12/32 198.51.100.5(ISP-2)
+                                               0             0 65402 ?
+ *>  10.255.255.21/32 192.0.2.5(ISP-1)
+                                                             0 65401 65100 ?
+ *                    198.51.100.5(ISP-2)
+                                                             0 65402 65100 ?
+ *>  100.64.0.0/30    192.0.2.5(ISP-1)
+                                               0             0 65401 ?
+ *                    198.51.100.5(ISP-2)
+                                                             0 65402 65100 ?
+ *>  100.64.0.4/30    198.51.100.5(ISP-2)
+                                               0             0 65402 ?
+ *                    192.0.2.5(ISP-1)
+                                                             0 65401 65100 ?
+ *>  172.16.2.0/24    198.51.100.5(ISP-2)
+                                               0             0 65402 ?
+ *                    192.0.2.5(ISP-1)
+                                               0             0 65401 ?
+ *>  192.0.2.0/30     192.0.2.5(ISP-1)
+                                               0             0 65401 ?
+ *                    198.51.100.5(ISP-2)
+                                                             0 65402 65251 ?
+ *>  192.0.2.4/30     0.0.0.0(Exit-Router2)
+                                               0         32768 ?
+ *                    192.0.2.5(ISP-1)
+                                               0             0 65401 ?
+ *>  198.51.100.0/30  198.51.100.5(ISP-2)
+                                               0             0 65402 ?
+ *                    192.0.2.5(ISP-1)
+                                                             0 65401 65251 ?
+ *>  198.51.100.4/30  0.0.0.0(Exit-Router2)
+                                               0         32768 ?
+ *                    198.51.100.5(ISP-2)
+                                               0             0 65402 ?
+ *>  203.0.113.0/24   192.0.2.5(ISP-1)
+                                                             0 65401 65100 i
+ *                    198.51.100.5(ISP-2)
+                                                             0 65402 65100 i
+
+Displayed 14 routes and 26 total paths
+Exit-Router2# show bgp vrf vrf-internet ipv4 unicast neighbors ens4 advertised-routes
+BGP table version is 14, local router ID is 172.16.2.42, vrf id 7
+Default local pref 100, local AS 65252
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  0.0.0.0/0        192.0.2.5(Exit-Router2)
+                                               0         32768 ?
+ *   0.0.0.0/0        192.0.2.5(ISP-1)
+                                               0         32768 ?
+ *   0.0.0.0/0        192.0.2.5(ISP-2)
+                                               0         32768 ?
+ *>  10.255.255.1/32  0.0.0.0(ISP-1)                         0 65401 65251 i
+ *   10.255.255.1/32  0.0.0.0(ISP-2)                         0 65401 65251 i
+ *>  10.255.255.2/32  0.0.0.0(Exit-Router2)@0<
+                                               0         32768 i
+ *>  10.255.255.11/32 0.0.0.0(ISP-1)                         0 65401 ?
+ *>  10.255.255.12/32 0.0.0.0(ISP-2)                         0 65402 ?
+ *>  10.255.255.21/32 0.0.0.0(ISP-1)                         0 65401 65100 ?
+ *   10.255.255.21/32 0.0.0.0(ISP-2)                         0 65401 65100 ?
+ *>  100.64.0.0/30    0.0.0.0(ISP-1)                         0 65401 ?
+ *   100.64.0.0/30    0.0.0.0(ISP-2)                         0 65401 ?
+ *>  100.64.0.4/30    0.0.0.0(ISP-2)                         0 65402 ?
+ *   100.64.0.4/30    0.0.0.0(ISP-1)                         0 65402 ?
+ *>  172.16.2.0/24    0.0.0.0(ISP-2)                         0 65402 ?
+ *   172.16.2.0/24    0.0.0.0(ISP-1)                         0 65402 ?
+ *>  192.0.2.0/30     0.0.0.0(ISP-1)                         0 65401 ?
+ *   192.0.2.0/30     0.0.0.0(ISP-2)                         0 65401 ?
+ *>  192.0.2.4/30     0.0.0.0(Exit-Router2)
+                                               0         32768 ?
+ *   192.0.2.4/30     0.0.0.0(ISP-1)           0         32768 ?
+ *>  198.51.100.0/30  0.0.0.0(ISP-2)                         0 65402 ?
+ *   198.51.100.0/30  0.0.0.0(ISP-1)                         0 65402 ?
+ *>  198.51.100.4/30  0.0.0.0(Exit-Router2)
+                                               0         32768 ?
+ *   198.51.100.4/30  0.0.0.0(ISP-2)           0         32768 ?
+ *>  203.0.113.0/24   0.0.0.0(ISP-1)                         0 65401 65100 i
+ *   203.0.113.0/24   0.0.0.0(ISP-2)                         0 65401 65100 i
+
+Total number of prefixes 14
+Exit-Router2# show bgp vrf vrf-internet ipv4 unicast neighbors ens4 received-routes
+% Inbound soft reconfiguration not enabled
+Exit-Router2#
