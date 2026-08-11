@@ -1,0 +1,571 @@
+Let us fix Exit-Router's issue.neither ssh nor ping is working. looks like ping gets and IP that I do not know where it is coming from?? 
+It doesn't look like mgmt ip used in topology clab file.
+nh1221@PowerEdge-R810:~$ ssh Exit-Router1
+^C
+nh1221@PowerEdge-R810:~$ ssh ubuntu@Exit-Router1
+kex_exchange_identification: read: Connection reset by peer
+Connection reset by 172.16.2.41 port 22
+nh1221@PowerEdge-R810:~$ ping Exit-Router1
+PING exit-router1 (10.10.1.40) 56(84) bytes of data.
+From PowerEdge-R810 (10.10.1.1) icmp_seq=1 Destination Host Unreachable
+From PowerEdge-R810 (10.10.1.1) icmp_seq=5 Destination Host Unreachable
+From PowerEdge-R810 (10.10.1.1) icmp_seq=8 Destination Host Unreachable
+From PowerEdge-R810 (10.10.1.1) icmp_seq=9 Destination Host Unreachable
+^C
+--- exit-router1 ping statistics ---
+10 packets transmitted, 0 received, +4 errors, 100% packet loss, time 9208ms
+pipe 4
+nh1221@PowerEdge-R810:~$ ping Exit-Router2
+PING exit-router2 (10.10.1.39) 56(84) bytes of data.
+From PowerEdge-R810 (10.10.1.1) icmp_seq=1 Destination Host Unreachable
+From PowerEdge-R810 (10.10.1.1) icmp_seq=5 Destination Host Unreachable
+From PowerEdge-R810 (10.10.1.1) icmp_seq=6 Destination Host Unreachable
+^C
+--- exit-router2 ping statistics ---
+8 packets transmitted, 0 received, +3 errors, 100% packet loss, time 7170ms
+pipe 4
+nh1221@PowerEdge-R810:~$ ssh ubuntu@Exit-Router2
+kex_exchange_identification: read: Connection reset by peer
+Connection reset by 172.16.2.42 port 22
+nh1221@PowerEdge-R810:~$ ping Spine-S1
+PING spine-s1 (172.16.2.11) 56(84) bytes of data.
+64 bytes from Spine-S1 (172.16.2.11): icmp_seq=1 ttl=64 time=0.376 ms
+64 bytes from Spine-S1 (172.16.2.11): icmp_seq=2 ttl=64 time=0.105 ms
+64 bytes from Spine-S1 (172.16.2.11): icmp_seq=3 ttl=64 time=0.078 ms
+^C
+--- spine-s1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2045ms
+rtt min/avg/max/mdev = 0.078/0.186/0.376/0.134 ms
+nh1221@PowerEdge-R810:~$
+
+nh1221@PowerEdge-R810:~$ sudo docker logs Exit-Router1
+2026-08-10 23:37:28,630: vrnetlab       DEBUG Creating overlay disk image: /resolute-ubuntu-cloud-overlay.qcow2
+wrote /cloud_init.iso with filesystem=iso9660 and diskformat=raw
+2026-08-10 23:37:28,686: vrnetlab       DEBUG Starting vrnetlab Ubuntu
+2026-08-10 23:37:28,687: vrnetlab       DEBUG VMs: [<__main__.Ubuntu_vm object at 0x73e488148440>]
+2026-08-10 23:37:28,687: vrnetlab       DEBUG VM not started; starting!
+2026-08-10 23:37:28,687: vrnetlab       INFO ----------------START ENVIRONMENT VARIABLES-----------------
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_INTFS: 4
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_ANSIBLE_GROUP: exit_routers
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_GROUP:
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_KIND: generic_vm
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_LAB_DIR: /home/nh1221/clab-sheba/Exit-Router1
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_NAME: Exit-Router1
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_TYPE:
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CLAB_TOPO_FILE: /opt/containerlab/sheba/topology.clab.yml
+2026-08-10 23:37:28,687: vrnetlab       INFO CLAB_LABEL_CONTAINERLAB: sheba
+2026-08-10 23:37:28,687: vrnetlab       INFO CONNECTION_MODE: tc
+2026-08-10 23:37:28,688: vrnetlab       INFO DOCKER_NET_V4_ADDR: 172.16.2.0/24
+2026-08-10 23:37:28,688: vrnetlab       INFO DOCKER_NET_V6_ADDR:
+2026-08-10 23:37:28,688: vrnetlab       INFO HOME: /root
+2026-08-10 23:37:28,688: vrnetlab       INFO HOSTNAME: Exit-Router1
+2026-08-10 23:37:28,688: vrnetlab       INFO LC_CTYPE: C.UTF-8
+2026-08-10 23:37:28,688: vrnetlab       INFO PASSWORD: ubuntu
+2026-08-10 23:37:28,688: vrnetlab       INFO PATH: /.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+2026-08-10 23:37:28,688: vrnetlab       INFO QEMU_ADDITIONAL_ARGS: -drive file=/seed.iso,media=cdrom,readonly=on
+2026-08-10 23:37:28,688: vrnetlab       INFO QEMU_CPU: qemu64
+2026-08-10 23:37:28,688: vrnetlab       INFO QEMU_SMP: 4
+2026-08-10 23:37:28,688: vrnetlab       INFO SONIC_CONFIG_MODE: unified
+2026-08-10 23:37:28,688: vrnetlab       INFO TERM: xterm
+2026-08-10 23:37:28,688: vrnetlab       INFO USERNAME: ubuntu
+2026-08-10 23:37:28,688: vrnetlab       INFO UV: /usr/bin/uv
+2026-08-10 23:37:28,688: vrnetlab       INFO UV_RUN_RECURSION_DEPTH: 1
+2026-08-10 23:37:28,688: vrnetlab       INFO VIRTUAL_ENV: /.venv
+2026-08-10 23:37:28,688: vrnetlab       INFO -----------------END ENVIRONMENT VARIABLES------------------
+
+  Verification pings are all failing as well.
+
+  Below are moe logs:
+  (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/exit-routers.yml
+
+PLAY [Configure Exit-Routers — WireGuard VPN, VRF-Internet, FRR BGP, NAT] **********************************************************************************
+
+TASK [linux_exit_router : Assert required exit-router vars are present] ************************************************************************************
+ok: [Exit-Router1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Exit-Router2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_exit_router : Install exit-router packages] ****************************************************************************************************
+[WARNING]: Host 'Exit-Router2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+changed: [Exit-Router2]
+[WARNING]: Host 'Exit-Router1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+changed: [Exit-Router1]
+
+TASK [linux_exit_router : Enable IPv4 and IPv6 forwarding] *************************************************************************************************
+changed: [Exit-Router2]
+changed: [Exit-Router1]
+
+TASK [linux_exit_router : Flush sysctl to activate forwarding immediately] *********************************************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy netplan for Border-Leaf uplinks (link-local for BGP unnumbered)] **********************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy netplan for ISP interfaces in vrf-internet] *******************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Apply netplan (Border-Leaf uplinks + ISP vrf-internet)] **************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Enable bgpd in FRR daemons file] *************************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy FRR exit-router configuration] ********************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Restart FRR to apply configuration] **********************************************************************************************
+changed: [Exit-Router2]
+changed: [Exit-Router1]
+
+TASK [linux_exit_router : Ensure /etc/wireguard directory exists] ******************************************************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Generate a valid WireGuard private key when the configured one is a placeholder] *************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Select the effective WireGuard private key] **************************************************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy WireGuard interface configuration] ****************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Enable and start WireGuard tunnel (best-effort)] *********************************************************************************
+changed: [Exit-Router2]
+changed: [Exit-Router1]
+
+TASK [linux_exit_router : Report WireGuard tunnel status] **************************************************************************************************
+ok: [Exit-Router1] => {
+    "msg": "WireGuard wg0 started"
+}
+ok: [Exit-Router2] => {
+    "msg": "WireGuard wg0 started"
+}
+
+TASK [linux_exit_router : Apply NAT MASQUERADE for tenant internet egress on each ISP interface] ***********************************************************
+ok: [Exit-Router1] => (item={'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.2/30', 'next_hop': '192.0.2.1', 'neighbor_asn': 65401})
+ok: [Exit-Router2] => (item={'device': 'ens4', 'isp_name': 'ISP_1', 'ip_addr': '192.0.2.6/30', 'next_hop': '192.0.2.5', 'neighbor_asn': 65401})
+ok: [Exit-Router2] => (item={'device': 'ens5', 'isp_name': 'ISP_2', 'ip_addr': '198.51.100.6/30', 'next_hop': '198.51.100.5', 'neighbor_asn': 65402})
+ok: [Exit-Router1] => (item={'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.2/30', 'next_hop': '198.51.100.1', 'neighbor_asn': 65402})
+
+TASK [linux_exit_router : Insert NAT MASQUERADE rule where missing] ****************************************************************************************
+changed: [Exit-Router2] => (item={'changed': False, 'stdout': '', 'stderr': 'iptables: Bad rule (does a matching rule exist in that chain?).', 'rc': 1, 'cmd': ['iptables', '-t', 'nat', '-C', 'POSTROUTING', '-o', 'ens4', '-j', 'MASQUERADE'], 'start': '2026-08-11 02:14:13.860000', 'end': '2026-08-11 02:14:13.956898', 'delta': '0:00:00.096898', 'failed': False, 'msg': 'non-zero return code', 'invocation': {'module_args': {'_raw_params': 'iptables -t nat -C POSTROUTING -o ens4 -j MASQUERADE\n', '_uses_shell': False, 'expand_argument_vars': True, 'stdin_add_newline': True, 'strip_empty_ends': True, 'cmd': None, 'argv': None, 'chdir': None, 'executable': None, 'creates': None, 'removes': None, 'stdin': None}}, 'stdout_lines': [], 'stderr_lines': ['iptables: Bad rule (does a matching rule exist in that chain?).'], 'failed_when_result': False, 'failed_when_suppressed_exception': '(traceback unavailable)', 'item': {'device': 'ens4', 'isp_name': 'ISP_1', 'ip_addr': '192.0.2.6/30', 'next_hop': '192.0.2.5', 'neighbor_asn': 65401}, 'ansible_loop_var': 'item'})
+changed: [Exit-Router1] => (item={'changed': False, 'stdout': '', 'stderr': 'iptables: Bad rule (does a matching rule exist in that chain?).', 'rc': 1, 'cmd': ['iptables', '-t', 'nat', '-C', 'POSTROUTING', '-o', 'ens4', '-j', 'MASQUERADE'], 'start': '2026-08-11 02:14:13.704488', 'end': '2026-08-11 02:14:13.899370', 'delta': '0:00:00.194882', 'failed': False, 'msg': 'non-zero return code', 'invocation': {'module_args': {'_raw_params': 'iptables -t nat -C POSTROUTING -o ens4 -j MASQUERADE\n', '_uses_shell': False, 'expand_argument_vars': True, 'stdin_add_newline': True, 'strip_empty_ends': True, 'cmd': None, 'argv': None, 'chdir': None, 'executable': None, 'creates': None, 'removes': None, 'stdin': None}}, 'stdout_lines': [], 'stderr_lines': ['iptables: Bad rule (does a matching rule exist in that chain?).'], 'failed_when_result': False, 'failed_when_suppressed_exception': '(traceback unavailable)', 'item': {'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.2/30', 'next_hop': '192.0.2.1', 'neighbor_asn': 65401}, 'ansible_loop_var': 'item'})
+changed: [Exit-Router2] => (item={'changed': False, 'stdout': '', 'stderr': 'iptables: Bad rule (does a matching rule exist in that chain?).', 'rc': 1, 'cmd': ['iptables', '-t', 'nat', '-C', 'POSTROUTING', '-o', 'ens5', '-j', 'MASQUERADE'], 'start': '2026-08-11 02:14:15.609793', 'end': '2026-08-11 02:14:15.617343', 'delta': '0:00:00.007550', 'failed': False, 'msg': 'non-zero return code', 'invocation': {'module_args': {'_raw_params': 'iptables -t nat -C POSTROUTING -o ens5 -j MASQUERADE\n', '_uses_shell': False, 'expand_argument_vars': True, 'stdin_add_newline': True, 'strip_empty_ends': True, 'cmd': None, 'argv': None, 'chdir': None, 'executable': None, 'creates': None, 'removes': None, 'stdin': None}}, 'stdout_lines': [], 'stderr_lines': ['iptables: Bad rule (does a matching rule exist in that chain?).'], 'failed_when_result': False, 'failed_when_suppressed_exception': '(traceback unavailable)', 'item': {'device': 'ens5', 'isp_name': 'ISP_2', 'ip_addr': '198.51.100.6/30', 'next_hop': '198.51.100.5', 'neighbor_asn': 65402}, 'ansible_loop_var': 'item'})
+changed: [Exit-Router1] => (item={'changed': False, 'stdout': '', 'stderr': 'iptables: Bad rule (does a matching rule exist in that chain?).', 'rc': 1, 'cmd': ['iptables', '-t', 'nat', '-C', 'POSTROUTING', '-o', 'ens5', '-j', 'MASQUERADE'], 'start': '2026-08-11 02:14:16.134685', 'end': '2026-08-11 02:14:16.141876', 'delta': '0:00:00.007191', 'failed': False, 'msg': 'non-zero return code', 'invocation': {'module_args': {'_raw_params': 'iptables -t nat -C POSTROUTING -o ens5 -j MASQUERADE\n', '_uses_shell': False, 'expand_argument_vars': True, 'stdin_add_newline': True, 'strip_empty_ends': True, 'cmd': None, 'argv': None, 'chdir': None, 'executable': None, 'creates': None, 'removes': None, 'stdin': None}}, 'stdout_lines': [], 'stderr_lines': ['iptables: Bad rule (does a matching rule exist in that chain?).'], 'failed_when_result': False, 'failed_when_suppressed_exception': '(traceback unavailable)', 'item': {'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.2/30', 'next_hop': '198.51.100.1', 'neighbor_asn': 65402}, 'ansible_loop_var': 'item'})
+
+TASK [linux_exit_router : Persist iptables rules across reboots] *******************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Wait for FRR BGP to initialise] **************************************************************************************************
+Pausing for 10 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Verify FRR BGP summary is reachable] *********************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+PLAY RECAP *************************************************************************************************************************************************
+Exit-Router1               : ok=21   changed=11   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Exit-Router2               : ok=20   changed=11   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/isp-routers.yml
+
+PLAY [Configure ISP Routers — FRR BGP with default route advertisement] ************************************************************************************
+
+TASK [linux_isp_router : Assert required ISP router vars are present] **************************************************************************************
+ok: [ISP-1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [ISP-2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_isp_router : Render FRR config on the containerlab host] ***************************************************************************************
+[WARNING]: Host 'ISP-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+changed: [ISP-2 -> poweredge_r810(192.168.9.198)]
+[WARNING]: Host 'ISP-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+changed: [ISP-1 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Push FRR config into the container] ***********************************************************************************************
+changed: [ISP-2 -> poweredge_r810(192.168.9.198)]
+changed: [ISP-1 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Assign IP addresses and bring up ISP data interfaces] *****************************************************************************
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '198.51.100.1/30', 'description': 'Link-to-Exit-Router1', 'neighbor_asn': 65251})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '192.0.2.1/30', 'description': 'Link-to-Exit-Router1', 'neighbor_asn': 65251})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth2', 'ip_addr': '192.0.2.5/30', 'description': 'Link-to-Exit-Router2', 'neighbor_asn': 65252})
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth2', 'ip_addr': '198.51.100.5/30', 'description': 'Link-to-Exit-Router2', 'neighbor_asn': 65252})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth3', 'ip_addr': '100.64.0.1/30', 'description': 'Link-to-External-Router', 'neighbor_asn': 65100})
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth3', 'ip_addr': '100.64.0.5/30', 'description': 'Link-to-External-Router', 'neighbor_asn': 65100})
+
+TASK [linux_isp_router : Enable IPv4/IPv6 forwarding inside the container] *********************************************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Ensure FRR daemons are running inside the container (additive; never stops PID 1)] ************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Apply integrated FRR configuration (vtysh -b, no restart)] ************************************************************************
+changed: [ISP-2 -> poweredge_r810(192.168.9.198)]
+changed: [ISP-1 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Wait for FRR to initialise] *******************************************************************************************************
+Pausing for 5 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [ISP-1]
+
+TASK [linux_isp_router : Verify FRR BGP is running] ********************************************************************************************************
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Display ISP BGP summary] **********************************************************************************************************
+ok: [ISP-1] => {
+    "msg": [
+        "",
+        "IPv4 Unicast Summary:",
+        "BGP router identifier 192.0.2.1, local AS number 65401 VRF default vrf-id 0",
+        "BGP table version 11",
+        "RIB entries 19, using 1824 bytes of memory",
+        "Peers 3, using 39 KiB of memory",
+        "",
+        "Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "eth1               4      65251         0         0        0    0    0    never       Active        0 Link-to-Exit-Router1",
+        "Exit-Router2(eth2) 4      65252        10        13       11    0    0 00:00:05            7       11 Link-to-Exit-Router2",
+        "eth3               4      65100         0         0        0    0    0    never       Active        0 Link-to-External-Rou",
+        "",
+        "Total number of neighbors 3"
+    ]
+}
+ok: [ISP-2] => {
+    "msg": [
+        "",
+        "IPv4 Unicast Summary:",
+        "BGP router identifier 198.51.100.1, local AS number 65402 VRF default vrf-id 0",
+        "BGP table version 11",
+        "RIB entries 19, using 1824 bytes of memory",
+        "Peers 3, using 39 KiB of memory",
+        "",
+        "Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "eth1               4      65251         0         0        0    0    0    never       Active        0 Link-to-Exit-Router1",
+        "Exit-Router2(eth2) 4      65252        10        13       11    0    0 00:00:05            7       11 Link-to-Exit-Router2",
+        "eth3               4      65100         0         0        0    0    0    never       Active        0 Link-to-External-Rou",
+        "",
+        "Total number of neighbors 3"
+    ]
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+ISP-1                      : ok=10   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-2                      : ok=9    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/external-routers.yml
+
+PLAY [Configure External-Router — FRR BGP to ISPs for WireGuard/VRF validation edge] ***********************************************************************
+
+TASK [linux_external_router : Assert required external-router vars are present] ****************************************************************************
+ok: [External-Router] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_external_router : Render FRR config on the containerlab host] **********************************************************************************
+[WARNING]: Host 'External-Router' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+changed: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Push FRR config into the container] ******************************************************************************************
+changed: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Assign IP addresses and bring up external-router interfaces] *****************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '100.64.0.2/30', 'description': 'To-ISP-1', 'neighbor_asn': 65401})
+ok: [External-Router -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth2', 'ip_addr': '100.64.0.6/30', 'description': 'To-ISP-2', 'neighbor_asn': 65402})
+ok: [External-Router -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth3', 'ip_addr': '203.0.113.1/24'})
+
+TASK [linux_external_router : Enable IPv4/IPv6 forwarding inside the container] ****************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Ensure FRR daemons are running inside the container (additive; never stops PID 1)] *******************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Apply integrated FRR configuration (vtysh -b, no restart)] *******************************************************************
+changed: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Wait for FRR to initialise] **************************************************************************************************
+Pausing for 5 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [External-Router]
+
+TASK [linux_external_router : Verify FRR BGP is running] ***************************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Display External-Router BGP summary] *****************************************************************************************
+ok: [External-Router] => {
+    "msg": [
+        "",
+        "IPv4 Unicast Summary:",
+        "BGP router identifier 100.64.0.2, local AS number 65100 VRF default vrf-id 0",
+        "BGP table version 13",
+        "RIB entries 23, using 2208 bytes of memory",
+        "Peers 2, using 26 KiB of memory",
+        "",
+        "Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "ISP-1(eth1)     4      65401        16        14       13    0    0 00:00:06           10       13 To-ISP-1",
+        "ISP-2(eth2)     4      65402        16        14       13    0    0 00:00:06           10       13 To-ISP-2",
+        "",
+        "Total number of neighbors 2"
+    ]
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+External-Router            : ok=10   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/verify-connectivity.yml
+
+PLAY [Tenant servers — BGP unnumbered + internet egress + route separation] ********************************************************************************
+
+TASK [Confirm data NICs carry an IPv6 link-local address] **************************************************************************************************
+[WARNING]: Host 'Host12-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-1] => (item=ens2)
+[WARNING]: Host 'Host12-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-2] => (item=ens2)
+[WARNING]: Host 'Host34-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host34-2] => (item=ens2)
+[WARNING]: Host 'Host12-3' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-3] => (item=ens2)
+[WARNING]: Host 'Host34-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host34-1] => (item=ens2)
+ok: [Host12-1] => (item=ens3)
+ok: [Host12-2] => (item=ens3)
+ok: [Host34-2] => (item=ens3)
+ok: [Host12-3] => (item=ens3)
+ok: [Host34-1] => (item=ens3)
+[WARNING]: Host 'MonSrv' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [MonSrv] => (item=ens2)
+[WARNING]: Host 'HostB12-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [HostB12-1] => (item=ens2)
+[WARNING]: Host 'HostB12-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [HostB12-2] => (item=ens2)
+ok: [MonSrv] => (item=ens3)
+ok: [HostB12-1] => (item=ens3)
+ok: [HostB12-2] => (item=ens3)
+
+TASK [Collect FRR BGP summary (PfxRcd / PfxSnt per neighbor)] **********************************************************************************************
+ok: [Host34-1]
+ok: [Host12-2]
+ok: [Host12-1]
+ok: [Host12-3]
+ok: [Host34-2]
+ok: [HostB12-1]
+ok: [MonSrv]
+ok: [HostB12-2]
+
+TASK [Route to the internet target (expected via a data NIC, not mgmt)] ************************************************************************************
+ok: [Host12-2]
+ok: [Host12-1]
+ok: [Host34-2]
+ok: [Host34-1]
+ok: [Host12-3]
+ok: [MonSrv]
+ok: [HostB12-1]
+ok: [HostB12-2]
+
+TASK [Route to the Ops/Mgmt subnet (expected via the mgmt NIC only)] ***************************************************************************************
+ok: [Host12-1]
+ok: [Host12-2]
+ok: [Host12-3]
+ok: [Host34-2]
+ok: [Host34-1]
+ok: [MonSrv]
+ok: [HostB12-1]
+ok: [HostB12-2]
+
+TASK [Ping each edge data-plane loopback (proves BGP prefix propagation)] **********************************************************************************
+ok: [Host12-1] => (item=Exit-Router1 (10.255.255.1))
+ok: [Host12-2] => (item=Exit-Router1 (10.255.255.1))
+ok: [Host34-1] => (item=Exit-Router1 (10.255.255.1))
+ok: [Host12-3] => (item=Exit-Router1 (10.255.255.1))
+ok: [Host34-2] => (item=Exit-Router1 (10.255.255.1))
+ok: [Host12-1] => (item=Exit-Router2 (10.255.255.2))
+ok: [Host12-2] => (item=Exit-Router2 (10.255.255.2))
+ok: [Host12-3] => (item=Exit-Router2 (10.255.255.2))
+ok: [Host34-2] => (item=Exit-Router2 (10.255.255.2))
+ok: [Host34-1] => (item=Exit-Router2 (10.255.255.2))
+ok: [Host12-1] => (item=ISP-1 (10.255.255.11))
+ok: [Host12-2] => (item=ISP-1 (10.255.255.11))
+ok: [Host12-3] => (item=ISP-1 (10.255.255.11))
+ok: [Host34-2] => (item=ISP-1 (10.255.255.11))
+ok: [Host34-1] => (item=ISP-1 (10.255.255.11))
+ok: [Host12-1] => (item=ISP-2 (10.255.255.12))
+ok: [Host12-2] => (item=ISP-2 (10.255.255.12))
+ok: [Host34-2] => (item=ISP-2 (10.255.255.12))
+ok: [Host12-3] => (item=ISP-2 (10.255.255.12))
+ok: [Host34-1] => (item=ISP-2 (10.255.255.12))
+ok: [Host12-1] => (item=External-Router (10.255.255.21))
+ok: [Host12-2] => (item=External-Router (10.255.255.21))
+ok: [Host34-2] => (item=External-Router (10.255.255.21))
+ok: [Host12-3] => (item=External-Router (10.255.255.21))
+ok: [Host34-1] => (item=External-Router (10.255.255.21))
+ok: [HostB12-1] => (item=Exit-Router1 (10.255.255.1))
+ok: [HostB12-2] => (item=Exit-Router1 (10.255.255.1))
+ok: [MonSrv] => (item=Exit-Router1 (10.255.255.1))
+ok: [HostB12-1] => (item=Exit-Router2 (10.255.255.2))
+ok: [HostB12-2] => (item=Exit-Router2 (10.255.255.2))
+ok: [MonSrv] => (item=Exit-Router2 (10.255.255.2))
+ok: [HostB12-1] => (item=ISP-1 (10.255.255.11))
+ok: [HostB12-2] => (item=ISP-1 (10.255.255.11))
+ok: [MonSrv] => (item=ISP-1 (10.255.255.11))
+ok: [HostB12-2] => (item=ISP-2 (10.255.255.12))
+ok: [HostB12-1] => (item=ISP-2 (10.255.255.12))
+ok: [MonSrv] => (item=ISP-2 (10.255.255.12))
+ok: [HostB12-2] => (item=External-Router (10.255.255.21))
+ok: [HostB12-1] => (item=External-Router (10.255.255.21))
+ok: [MonSrv] => (item=External-Router (10.255.255.21))
+
+TASK [Ping the (simulated) internet target over the data plane] ********************************************************************************************
+ok: [Host12-2]
+ok: [Host34-1]
+ok: [Host12-3]
+ok: [Host12-1]
+ok: [Host34-2]
+ok: [MonSrv]
+ok: [HostB12-1]
+ok: [HostB12-2]
+
+TASK [Report] **********************************************************************************************************************************************
+ok: [Host12-1] => {
+    "msg": [
+        "===== Host12-1 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0\nBGP table version 1\nRIB entries 1, using 128 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L1(ens2)   4      65011       165       166        1    0    0 00:08:06            0        1 To-Leaf-L1-Ethernet0\nLeaf-L2(ens3)   4      65012       165       166        1    0    0 00:08:06            0        1 To-Leaf-L2-Ethernet0\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [Host12-2] => {
+    "msg": [
+        "===== Host12-2 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.0.10.2, local AS number 65212 VRF default vrf-id 0\nBGP table version 1\nRIB entries 1, using 128 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L1(ens2)   4      65011       166       167        1    0    0 00:08:10            0        1 To-Leaf-L1-Ethernet1\nLeaf-L2(ens3)   4      65012       166       167        1    0    0 00:08:10            0        1 To-Leaf-L2-Ethernet1\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [Host12-3] => {
+    "msg": [
+        "===== Host12-3 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.0.10.3, local AS number 65213 VRF default vrf-id 0\nBGP table version 1\nRIB entries 1, using 128 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L1(ens2)   4      65011       167       168        1    0    0 00:08:13            0        1 To-Leaf-L1-Ethernet2\nLeaf-L2(ens3)   4      65012       165       166        1    0    0 00:08:07            0        1 To-Leaf-L2-Ethernet2\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [Host34-1] => {
+    "msg": [
+        "===== Host34-1 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.0.20.1, local AS number 65221 VRF default vrf-id 0\nBGP table version 1\nRIB entries 1, using 128 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L3(ens2)   4      65021       166       167        1    0    0 00:08:10            0        1 To-Leaf-L3-Ethernet0\nLeaf-L4(ens3)   4      65022       166       167        1    0    0 00:08:10            0        1 To-Leaf-L4-Ethernet0\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [Host34-2] => {
+    "msg": [
+        "===== Host34-2 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.0.20.2, local AS number 65222 VRF default vrf-id 0\nBGP table version 1\nRIB entries 1, using 128 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L3(ens2)   4      65021       167       168        1    0    0 00:08:13            0        1 To-Leaf-L3-Ethernet1\nLeaf-L4(ens3)   4      65022       167       168        1    0    0 00:08:13            0        1 To-Leaf-L4-Ethernet1\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [MonSrv] => {
+    "msg": [
+        "===== MonSrv =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.10.255.102, local AS number 65223 VRF default vrf-id 0\nBGP table version 0\nRIB entries 0, using 0 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nLeaf-L3(ens2)   4      65021       164       164        0    0    0 00:08:05            0        0 To-Leaf-L3-Ethernet2\nLeaf-L4(ens3)   4      65022       164       164        0    0    0 00:08:05            0        0 To-Leaf-L4-Ethernet2\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [HostB12-1] => {
+    "msg": [
+        "===== HostB12-1 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.10.255.100, local AS number 65231 VRF default vrf-id 0\nBGP table version 0\nRIB entries 0, using 0 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nBorder-Leaf1(ens2) 4      65031       162       162        0    0    0 00:08:00            0        0 To-Border-Leaf1-Ethe\nBorder-Leaf2(ens3) 4      65032       162       162        0    0    0 00:08:00            0        0 To-Border-Leaf2-Ethe\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+ok: [HostB12-2] => {
+    "msg": [
+        "===== HostB12-2 =====",
+        "BGP summary:\n\nIPv4 Unicast Summary:\nBGP router identifier 10.10.255.101, local AS number 65232 VRF default vrf-id 0\nBGP table version 0\nRIB entries 0, using 0 bytes of memory\nPeers 2, using 47 KiB of memory\n\nNeighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc\nBorder-Leaf1(ens2) 4      65031       163       163        0    0    0 00:08:02            0        0 To-Border-Leaf1-Ethe\nBorder-Leaf2(ens3) 4      65032       163       163        0    0    0 00:08:02            0        0 To-Border-Leaf2-Ethe\n\nTotal number of neighbors 2",
+        "Route to internet (203.0.113.1 / bbc.com): 203.0.113.1 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Route to mgmt (172.16.2.0/24): 172.16.2.254 via 10.0.0.2 dev enp1s0 src 10.0.0.15 uid 0 \n    cache ",
+        "Loopback pings: Exit-Router1=OK Exit-Router2=OK ISP-1=FAIL ISP-2=FAIL External-Router=FAIL ",
+        "Internet ping (bbc.com): FAILED"
+    ]
+}
+
+PLAY [Exit-Routers — BGP to Border-Leaves & ISPs + internet egress] ****************************************************************************************
+
+TASK [Confirm FRR is installed (vtysh present)] ************************************************************************************************************
+[ERROR]: Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange
+Connection to UNKNOWN port 65535 timed out
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/verify-connectivity.yml:116:7
+
+114       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %...
+115   tasks:
+116     - name: Confirm FRR is installed (vtysh present)
+          ^ column 7
+
+<<< caused by >>>
+
+Failed to connect to the host via ssh: Connection timed out during banner exchange
+Connection to UNKNOWN port 65535 timed out
+
+fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange\r\nConnection to UNKNOWN port 65535 timed out", "unreachable": true}
+fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange\r\nConnection to UNKNOWN port 65535 timed out", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Exit-Router1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Exit-Router2               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Host12-1                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12-2                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12-3                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34-1                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host34-2                   : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-1                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+HostB12-2                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+  
