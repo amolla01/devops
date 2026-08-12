@@ -1,0 +1,44 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/lab/deploy.yml
+
+PLAY [Deploy containerlab topology on R810] ****************************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Host 'poweredge_r810' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure genisoimage is installed (for cloud-init seed ISO)] *******************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+[ERROR]: Task failed: Module failed: non-zero return code
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/lab/deploy.yml:52:7
+
+50       changed_when: true
+51
+52     - name: Deploy topology on R810
+         ^ column 7
+
+fatal: [poweredge_r810]: FAILED! => {"changed": true, "cmd": ["containerlab", "deploy", "-t", "/opt/containerlab/sheba/topology.clab.yml", "--reconfigure"], "delta": "0:00:00.078724", "end": "2026-08-11 21:00:33.003678", "msg": "non-zero return code", "rc": 1, "start": "2026-08-11 21:00:32.924954", "stderr": "time=\"2026-08-11T21:00:32-05:00\" level=info msg=\"Containerlab v0.56.0 started\"\ntime=\"2026-08-11T21:00:32-05:00\" level=info msg=\"Parsing & checking topology file: topology.clab.yml\"\nError: failed to verify bind path: stat /opt/containerlab/sheba/configs/ceph-disks/HostB12-1-osd-b.qcow2: no such file or directory", "stderr_lines": ["time=\"2026-08-11T21:00:32-05:00\" level=info msg=\"Containerlab v0.56.0 started\"", "time=\"2026-08-11T21:00:32-05:00\" level=info msg=\"Parsing & checking topology file: topology.clab.yml\"", "Error: failed to verify bind path: stat /opt/containerlab/sheba/configs/ceph-disks/HostB12-1-osd-b.qcow2: no such file or directory"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+poweredge_r810             : ok=8    changed=4    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
