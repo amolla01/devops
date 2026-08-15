@@ -1,0 +1,723 @@
+
+PLAY [Verify vrf-storage isolation and QoS bandwidth split] ************************************************************************************************
+
+TASK [Confirm the storage route lives in vrf-storage (table 300)] ******************************************************************************************
+ok: [HostB12-2]
+
+TASK [Confirm the storage subnet is ABSENT from the default table] *****************************************************************************************
+ok: [HostB12-2]
+
+TASK [Assert no storage leak into the tenant/default table] ************************************************************************************************
+ok: [HostB12-2] => {
+    "changed": false,
+    "msg": "vrf-storage is isolated from the tenant/default table."
+}
+
+TASK [Show storage BGP summary (vrf-storage)] **************************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Report storage BGP summary] **************************************************************************************************************************
+ok: [HostB12-2] => {
+    "host_storage_bgp.stdout_lines": [
+        "BGP router identifier 20.0.56.2, local AS number 65232 VRF vrf-storage vrf-id 5",
+        "BGP table version 1",
+        "RIB entries 1, using 128 bytes of memory",
+        "Peers 2, using 47 KiB of memory",
+        "",
+        "Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "ens2.100        4      65031         0         0        0    0    0    never         Idle        0 STORAGE-To-Border-Le",
+        "ens3.100        4      65032         0         0        0    0    0    never         Idle        0 STORAGE-To-Border-Le",
+        "",
+        "Total number of neighbors 2"
+    ]
+}
+
+TASK [Stop previous storage iperf3 server on HostB12-1] ****************************************************************************************************
+ok: [HostB12-2 -> HostB12-1]
+
+TASK [Start storage iperf3 server (in vrf-storage) on HostB12-1] *******************************************************************************************
+ok: [HostB12-2 -> HostB12-1]
+
+TASK [Stop previous tenant iperf3 server on HostB12-1] *****************************************************************************************************
+ok: [HostB12-2 -> HostB12-1]
+
+TASK [Start tenant iperf3 server (default VRF) on HostB12-1] ***********************************************************************************************
+ok: [HostB12-2 -> HostB12-1]
+
+TASK [Give the servers a moment to bind] *******************************************************************************************************************
+Pausing for 3 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [HostB12-2]
+
+TASK [Ping the peer OSD storage IP inside vrf-storage] *****************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Report storage reachability] *************************************************************************************************************************
+ok: [HostB12-2] => {
+    "storage_ping.stdout_lines": [
+        "PING 20.0.56.1 (20.0.56.1) from 20.0.56.2 : 56(84) bytes of data.",
+        "",
+        "--- 20.0.56.1 ping statistics ---",
+        "3 packets transmitted, 0 received, 100% packet loss, time 2066ms"
+    ]
+}
+
+TASK [Run storage + tenant iperf3 flows concurrently] ******************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Slurp storage iperf result] **************************************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Slurp tenant iperf result] ***************************************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Parse throughput (bits/sec)] *************************************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Compute storage share of the contended link] *********************************************************************************************************
+ok: [HostB12-2]
+
+TASK [Report QoS split] ************************************************************************************************************************************
+ok: [HostB12-2] => {
+    "msg": [
+        "Storage flow : 0.00 Mbit/s",
+        "Tenant  flow : 19.60 Mbit/s",
+        "Storage share: 0.0% (HTB target 80%)"
+    ]
+}
+
+TASK [Assert the HTB partition favours storage under contention] *******************************************************************************************
+[ERROR]: Task failed: Action failed: Storage share 0.0% is below the 60.0% floor — HTB shaping not effective.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/verify-storage-qos.yml:203:7
+
+201
+202     # Non-fatal: vrf-storage BGP may still be converging; warn and continue.
+203     - name: Assert the HTB partition favours storage under contention
+          ^ column 7
+
+fatal: [HostB12-2]: FAILED! => {
+    "assertion": "(storage_share | float) >= (storage_min_share | float)",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "Storage share 0.0% is below the 60.0% floor — HTB shaping not effective."
+}
+...ignoring
+
+TASK [Warn when QoS assert did not pass] *******************************************************************************************************************
+ok: [HostB12-2] => {
+    "msg": "WARNING: QoS assert skipped/failed. If vrf-storage BGP peers are Idle (check `vtysh -c 'show bgp vrf vrf-storage sum'`), re-run verify-storage-qos.yml after storage VRF converges. This does NOT block the K8s overlay deployment."
+}
+
+PLAY [Deploy air-gapped registry mirror on R810 host] ******************************************************************************************************
+
+TASK [registry_deploy : Ensure Docker is installed] ********************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Enable and start Docker] ***********************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Create registry data directory] ****************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Check for registry image] **********************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Pull registry image if missing] ****************************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [registry_deploy : Check for registry container] ******************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Create or restart registry container] **********************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Wait for registry port] ************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Confirm registry endpoint responds] ************************************************************************************************
+ok: [poweredge_r810]
+
+PLAY [Seed registry from /opt/fabric-cache/images] *********************************************************************************************************
+
+TASK [registry_seed : Check for cached image tarballs on the control node] *********************************************************************************
+ok: [poweredge_r810 -> localhost]
+
+TASK [registry_seed : Display cached image count] **********************************************************************************************************
+ok: [poweredge_r810] => {
+    "msg": "Found 60 image tarballs in /opt/fabric-cache/images/"
+}
+
+TASK [registry_seed : Ensure skopeo is available on the registry host] *************************************************************************************
+changed: [poweredge_r810]
+
+TASK [registry_seed : Create staging directory on registry host] *******************************************************************************************
+changed: [poweredge_r810]
+
+TASK [registry_seed : Upload image tarballs to registry host] **********************************************************************************************
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_kubernetesui_metrics-scraper_v1.0.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_kubernetesui_metrics-scraper_v1.0.9.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_kubernetesui_metrics-scraper_v1.0.9.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662393.1911302, "ctime": 1786662394.8939302, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 330701, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662394.8219302, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_kubernetesui_metrics-scraper_v1.0.9.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 19763200, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_kubernetesui_metrics-scraper_v1.0.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_kubernetesui_metrics-scraper_v1.0.9.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_nginx_1.27-alpine.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_nginx_1.27-alpine.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_nginx_1.27-alpine.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662411.9435308, "ctime": 1786662413.937931, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 332746, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662413.7759311, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_nginx_1.27-alpine.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 21896192, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_nginx_1.27-alpine.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_nginx_1.27-alpine.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_cni_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_cni_v3.29.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_cni_v3.29.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739355.2549925, "ctime": 1786739362.2190514, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337282, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739362.1190531, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_cni_v3.29.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 99284992, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_cni_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_cni_v3.29.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_cni_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_cni_v3.28.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_cni_v3.28.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660424.2447755, "ctime": 1786660433.8184052, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 206657, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660433.7304056, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_cni_v3.28.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 94707200, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_cni_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_cni_v3.28.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661667.3324351, "ctime": 1786661674.3680036, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311193, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661674.3212037, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 32185344, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-provisioner_v5.1.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_metallb_controller_v0.14.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_metallb_controller_v0.14.9.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_metallb_controller_v0.14.9.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660670.920359, "ctime": 1786660671.2393577, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 211337, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660671.2283578, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_metallb_controller_v0.14.9.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30208, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_metallb_controller_v0.14.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_metallb_controller_v0.14.9.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_brancz_kube-rbac-proxy_v0.18.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_brancz_kube-rbac-proxy_v0.18.1.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_brancz_kube-rbac-proxy_v0.18.1.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662108.6487064, "ctime": 1786662108.7927065, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 2220, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662108.7783065, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_brancz_kube-rbac-proxy_v0.18.1.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12288, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_brancz_kube-rbac-proxy_v0.18.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_brancz_kube-rbac-proxy_v0.18.1.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.17.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.17.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_etcd_v3.5.17.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739271.3732982, "ctime": 1786739271.493268, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337202, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739271.48527, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.17.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.17.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.17.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660290.02585, "ctime": 1786660291.5731773, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 203498, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660291.543844, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 19513344, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.7.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_prometheus_v2.55.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_prometheus_v2.55.1.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_prometheus_prometheus_v2.55.1.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661872.5124872, "ctime": 1786661887.377253, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 312662, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661887.290853, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_prometheus_prometheus_v2.55.1.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 114304512, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_prometheus_v2.55.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_prometheus_v2.55.1.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661697.1561995, "ctime": 1786661700.4537995, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311202, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661700.3997996, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30914560, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-resizer_v1.12.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_controller_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_controller_v1.12.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_ingress-nginx_controller_v1.12.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662199.627308, "ctime": 1786662213.1519926, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325811, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662211.4671926, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_controller_v1.12.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 107919872, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_controller_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_controller_v1.12.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.31.4.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-controller-manager_v1.31.4.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660101.7466033, "ctime": 1786660104.6175919, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 197505, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660104.5662587, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.31.4.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 26165760, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.31.4.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.28.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_pod2daemon-flexvol_v3.28.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660619.4745576, "ctime": 1786660620.009889, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 209934, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660619.987889, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.28.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 6643200, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.28.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_typha_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_typha_v3.28.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_typha_v3.28.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660642.2125716, "ctime": 1786660645.0945604, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 209943, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660645.0468938, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_typha_v3.28.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30950912, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_typha_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_typha_v3.28.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661726.9667451, "ctime": 1786661731.0959454, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311211, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661731.0419452, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30573568, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-snapshotter_v8.1.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660311.3561358, "ctime": 1786660312.8777964, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 204964, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660312.85213, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 13401088, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_cpa_cluster-proportional-autoscaler_v1.9.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662231.2779932, "ctime": 1786662231.4543931, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325832, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662231.4471931, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 17920, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_ingress-nginx_kube-webhook-certgen_v1.4.4.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.33.3.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-apiserver_v1.33.3.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739182.184019, "ctime": 1786739184.1458702, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 333816, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739184.1020114, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.33.3.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30093312, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.33.3.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.28.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_kube-controllers_v3.28.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660608.7389886, "ctime": 1786660612.167309, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 209894, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660612.1123092, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.28.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 34864640, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.28.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-controller_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-controller_v1.16.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_jetstack_cert-manager-controller_v1.16.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662252.23459, "ctime": 1786662252.5513902, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325884, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662252.5297902, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_jetstack_cert-manager-controller_v1.16.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-controller_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-controller_v1.16.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_pause_3.10.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_pause_3.10.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_pause_3.10.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660173.2440028, "ctime": 1786660173.3320026, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 199534, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660173.3210025, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_pause_3.10.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 328192, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_pause_3.10.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_pause_3.10.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_memcached_1.6.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_memcached_1.6.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_memcached_1.6.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739789.2968972, "ctime": 1786739792.9374683, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 352954, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739792.8862216, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_memcached_1.6.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 34270208, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_memcached_1.6.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_memcached_1.6.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661758.1427705, "ctime": 1786661761.2963705, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311220, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661761.2423706, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 31025152, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-attacher_v4.7.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739286.2931042, "ctime": 1786739287.913832, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337216, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739287.8898213, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 22512128, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_metrics-server_metrics-server_v0.8.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662066.3296714, "ctime": 1786662068.1096044, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 323393, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662067.5392714, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 15444992, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-state-metrics_kube-state-metrics_v2.14.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.29.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_kube-controllers_v3.29.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739517.0490413, "ctime": 1786739520.939864, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 339970, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739520.891862, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.29.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 36295680, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_kube-controllers_v3.29.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.33.3.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-proxy_v1.33.3.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739241.8121004, "ctime": 1786739244.0953426, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337144, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739244.0513494, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.33.3.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 31900672, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.33.3.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661776.1499705, "ctime": 1786661780.9181817, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311239, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661780.8965816, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 18787840, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-operator_v0.78.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-webhook_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-webhook_v1.16.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_jetstack_cert-manager-webhook_v1.16.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662266.1413906, "ctime": 1786662266.3393908, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325908, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662266.3249907, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_jetstack_cert-manager-webhook_v1.16.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-webhook_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-webhook_v1.16.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_node-exporter_v1.8.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_node-exporter_v1.8.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_prometheus_node-exporter_v1.8.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661927.3186285, "ctime": 1786661928.8270288, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 312707, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661928.7946286, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_prometheus_node-exporter_v1.8.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12051456, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_node-exporter_v1.8.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_node-exporter_v1.8.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_mariadb_11.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_mariadb_11.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_mariadb_11.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786740076.237389, "ctime": 1786740086.8753119, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 384701, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786740086.7418916, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_mariadb_11.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 110528000, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_mariadb_11.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_mariadb_11.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.31.4.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-proxy_v1.31.4.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660167.5166914, "ctime": 1786660171.0770113, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 199530, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660170.9890118, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.31.4.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 30238208, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-proxy_v1.31.4.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.33.3.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-controller-manager_v1.33.3.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739201.7511342, "ctime": 1786739203.1034257, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 335313, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739203.0674188, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.33.3.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 27665408, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-controller-manager_v1.33.3.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_typha_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_typha_v3.29.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_typha_v3.29.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739547.302584, "ctime": 1786739550.6229994, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 340020, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739550.5789843, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_typha_v3.29.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 31916544, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_typha_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_typha_v3.29.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662295.4366746, "ctime": 1786662295.6130745, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325951, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662295.6022747, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-startupapicheck_v1.16.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.33.3.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-scheduler_v1.33.3.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739218.4333282, "ctime": 1786739219.2143273, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 335326, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739219.186292, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.33.3.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 21800960, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.33.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.33.3.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_node_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_node_v3.28.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_node_v3.28.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660572.5405009, "ctime": 1786660585.4377506, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 206661, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660585.305751, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_node_v3.28.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 119836672, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_node_v3.28.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_node_v3.28.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_node_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_node_v3.29.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_node_v3.29.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739479.301984, "ctime": 1786739492.5288916, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337287, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739492.36472, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_node_v3.29.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 142250496, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_node_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_node_v3.29.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_ceph_ceph_v19.2.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_ceph_ceph_v19.2.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_ceph_ceph_v19.2.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661544.4104252, "ctime": 1786661614.256511, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311179, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661614.2032351, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_ceph_ceph_v19.2.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 457232896, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_ceph_ceph_v19.2.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_ceph_ceph_v19.2.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660259.442605, "ctime": 1786660263.0212574, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 201653, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660262.962591, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 35116032, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_dns_k8s-dns-node-cache_1.23.1.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.31.4.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-apiserver_v1.31.4.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660060.709152, "ctime": 1786660063.3183007, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 53916, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660063.0623019, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.31.4.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 27990528, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-apiserver_v1.31.4.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_grafana_grafana_11.3.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_grafana_grafana_11.3.1.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_grafana_grafana_11.3.1.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662040.787861, "ctime": 1786662051.350262, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 323388, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662051.263862, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_grafana_grafana_11.3.1.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 132737024, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_grafana_grafana_11.3.1.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_grafana_grafana_11.3.1.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_alertmanager_v0.27.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_alertmanager_v0.27.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_prometheus_alertmanager_v0.27.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661911.6929317, "ctime": 1786661915.5413315, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 312698, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661915.4873316, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_prometheus_alertmanager_v0.27.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 32425472, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus_alertmanager_v0.27.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus_alertmanager_v0.27.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_fossbilling_fossbilling_latest.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_fossbilling_fossbilling_latest.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_fossbilling_fossbilling_latest.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739980.6769488, "ctime": 1786740006.2676952, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337292, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786740006.0553408, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_fossbilling_fossbilling_latest.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 230745600, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_fossbilling_fossbilling_latest.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_fossbilling_fossbilling_latest.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.29.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_calico_pod2daemon-flexvol_v3.29.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739525.7443695, "ctime": 1786739526.31699, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 340004, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739526.3009725, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.29.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 6866432, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.29.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_calico_pod2daemon-flexvol_v3.29.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662079.0501053, "ctime": 1786662082.4665053, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 323406, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662080.3929055, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 14731776, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_prometheus-operator_prometheus-config-reloader_v0.78.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.16.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.16.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_etcd_v3.5.16.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660224.7006092, "ctime": 1786660224.9536083, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 201648, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660224.9426084, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.16.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.16.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_etcd_v3.5.16.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_rook_ceph_v1.15.5.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_rook_ceph_v1.15.5.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_rook_ceph_v1.15.5.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661089.0782456, "ctime": 1786661138.6384532, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 281817, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661138.591653, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_rook_ceph_v1.15.5.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 470679552, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_rook_ceph_v1.15.5.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_rook_ceph_v1.15.5.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_rabbitmq_3.13-management.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_rabbitmq_3.13-management.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_rabbitmq_3.13-management.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739751.8218632, "ctime": 1786739762.6556778, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 349515, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739762.5375466, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_rabbitmq_3.13-management.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 117599232, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_rabbitmq_3.13-management.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_rabbitmq_3.13-management.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662284.7698743, "ctime": 1786662284.9498742, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 325931, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662284.9354742, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12800, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_jetstack_cert-manager-cainjector_v1.16.2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_kubernetesui_dashboard_v2.7.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_kubernetesui_dashboard_v2.7.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_kubernetesui_dashboard_v2.7.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662368.9447987, "ctime": 1786662374.1971989, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 330686, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662374.0747988, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_kubernetesui_dashboard_v2.7.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 75798016, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_kubernetesui_dashboard_v2.7.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_kubernetesui_dashboard_v2.7.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_metallb_speaker_v0.14.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_metallb_speaker_v0.14.9.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=quay.io_metallb_speaker_v0.14.9.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660714.7133396, "ctime": 1786660714.9443386, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 211365, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660714.9370053, "nlink": 1, "path": "/opt/fabric-cache/images/quay.io_metallb_speaker_v0.14.9.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 34816, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/quay.io_metallb_speaker_v0.14.9.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/quay.io_metallb_speaker_v0.14.9.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.11.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.11.3.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_coredns_coredns_v1.11.3.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660200.8847945, "ctime": 1786660203.771358, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 199559, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660203.7053583, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.11.3.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 18580480, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.11.3.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.11.3.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_registry_2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_registry_2.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_registry_2.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786662425.9246297, "ctime": 1786662427.0082297, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 333783, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786662426.9326296, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_registry_2.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 10341376, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_registry_2.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_registry_2.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786661627.00576, "ctime": 1786661628.52496, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 311184, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786661628.49976, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 14056448, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_sig-storage_csi-node-driver-registrar_v2.12.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739668.728701, "ctime": 1786739668.9368103, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 340594, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739668.924804, "nlink": 1, "path": "/opt/fabric-cache/images/ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 14336, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/ghcr.io_k8snetworkplumbingwg_multus-cni_v4.1.0.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.31.4.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_kube-scheduler_v1.31.4.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786660123.1052742, "ctime": 1786660129.0011387, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 197713, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786660128.93419, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.31.4.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 20115456, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.31.4.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_kube-scheduler_v1.31.4.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_mariadb_10.11.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_mariadb_10.11.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=docker.io_library_mariadb_10.11.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786742090.8764465, "ctime": 1786742107.145608, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 393668, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786742106.7995484, "nlink": 1, "path": "/opt/fabric-cache/images/docker.io_library_mariadb_10.11.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 108893696, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/docker.io_library_mariadb_10.11.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/docker.io_library_mariadb_10.11.tar'"}
+[ERROR]: Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.12.0.tar'
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/registry_seed/tasks/main.yml:43:3
+
+41   when: cached_tarballs.files | length > 0
+42
+43 - name: Upload image tarballs to registry host
+     ^ column 3
+
+failed: [poweredge_r810] (item=registry.k8s.io_coredns_coredns_v1.12.0.tar) => {"ansible_loop_var": "item", "changed": false, "item": {"atime": 1786739257.3197837, "ctime": 1786739257.4397557, "dev": 2096, "gid": 0, "gr_name": "root", "inode": 337158, "isblk": false, "ischr": false, "isdir": false, "isfifo": false, "isgid": false, "islnk": false, "isreg": true, "issock": false, "isuid": false, "mode": "0600", "mtime": 1786739257.4357564, "nlink": 1, "path": "/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.12.0.tar", "pw_name": "root", "rgrp": false, "roth": false, "rusr": true, "size": 12288, "uid": 0, "wgrp": false, "woth": false, "wusr": true, "xgrp": false, "xoth": false, "xusr": false}, "msg": "Task failed: an error occurred while trying to read the file '/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.12.0.tar': [Errno 13] Permission denied: b'/opt/fabric-cache/images/registry.k8s.io_coredns_coredns_v1.12.0.tar'"}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=93   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Border-Leaf2               : ok=93   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Exit-Router1               : ok=39   changed=16   unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+Exit-Router2               : ok=38   changed=16   unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+External-Router            : ok=15   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12-1                   : ok=37   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Host12-2                   : ok=36   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Host12-3                   : ok=36   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Host34-1                   : ok=36   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Host34-2                   : ok=36   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+HostB12-1                  : ok=52   changed=18   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+HostB12-2                  : ok=72   changed=18   unreachable=0    failed=0    skipped=17   rescued=0    ignored=1
+ISP-1                      : ok=15   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-2                      : ok=14   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=72   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Leaf-L2                    : ok=72   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Leaf-L3                    : ok=93   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Leaf-L4                    : ok=93   changed=13   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+MonSrv                     : ok=52   changed=18   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+Spine-S1                   : ok=86   changed=13   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Spine-S2                   : ok=86   changed=13   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+localhost                  : ok=5    changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+poweredge_r810             : ok=30   changed=9    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
