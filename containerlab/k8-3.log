@@ -1,0 +1,170 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/lab/fabric-full.yml
+[WARNING]: Found duplicate mapping key 'ansible.builtin.shell'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:30:3
+
+28   delegate_to: "{{ groups['kube_control_plane'][0] }}"
+29   when: not cached_helm_binary.stat.exists
+30   ansible.builtin.shell: |
+     ^ column 3
+
+Using last defined value only.
+
+[WARNING]: Found duplicate mapping key 'args'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:32:3
+
+30   ansible.builtin.shell: |
+31     curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+32   args:
+     ^ column 3
+
+Using last defined value only.
+
+[WARNING]: Found duplicate mapping key 'become'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:34:3
+
+32   args:
+33     creates: /usr/local/bin/helm
+34   become: true
+     ^ column 3
+
+Using last defined value only.
+
+[WARNING]: Found duplicate mapping key 'run_once'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:35:3
+
+33     creates: /usr/local/bin/helm
+34   become: true
+35   run_once: true
+     ^ column 3
+
+Using last defined value only.
+
+[WARNING]: Found duplicate mapping key 'delegate_to'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:36:3
+
+34   become: true
+35   run_once: true
+36   delegate_to: "{{ groups['kube_control_plane'][0] }}"
+     ^ column 3
+
+Using last defined value only.
+
+[WARNING]: Found duplicate mapping key 'when'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/monitoring_stack/tasks/main.yml:37:3
+
+35   run_once: true
+36   delegate_to: "{{ groups['kube_control_plane'][0] }}"
+37   when: not cached_helm_binary.stat.exists
+     ^ column 3
+
+Using last defined value only.
+
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+[WARNING]: Host 'localhost' is using the discovered Python interpreter at '/mnt/c/Users/nh1221/data-center/venv/bin/python3.12', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+ok: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+ok: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+ok: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Deploy containerlab topology on R810] ****************************************************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Host 'poweredge_r810' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure genisoimage is installed (for cloud-init seed ISO)] *******************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Host VM 40 GB data disks required by topology bind mounts] ************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Wait for SONiC management SSH from R810 side] ********************************************************************************************************
+ok: [poweredge_r810] => (item=Spine-S1 -> 172.16.2.11)
+ok: [poweredge_r810] => (item=Spine-S2 -> 172.16.2.12)
+ok: [poweredge_r810] => (item=Leaf-L1 -> 172.16.2.21)
+ok: [poweredge_r810] => (item=Leaf-L2 -> 172.16.2.22)
+ok: [poweredge_r810] => (item=Leaf-L3 -> 172.16.2.23)
+ok: [poweredge_r810] => (item=Leaf-L4 -> 172.16.2.24)
+ok: [poweredge_r810] => (item=Border-Leaf1 -> 172.16.2.31)
+ok: [poweredge_r810] => (item=Border-Leaf2 -> 172.16.2.32)
+
+TASK [Wait for generic_vm Linux SSH from R810 side] ********************************************************************************************************
+[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.51:22
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/lab/deploy.yml:79:7
+
+77         label: "{{ item }} -> {{ hostvars[item].ansible_host }}"
+78
+79     - name: Wait for generic_vm Linux SSH from R810 side
+         ^ column 7
+
+failed: [poweredge_r810] (item=Host12-1 -> 172.16.2.51) => {"ansible_loop_var": "item", "changed": false, "elapsed": 300, "item": "Host12-1", "msg": "Timeout when waiting for 172.16.2.51:22"}
+[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.52:22
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/lab/deploy.yml:79:7
+
+77         label: "{{ item }} -> {{ hostvars[item].ansible_host }}"
+78
+79     - name: Wait for generic_vm Linux SSH from R810 side
+         ^ column 7
+
+failed: [poweredge_r810] (item=Host12-2 -> 172.16.2.52) => {"ansible_loop_var": "item", "changed": false, "elapsed": 300, "item": "Host12-2", "msg": "Timeout when waiting for 172.16.2.52:22"}
+[ERROR]: Task failed: Module failed: Timeout when waiting for 172.16.2.53:22
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/lab/deploy.yml:79:7
+
+77         label: "{{ item }} -> {{ hostvars[item].ansible_host }}"
+78
+79     - name: Wait for generic_vm Linux SSH from R810 side
+         ^ column 7
+
+failed: [poweredge_r810] (item=Host12-3 -> 172.16.2.53) => {"ansible_loop_var": "item", "changed": false, "elapsed": 300, "item": "Host12-3", "msg": "Timeout when waiting for 172.16.2.53:22"}
