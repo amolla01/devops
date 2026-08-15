@@ -1,0 +1,491 @@
+In regrads to routing through air-gaped fabric topology, do we really need to have all the bgp prefixes in ubuntu host servers? 
+Their default gw is always to their multi-homed connected Leaf colums. So, shouldn't their loopp-back ip be enough??
+ I see the following in the Host Server: 
+ubuntu@Host12-1:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Host12-1# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0
+BGP table version 105
+RIB entries 70, using 8960 bytes of memory
+Peers 3, using 71 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Leaf-L1(ens2)   4      65011     20062     20058      105    0    0 16:40:06           34       37 To-Leaf-L1-Ethernet0
+Leaf-L2(ens3)   4      65012     20085     20058      105    0    0 16:40:06           34       37 To-Leaf-L2-Ethernet0
+127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
+
+Total number of neighbors 3
+Host12-1# show ip route
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+B   0.0.0.0/0 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+K>* 0.0.0.0/0 [0/0] via 10.0.0.2, enp1s0, weight 1, 16:40:39
+B   10.0.0.0/24 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+                       via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+C>* 10.0.0.0/24 is directly connected, enp1s0, weight 1, 16:40:39
+B>* 10.0.0.1/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:50
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:50
+B>* 10.0.0.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:50
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:50
+L>* 10.0.0.15/32 is directly connected, enp1s0, weight 1, 16:40:39
+B>* 10.0.1.1/32 [20/0] via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 10.0.1.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+B>* 10.0.1.3/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:50
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:50
+B>* 10.0.1.4/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:50
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:50
+B>* 10.0.2.1/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:50
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:50
+B>* 10.0.2.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:54
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:54
+L * 10.0.10.1/32 is directly connected, lo, weight 1, 16:40:39
+C>* 10.0.10.1/32 is directly connected, lo, weight 1, 16:40:39
+B>* 10.0.10.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 10.0.10.3/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 10.0.20.1/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 10.0.20.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 10.1.0.1/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+  *                    via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 10.10.255.100/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:53
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:53
+B>* 10.10.255.101/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:53
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:53
+B>* 10.10.255.102/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 10.255.255.1/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                        via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 10.255.255.2/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                        via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 10.255.255.11/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 10.255.255.12/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 10.255.255.21/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 100.64.0.0/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                      via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 100.64.0.4/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                      via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 100.64.100.10/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 192.0.2.0/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 192.0.2.4/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                     via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+L * 192.168.20.11/32 is directly connected, cephdummy0, weight 1, 16:40:39
+C>* 192.168.20.11/32 is directly connected, cephdummy0, weight 1, 16:40:39
+B>* 192.168.20.12/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 192.168.20.13/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:40:33
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:40:33
+B>* 192.168.20.21/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 192.168.20.22/32 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                         via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 198.51.100.0/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                        via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+B>* 198.51.100.4/30 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:49
+  *                        via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:49
+B>* 203.0.113.0/24 [20/0] via fe80::2026:34ff:fe08:97b2, ens3, weight 1, 16:32:52
+  *                       via fe80::20f8:5cff:fef6:dfc, ens2, weight 1, 16:32:52
+Host12-1# ping bbc.com
+PING bbc.com (151.101.192.81) 56(84) bytes of data.
+64 bytes from 151.101.192.81: icmp_seq=1 ttl=255 time=8.94 ms
+64 bytes from 151.101.192.81: icmp_seq=2 ttl=255 time=10.2 ms
+64 bytes from 151.101.192.81: icmp_seq=3 ttl=255 time=8.84 ms
+64 bytes from 151.101.192.81: icmp_seq=4 ttl=255 time=11.0 ms
+64 bytes from 151.101.192.81: icmp_seq=5 ttl=255 time=9.35 ms
+^C
+--- bbc.com ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4007ms
+rtt min/avg/max/mdev = 8.842/9.667/11.035/0.829 ms
+Host12-1# show ip bgp
+BGP table version is 105, local router ID is 10.0.10.1, vrf id 0
+Default local pref 100, local AS 65211
+Status codes:  s suppressed, d damped, h history, u unsorted, * valid, > best, = multipath,
+               i internal, r RIB-failure, S Stale, R Removed
+Nexthop codes: @NNN nexthop's vrf id, < announce-nh-self
+Origin codes:  i - IGP, e - EGP, ? - incomplete
+RPKI validation codes: V valid, I invalid, N Not found
+
+     Network          Next Hop            Metric LocPrf Weight Path
+ *>  0.0.0.0/0        ens2                                   0 65011 65000 65032 65251 i
+ *=                   ens3                                   0 65012 65000 65032 65251 i
+ *>  10.0.0.0/24      ens2                     0             0 65011 ?
+ *=                   ens3                     0             0 65012 ?
+ *>  10.0.0.1/32      ens2                                   0 65011 65000 ?
+ *=                   ens3                                   0 65012 65000 ?
+ *>  10.0.0.2/32      ens2                                   0 65011 65000 ?
+ *=                   ens3                                   0 65012 65000 ?
+ *>  10.0.1.1/32      ens2                     0             0 65011 ?
+ *>  10.0.1.2/32      ens3                     0             0 65012 ?
+ *>  10.0.1.3/32      ens2                                   0 65011 65000 65021 ?
+ *=                   ens3                                   0 65012 65000 65021 ?
+ *>  10.0.1.4/32      ens2                                   0 65011 65000 65022 ?
+ *=                   ens3                                   0 65012 65000 65022 ?
+ *>  10.0.2.1/32      ens2                                   0 65011 65000 65031 ?
+ *=                   ens3                                   0 65012 65000 65031 ?
+ *>  10.0.2.2/32      ens2                                   0 65011 65000 65032 ?
+ *=                   ens3                                   0 65012 65000 65032 ?
+ *>  10.0.10.1/32     0.0.0.0(Host12-1)
+                                               0         32768 ?
+ *>  10.0.10.2/32     ens2                                   0 65011 65212 ?
+ *=                   ens3                                   0 65012 65212 ?
+ *>  10.0.10.3/32     ens2                                   0 65011 65213 ?
+ *=                   ens3                                   0 65012 65213 ?
+ *>  10.0.20.1/32     ens2                                   0 65011 65000 65021 65221 ?
+ *=                   ens3                                   0 65012 65000 65021 65221 ?
+ *>  10.0.20.2/32     ens2                                   0 65011 65000 65021 65222 ?
+ *=                   ens3                                   0 65012 65000 65021 65222 ?
+ *>  10.1.0.1/32      ens2                     0             0 65011 ?
+ *=                   ens3                     0             0 65012 ?
+ *>  10.10.255.100/32 ens2                                   0 65011 65000 65032 65231 ?
+ *=                   ens3                                   0 65012 65000 65032 65231 ?
+ *>  10.10.255.101/32 ens2                                   0 65011 65000 65032 65232 ?
+ *=                   ens3                                   0 65012 65000 65032 65232 ?
+ *>  10.10.255.102/32 ens2                                   0 65011 65000 65021 65223 ?
+ *=                   ens3                                   0 65012 65000 65021 65223 ?
+ *>  10.255.255.1/32  ens2                                   0 65011 65000 65032 65251 i
+ *=                   ens3                                   0 65012 65000 65032 65251 i
+ *>  10.255.255.2/32  ens2                                   0 65011 65000 65031 65252 i
+ *=                   ens3                                   0 65012 65000 65031 65252 i
+ *>  10.255.255.11/32 ens2                                   0 65011 65000 65032 65251 65401 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 65401 ?
+ *>  10.255.255.12/32 ens2                                   0 65011 65000 65032 65251 65402 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 65402 ?
+ *>  10.255.255.21/32 ens2                                   0 65011 65000 65032 65251 65401 65100 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 65401 65100 ?
+ *>  100.64.0.0/30    ens2                                   0 65011 65000 65032 65251 65401 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 65401 ?
+ *>  100.64.0.4/30    ens2                                   0 65011 65000 65032 65251 65402 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 65402 ?
+ *>  100.64.100.10/32 ens2                                   0 65011 65000 65032 65251 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 ?
+ *>  192.0.2.0/30     ens2                                   0 65011 65000 65032 65251 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 ?
+ *>  192.0.2.4/30     ens2                                   0 65011 65000 65031 65252 ?
+ *=                   ens3                                   0 65012 65000 65031 65252 ?
+ *>  192.168.20.11/32 0.0.0.0(Host12-1)
+                                               0         32768 ?
+ *>  192.168.20.12/32 ens2                                   0 65011 65212 ?
+ *=                   ens3                                   0 65012 65212 ?
+ *>  192.168.20.13/32 ens2                                   0 65011 65213 ?
+ *=                   ens3                                   0 65012 65213 ?
+ *>  192.168.20.21/32 ens2                                   0 65011 65000 65021 65221 ?
+ *=                   ens3                                   0 65012 65000 65021 65221 ?
+ *>  192.168.20.22/32 ens2                                   0 65011 65000 65021 65222 ?
+ *=                   ens3                                   0 65012 65000 65021 65222 ?
+ *>  198.51.100.0/30  ens2                                   0 65011 65000 65032 65251 ?
+ *=                   ens3                                   0 65012 65000 65032 65251 ?
+ *>  198.51.100.4/30  ens2                                   0 65011 65000 65031 65252 ?
+ *=                   ens3                                   0 65012 65000 65031 65252 ?
+ *>  203.0.113.0/24   ens2                                   0 65011 65000 65032 65251 65401 65100 i
+ *=                   ens3                                   0 65012 65000 65032 65251 65401 65100 i
+
+Displayed 37 routes and 70 total paths
+
+Host12-1# show ip bgp
+Host12-1# exit
+ubuntu@Host12-1:~$ ping -c 3 bbc.com
+PING bbc.com (151.101.192.81) 56(84) bytes of data.
+64 bytes from 151.101.192.81: icmp_seq=1 ttl=255 time=10.4 ms
+64 bytes from 151.101.192.81: icmp_seq=2 ttl=255 time=9.13 ms
+64 bytes from 151.101.192.81: icmp_seq=3 ttl=255 time=9.50 ms
+
+--- bbc.com ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 9.134/9.678/10.398/0.530 ms
+I see in the below going to internet it is using 172.16.2.1 which is the mgmt_gw. Please analyze what this means if we are oing through fabric or using the L2 mgmt
+network to go out. Since we are air-gapped, which route to be used for internet download necessitated from the playbook??
+ubuntu@Host12-1:~$ tracepath bbc.com
+ 1?: [LOCALHOST]                      pmtu 1500
+ 1:  _gateway                                              0.374ms
+ 1:  _gateway                                              0.474ms
+ 2:  172.16.2.1                                            0.510ms asymm  1
+ 3:  192.168.9.1                                           1.294ms asymm  1
+ 4:  10.255.255.1                                          1.164ms asymm  1
+ 5:  192.168.254.254                                       2.113ms asymm  1
+ 6:  47-184-0-1.fdr02.crtn.tx.ip.frontiernet.net          15.190ms asymm  1
+ 7:  ae39---100.ber01.irng.tx.frontiernet.net             10.253ms asymm  1
+ 8:  ae11---0.scr05.dlls.tx.frontiernet.net                8.820ms asymm  1
+ 9:  ae0---0.cbr04.dlls.tx.frontiernet.net                16.676ms asymm  1
+10:  no reply
+11:  no reply
+12:  no reply
+13:  no reply
+14:  no reply
+^C
+ubuntu@Host12-1:~$
+
+We are failing in the k8 playbook, please provide the fix. The log is below:
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook playbooks/kubespray-prep.yml
+
+PLAY [Prepare all K8s nodes for Kubespray deployment] ******************************************************************************************************
+[WARNING]: Found duplicate mapping key 'ceph_dummy_mtu'.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/group_vars/all.yml:52:1
+
+50 netplan_data_interfaces: []
+51 ceph_dummy_prefix: 32
+52 ceph_dummy_mtu: 9000
+   ^ column 1
+
+Using last defined value only.
+
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Host 'Host12-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-2]
+[WARNING]: Host 'Host12-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-1]
+[WARNING]: Host 'Host12-3' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host12-3]
+[WARNING]: Host 'Host34-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host34-2]
+[WARNING]: Host 'Host34-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [Host34-1]
+[WARNING]: Host 'MonSrv' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [MonSrv]
+[WARNING]: Host 'HostB12-1' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [HostB12-1]
+[WARNING]: Host 'HostB12-2' is using the discovered Python interpreter at '/usr/bin/python3.14', but future installation of another Python interpreter could cause a different interpreter to be discovered. See https://docs.ansible.com/ansible-core/2.20/reference_appendices/interpreter_discovery.html for more information.
+ok: [HostB12-2]
+
+TASK [kubespray_prep : Disable swap immediately] ***********************************************************************************************************
+ok: [Host12-3]
+ok: [Host12-2]
+ok: [Host12-1]
+ok: [Host34-1]
+ok: [Host34-2]
+ok: [HostB12-1]
+ok: [MonSrv]
+ok: [HostB12-2]
+
+TASK [kubespray_prep : Remove swap from /etc/fstab permanently] ********************************************************************************************
+ok: [Host12-2]
+ok: [Host12-3]
+ok: [Host12-1]
+ok: [Host34-2]
+ok: [Host34-1]
+ok: [HostB12-1]
+ok: [MonSrv]
+ok: [HostB12-2]
+
+TASK [kubespray_prep : Load required kernel modules] *******************************************************************************************************
+changed: [Host12-1]
+changed: [Host12-3]
+changed: [Host34-1]
+changed: [Host34-2]
+changed: [Host12-2]
+changed: [HostB12-2]
+changed: [HostB12-1]
+changed: [MonSrv]
+
+TASK [kubespray_prep : Activate kernel modules immediately] ************************************************************************************************
+ok: [Host12-2] => (item=overlay)
+ok: [Host12-1] => (item=overlay)
+ok: [Host12-3] => (item=overlay)
+ok: [Host34-2] => (item=overlay)
+ok: [Host34-1] => (item=overlay)
+ok: [Host12-1] => (item=br_netfilter)
+ok: [Host12-2] => (item=br_netfilter)
+ok: [Host34-2] => (item=br_netfilter)
+ok: [Host12-3] => (item=br_netfilter)
+ok: [Host34-1] => (item=br_netfilter)
+ok: [HostB12-1] => (item=overlay)
+ok: [MonSrv] => (item=overlay)
+ok: [HostB12-2] => (item=overlay)
+ok: [HostB12-1] => (item=br_netfilter)
+ok: [MonSrv] => (item=br_netfilter)
+ok: [HostB12-2] => (item=br_netfilter)
+
+TASK [kubespray_prep : Set kernel parameters for Kubernetes networking] ************************************************************************************
+changed: [Host12-2]
+changed: [Host12-1]
+changed: [Host34-2]
+changed: [Host34-1]
+changed: [Host12-3]
+changed: [HostB12-1]
+changed: [MonSrv]
+changed: [HostB12-2]
+
+TASK [kubespray_prep : Apply sysctl parameters] ************************************************************************************************************
+ok: [Host12-1]
+ok: [Host12-2]
+ok: [Host12-3]
+ok: [Host34-1]
+ok: [Host34-2]
+ok: [HostB12-1]
+ok: [MonSrv]
+ok: [HostB12-2]
+
+TASK [kubespray_prep : Install prerequisite packages for kubespray] ****************************************************************************************
+[ERROR]: Task failed: Module failed: '/usr/bin/apt-get -y -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" -o DPkg::Lock::Timeout=60       install 'python3-pip=25.1.1+dfsg-1ubuntu2' 'apt-transport-https=3.2.0'' failed: E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).
+
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/kubespray_prep/tasks/main.yml:44:3
+
+42   changed_when: false
+43
+44 - name: Install prerequisite packages for kubespray
+     ^ column 3
+
+fatal: [Host34-2]: FAILED! => {"cache_update_time": 1786802891, "cache_updated": true, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\" -o DPkg::Lock::Timeout=60       install 'python3-pip=25.1.1+dfsg-1ubuntu2' 'apt-transport-https=3.2.0'' failed: E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "rc": 100, "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "stderr_lines": ["E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution)."], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed\n python3-pip : Depends: python3-wheel but it is not going to be installed\n               Recommends: build-essential but it is not going to be installed\n               Recommends: python3-dev (>= 3.2) but it is not going to be installed\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "You might want to run 'apt --fix-broken install' to correct these.", "The following packages have unmet dependencies:", " linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed", " python3-pip : Depends: python3-wheel but it is not going to be installed", "               Recommends: build-essential but it is not going to be installed", "               Recommends: python3-dev (>= 3.2) but it is not going to be installed"]}
+fatal: [MonSrv]: FAILED! => {"cache_update_time": 1786802908, "cache_updated": true, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\" -o DPkg::Lock::Timeout=60       install 'python3-pip=25.1.1+dfsg-1ubuntu2' 'apt-transport-https=3.2.0'' failed: E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "rc": 100, "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "stderr_lines": ["E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution)."], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed\n python3-pip : Depends: python3-wheel but it is not going to be installed\n               Recommends: build-essential but it is not going to be installed\n               Recommends: python3-dev (>= 3.2) but it is not going to be installed\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "You might want to run 'apt --fix-broken install' to correct these.", "The following packages have unmet dependencies:", " linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed", " python3-pip : Depends: python3-wheel but it is not going to be installed", "               Recommends: build-essential but it is not going to be installed", "               Recommends: python3-dev (>= 3.2) but it is not going to be installed"]}
+fatal: [HostB12-1]: FAILED! => {"cache_update_time": 1786802928, "cache_updated": true, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\" -o DPkg::Lock::Timeout=60       install 'python3-pip=25.1.1+dfsg-1ubuntu2' 'apt-transport-https=3.2.0'' failed: E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "rc": 100, "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "stderr_lines": ["E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution)."], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed\n python3-pip : Depends: python3-wheel but it is not going to be installed\n               Recommends: build-essential but it is not going to be installed\n               Recommends: python3-dev (>= 3.2) but it is not going to be installed\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "You might want to run 'apt --fix-broken install' to correct these.", "The following packages have unmet dependencies:", " linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed", " python3-pip : Depends: python3-wheel but it is not going to be installed", "               Recommends: build-essential but it is not going to be installed", "               Recommends: python3-dev (>= 3.2) but it is not going to be installed"]}
+fatal: [HostB12-2]: FAILED! => {"cache_update_time": 1786802945, "cache_updated": true, "changed": false, "msg": "'/usr/bin/apt-get -y -o \"Dpkg::Options::=--force-confdef\" -o \"Dpkg::Options::=--force-confold\" -o DPkg::Lock::Timeout=60       install 'python3-pip=25.1.1+dfsg-1ubuntu2' 'apt-transport-https=3.2.0'' failed: E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "rc": 100, "stderr": "E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution).\n", "stderr_lines": ["E: Unmet dependencies. Try 'apt --fix-broken install' with no packages (or specify a solution)."], "stdout": "Reading package lists...\nBuilding dependency tree...\nReading state information...\nYou might want to run 'apt --fix-broken install' to correct these.\nThe following packages have unmet dependencies:\n linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed\n python3-pip : Depends: python3-wheel but it is not going to be installed\n               Recommends: build-essential but it is not going to be installed\n               Recommends: python3-dev (>= 3.2) but it is not going to be installed\n", "stdout_lines": ["Reading package lists...", "Building dependency tree...", "Reading state information...", "You might want to run 'apt --fix-broken install' to correct these.", "The following packages have unmet dependencies:", " linux-image-7.0.0-29-generic : Depends: linux-modules-7.0.0-29-generic but it is not going to be installed", " python3-pip : Depends: python3-wheel but it is not going to be installed", "               Recommends: build-essential but it is not going to be installed", "               Recommends: python3-dev (>= 3.2) but it is not going to be installed"]}
+[ERROR]: Task failed: Module failed: Command '/usr/bin/apt-mark manual python3 python3-pip git curl apt-transport-https ca-certificates gnupg lsb-release' failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles/kubespray_prep/tasks/main.yml:44:3
+
+42   changed_when: false
+43
+44 - name: Install prerequisite packages for kubespray
+     ^ column 3
+
+fatal: [Host34-1]: FAILED! => {"changed": false, "msg": "Command '/usr/bin/apt-mark manual python3 python3-pip git curl apt-transport-https ca-certificates gnupg lsb-release' failed.", "rc": 100, "stderr": "E: Write error - write (28: No space left on device)\nE: IO Error saving source cache\nE: The package lists or status file could not be parsed or opened.\n", "stderr_lines": ["E: Write error - write (28: No space left on device)", "E: IO Error saving source cache", "E: The package lists or status file could not be parsed or opened."], "stdout": "", "stdout_lines": []}
+fatal: [Host12-2]: FAILED! => {"changed": false, "msg": "Command '/usr/bin/apt-mark manual python3 python3-pip git curl apt-transport-https ca-certificates gnupg lsb-release' failed.", "rc": 100, "stderr": "E: Write error - write (28: No space left on device)\nE: IO Error saving source cache\nE: The package lists or status file could not be parsed or opened.\n", "stderr_lines": ["E: Write error - write (28: No space left on device)", "E: IO Error saving source cache", "E: The package lists or status file could not be parsed or opened."], "stdout": "", "stdout_lines": []}
+fatal: [Host12-3]: FAILED! => {"changed": false, "msg": "Command '/usr/bin/apt-mark manual python3 python3-pip git curl apt-transport-https ca-certificates gnupg lsb-release' failed.", "rc": 100, "stderr": "E: Write error - write (28: No space left on device)\nE: IO Error saving source cache\nE: The package lists or status file could not be parsed or opened.\n", "stderr_lines": ["E: Write error - write (28: No space left on device)", "E: IO Error saving source cache", "E: The package lists or status file could not be parsed or opened."], "stdout": "", "stdout_lines": []}
+changed: [Host12-1]
+
+TASK [kubespray_prep : Set hostname to match inventory name] ***********************************************************************************************
+ok: [Host12-1]
+
+TASK [kubespray_prep : Ensure hostname resolves to primary IP in /etc/hosts] *******************************************************************************
+changed: [Host12-1]
+
+PLAY [Generate Kubespray inventory on control node] ********************************************************************************************************
+
+TASK [Ensure kubespray destination directory exists] *******************************************************************************************************
+[ERROR]: Task failed: Finalization of task args for 'ansible.builtin.file' failed: Error while resolving value for 'path': 'kubespray_inventory_dir' is undefined
+
+Task failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/kubespray-prep.yml:21:7
+
+19   gather_facts: false
+20   tasks:
+21     - name: Ensure kubespray destination directory exists
+         ^ column 7
+
+<<< caused by >>>
+
+Finalization of task args for 'ansible.builtin.file' failed.
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/kubespray-prep.yml:22:7
+
+20   tasks:
+21     - name: Ensure kubespray destination directory exists
+22       ansible.builtin.file:
+         ^ column 7
+
+<<< caused by >>>
+
+Error while resolving value for 'path': 'kubespray_inventory_dir' is undefined
+Origin: /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/kubespray-prep.yml:23:15
+
+21     - name: Ensure kubespray destination directory exists
+22       ansible.builtin.file:
+23         path: "{{ kubespray_inventory_dir }}/group_vars/k8s_cluster"
+                 ^ column 15
+
+fatal: [localhost]: FAILED! => {"changed": false, "msg": "Task failed: Finalization of task args for 'ansible.builtin.file' failed: Error while resolving value for 'path': 'kubespray_inventory_dir' is undefined"}
+
+PLAY RECAP *************************************************************************************************************************************************
+Host12-1                   : ok=10   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Host12-2                   : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host12-3                   : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host34-1                   : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+Host34-2                   : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+HostB12-1                  : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+HostB12-2                  : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=7    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+
+I have the following in the wsl/opt/fabric-cache, please validate and don't use folder old time-stamped:
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ls -al /opt
+total 20
+drwxr-xr-x  5 root root 4096 Aug 15 08:02 .
+drwxr-xr-x 22 root root 4096 Aug 15 07:51 ..
+drwx--x--x  4 root root 4096 Jun  6 19:45 containerd
+drwxr-xr-x 13 root root 4096 Aug 14 15:25 fabric-cache
+drwxr-xr-x  6 root root 4096 Aug 14 20:23 kolla-venv
+lrwxrwxrwx  1 root root   33 Aug 15 08:02 kubespray -> /opt/fabric-cache/repos/kubespray
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ls -al /opt/fabric-cache/
+total 76
+drwxr-xr-x 13 root root  4096 Aug 14 15:25 .
+drwxr-xr-x  5 root root  4096 Aug 15 08:02 ..
+drwxr-xr-x  2 root root 20480 Jun  6 08:13 apt-packages
+drwxr-xr-x  2 root root  4096 Aug 13 18:07 bin
+drwxr-xr-x  2 root root  4096 May 31 18:53 binaries
+drwxr-xr-x  2 root root  4096 Aug 15 08:02 charts
+drwxr-xr-x  2 root root  4096 Jun  6 08:12 helm-charts
+drwxr-xr-x  2 root root  4096 Aug 14 16:15 images
+drwxr-xr-x  5 root root  4096 Jun  6 12:42 kubespray
+drwxr-xr-x  2 root root  4096 May 31 18:52 maas
+drwxr-xr-x  2 root root  4096 Aug 15 08:03 pip
+drwxr-xr-x  2 root root 12288 Jun  6 08:13 pip-packages
+drwxr-xr-x  3 root root  4096 Aug 15 08:02 repos
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+In R810, we have the following, why K8 and other relevnat stuffs not there, I ran the registry playbook:
+nh1221@PowerEdge-R810:~$ ls -al /opt/registry/data/docker/registry/v2/repositories/openstack.kolla/
+total 172
+drwxr-xr-x 43 root root 4096 Aug 14 23:25 .
+drwxr-xr-x  3 root root 4096 Aug 14 20:24 ..
+drwxr-xr-x  5 root root 4096 Aug 14 20:45 barbican-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:09 barbican-keystone-listener
+drwxr-xr-x  5 root root 4096 Aug 14 20:24 base
+drwxr-xr-x  5 root root 4096 Aug 14 23:09 cloudkitty-api
+drwxr-xr-x  5 root root 4096 Aug 14 20:46 cloudkitty-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:09 cloudkitty-processor
+drwxr-xr-x  5 root root 4096 Aug 14 23:18 glance-api
+drwxr-xr-x  5 root root 4096 Aug 14 23:08 glance-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:16 heat-api
+drwxr-xr-x  5 root root 4096 Aug 14 23:16 heat-api-cfn
+drwxr-xr-x  5 root root 4096 Aug 14 20:49 heat-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:16 heat-engine
+drwxr-xr-x  5 root root 4096 Aug 14 23:18 horizon
+drwxr-xr-x  5 root root 4096 Aug 14 23:22 keystone
+drwxr-xr-x  5 root root 4096 Aug 14 23:01 keystone-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:16 keystone-fernet
+drwxr-xr-x  5 root root 4096 Aug 14 23:17 keystone-ssh
+drwxr-xr-x  5 root root 4096 Aug 14 23:17 neutron-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:23 neutron-server
+drwxr-xr-x  5 root root 4096 Aug 14 23:20 nova-api
+drwxr-xr-x  5 root root 4096 Aug 14 23:09 nova-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:26 nova-compute
+drwxr-xr-x  5 root root 4096 Aug 14 23:17 nova-compute-ironic
+drwxr-xr-x  5 root root 4096 Aug 14 23:18 nova-conductor
+drwxr-xr-x  5 root root 4096 Aug 14 20:37 nova-libvirt
+drwxr-xr-x  5 root root 4096 Aug 14 23:19 nova-novncproxy
+drwxr-xr-x  5 root root 4096 Aug 14 23:18 nova-scheduler
+drwxr-xr-x  5 root root 4096 Aug 14 20:41 openstack-base
+drwxr-xr-x  5 root root 4096 Aug 14 20:27 openvswitch-base
+drwxr-xr-x  5 root root 4096 Aug 14 20:27 openvswitch-db-server
+drwxr-xr-x  5 root root 4096 Aug 14 20:27 openvswitch-vswitchd
+drwxr-xr-x  5 root root 4096 Aug 14 20:28 ovn-base
+drwxr-xr-x  5 root root 4096 Aug 14 20:31 ovn-controller
+drwxr-xr-x  5 root root 4096 Aug 14 20:31 ovn-nb-db-server
+drwxr-xr-x  5 root root 4096 Aug 14 20:31 ovn-northd
+drwxr-xr-x  5 root root 4096 Aug 14 20:31 ovn-sb-db-server
+drwxr-xr-x  5 root root 4096 Aug 14 23:07 placement-api
+drwxr-xr-x  5 root root 4096 Aug 14 20:43 placement-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:17 skyline-apiserver
+drwxr-xr-x  5 root root 4096 Aug 14 20:48 skyline-base
+drwxr-xr-x  5 root root 4096 Aug 14 23:17 skyline-console
+nh1221@PowerEdge-R810:~$
