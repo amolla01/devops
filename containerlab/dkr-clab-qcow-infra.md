@@ -2444,3 +2444,42 @@ Do you have your Kubernetes cluster deployment playbooks ready, or would you lik
 [8] [https://github.com](https://github.com/rook/rook/issues/7107)
 [9] [https://www.infracloud.io](https://www.infracloud.io/blogs/unlocking-kubernetes-power-with-rke-custer-metallb-rook-ceph/)
 
+
+
+
+By running docker images, I came across 'local-ubuntu:26.04' listed which is getting used in topology clab yml file as generic_vm as kind. How clab collects this image for getting used in clab topo deployment?
+
+Containerlab (clab) collects and utilizes the local-ubuntu:26.04 image by talking directly to the local Docker daemon running on the host machine where the lab is being deployed.
+Because local-ubuntu:26.04 does not have a remote registry path (like docker.io/ or ghcr.io/), Containerlab will never attempt to download it from the internet. It expects the image to already reside inside the host's local container storage cache.
+------------------------------
+## The Step-by-Step Image Collection Pipeline
+When you run sudo containerlab deploy, Containerlab automates the following steps behind the scenes to extract and launch your VM:
+## 1. Checking the Local Cache
+Containerlab reads your topology.clab.yml and sees kind: generic_vm mapped to image: local-ubuntu:26.04. It calls the Docker engine API locally to check if that exact string exists in your docker images output. [1] 
+## 2. Launching the Sandbox Container
+Instead of booting QEMU directly on your host, Containerlab triggers Docker to spin up a standard, lightweight container using the local-ubuntu:26.04 base layers.
+
+* Containerlab strips away default Docker networking and injects its own customized network namespaces.
+* It mounts any directories specified in your binds: section (like your seed.iso and Host12-1-data.qcow2) straight into the container filesystem.
+
+## 3. Executing the Internal Wrapper Script
+Once the container sandbox starts, Containerlab hands complete execution control over to the container's internal entrypoint script (a vrnetlab feature usually managed by a python script like /launch.py or /vr.py).
+This internal script looks inside the container's own internal directories, finds the base .qcow2 OS image that was baked into the local-ubuntu:26.04 Docker image during its original creation, and executes the QEMU emulator command inside the container namespace—bringing your Ubuntu virtual machine to life.
+------------------------------
+## How to Inspect the Hidden .qcow2 Inside the Docker Cache
+If you ever need to verify or see the exact file template Containerlab is cloning to build your nodes, you can bypass Containerlab and look at the image directly through Docker.
+
+* Find where the .qcow2 is hidden inside the image:
+
+docker run --rm -it --entrypoint=find local-ubuntu:26.04 / -name "*.qcow2"
+
+(This will usually return a path like /image/ubuntu.qcow2 inside the Docker cache layers).
+* See the exact QEMU boot flags built into the image:
+
+docker inspect local-ubuntu:26.04 | grep -A 10 "Cmd"
+
+
+Because Containerlab treats this image as a read-only template, it will pull a fresh copy of that 2.8GB disk for your node's /dev/vda drive every single time you execute a deploy command.
+Would you like to see how to export or save this local Docker image as a .tar backup archive so you can copy it to other deployment machines if needed?
+
+[1] [https://containerlab.dev](https://containerlab.dev/rn/0.12.0/)
