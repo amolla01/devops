@@ -17,7 +17,8 @@ roles/
       topology.clab.yml.j2     # The verified dynamic topology blueprint
 ```
 ------------------------------
-## 2. File Implementation Layout## Role Variables: roles/clab_deploy/defaults/main.yml
+## 2. File Implementation Layout
+## Role Variables: roles/clab_deploy/defaults/main.yml
 Define global defaults so you don't hardcode system workspace paths across multiple tasks.
 
 ---
