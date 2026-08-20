@@ -3054,3 +3054,155 @@ Would you like to build the dynamic Ansible playbook task that automatically che
 [1] [https://linuxconfig.org](https://linuxconfig.org/linux-software-raid-1-setup)
 [2] [https://oneuptime.com](https://oneuptime.com/blog/post/2026-03-31-rook-device-classes-hdd-ssd-nvme/view)
 [3] [https://github.com](https://github.com/rook/rook/discussions/10214)
+
+
+What is the unique signature that will tell OverlayFS is properly configured and working. What are the cmds I can execute from inside the Host vm and what to look for. What exact elaborate ansible task can we right to iterate over all hosts that is in topology clab yml file and providing info for the disks and their OverlayFS status including osd status for few of the vms specially configured?
+
+## 1. The Unique Signatures of a Working OverlayFS
+When OverlayFS is working properly, the guest Linux kernel merges your base OS directories with your 150GB persistent storage disk (/dev/vda). Inside the host VM, this leaves three unmistakable signatures:
+
+   1. The df -h Filesystem Type: The directory mount type will explicitly show up as overlay or overlay_var instead of ext4 or rootfs.
+   2. The Upper/Lower Split: Running the mount command will display the explicit routing blueprint (lowerdir, upperdir, and workdir) pointing to your persistent mount anchor (/mnt/storage).
+   3. The Storage Expansion Illusion: Even though your base container root partition (/) is only 4GB, directories protected by the shield (like /var) will report the full remaining capacity of your 150GB disk.
+
+------------------------------
+## 2. Manual Verification Commands Inside the Host VM
+Log directly into any host VM over SSH and execute these commands to verify the state of your infrastructure:
+## Command A: Check Mount Specifications
+
+mount | grep overlay
+
+
+* What to look for: You must see lines mapping your critical system trees. A healthy system will return:
+
+overlay_var on /var type overlay (rw,relatime,lowerdir=/var,upperdir=/mnt/storage/upper/var,workdir=/mnt/storage/work/var)
+overlay_opt on /opt type overlay (rw,relatime,lowerdir=/opt,upperdir=/mnt/storage/upper/opt,workdir=/mnt/storage/work/opt)
+
+
+## Command B: Verify Directory Capacity Expansion
+
+df -h /var /opt /
+
+
+* What to look for: Look closely at the Size and Mounted on columns. The root partition / will show its standard 4GB constraint, but /var and /opt will proudly report the full 150GB pool size:
+
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1       2.8G  2.4G  428M  85% /
+overlay_var     147G  1.2G  139G   1% /var
+overlay_opt     147G   16M  140G   1% /opt
+
+
+## Command C: Verify the Ceph OSD Drive Stays Raw
+
+lsblk -f /dev/vdb
+
+
+* What to look for: On your hyperconverged storage nodes, /dev/vdb (your physical server's sdb/sdc pass-through) must be completely blank. It should have no FSTYPE, no LABEL, and no MOUNTPOINTS.
+
+NAME FSTYPE FSVER LABEL UUID FSAVAIL FSUSE% MOUNTPOINTS
+vdb
+
+(Note: Once Rook-Ceph initializes later, the FSTYPE will automatically change to ceph_bluestore).
+
+------------------------------
+## 3. Comprehensive, Production-Grade Verification Ansible Playbook
+This elaborate playbook connects directly to your live virtual machine inventory (all_hosts). It automatically loops through every node, extracts the disk geometries, evaluates the safety status of your OverlayFS shields, checks the raw status of your Ceph target block channels, and provides a clean cluster audit report.
+Save this file as verify-cluster-storage.yml:
+
+---
+- name: Advanced Multi-Node Storage & OverlayFS Fabric Audit
+  hosts: all_hosts
+  gather_facts: true  # Gathers network interfaces, devices, and kernel variables natively
+  tasks:
+
+    # -------------------------------------------------------------------------
+    # STEP 1: CAPTURE OPERATING SYSTEM MOUNT FABRIC
+    # -------------------------------------------------------------------------
+    - name: Capture active kernel storage mount configurations
+      ansible.builtin.command:
+        cmd: mount
+      register: system_mounts
+      changed_when: false
+
+    - name: Capture directory capacity statistics
+      ansible.builtin.command:
+        cmd: df -h /var /opt /
+      register: directory_capacity
+      changed_when: false
+
+    - name: Capture kernel block device layouts
+      ansible.builtin.command:
+        cmd: lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS -f --json
+      register: lsblk_topology
+      changed_when: false
+
+    # -------------------------------------------------------------------------
+    # STEP 2: PARSE & EVALUATE STATUS VARIABLES
+    # -------------------------------------------------------------------------
+    - name: Evaluate OverlayFS protection states
+      ansible.builtin.set_fact:
+        var_overlay_active: "{{ 'overlay_var on /var' in system_mounts.stdout }}"
+        opt_overlay_active: "{{ 'overlay_opt on /opt' in system_mounts.stdout }}"
+        ceph_disk_present: "{{ 'vdb' in (lsblk_topology.stdout | from_json) | json_query('blockdevices[*].name') }}"
+
+    - name: Audit Ceph target raw disk state (If disk is physically attached)
+      ansible.builtin.set_fact:
+        # Extracts filesystem signatures from the json structure for device /dev/vdb
+        ceph_disk_fstype: "{{ (lsblk_topology.stdout | from_json) | json_query('blockdevices[?name==`vdb`].fstype | [0]') }}"
+      when: ceph_disk_present | bool
+
+    # -------------------------------------------------------------------------
+    # STEP 3: NATIVE FAIL-FAST ENFORCEMENT
+    # -------------------------------------------------------------------------
+    - name: Enforce Control Plane System Storage Integrity
+      ansible.builtin.assert:
+        that:
+          - var_overlay_active | bool
+          - opt_overlay_active | bool
+        fail_msg: |
+          [CRITICAL INFRASTRUCTURE FAILURE] on Node: {{ inventory_hostname }}
+          The persistent OverlayFS shield failed to mount to your 150GB data canvas.
+          Framework microservices cannot safely install without filling the 4GB root template disk.        success_msg: "Node [{{ inventory_hostname }}]: Core System-Overlay Engine Verified and Locked."
+
+    - name: Enforce Ceph Raw OSD Isolation Safeguard
+      ansible.builtin.assert:
+        that:
+          - ceph_disk_fstype == "" or ceph_disk_fstype == null or 'ceph' in ceph_disk_fstype
+        fail_msg: |
+          [DATA PROTECTION VIOLATION] on Storage Node: {{ inventory_hostname }}
+          Your raw physical passthrough drive (/dev/vdb) has been formatted with an invalid signature: '{{ ceph_disk_fstype }}'.
+          Cloud-Init or an installation script has breached isolation boundaries!        success_msg: "Node [{{ inventory_hostname }}]: Ceph Target Channel (/dev/vdb) verified clean or already managed by Ceph."
+      when: inventory_hostname in groups['ceph_storage_nodes'] and ceph_disk_present | bool
+
+    # -------------------------------------------------------------------------
+    # STEP 4: VISUAL INFRASTRUCTURE AUDIT REPORTING
+    # -------------------------------------------------------------------------
+    - name: Generate Infrastructure Storage Audit Dashboard
+      ansible.builtin.debug:
+        msg: |
+          =====================================================================
+          STORAGE MANAGEMENT FABRIC REPORT FOR WORKER: [ {{ inventory_hostname }} ]
+          =====================================================================
+          NODE ROLE CONFIGURATION : {% if inventory_hostname in groups['ceph_storage_nodes'] %}Hyperconverged Storage & Compute{% else %}Compute-Only Engine{% endif %}
+          
+          OVERLAYFS ENGINES STATUS:
+          - /var Directory Shield : {% if var_overlay_active | bool %}ONLINE (Protected by 150GB data.qcow2){% else %}OFFLINE (WARNING! Using 4GB Template Root){% endif %}
+          - /opt Directory Shield : {% if opt_overlay_active | bool %}ONLINE (Protected by 150GB data.qcow2){% else %}OFFLINE (WARNING! Using 4GB Template Root){% endif %}
+          
+          CEPH RAW DRIVER TARGET MATRIX:
+          - Dedicated OSD Present : {% if ceph_disk_present | bool %}YES (/dev/vdb attached){% else %}NO (Disk-less compute context){% endif %}
+          - Storage Block Status  : {% if ceph_disk_present | bool %}{% if ceph_disk_fstype == "" or ceph_disk_fstype == null %}PRISTINE RAW DEVICE (Perfect for Rook-Ceph Discovery){% else %}ACTIVE POOL APPLICATION (Signature: {{ ceph_disk_fstype }}){% endif %}{% else %}NOT APPLICABLE{% endif %}
+          
+          LIVE DEVICE CAPACITY GRID:
+          {{ directory_capacity.stdout }}
+          =====================================================================
+...
+
+## Why This Automated Flow Works Across Your Complete Topology
+
+   1. Role-Aware Output Mapping: The playbook uses the conditional blocks {% if inventory_hostname in groups['ceph_storage_nodes'] %} to change its reporting lookups dynamically. It knows that a compute-only node (like Host12-3) shouldn't be penalized for not having a /dev/vdb OSD drive.
+   2. JSON Schema Parsing Security: Instead of messy bash text processing (awk, sed), it forces lsblk to output a structured JSON string, which Ansible natively parses using from_json and json_query. This makes your device path evaluations highly accurate across different Ubuntu updates.
+   3. Pre-Flight Cluster Block: You can include this playbook as an automated task block right before you invoke your heavy Kubespray, Rook-Ceph, or OpenStack-Helm deployment loops. If a developer accidentally breaks the drive order mappings inside topology.clab.yml, this playbook will step in and halt execution within seconds—keeping your environment clear of messy setup errors.
+
+To keep expanding your setup, let me know if you want to write the Ansible task to automatically clear and reset these virtual disk partitions if an inspection ever fails.
+
