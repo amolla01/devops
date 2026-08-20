@@ -1,6 +1,7 @@
 To structure this deployment according to production-grade Ansible standards, we will break the architecture down into a formal Ansible Role pattern. This separates your structural data configurations, automated tasks, template logic, and lifecycle triggers into clean, maintainable modular layers.
 Here is the complete standard directory structure and file contents for the clab_deploy role.
 ------------------------------
+```
 ## 1. The Standard Ansible Workspace Directory Tree
 Organize your files on your Ansible Controller exactly like this:
 
@@ -14,17 +15,28 @@ roles/
       main.yml                 # Sequential automation tasks
     templates/
       topology.clab.yml.j2     # The verified dynamic topology blueprint
-
+```
 ------------------------------
 ## 2. File Implementation Layout## Role Variables: roles/clab_deploy/defaults/main.yml
 Define global defaults so you don't hardcode system workspace paths across multiple tasks.
 
----# Workspace path defaults for the remote deployment engine hostclab_workspace_dir: "/opt/clab-labs/sheba"clab_config_dir: "{{ clab_workspace_dir }}/configs"clab_vmdisks_dir: "{{ clab_config_dir }}/vmdisks"clab_cloudinit_dir: "{{ clab_config_dir }}/cloud-init"
+---
+```
+# Workspace path defaults for the remote deployment engine host
+clab_workspace_dir: "/opt/clab-labs/sheba"
+clab_config_dir: "{{ clab_workspace_dir }}/configs"
+clab_vmdisks_dir: "{{ clab_config_dir }}/vmdisks"
+clab_cloudinit_dir: "{{ clab_config_dir }}/cloud-init"
 
 ## Role Automation: roles/clab_deploy/tasks/main.yml
+```
 This is your standard task sequence. It manages remote workspace storage paths, formats empty baseline operating canvasses, renders the blueprint, and triggers Containerlab.
 
----# =========================================================================# STEP 1: WORKSPACE PATH INITIALIZATION# =========================================================================
+---
+```
+# =========================================================================
+# STEP 1: WORKSPACE PATH INITIALIZATION
+# =========================================================================
 - name: Ensure target laboratory directory structures exist on remote host
   ansible.builtin.file:
     path: "{{ item }}"
@@ -34,7 +46,9 @@ This is your standard task sequence. It manages remote workspace storage paths, 
     - "{{ clab_workspace_dir }}"
     - "{{ clab_vmdisks_dir }}"
     - "{{ clab_cloudinit_dir }}"
-# =========================================================================# STEP 2: FRAMEWORK CANVAS DRIVE PROVISIONING# =========================================================================
+# =========================================================================
+# STEP 2: FRAMEWORK CANVAS DRIVE PROVISIONING
+# =========================================================================
 - name: Audit framework canvas storage allocation files
   ansible.builtin.stat:
     path: "{{ clab_vmdisks_dir }}/{{ item }}-data.qcow2"
@@ -47,7 +61,9 @@ This is your standard task sequence. It manages remote workspace storage paths, 
   when: not item.stat.exists
   loop: "{{ system_canvas_stats.results }}"
   changed_when: true
-# =========================================================================# STEP 3: TEMPLATE COMPILATION & ENGINES DEPLOYMENT# =========================================================================
+# =========================================================================
+# STEP 3: TEMPLATE COMPILATION & ENGINES DEPLOYMENT
+# =========================================================================
 - name: Generate finalized topology configuration from Jinja2 template
   ansible.builtin.template:
     src: topology.clab.yml.j2
@@ -67,9 +83,12 @@ This is your standard task sequence. It manages remote workspace storage paths, 
 
 (Place the topology.clab.yml.j2 code generated in the previous step into roles/clab_deploy/templates/topology.clab.yml.j2 unchanged).
 ------------------------------
-## 3. Executing the Master Playbook Matrix## The Global Production Inventory File: inventory.yml
+## 3. Executing the Master Playbook Matrix
+## The Global Production Inventory File: inventory.yml
 
----all:
+---
+```
+all:
   hosts:
     # Remote host server that runs the containerlab service engine
     clab-hypervisor-node:
@@ -97,17 +116,18 @@ This is your standard task sequence. It manages remote workspace storage paths, 
         MonSrv:
         HostB12-1:
         HostB12-2:
-
+```
 ## The Master Playbook Trigger: site.yml
 This is your clean, standard top-level playbook that ties your deployment server targets to your operational roles.
 
 ---
+```
 - name: Orchestrate Sheba Laboratory Cloud Architecture Environment
   hosts: clab-hypervisor-node
   gather_facts: true  # Gathers remote host facts to help dynamic tracking
   roles:
     - role: clab_deploy
-
+```
 To run this complete production framework from your controller machine terminal, use the standard command:
 
 ansible-playbook -i inventory.yml site.yml
