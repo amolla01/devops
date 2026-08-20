@@ -74,6 +74,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
 - name: Handle Clab Topology Storage Lifecycle
   hosts: deploy_machines
   gather_facts: false
@@ -114,7 +115,9 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
       ansible.builtin.command:
         cmd: containerlab deploy -t topology.clab.yml --reconfigure
       chdir: "{{ lab_dir }}"
+```
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
     # =========================================================================
     # STEP 5: CONTINUOUS Flow - AUTOMATED STORAGE VERIFICATION
     # =========================================================================
@@ -148,6 +151,7 @@ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     - name: Continue to Cluster Installation
       ansible.builtin.debug:
         msg: "Storage environment verified. Initiating Kubespray / OpenStack installation steps..."
+```
 XXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 Let's say I want to add two data disk's, one is Host12-1-data.qcow2 and another Host12-1-osd_a.qcow2, so, how the QEMU_ADDITIONAL_ARGS be written in topology file for that.
@@ -155,7 +159,7 @@ Let's say I want to add two data disk's, one is Host12-1-data.qcow2 and another 
 To add both the persistent system-overlay disk (Host12-1-data.qcow2) and your dedicated Ceph storage disk (Host12-1-osd_a.qcow2), you need to pass them to QEMU as separate -drive arguments.
 The cleanest way to handle this is to use if=none combined with a virtual virtio-blk-pci controller device. This prevents QEMU driver collision bugs and gives you explicit control over the exact drive letter names (/dev/sdb, /dev/sdc, etc.) inside your guest VM.
 Here is exactly how to write your topology.clab.yml node configuration:
-
+```
     Host12-1:
       kind: generic_vm
       mgmt-ipv4: 172.16.2.51
@@ -180,7 +184,7 @@ By using this clean VirtIO-PCI separation, the Linux kernel inside the booted Ub
    1. /dev/sda (4GB): The standard, read-only system disk pulled from your local Docker container engine cache (local-ubuntu:26.04).
    2. /dev/vda (150GB): Maps directly to Host12-1-data.qcow2. This is what your Cloud-Init script will look for to build your high-capacity Kubernetes/OpenStack engine OverlayFS layer.
    3. /dev/vdb (150GB+): Maps directly to Host12-1-osd_a.qcow2. This stays completely unformatted, completely naked, and ready for your Rook-Ceph Operator deployment to claim as an OSD.
-
+```
 ------------------------------
 ## The Clean YAML String Tip (>-)
 Notice the >- syntax next to QEMU_ADDITIONAL_ARGS. This is a YAML folded block scalar. It allows you to write your massive QEMU arguments on separate lines so your topology file stays organized and easy to read, but tells Containerlab to stitch them back together into a single continuous space-separated command string when booting the VM.
@@ -194,7 +198,7 @@ This is an excellent architectural design choice. You are creating a perfect sep
 By assigning distinct responsibilities to each disk, you mirror exactly how a high-availability production data center is structured, while keeping your lab robust and easy to troubleshoot.
 ------------------------------
 ## The Functional Division of Labor Matrix
-
+```
 | Virtual Disk | Mapping Inside VM | Managed By | What Lives Inside It? | Lifecycle Behavior on clab destroy |
 |---|---|---|---|---|
 | Host12-1-data.qcow2 | /dev/vda ➔ Mounted to /var via OverlayFS | Cloud-Init + Linux System Kernel | Kubernetes Binaries, Containerd Runtimes, Rook-Ceph Operator Configurations, OpenStack Control Plane Services (Nova, Keystone, Horizon, Neutron database files). | Preserved Entirely. All infrastructure configurations and control databases stay completely safe. |
@@ -224,7 +228,7 @@ Because these disks are physically isolated from one another on your host, you g
 You do not need to destroy your lab or run any Ansible tasks. You simply delete the instance inside the OpenStack dashboard or CLI. OpenStack will talk to Ceph, instantly reclaim the blocks on Host12-1-osd_a.qcow2, and keep your control infrastructure running perfectly. [3] 
 * Scenario B: You want to test infrastructure failovers or update K8s configurations.
 You can run clab destroy and clab deploy. When the environment comes back up, Host12-1-data.qcow2 restores your cluster, Rook re-maps /dev/vdb, and all your previous tenant virtual machines reappear inside OpenStack unharmed.
-
+```
 To ensure your storage layout remains perfectly reliable, would you like to review how to write the Cloud-Init script so it explicitly formats /dev/vda for your system overlay while ignoring /dev/vdb so Ceph can consume it?
 
 [1] [https://itnext.io](https://itnext.io/deploy-openstack-on-kubernetes-in-under-60-minutes-f4ff01e2b424)
@@ -237,9 +241,13 @@ Yes please, prepare a production quality cloud-init script that reflects so far 
 
 This production-quality #cloud-config script is designed specifically for your multi-disk setup. It formats /dev/vda (Host12-1-data.qcow2) to establish the OverlayFS shield for your control plane software, while completely ignoring /dev/vdb (Host12-1-osd_a.qcow2) so that Rook-Ceph can discover it as a raw block device later.
 Save this content as configs/cloud-init/user-data before compiling it into your seed.iso.
-
+```
 #cloud-config
-# =========================================================================# PRODUCTION INFRASTRUCTURE CONTROL PLANE BOOTSTRAPPER# Design: Sets up persistent OverlayFS on /dev/vda for K8s/OpenStack.#         Leaves /dev/vdb completely pristine and raw for Rook-Ceph.# =========================================================================
+# =========================================================================
+# PRODUCTION INFRASTRUCTURE CONTROL PLANE BOOTSTRAPPER
+# Design: Sets up persistent OverlayFS on /dev/vda for K8s/OpenStack.
+#         Leaves /dev/vdb completely pristine and raw for Rook-Ceph.
+# =========================================================================
 # Ensure system requirements and core utilities are ready earlybootcmd:
   - [ modprobe, overlay ]
 write_files:
@@ -348,7 +356,7 @@ runcmd:
   - systemctl daemon-reload
   - systemctl enable --now storage-bootstrap.service
 final_message: "The Cloud-Init storage infrastructure matrix is ready. System-Overlay is fully active."
-
+```
 ------------------------------
 ## Architectural Safeguards Built Inside This Script
 
@@ -369,6 +377,7 @@ Need to mention that Host12-1/2/3, there will be many so instances , however all
 
 To handle a larger cluster containing mixed nodes—where some hosts act as Compute-Only nodes (only data.qcow2 attached) and others act as Hyperconverged Storage nodes (both data.qcow2 and osd_a.qcow2 attached)—the script must be completely agnostic to the presence of a Ceph disk.
 The cloud-init script provided above already handles this automatically because of its strict hardware discovery strategy.
+```
 Here is why the script works flawlessly across a multi-node, mixed-disk topology without requiring any modifications:
 ## 1. The Size-Targeting Safety Guard
 The script does not blindly grab any extra disk it finds. It loops through the available devices and calculates their capacity in GiB.
@@ -442,7 +451,7 @@ name: openstack-k8s-labtopology:
 
    1. Host12-1 & Host12-2: Ansible generates their block definitions to plug in both the system disk and the raw OSD disk. On boot, Cloud-Init claims the first empty 150GB disk for system files, leaving the second one pristine. Rook-Ceph later discovers the empty second drive and starts streaming tenant data to it.
    2. Host12-3: Ansible generates its block definition with only the single system disk. On boot, Cloud-Init initializes it perfectly. Rook-Ceph skips this node because it finds no available raw storage devices, turning it into a compute-only node.
-
+```
 Would you like to build the Ansible task to dynamically compile and write out the unique seed.iso files for all these nodes simultaneously?
 
 [1] [https://www.youtube.com](https://www.youtube.com/watch?v=r0njjJXO8oM)
@@ -457,7 +466,7 @@ Here is how you adjust the configuration to make it fully dynamic.
 ## 1. The Updated Topology Layout (topology.clab.yml)
 Instead of treating the Ceph disks as virtual files (/osd_a.qcow2), you pass the raw host hardware devices (/dev/sdb and /dev/sdc) straight into QEMU via the binds and arguments block.
 By using the PCI slot identification system (addr=), we can guarantee exactly which drive letter they show up as inside the VM, regardless of size:
-
+```
     Host12-1:
       kind: generic_vm
       mgmt-ipv4: 172.16.2.51
@@ -522,13 +531,13 @@ for target_dir in var opt usr etc; do
     fidone
 
 echo "=== Storage Shield Fully Engaged. /dev/vdb left pristine for Ceph ==="
-
+```
 ------------------------------
 ## 3. How Rook-Ceph Discovers the Unknown Size Drive
 Once Kubernetes finishes booting on top of your newly stabilized /var overlay framework, you drop your Rook-Ceph Cluster Resource manifest into the cluster.
 Since Rook-Ceph operates inside the node, it queries the devices. It sees /dev/sda (In use by root), /dev/vda (In use by OverlayFS), and /dev/vdb (100% naked and raw). [2, 3] 
 You can use the wildcard filter inside your Rook cluster.yaml deployment step. Rook will dynamically identify the type, scan the absolute size of the physical sdb/sdc partition automatically, and allocate it completely to the OSD storage pool without you having to define it anywhere in your code:
-
+```
 spec:
   storage:
     useAllNodes: false
@@ -544,7 +553,7 @@ spec:
 
 * Variable Drive Sizes: If your physical server sdb is 500GB and sdc is 2TB, the lab handles it automatically. Rook will dynamically adjust and provision a 500GB OSD on Host12-1 and a 2TB OSD on Host12-2.
 * Zero Risk to Operating Data: Because cloud-init is rigidly pinned to execute its destructive formatting logic exclusively on /dev/vda, your physical server data arrays mounted to /dev/vdb are kept completely safe from accidental initialization scripts.
-
+```
 Would you like to build the dynamic Ansible playbook task that automatically checks if the host's /dev/sdb or /dev/sdc are currently in use by any other system arrays before booting up the lab environment?
 
 [1] [https://linuxconfig.org](https://linuxconfig.org/linux-software-raid-1-setup)
@@ -554,7 +563,7 @@ Would you like to build the dynamic Ansible playbook task that automatically che
 
 XXXXXXXXXXXXXXXXXXXXX
 What is the unique signature that will tell OverlayFS is properly configured and working. What are the cmds I can execute from inside the Host vm and what to look for. What exact elaborate ansible task can we right to iterate over all hosts that is in topology clab yml file and providing info for the disks and their OverlayFS status including osd status for few of the vms specially configured?
-
+```
 ## 1. The Unique Signatures of a Working OverlayFS
 When OverlayFS is working properly, the guest Linux kernel merges your base OS directories with your 150GB persistent storage disk (/dev/vda). Inside the host VM, this leaves three unmistakable signatures:
 
@@ -600,12 +609,12 @@ NAME FSTYPE FSVER LABEL UUID FSAVAIL FSUSE% MOUNTPOINTS
 vdb
 
 (Note: Once Rook-Ceph initializes later, the FSTYPE will automatically change to ceph_bluestore).
-
+```
 ------------------------------
 ## 3. Comprehensive, Production-Grade Verification Ansible Playbook
 This elaborate playbook connects directly to your live virtual machine inventory (all_hosts). It automatically loops through every node, extracts the disk geometries, evaluates the safety status of your OverlayFS shields, checks the raw status of your Ceph target block channels, and provides a clean cluster audit report.
 Save this file as verify-cluster-storage.yml:
-
+```
 ---
 - name: Advanced Multi-Node Storage & OverlayFS Fabric Audit
   hosts: all_hosts
@@ -700,7 +709,7 @@ Save this file as verify-cluster-storage.yml:
    1. Role-Aware Output Mapping: The playbook uses the conditional blocks {% if inventory_hostname in groups['ceph_storage_nodes'] %} to change its reporting lookups dynamically. It knows that a compute-only node (like Host12-3) shouldn't be penalized for not having a /dev/vdb OSD drive.
    2. JSON Schema Parsing Security: Instead of messy bash text processing (awk, sed), it forces lsblk to output a structured JSON string, which Ansible natively parses using from_json and json_query. This makes your device path evaluations highly accurate across different Ubuntu updates.
    3. Pre-Flight Cluster Block: You can include this playbook as an automated task block right before you invoke your heavy Kubespray, Rook-Ceph, or OpenStack-Helm deployment loops. If a developer accidentally breaks the drive order mappings inside topology.clab.yml, this playbook will step in and halt execution within seconds—keeping your environment clear of messy setup errors.
-
+```
 To keep expanding your setup, let me know if you want to write the Ansible task to automatically clear and reset these virtual disk partitions if an inspection ever fails.
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXX
