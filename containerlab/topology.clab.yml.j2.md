@@ -5,7 +5,8 @@ We will accomplish this by transforming your massive setup file into a clean Jin
 This template automatically strips away hardcoded disk parameters from your base layout. It evaluates your cluster groupings on-the-fly and drops highly resilient, explicit PCI address mappings (addr=) into QEMU to ensure drive letters never swap inside the virtual hosts.
 Save this exact content on your Ansible controller at templates/topology.clab.yml.j2:
 ```
-name: shebaprefix: ""
+name: sheba
+prefix: ""
 mgmt:
   network: sonic_oob_mgmt
   ipv4-subnet: 172.16.2.0/24
