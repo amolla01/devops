@@ -4,7 +4,7 @@ We will accomplish this by transforming your massive setup file into a clean Jin
 ## Step 1: The Production Jinja2 Template (topology.clab.yml.j2)
 This template automatically strips away hardcoded disk parameters from your base layout. It evaluates your cluster groupings on-the-fly and drops highly resilient, explicit PCI address mappings (addr=) into QEMU to ensure drive letters never swap inside the virtual hosts.
 Save this exact content on your Ansible controller at templates/topology.clab.yml.j2:
-
+```
 name: shebaprefix: ""
 mgmt:
   network: sonic_oob_mgmt
@@ -601,7 +601,7 @@ mtu: 9100
 - endpoints: ["External-Router:eth3", "Mgmt-Switch:eth1"]
 - endpoints: ["Mgmt-Switch:eth2", "oob-mgmt-node:eth1"]
 
-
+```
 ---
 
 ### 3. Integrated Ansible Implementation Verification
@@ -623,7 +623,7 @@ To guarantee this templates processes correctly when using the updated inventory
         src: templates/topology.clab.yml.j2
         dest: "{{ lab_dir }}/topology.clab.yml"
         mode: '0644'
-
+```
 Running this updated sequence allows Containerlab to automatically build out the unified environment. Your compute-only nodes scale smoothly with a single disk overlay, while your hyperconverged storage targets safely mount the raw hardware layers.
 Since your laboratory layout configuration is completely verified, would you like to build out the Ansible task block to compile individual, custom Cloud-Init user-data configurations for each host node before firing the final deployment line?
 
