@@ -1,0 +1,95 @@
+    # Query the live storage layout inside the running container instances
+    - name: Inspect running VM storage mounts
+      ansible.builtin.command:
+        cmd: df -h
+      register: df_output
+      changed_when: false
+
+    # Fail the playbook instantly if /var isn't utilizing the 150GB OverlayFS shield
+    - name: Verify OverlayFS is actively protecting high-volume directories
+      ansible.builtin.assert:
+        that:
+          - "'overlay' in df_output.stdout"
+          - "'/var' in df_output.stdout"
+        fail_msg: |
+          STORAGE VERIFICATION FAILED: The 150GB data disk overlay is not active. 
+          Please check the remote machine's cloud-init log inside the VM using:
+          'sudo journalctl -u cloud-init' or 'cat /var/log/cloud-init-output.log'
+        success_msg: "STORAGE VERIFICATION SUCCESSFUL: 150GB OverlayFS shield is safely engaged on /var!"
+TASK [Inspect running VM storage mounts] *******************************************************************************************************************
+ok: [localhost]
+
+TASK [Verify OverlayFS is actively protecting high-volume directories] *************************************************************************************
+fatal: [localhost]: FAILED! => {
+    "assertion": "'overlay' in df_output.stdout",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "STORAGE VERIFICATION FAILED: The 150GB data disk overlay is not active. \nPlease check the remote machine's cloud-init log inside the VM using:\n'sudo journalctl -u cloud-init' or 'cat /var/log/cloud-init-output.log'\n"
+}
+ubuntu@Host12-1:~$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           6.3G  1.1M  6.3G   1% /run
+/dev/sda1       2.8G  2.4G  428M  85% /
+tmpfs            16G     0   16G   0% /dev/shm
+none            1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs            16G     0   16G   0% /tmp
+none            1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda13      989M  106M  816M  12% /boot
+/dev/sda15      105M  6.3M   99M   7% /boot/efi
+none            1.0M     0  1.0M   0% /run/credentials/systemd-networkd.service
+none            1.0M     0  1.0M   0% /run/credentials/getty@tty1.service
+none            1.0M     0  1.0M   0% /run/credentials/serial-getty@ttyS0.service
+tmpfs           3.2G  4.0K  3.2G   1% /run/user/1000
+ubuntu@Host12-1:~$ lsblk
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+fd0       2:0    1    4K  0 disk
+sda       8:0    0    4G  0 disk
+├─sda1    8:1    0  2.9G  0 part /
+├─sda13   8:13   0 1023M  0 part /boot
+├─sda14   8:14   0    4M  0 part
+└─sda15   8:15   0  106M  0 part /boot/efi
+sr0      11:0    1  368K  1 rom
+sr1      11:1    1  368K  1 rom
+vda     253:0    0  150G  0 disk
+ubuntu@Host12-1:~$ lsblk -f
+NAME    FSTYPE  FSVER            LABEL           UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+fd0
+sda
+├─sda1  ext4    1.0              cloudimg-rootfs 1af52c72-24ee-46b6-8e75-be5adce5e9d3    427M    84% /
+├─sda13 ext4    1.0              BOOT            1d82ba79-209d-4da4-9534-77487ea14a54  815.8M    11% /boot
+├─sda14
+└─sda15 vfat    FAT32            UEFI            DD42-7FC0                              98.1M     6% /boot/efi
+sr0     iso9660 Joliet Extension cidata          2026-08-19-22-09-30-00
+sr1     iso9660 Joliet Extension cidata          2026-08-20-03-09-53-00
+vda
+ubuntu@Host12-1:~$ df -a
+Filesystem     1K-blocks    Used Available Use% Mounted on
+tmpfs            6572148    1108   6571040   1% /run
+/dev/sda1        2866068 2412412    437272  85% /
+devtmpfs        14965136       0  14965136   0% /dev
+tmpfs           16430368       0  16430368   0% /dev/shm
+devpts                 0       0         0    - /dev/pts
+sysfs                  0       0         0    - /sys
+securityfs             0       0         0    - /sys/kernel/security
+cgroup2                0       0         0    - /sys/fs/cgroup
+none                   0       0         0    - /sys/fs/pstore
+bpf                    0       0         0    - /sys/fs/bpf
+configfs               0       0         0    - /sys/kernel/config
+proc                   0       0         0    - /proc
+systemd-1              -       -         -    - /proc/sys/fs/binfmt_misc
+none                1024       0      1024   0% /run/credentials/systemd-journald.service
+debugfs                0       0         0    - /sys/kernel/debug
+tmpfs           16430372       0  16430372   0% /tmp
+hugetlbfs              0       0         0    - /dev/hugepages
+tracefs                0       0         0    - /sys/kernel/tracing
+mqueue                 0       0         0    - /dev/mqueue
+fusectl                0       0         0    - /sys/fs/fuse/connections
+none                1024       0      1024   0% /run/credentials/systemd-resolved.service
+/dev/sda13       1012140  107972    835408  12% /boot
+/dev/sda15        106832    6414    100418   7% /boot/efi
+binfmt_misc            0       0         0    - /proc/sys/fs/binfmt_misc
+none                1024       0      1024   0% /run/credentials/systemd-networkd.service
+none                1024       0      1024   0% /run/credentials/getty@tty1.service
+none                1024       0      1024   0% /run/credentials/serial-getty@ttyS0.service
+tmpfs            3286072       4   3286068   1% /run/user/1000
+ubuntu@Host12-1:~$
