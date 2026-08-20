@@ -1,3 +1,4 @@
+```
 #cloud-config
 users:
   - name: nh1221
@@ -9,7 +10,7 @@ users:
   - name: ubuntu
     plain_text_passwd: ubuntu
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL`
     lock_passwd: false
 ssh_pwauth: true
 chpasswd:
@@ -61,7 +62,7 @@ runcmd:
     done
 
   # (Optional) You can place other standard initialization commands BELOW this line.
-  
+```  
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 - name: Ensure remote data disks are expanded to 150GB
   ansible.builtin.command:
