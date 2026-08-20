@@ -1,0 +1,275 @@
+name: sheba
+prefix: ""
+
+mgmt:
+  network: sonic_oob_mgmt
+  ipv4-subnet: 172.16.2.0/24
+
+topology:
+  defaults:
+    env:
+      USERNAME: "admin"
+      PASSWORD: "Welcome1!"
+      SONIC_CONFIG_MODE: "unified"
+      QEMU_CPU: "qemu64"
+      QEMU_SMP: "2"
+      QEMU_MEMORY: "2048"
+
+  kinds:
+    sonic-vm:
+      image: vrnetlab/sonic_sonic-vs:202605
+      env:
+        QEMU_SMP: "4"
+        QEMU_MEMORY: "4096"
+    generic_vm:
+      image: local-ubuntu:26.04
+      env:
+        USERNAME: "ubuntu"
+        PASSWORD: "ubuntu"
+        QEMU_ADDITIONAL_ARGS: "-drive file=/seed.iso,media=cdrom,readonly=on"
+      binds:
+        - configs/cloud-init/seed.iso:/seed.iso:ro
+
+  nodes:
+    # ==========================================
+    # SPINE LAYER — Celestica Seastone-DX010
+    # ==========================================
+    Spine-S1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.11
+      binds: [ configs/celestica-dx010/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Spine-S2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.12
+      binds: [ configs/celestica-dx010/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    # ==========================================
+    # LEAF LAYER — Accton AS5712 / Arista 7050
+    # ==========================================
+    Leaf-L1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.21
+      binds: [ configs/accton-as5712/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Leaf-L2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.22
+      binds: [ configs/accton-as5712/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Leaf-L3:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.23
+      binds: [ configs/arista-7050qx-32/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Leaf-L4:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.24
+      binds: [ configs/arista-7050qx-32/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Border-Leaf1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.31
+      binds: [ configs/arista-7050qx-32s/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    Border-Leaf2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.32
+      binds: [ configs/arista-7050qx-32s/config.sh:/etc/rc.local.d/init-platform.sh ]
+      exec: [ bash /etc/rc.local.d/init-platform.sh & ]
+
+    # ==========================================
+    # EXIT & ISP EDGE ROUTERS
+    # ==========================================
+    Exit-Router1:
+      kind: generic_vm
+      mgmt-ipv4: 172.16.2.41
+      labels: { ansible_group: exit_routers }
+
+    Exit-Router2:
+      kind: generic_vm
+      mgmt-ipv4: 172.16.2.42
+      labels: { ansible_group: exit_routers }
+
+    ISP-1:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.61
+      binds: [ configs/frr/daemons:/etc/frr/daemons:ro ]
+      labels: { ansible_group: isp_routers }
+
+    ISP-2:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.62
+      binds: [ configs/frr/daemons:/etc/frr/daemons:ro ]
+      labels: { ansible_group: isp_routers }
+
+    # =========================================================================
+    # DYNAMIC UBUNTU INFRASTRUCTURE & CEPH DATA FABRIC MATRIX
+    # =========================================================================
+{% for host_name in ["Host12-1", "Host12-2", "Host12-3", "Host34-1", "Host34-2", "MonSrv", "HostB12-1", "HostB12-2"] %}
+    {{ host_name }}:
+      kind: generic_vm
+      mgmt-ipv4: {% if host_name == "Host12-1" %}172.16.2.51{% elif host_name == "Host12-2" %}172.16.2.52{% elif host_name == "Host12-3" %}172.16.2.53{% elif host_name == "Host34-1" %}172.16.2.54{% elif host_name == "Host34-2" %}172.16.2.55{% elif host_name == "MonSrv" %}172.16.2.56{% elif host_name == "HostB12-1" %}172.16.2.57{% else %}172.16.2.58{% endif %}
+      env:
+        QEMU_CPU: "host"
+        QEMU_SMP: "{% if host_name in ['Host12-3', 'Host34-2'] %}8{% elif host_name in ['Host12-1', 'Host12-2', 'Host34-1'] %}6{% else %}4{% endif %}"
+        QEMU_MEMORY: "{% if host_name in ['Host12-3', 'Host34-2'] %}20480{% elif host_name in ['Host12-1', 'Host12-2', 'Host34-1', 'MonSrv'] %}16384{% else %}12288{% endif %}"
+        QEMU_ADDITIONAL_ARGS: >-
+          -drive file=/seed.iso,media=cdrom,readonly=on
+          -drive file=/data.qcow2,if=none,id=drvSystem,format=qcow2 -device virtio-blk-pci,drive=drvSystem,id=vblkSystem,addr=0x4
+          {% if host_name in groups['ceph_storage_nodes'] %}
+          -drive file={{ hostvars[host_name]['physical_ceph_disk_a'] }},if=none,id=drvCephA,format=raw -device virtio-blk-pci,drive=drvCephA,id=vblkCephA,addr=0x5
+          {% endif %}
+          {% if host_name == "MonSrv" %}
+          -drive file={{ hostvars[host_name]['physical_ceph_disk_b'] }},if=none,id=drvCephB,format=raw -device virtio-blk-pci,drive=drvCephB,id=vblkCephB,addr=0x6
+          {% endif %}
+      binds:
+        - configs/cloud-init/seed.iso:/seed.iso:ro
+        - configs/vmdisks/{{ host_name }}-data.qcow2:/data.qcow2
+        {% if host_name in groups['ceph_storage_nodes'] %}
+        - {{ hostvars[host_name]['physical_ceph_disk_a'] }}:{{ hostvars[host_name]['physical_ceph_disk_a'] }}
+        {% endif %}
+        {% if host_name == "MonSrv" %}
+        - {{ hostvars[host_name]['physical_ceph_disk_b'] }}:{{ hostvars[host_name]['physical_ceph_disk_b'] }}
+        {% endif %}
+      labels: { ansible_group: {% if host_name == "MonSrv" %}monitoring_hosts{% else %}compute_hosts{% endif %} }
+{% endfor %}
+
+    oob-mgmt-node:
+      kind: generic_vm
+      mgmt-ipv4: 172.16.2.254
+      labels: { ansible_group: management_nodes }
+
+    # ==========================================
+    # MANAGEMENT ARTIFACTS
+    # ==========================================
+    Mgmt-Switch:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool
+      mgmt-ipv4: 172.16.2.253
+      exec:
+        - ip link add name br-mgmt type bridge
+        - ip link set br-mgmt up
+        - ip link set eth1 master br-mgmt
+        - ip link set eth2 master br-mgmt
+        - ip link set eth1 up
+        - ip link set eth2 up
+      labels: { ansible_group: management_nodes }
+
+    External-Router:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.252
+      binds:
+        - configs/frr/daemons:/etc/frr/daemons:ro
+      labels: { ansible_group: external_routers }
+
+  links:
+    # =========================================================================
+    # SPINE-S1 FABRIC UPLINKS
+    # =========================================================================
+    - endpoints: ["Spine-S1:eth1", "Leaf-L1:eth69"]
+      mtu: 9100
+    - endpoints: ["Spine-S1:eth2", "Leaf-L2:eth69"]
+      mtu: 9100
+    - endpoints: ["Spine-S1:eth3", "Leaf-L3:eth32"]
+      mtu: 9100
+    - endpoints: ["Spine-S1:eth4", "Leaf-L4:eth32"]
+      mtu: 9100
+    - endpoints: ["Spine-S1:eth5", "Border-Leaf1:eth35"]
+      mtu: 9100
+    - endpoints: ["Spine-S1:eth6", "Border-Leaf2:eth35"]
+      mtu: 9100
+
+    # =========================================================================
+    # SPINE-S2 FABRIC UPLINKS
+    # =========================================================================
+    - endpoints: ["Spine-S2:eth1", "Leaf-L1:eth65"]
+      mtu: 9100
+    - endpoints: ["Spine-S2:eth2", "Leaf-L2:eth65"]
+      mtu: 9100
+    - endpoints: ["Spine-S2:eth3", "Leaf-L3:eth31"]
+      mtu: 9100
+    - endpoints: ["Spine-S2:eth4", "Leaf-L4:eth31"]
+      mtu: 9100
+    - endpoints: ["Spine-S2:eth5", "Border-Leaf1:eth34"]
+      mtu: 9100
+    - endpoints: ["Spine-S2:eth6", "Border-Leaf2:eth34"]
+      mtu: 9100
+
+    # =========================================================================
+    # LEAF ACCESS LINKS (COLUMN 1 & COLUMNS 2)
+    # =========================================================================
+    - endpoints: ["Leaf-L1:eth1", "Host12-1:eth1"]
+      mtu: 9100
+    - endpoints: ["Leaf-L1:eth2", "Host12-2:eth1"]
+      mtu: 9100
+    - endpoints: ["Leaf-L1:eth3", "Host12-3:eth1"]
+      mtu: 9100
+
+    - endpoints: ["Leaf-L2:eth1", "Host12-1:eth2"]
+      mtu: 9100
+    - endpoints: ["Leaf-L2:eth2", "Host12-2:eth2"]
+      mtu: 9100
+    - endpoints: ["Leaf-L2:eth3", "Host12-3:eth2"]
+      mtu: 9100
+
+    - endpoints: ["Leaf-L3:eth1", "Host34-1:eth1"]
+      mtu: 9100
+    - endpoints: ["Leaf-L3:eth2", "Host34-2:eth1"]
+      mtu: 9100
+    - endpoints: ["Leaf-L3:eth3", "MonSrv:eth1"]
+      mtu: 9100
+
+    - endpoints: ["Leaf-L4:eth1", "Host34-1:eth2"]
+      mtu: 9100
+    - endpoints: ["Leaf-L4:eth2", "Host34-2:eth2"]
+      mtu: 9100
+    - endpoints: ["Leaf-L4:eth3", "MonSrv:eth2"]
+      mtu: 9100
+
+    # =========================================================================
+    # BORDER LEAF HYPERCONVERGED ACCESS ENDPOINTS
+    # =========================================================================
+    - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:eth1"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf1:eth3", "HostB12-1:eth1"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf1:eth4", "HostB12-2:eth1"]
+      mtu: 9100
+
+    - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:eth2"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf2:eth3", "HostB12-1:eth2"]
+      mtu: 9100
+    - endpoints: ["Border-Leaf2:eth4", "HostB12-2:eth2"]
+      mtu: 9100
+
+    # =========================================================================
+    # CORE INTERNET TRANSIT / GATEWAYS
+    # =========================================================================
+    - endpoints: ["ISP-1:eth1", "Exit-Router1:eth3"]
+      mtu: 9100
+- endpoints: ["ISP-2:eth1", "Exit-Router1:eth4"]mtu: 9100
+- endpoints: ["ISP-1:eth2", "Exit-Router2:eth3"]mtu: 9100
+- endpoints: ["ISP-2:eth2", "Exit-Router2:eth4"]mtu: 9100
+# =========================================================================
+# EDGE CORRELATION & MANAGEMENT CROSSOVERS
+# =========================================================================
+- endpoints: ["External-Router:eth1", "ISP-1:eth3"]mtu: 9100
+- endpoints: ["External-Router:eth2", "ISP-2:eth3"]mtu: 9100
+- endpoints: ["External-Router:eth3", "Mgmt-Switch:eth1"]
+- endpoints: ["Mgmt-Switch:eth2", "oob-mgmt-node:eth1"]
