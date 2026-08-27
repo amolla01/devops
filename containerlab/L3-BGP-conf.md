@@ -1674,3 +1674,244 @@ Instead of slicing up ports on your Exit Router, you forward one single public p
 This keeps your Exit Router lean, secure, and easy to maintain, while offloading granular access controls to software layers designed specifically for multi-tenant handling.
 Would you like to write out the nftables DNAT mapping syntax to execute the Tenant-A vs. Tenant-B port forwarding rules on vrf-internet, or should we look at the WireGuard routing matrix for the Ops team?
 
+Does the border leaves and the leaf columns also needs to be partitioned through vrf's like above?? Probably there is vrf-mgmt for the 'eth0' management port but any other??
+
+For a standard enterprise data center layout, no, the Leaf/Spine CLOS fabric does not need to be carved into multiple VRFs for data plane traffic.
+The network elements are split to balance data plane speed with management isolation:
+## 1. The Separation of Concerns (Why the Fabric Stays Clean)
+The core purpose of a Leaf/Spine CLOS underlay is to act as a high-speed, stateless transport engine. Its only job is to move packets between endpoints as fast as possible using hardware ASICs and Equal-Cost Multi-Pathing (ECMP).
+
+* The Edge (Exit Router & Ubuntu Hosts): This is where state, firewalls, and complex security logic reside. The Exit Router uses VRFs because it actively bridges untrusted public networks with trusted data networks. The Ubuntu hosts use VRFs because they support multiple services (like standard internet applications alongside sensitive cluster control channels).
+* The Core (Leafs & Spines): These switches do not touch the raw internet or the raw management traffic. They deal strictly with pre-authenticated infrastructure traffic. Splitting them into data plane VRFs introduces unnecessary configuration complexity and burns precious hardware routing table space (TCAM) on the switch ASICs.
+
+------------------------------
+## 2. The Standard VRF Layout on a SONiC Leaf/Spine
+On your SONiC switches, you only maintain one mandatory VRF and one implicit default routing instance:
+## A. vrf-mgmt (Mandatory Isolation)
+As we established, this is dedicated strictly to the physical eth0 out-of-band management port. It is completely isolated from the switching silicon. It handles administrative tools like:
+
+* SSH access for network engineers.
+* SNMP/gRPC telemetry streaming to your monitoring tools.
+* Syslog output to a centralized server.
+* Radius/TACACS+ authentication requests.
+
+## B. The Default/Global VRF (The CLOS Underlay)
+All BGP Unnumbered peerings (Leaf-to-Spine, Leaf-to-Host) live in the default routing table. This table handles:
+
+* Infrastructure Loopbacks (10.0.0.0/24) for BGP stability.
+* etcd consensus traffic on ports 2379/2380.
+* Encapsulated Tenant traffic.
+
+------------------------------
+## 3. When Would a Leaf/Spine Fabric Need Extra VRFs?
+There is only one major architectural scenario where you would implement multiple VRFs (Tenant VRFs) across your entire physical switching fabric: Hard Multitenancy at the Hardware Layer (Overlays).
+If your data center hosts completely separate companies or agencies that require total isolation, you run BGP EVPN with VXLAN.
+
+               [ Global Underlay: BGP Unnumbered (Stateless Transport) ]
+                                  │
+         ┌────────────────────────┴────────────────────────┐
+         ▼                                                 ▼
+[ Tenant-A VRF (VNI 10001) ]                     [ Tenant-B VRF (VNI 10002) ]
+- Isolated Virtual Network                       - Isolated Virtual Network
+- Overlapping IPs allowed                        - Overlapping IPs allowed
+
+In this advanced setup:
+
+   1. The Underlay: The Leafs and Spines still run a single, clean BGP Unnumbered configuration in the default table just to exchange loopback IPs (10.0.0.X).
+   2. The Overlay: You configure virtual tunnels (VXLAN) that maps to separate VRFs on the switches. Tenant A's packets are tagged with Layer 3 Virtual Network Identifier (VNI) 10001, and Tenant B's packets are tagged with VNI 10002.
+
+The physical switches route the encapsulated packets across the fabric. Even if Tenant A and Tenant B use the exact same IP addresses internally, they can never see or touch each other's traffic.
+## Summary for Your Topology
+For your architecture deploying Kubernetes with an explicit air-gapped management network, keep the Leaf and Spine data planes simple and VRF-free. Rely on the explicit Inbound/Outbound Route-Maps and Prefix-Lists we built to control traffic propagation. Let the Exit Router handle the perimeter VRF security, and let your switches focus entirely on fast hardware forwarding.
+Would you like to examine a SONiC BGP EVPN configuration blueprint to see how a Tenant VRF maps to a VXLAN tunnel, or are you ready to look at verification tools for your multi-VRF Exit Router?
+
+
+
+For bandwidth gurantee for for ceph OSD replication, we need one vrf though I think, elaborate on your thought and solution.
+
+You are entirely correct to focus on isolating and guaranteeing network capacity for Ceph OSD replication. A Ceph cluster experiences massive, bursty East-West traffic spikes when an OSD fails, nodes rebalance, or heavy write workloads arrive. If replication packets end up competing with sensitive Kubernetes etcd heartbeats or user application traffic over the same lanes, it can lead to high latency, etcd election timeouts, and cascading cluster failures.
+However, from a networking architecture perspective, a VRF alone does not guarantee bandwidth. A VRF provides logical isolation (a separate routing table), but it does not natively throttle or prioritize traffic at the physical port level.
+To guarantee Ceph replication bandwidth while preserving your L3 Routed-to-Host CLOS design, you must combine Layer 3 Isolation (via a dedicated Ceph VRF or unique subnet topology) with Layer 2 Hardware Quality of Service (QoS) and Traffic Engineering.
+------------------------------
+## 1. Two Architectural Approaches for Ceph Isolation
+Depending on your hardware capability and how your Ubuntu nodes are cabled, you can choose between two main implementation models:
+## Option A: Dedicated Physical Fabrics (Air-Gapped - Recommended)
+If your budget allows, the gold-standard enterprise design is to completely separate storage from the compute/management fabric using dedicated network cards (NICs) on the hosts and separate Leaf switches.
+
+* 
+* The Cabling:
+* enp3s0f0/1 -> Data Fabric Leafs (K8s pods, etcd, user apps via BGP Unnumbered).
+   * enp4s0f0/1 -> Storage Fabric Leafs (Ceph Public and Ceph Cluster/Replication networks).
+* The Advantage: True physical separation. Storage bursts cannot impact etcd or user application workloads because they do not share the same physical wires or switch buffers.
+* 
+
+## Option B: Converged Multi-VRF/Multi-Subnet Fabric with Hardware QoS
+If you are running everything over a shared pair of high-bandwidth physical links (e.g., dual 100GbE NICs) to the Leaf switches, you must implement a Ceph VRF (vrf-storage) on the hosts paired with strict ASIC-enforced Quality of Service (QoS) across the SONiC Leafs and Spines.
+------------------------------
+## 2. Implementing the Converged Solution (vrf-storage)
+If you proceed with Option B (Converged Network), you must carve out a dedicated IP block for Ceph and isolate it to prevent general traffic leakage.
+## Step 1: Ubuntu Host Netplan Setup (/etc/netplan/01-netcfg.yaml)
+Create a separate storage loopback address on the host and assign it to a dedicated storage VRF:
+
+network:
+  version: 2
+  renderer: networkd
+  vrfs:
+    vrf-storage:
+      table: 200  # Separate routing table for storage
+      interfaces: [ enp3s0f0.200, enp3s0f1.200 ] # Using VLAN sub-interfaces over the fabric links
+      addresses:
+        - 10.10.0.102/32  # Unique Storage Loopback for Ceph OSD on this node
+
+## Step 2: FRR Storage BGP Peering
+Inside your Ubuntu node's FRR daemon, configure a dedicated BGP instance for vrf-storage. This advertises the Ceph loopback up to the Leafs completely separately from the Kubernetes pod networks.
+
+router bgp 65102 vrf vrf-storage
+ bgp router-id 10.10.0.102
+ !
+ address-family ipv4 unicast
+  network 10.10.0.102/32
+ exit-address-family
+
+------------------------------
+## 3. Enforcing the Bandwidth Guarantee (The QoS Solution)
+Once the VRF isolates the routing paths, you must configure the SONiC switches and the Ubuntu kernel to ensure Ceph replication traffic does not starve your etcd or application traffic.
+## Action 1: Differentiated Services Code Point (DSCP) Tagging
+You must configure your Ceph OSD nodes to tag replication packets with a specific Layer 3 Priority value (DSCP/TOS) so that the network switches can identify them.
+
+* 
+* etcd & K8s Control Plane: Tag as Expedited Forwarding (EF / DSCP 46) -> Highest priority, ultra-low latency queue.
+* Ceph OSD Replication: Tag as Assured Forwarding (AF41 / DSCP 34) or a designated storage class -> High priority, guaranteed bandwidth queue.
+* Standard Pod/User Traffic: Tag as Best Effort (BE / DSCP 0) -> Standard queue.
+* 
+
+In the Ceph configuration (/etc/ceph/ceph.conf), you can enforce network priority strings natively:
+
+[global]
+# Tag Ceph traffic sockets with high-priority DSCP bits
+osd_ms_type = async+posix
+ms_tcp_rcvbuf = 1048576
+# Configure your underlying Linux rules to map storage execution to a specific DSCP class
+
+## Action 2: SONiC Switch QoS Deficit Weighted Round Robin (DWRR)
+On your SONiC Leaf and Spine switches, you must configure the physical ports to map these DSCP tags to hardware queues. Instead of processing traffic on a "first-come, first-served" basis, the switch ASIC uses a scheduler to guarantee a percentage of the total interface wire-speed.
+Configure your SONiC switches (via config_db.json or CLI scheduler profiles) to apply these allocations:
+
+* 
+* Queue 7 (Network Control / BGP / etcd): Configure with Strict Priority (SP). These packets always jump to the front of the line to prevent election timeouts.
+* Queue 4 (Ceph Replication Storage): Configure with DWRR and allocate a guaranteed 40% of interface bandwidth. Even during a full rebalance, Ceph is hard-throttled to its allocation and cannot consume the remaining bandwidth.
+* Queue 0 (User Apps / Internet Traffic): Configure with DWRR and allocate the remaining 60% of interface bandwidth.
+* 
+
+------------------------------
+## Summary
+A VRF provides the logical segregation required to keep storage management and Ceph clustering paths hidden from tenant container networks. However, to achieve a true bandwidth guarantee, you must pair that VRF structure with DSCP marking on the Ubuntu hosts and DWRR hardware queue profiles on the SONiC switches.
+Would you like to review the SONiC QoS profile configuration template to map these specific DSCP classes to hardware egress queues, or should we examine how Ceph splits its public vs. cluster networks within the Linux network stack?
+
+
+
+These days, each compute server will have storage disks such as hdd/sdd/nvme etc. so, how to use these resources for option 1? The other thing is we can easily run HTB TC on the ubuntu hosts and split muti-homing nic interfaces for osd traffic as well using vrf/vlan sub-interfaces etc. Can't we?
+
+## 1. Implementing Option 1 (Dedicated Storage Fabric) on Hyperconverged Compute Nodes
+In modern data centers, nodes that host both compute containers and physical storage disks (HDDs, SSDs, NVMe) are called Hyperconverged Infrastructure (HCI).
+To use these local resources for Option 1 (Physically Dedicated Storage Fabric), you do not separate the servers; you separate the network data paths within the same server.
+Each hyperconverged Ubuntu node is built with two distinct physical network interface cards (NICs), or a dual-port PCIe NIC where each port connects to an entirely different physical Leaf switch infrastructure:
+
+       ┌─────────────────────────────────────────────────────────┐
+       │             HYPERCONVERGED UBUNTU COMPUTE NODE          │
+       │                                                         │
+       │  [ Compute / K8s Engine ]     [ Ceph OSD Storage Core ] │
+       │   (Pods, Services, etcd)      (Local HDDs, SSDs, NVMes) │
+       └──────────────┬───────────────────────────┬──────────────┘
+                      │                           │
+  (Physical Port 1)   │                           │ (Physical Port 2)
+  enp3s0f0 / enp3s0f1 │                           │ enp4s0f0 / enp4s0f1
+                      ▼                           ▼
+            ┌──────────────────┐        ┌──────────────────┐
+            │   DATA LEAFS     │        │  STORAGE LEAFS   │
+            │ (K8s / Apps / L3)│        │ (Ceph Repl / L3) │
+            └──────────────────┘        └──────────────────┘
+
+## How it works under the hood:
+
+* The Software Separation: The local Ceph OSD daemons running on the host are explicitly configured to bind only to the IP addresses assigned to the storage NICs (enp4s0f0/1).
+* The Wire Separation: When a disk fails and Ceph starts a heavy replication sync, those massive bursts of storage traffic move exclusively out of enp4s0f0/1 into the Storage Leafs.
+* The Result: The Kubernetes workloads and sensitive etcd control-plane traffic moving through enp3s0f0/1 into the Data Leafs remain completely untouched by the storage burst.
+
+------------------------------
+## 2. The Shared-NIC Alternative: HTB TC + Multi-Homing VRF Sub-Interfaces
+If your servers only have one set of high-bandwidth multi-homing interfaces (e.g., a single dual-port 100GbE card) and you cannot run physically dedicated fabrics, yes, you can absolutely use Linux Hierarchical Token Bucket (HTB) Traffic Control (tc) combined with VRF/VLAN sub-interfaces.
+This is a highly elegant, cost-effective design pattern for converged networks. You use VLAN sub-interfaces to split the physical link into logical lanes, VRFs to keep the routing tables separate, and HTB tc to enforce hard bandwidth limits at the egress of the Ubuntu kernel.
+## Step A: Configure the Kernel Network Stack (Netplan)
+We build two tagged VLAN sub-interfaces over the physical interfaces and place them into their respective VRFs.
+
+# /etc/netplan/01-netcfg.yamlnetwork:
+  version: 2
+  renderer: networkd
+  ethernets:
+    enp3s0f0: { dhcp4: no }
+    enp3s0f1: { dhcp4: no }
+
+  vlans:
+    # K8s Data Plane VLAN
+    enp3s0f0.100:
+      id: 100
+      link: enp3s0f0
+    enp3s0f1.100:
+      id: 100
+      link: enp3s0f1
+
+    # Ceph Storage Replication VLAN
+    enp3s0f0.200:
+      id: 200
+      link: enp3s0f0
+    enp3s0f1.200:
+      id: 200
+      link: enp3s0f1
+
+  vrfs:
+    vrf-fabric:
+      table: 102
+      interfaces: [ enp3s0f0.100, enp3s0f1.100 ]
+    vrf-storage:
+      table: 200
+      interfaces: [ enp3s0f0.200, enp3s0f1.200 ]
+
+## Step B: Applying HTB Traffic Control (tc) Rules
+To ensure Ceph cannot starve etcd, we attach an HTB queuing discipline (qdisc) to the physical interfaces. We split the bandwidth proportionally (assuming a 25Gbps link profile for this example, though it scales to 100Gbps).
+Run these commands on the host (or automate via a systemd up-script):
+
+# 1. Clear any existing root queuing disciplines
+sudo tc qdisc del dev enp3s0f0 root 2>/dev/null
+# 2. Create a root HTB qdisc
+sudo tc qdisc add dev enp3s0f0 root handle 1: htb default 30
+# 3. Create a parent class defining total physical link limit (e.g., 25 Gbps)
+sudo tc class add dev enp3s0f0 parent 1: classid 1:1 htb rate 25gbit
+# 4. Class 1:10 -> High Priority K8s/etcd Control Plane (Guaranteed 5 Gbps, can burst up)
+sudo tc class add dev enp3s0f0 parent 1:1 classid 1:10 htb rate 5gbit ceil 25gbit priority 1
+# 5. Class 1:20 -> Ceph Replication Storage (Guaranteed 10 Gbps, capped strictly at 15 Gbps)
+sudo tc class add dev enp3s0f0 parent 1:1 classid 1:20 htb rate 10gbit ceil 15gbit priority 3
+# 6. Class 1:30 -> Standard Tenant App Traffic (Guaranteed 10 Gbps, can burst up)
+sudo tc class add dev enp3s0f0 parent 1:1 classid 1:30 htb rate 10gbit ceil 25gbit priority 5
+# 7. Add Stochastic Fairness (sfq) to queues to prevent a single connection from choking a class
+sudo tc qdisc add dev enp3s0f0 parent 1:10 handle 10: sfq perturb 10
+sudo tc qdisc add dev enp3s0f0 parent 1:20 handle 20: sfq perturb 10
+sudo tc qdisc add dev enp3s0f0 parent 1:30 handle 30: sfq perturb 10
+
+## Step C: Mapping VRF/VLAN Traffic to the HTB Classes
+To make the traffic control engine map packets automatically, you use a tc filter rule that targets the VLAN protocol tag or use iptables/nftables MANGLE marks:
+
+# Direct all traffic originating out of the storage VLAN (200) into the Class 1:20 storage queue
+sudo tc filter add dev enp3s0f0 parent 1:0 protocol 802.1q u32 match u16 0x00c8 0x0fff at -4 flowid 1:20
+# Direct all traffic originating out of the data VLAN (100) into the Class 1:30 app queue
+sudo tc filter add dev enp3s0f0 parent 1:0 protocol 802.1q u32 match u16 0x0064 0x0fff at -4 flowid 1:30
+
+(Note: Repeat these identical tc configurations for your second multi-homed link interface, enp3s0f1)
+------------------------------
+## 3. Comparing both architectural paths
+
+* Option 1 (Physical Separation): Is the most reliable and zero-overhead solution. It completely eliminates network troubleshooting headaches because a hardware failure or traffic burst on one fabric cannot physically cross into the other.
+* The HTB TC + VRF Alternative: Is a highly sophisticated software-defined networking pattern. It saves significant capital costs on network switches and extra cabling. However, it requires careful management; if your tc scripts fail to initialize during a host boot, your bandwidth protection boundary drops instantly.
+
+Would you like to explore how to persist these tc rules across host reboots smoothly using network interface up-hooks, or do you want to configure the Ceph Public vs. Cluster networks to map exactly to these specific VLAN targets?
+
