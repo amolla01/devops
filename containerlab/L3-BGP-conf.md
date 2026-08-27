@@ -15,6 +15,8 @@ Which network subnet etcd uses to communicate for  building a quoram during k8 e
        │
        ▼
 [Node-02: 10.0.0.102]
+<img width="953" height="812" alt="image" src="https://github.com/user-attachments/assets/f21aed9c-387b-42b8-b514-ea953e833672" />
+<img width="953" height="812" alt="image" src="https://github.com/user-attachments/assets/09639192-3f27-42be-83f2-dd45aa469f82" />
 
   
 3. Route-Map & BGP ConfigurationTo prevent configuration errors and secure the fabric, Route-Maps are heavily utilized to control exactly what routes enter and exit the network layers.On the Leaf Switch (FRR / Network OS Example)The Leaf must accept /32 host routes from the compute nodes but reject unauthorized prefixes (like a rogue node trying to advertise a spoofed service IP).text! Define a prefix-list allowing only host loopbacks and pod networks
