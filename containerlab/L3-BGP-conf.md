@@ -1068,7 +1068,7 @@ default via 192.168.10.1 dev eth0
 [6] 
 * 
 
-```
+
 With this segregation active, eth0 handles management traffic (SNMP, SSH, telemetry) exclusively inside its own sandboxed VRF table, guaranteeing that an accidental configuration leak inside the L3 BGP CLOS routing domain is structurally impossible.
 Would you like to review how SNMP or Syslog daemons are natively directed to use the mgmt-vrf in SONiC, or are we ready to look at a traffic simulation test between the nodes?
 
@@ -1111,7 +1111,7 @@ If it is going through the management block, the output will explicitly show the
 
 91.189.91.83 dev enp1s0 table mgmt-vrf src 192.168.10.102 uid 0
 
-```
+
 ------------------------------
 ## Method 2: Check Active Connections (ss or netstat)
 While the apt install or apt download command is actively running, open a secondary terminal window and inspect the live network socket.
@@ -1147,7 +1147,7 @@ sudo apt-get update && sudo apt-get install <package>
 sudo ip vrf exec mgmt-vrf apt-get update
 sudo ip vrf exec mgmt-vrf apt-get install <package>
 
-```
+
 Are you planning to restrict all external internet access from the management VRF to tighten the air gap, or do you want to keep the dual-egress architecture active for administrative convenience?
 
 
@@ -1170,13 +1170,15 @@ A comparison of how these two configurations impact data center stability and se
 | Air-Gap Integrity | Absolute. True separation between the internal infrastructure data plane and out-of-band management. | Compromised. It creates a dual-homed bridge where an OS breach can allow lateral movement between networks. |
 | Routing Determinism | Flawless. Servers have exactly one default route (0.0.0.0/0) in the main table via the L3 CLOS fabric. | Unpredictable. DNS resolution or multi-homed system daemons can experience race conditions, causing traffic to leak. |
 | Operational Control | All packages, updates, and images pass through inspected internal mirrors/registries. | System administrators can bypass corporate proxy controls and download unvetted external code directly. |
-
+```
 ------------------------------
 ## The Production Data Center Blueprint
 To achieve optimal security and scalability, leading data centers enforce a pattern known as Proxy/Bastion-Mediated Out-of-Band Management.
+
 Instead of allowing your Management VRF directly onto the internet, configure the environment using these three design steps:
 ## 1. Centralized Administrative Bastions
 If an administrator needs to access an Ubuntu node or a SONiC switch via SSH, they must first log into a secured Jump Host / Bastion Server that sits inside a dedicated DMZ. That Bastion has dual-homed access—one leg in the secure corporate network and the other in the L2 Management Subnet block.
+
 ## 2. Internal Infrastructure Mirrors
 Instead of your Kubernetes nodes pulling apt packages or container images directly from public endpoints over the internet, deploy local infrastructure utilities inside your management block:
 
@@ -1186,7 +1188,7 @@ Instead of your Kubernetes nodes pulling apt packages or container images direct
 
 ## 3. Strict Perimeter Firewall Filtering
 At your data center's edge firewall, write a rule that explicitly blocks your management subnet block (192.168.10.0/24) from reaching any external IP address space. The only network allowed to communicate out to the web should be your L3 CLOS fabric via the Exit Router gateways.
-```
+
 ------------------------------
 
 ## Summary
@@ -1310,8 +1312,11 @@ print("File generated successfully inside the target directory.")
 
 ## Running the script:
 To generate this script on your machine, run the following code block in your terminal:
-```
-python3 -c 'import os; config_content = """#!/usr/sbin/nftables -f\n\nflush ruleset\n\ntable inet filter {\n    define DEV_WAN = "enp1s0f0"\n    define DEV_WG  = "wg0"\n    define DEV_MGMT = "enp1s0"\n    define NET_MGMT = 192.168.10.0/24\n    define NET_CLOS_INFRA = 10.0.0.0/24\n    define NET_K8S_PODS = 10.244.0.0/16\n\n    chain input {\n        type filter hook input priority filter; policy drop;\n        iif "lo" accept\n        ct state established,related accept\n        ct state invalid drop\n        tcp dport 179 accept\n        iif $DEV_WAN udp dport 51820 accept\n        iif $DEV_MGMT ip saddr $NET_MGMT tcp dport 22 accept\n        iif $DEV_WG tcp dport 22 accept\n    }\n\n    chain forward {\n        type filter hook forward priority filter; policy drop;\n        ct state established,related accept\n        ct state invalid drop\n        iifname "enp3s0*" oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } accept\n        iif $DEV_WG oif $DEV_MGMT ip daddr $NET_MGMT accept\n        iif $DEV_MGMT oif $DEV_WAN counter log prefix \"AIRGAP_VIOLATION_DROP: \" drop\n    }\n\n    chain postrouting {\n        type nat hook postrouting priority srcnat; policy accept;\n        oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } masquerade\n    }\n}\n"""; os.makedirs("generated", exist_ok=True); f = open("generated/nftables.conf", "w"); f.write(config_content); f.close()'
+
+python3 -c 'import os; config_content = """
+
+#!/usr/sbin/nftables -f\n\nflush ruleset\n\ntable inet filter {\n    define DEV_WAN = "enp1s0f0"\n    define DEV_WG  = "wg0"\n    define DEV_MGMT = "enp1s0"\n    define NET_MGMT = 192.168.10.0/24\n    define NET_CLOS_INFRA = 10.0.0.0/24\n    define NET_K8S_PODS = 10.244.0.0/16\n\n    chain input {\n        type filter hook input priority filter; policy drop;\n        iif "lo" accept\n        ct state established,related accept\n        ct state invalid drop\n        tcp dport 179 accept\n        iif $DEV_WAN udp dport 51820 accept\n        iif $DEV_MGMT ip saddr $NET_MGMT tcp dport 22 accept\n        iif $DEV_WG tcp dport 22 accept\n    }\n\n    chain forward {\n        type filter hook forward priority filter; policy drop;\n        ct state established,related accept\n        ct state invalid drop\n        iifname "enp3s0*" oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } accept\n        iif $DEV_WG oif $DEV_MGMT ip daddr $NET_MGMT accept\n        iif $DEV_MGMT oif $DEV_WAN counter log prefix \"AIRGAP_VIOLATION_DROP: \" drop\n    }\n\n    chain postrouting {\n        type nat hook postrouting priority srcnat; policy accept;\n        oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } masquerade\n    }\n}\n"""; os.makedirs("generated", exist_ok=True); f = open("generated/nftables.conf", "w"); f.write(config_content); f.close()'
+
 ```
 ------------------------------
 
