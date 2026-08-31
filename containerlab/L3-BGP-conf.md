@@ -89,7 +89,7 @@ Use code with caution.
 4. Network Filtering & Security (ACLs)
 Because the L3 CLOS fabric handles high-performance data plane traffic, network-level security controls (Access Control Lists) must isolate etcd from standard application workloads while leaving the L2 Management subnet isolated.
 
-Core Filtering Rules
+## Core Filtering Rules
 L3 Fabric Port Isolation:
 etcd communicates on ports 2379 (client requests) and 2380 (peer-to-peer quorum). Infrastructure ACLs applied on the Leaf interfaces ensure that only the IP addresses belonging to the Master Node Loopback pool (10.0.0.100 - 10.0.0.105) can talk to each other on port 2380.
 
@@ -111,10 +111,11 @@ containers:
 ```
 Use code with caution.
 
-Would you like to explore a specific CNI implementation (like Cilium or Calico) for managing these BGP host announcements, or would you prefer a sample FRR configuration file for the Kubernetes hosts?AI can make mistakes, so double-check responses 
+Would you like to explore a specific CNI implementation (like Cilium or Calico) for managing these BGP host announcements, or would you prefer a sample FRR configuration file for the Kubernetes hosts? AI can make mistakes, so double-check responses 
 
 
 Extend the above picture where Leaf-3 & Leaf-4 represents 2nd column of leafs connects K8s Node 2 and Leaf-5, Leaf-6 as third leaf columns connects to K8s Node 3 and explain even though Host servers(assume ubuntu running frr) shows clear bgp listing of other Nodes loopback ip, fails to communicate(assume SONiC running on switches)
+
 ```
 ## Updated Architecture Diagram
 The L3 CLOS BGP Unnumbered fabric expands below to cover three separate columns of Leafs, each providing a dual-homed connection to individual Kubernetes Nodes.
