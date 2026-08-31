@@ -1,4 +1,4 @@
-Which network subnet etcd uses to communicate for  building a quoram during k8 env. deployment in a leaf spine routed to host using bgp is configured where L3 is for CLOS and there is an L2 on a subnet where magement subnet is configured totally air gapped form L3 bgp unnumbered is running. provide example subnet LoopBack IP's, Leaf spine communication route, network filtering and route-map use etc for a detailed picture. Along with how the netowrk subnets used in here come into live.
+# Which network subnet etcd uses to communicate for  building a quoram during k8 env. deployment in a leaf spine routed to host using bgp is configured where L3 is for CLOS and there is an L2 on a subnet where magement subnet is configured totally air gapped form L3 bgp unnumbered is running. provide example subnet LoopBack IP's, Leaf spine communication route, network filtering and route-map use etc for a detailed picture. Along with how the netowrk subnets used in here come into live.
 
 
 
@@ -114,7 +114,7 @@ Use code with caution.
 Would you like to explore a specific CNI implementation (like Cilium or Calico) for managing these BGP host announcements, or would you prefer a sample FRR configuration file for the Kubernetes hosts? AI can make mistakes, so double-check responses 
 
 
-Extend the above picture where Leaf-3 & Leaf-4 represents 2nd column of leafs connects K8s Node 2 and Leaf-5, Leaf-6 as third leaf columns connects to K8s Node 3 and explain even though Host servers(assume ubuntu running frr) shows clear bgp listing of other Nodes loopback ip, fails to communicate(assume SONiC running on switches)
+# Extend the above picture where Leaf-3 & Leaf-4 represents 2nd column of leafs connects K8s Node 2 and Leaf-5, Leaf-6 as third leaf columns connects to K8s Node 3 and explain even though Host servers(assume ubuntu running frr) shows clear bgp listing of other Nodes loopback ip, fails to communicate(assume SONiC running on switches)
 
 ```
 ## Updated Architecture Diagram
@@ -143,12 +143,14 @@ The L3 CLOS BGP Unnumbered fabric expands below to cover three separate columns 
 ## Why Communication Fails Despite Perfect BGP Routing Tables
 When you inspect an Ubuntu host via vtysh and run show ip bgp, you see perfect convergence. Node 1 has a route to Node 2 (10.0.0.102/32) and Node 3 (10.0.0.103/32). However, a simple ping or etcd heartbeat fails to connect.
 In an architecture using SONiC on the switches and standard FRR on Ubuntu, this failure occurs due to how BGP Unnumbered (RFC 8950 / ENHE) transforms routing definitions across the application and hardware boundary.
+
 The underlying issues that cause this breakdown include:
 ## 1. The Kernel "No Route to Next-Hop" (Missing Router Advertisements)
 BGP Unnumbered transmits IPv4 prefixes using an IPv6 Link-Local address (e.g., fe80::...) as the hardware next-hop. [1] 
 
 * 
 * The Failure: If FRR on Ubuntu learns the route to 10.0.0.102/32 via fe80::Leaf3_MAC, it attempts to program that route into the Linux kernel. However, if the Ubuntu network stack hasn't actively learned the Layer 2 MAC address of Leaf-3 via IPv6 Neighbor Discovery Protocol (NDP), the kernel marks the next-hop as unreachable.
+
 * The Fix: Ubuntu hosts must run radvd (Router Advertisement Daemon) or have systemd-networkd properly accept IPv6 Router Advertisements (AcceptRA=true) on the physical interface. If the host cannot resolve the IPv6 link-local gateway, the packets are dropped inside the server before hitting the wire. [2] 
 * 
 
