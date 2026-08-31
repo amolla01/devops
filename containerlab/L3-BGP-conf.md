@@ -193,7 +193,7 @@ Would you like to examine a sysctl and interface configuration layout for the Ub
 [7] [https://github.com](https://github.com/FRRouting/frr/issues/19234)
 [8] [https://bst.cisco.com](https://bst.cisco.com/quickview/bug/CSCwf16504)
 
-Like to examine a sysctl and interface configuration layout. Remember that Host, leaves, spines all is showing routes with B* perfectly, howver ping from K82 Node -1, to K8s Node-2 not working. What should be the best troubleshooting approach and how to make sure etcd instances binds them with Ubuntu Hosts loopback IP?
+## Like to examine a sysctl and interface configuration layout. Remember that Host, leaves, spines all is showing routes with B* perfectly, howver ping from K8's Node -1, to K8s Node-2 not working. What should be the best troubleshooting approach and how to make sure etcd instances binds them with Ubuntu Hosts loopback IP?
 ```
 ## 1. The Architectural Truth
 If vtysh shows a B* (BGP Selected/Best Route) inside the FRR routing table across your hosts, leafs, and spines, your control plane is 100% healthy.
@@ -218,7 +218,9 @@ net.ipv6.conf.default.accept_ra=2
 # Do not configure default IPv6 global addresses from RA (Keep it Link-Local only)
 net.ipv6.conf.all.autoconf=0
 
-Apply changes instantly: sudo sysctl --system
+Apply changes instantly:
+sudo sysctl --system
+
 ## Netplan Interface Configuration (/etc/netplan/01-netcfg.yaml)
 Ensure your physical fabric interfaces do not try to look for an IPv4 DHCP server, but do listen actively for IPv6 Neighbor Discovery.
 
@@ -255,14 +257,17 @@ To find where the packet is dropping, execute this progressive trace:
 ## Step A: Verify Ubuntu Actually Programmed the Kernel Routing Table
 FRR's routing table is distinct from the Linux Kernel routing table. If FRR cannot resolve the IPv6 link-local gateway, it won't push it to Linux.
 
-* Run on Ubuntu: ip route show
-* Expected Output: You must see the target loopback pointing to your physical interfaces via an IPv6 (fe80) link-local address.
+* Run on Ubuntu:
+ ip route show
+* Expected Output:
+ You must see the target loopback pointing to your physical interfaces via an IPv6 (fe80) link-local address.
 
 10.0.0.103 proto bgp metric 20 
     nexthop via inet6 fe80::leaf3_mac dev enp3s0f0 weight 1
     nexthop via inet6 fe80::leaf4_mac dev enp3s0f1 weight 1
 
-* If Missing or Stale: The Linux kernel doesn't know how to reach fe80::leaf3_mac. Check if your interface link-local neighbor discovery is broken: ip -6 neighbor show.
+* If Missing or Stale: The Linux kernel doesn't know how to reach fe80::leaf3_mac. Check if your interface link-local neighbor discovery is broken:
+ip -6 neighbor show.
 
 ## Step B: Check the SONiC ASIC (The Hardware vs. Software Gap)
 Since SONiC shows a perfect B* route inside its internal FRR instance, you must verify if its orchestration layer (orchagent) successfully programmed that route into the physical switching silicon.
