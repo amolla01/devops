@@ -1915,3 +1915,307 @@ sudo tc filter add dev enp3s0f0 parent 1:0 protocol 802.1q u32 match u16 0x0064 
 
 Would you like to explore how to persist these tc rules across host reboots smoothly using network interface up-hooks, or do you want to configure the Ceph Public vs. Cluster networks to map exactly to these specific VLAN targets?
 
+
+Please review your working memory. it is mentioned above: Bootstrap Phase (Host OS): Install the native frr package directly on Ubuntu using an automation tool like Ansible or Kubespray pre-tasks. Configure it to peer with your two Leafs using BGP Unnumbered or IP link-locals to advertise the Node IPs only. This establishes the stable L3 mesh needed for etcd and cluster lifecycle communication.....Now, we will have pod network and pod service network subnets in cluster.yml when we we deploy k8s first on nodes using kubespray. since we employing  routed-to-host architecture, an all L3 bgp un-numbered architecture, there will be /32 Loopback IP's only to identify Ubuntu Nodes and SONiC switches, etcd builds quoram of ubuntu primary servers using this /32 lo IP's in this fabric, on top of that we will have a MetalLB subnet that has both L2/L3 pool of ip's divided so, L3 can be distributed through fabric whereas L2 will happen through mgmt route, an air-gapped one, On top of this k8 deployment we are deploying OSH which will handle individual tenant traffic totally isolated through L3 fabric datapath. Provide a comple and comprehensive subnet prefix list, and route maps for ubuntu host frr connecting to multihomed SONiC Switch fabric that does not leak mgmt-ip block and L2 MetalLb pools into the fabric and also consider mgmt-vrf and ceph-storage vrf to be in place for osd storage replication. And also add a section how ovn-bgp-agent will keep the tenants vrf from OpenStack perspective keep security and isolation in place.
+
+
+To implement this all-L3 routed-to-host model, the Ubuntu host native frr daemon handles core node networking, while the containerized FRR instances (via MetalLB / FRR-K8s) and the ovn-bgp-agent handle service and tenant routing.
+To maintain strict network isolation, prevent unauthorized route leaks, and ensure multi-tenancy, you must implement the specific prefix lists, route maps, and architectural controls outlined below.
+------------------------------
+## 1. Network Subnet Reference Architecture
+Below is the unified IP schema mapping the separate domains of the fabric.
+
+| Network Domain / Function | Prefix Block / Example | Routing Context (VRF) | Propagation Rules / Fabric Leak Control |
+|---|---|---|---|
+| Underlay Loopbacks (Nodes/Switches) | 10.0.0.0/22 (e.g., Node 10.0.0.10/32) | default (Global) | Allowed. Explicitly announced to build the base etcd mesh and k8s underlay. |
+| BGP Unnumbered P2P Links | IPv6 Link-Local (fe80::/10) | default (Global) | Allowed. Next-hop derivation only. No IPv4 subnets allocated. |
+| K8s Pod Network Subnet | 10.244.0.0/16 | default (Global) | Allowed/Conditional. Advertised to fabric if node-to-node routing bypasses overlay encapsulation. |
+| K8s Service Subnet (ClusterIP) | 10.96.0.0/16 | Internal only | Dropped. Internal cluster traffic; must never leak to the core switches. |
+| MetalLB L3 Address Pool | 192.168.100.0/24 | default (Global) | Allowed. This is the routable VIP space announced via BGP to the fabric. |
+| MetalLB L2 Address Pool | 172.16.50.0/24 | mgmt-vrf (Isolated) | Dropped. Bound to air-gapped management broadcast domains. Static or ARP only. |
+| Host Management Network | 192.168.1.0/24 | mgmt-vrf | Dropped. Out-of-Band (OOB) plane; strictly filtered from BGP. |
+| Ceph Storage Cluster (OSD Replica) | 10.50.0.0/22 | ceph-storage-vrf | Dropped/Isolated. Storage replication backend traffic; confined to the storage VRF. |
+
+------------------------------
+## 2. Ubuntu Host Native FRR Configuration (/etc/frr/frr.conf)
+This configuration establishes the multi-VRF BGP unnumbered underlay fabric over interfaces enp1s0f0 and enp1s0f1 (connecting to Leaf-1 and Leaf-2 running SONiC). It selectively announces the /32 host loopback and MetalLB L3 VIPs, while completely blocking the management and Ceph networks from leaking into the core.
+
+!
+frr version 10.0
+frr defaults traditional
+hostname ubuntu-node-1
+log file /var/log/frr/frr.log info
+!
+! Define isolated VRFs for Infrastructure Separation
+vrf mgmt-vrf
+ vni 1001
+exit-vrf
+!
+vrf ceph-storage-vrf
+ vni 1002
+exit-vrf
+!
+! --- PREFIX LISTS ---
+! Allow only the explicit host loopback IP
+ip prefix-list PL-K8S-LOOPBACK permit 10.0.0.10/32
+!
+! Allow the routable MetalLB L3 service pool
+ip prefix-list PL-METALLB-L3 permit 192.168.100.0/24 ge 24 le 32
+!
+! Deny management block explicitly (Safety Blanket)
+ip prefix-list PL-MGMT-BLOCK deny 192.168.1.0/24 le 32
+ip prefix-list PL-METALLB-L2 deny 172.16.50.0/24 le 32
+!
+! Deny Ceph storage replication from escaping the VRF
+ip prefix-list PL-CEPH-BLOCK deny 10.50.0.0/22 le 32
+!
+! Catch-all allowed fabric prefix-list
+ip prefix-list PL-FABRIC-OUT permit 10.0.0.10/32
+ip prefix-list PL-FABRIC-OUT permit 192.168.100.0/24 ge 24 le 32
+!
+! --- ROUTE MAPS ---
+! Outbound map to control what gets sent to the SONiC Leafs
+route-map RM-FABRIC-OUT permit 10
+ match ip address prefix-list PL-FABRIC-OUT
+exit
+!
+route-map RM-FABRIC-OUT deny 20
+!
+! Inbound map: Accept underlay /32s from SONiC switches to enable ECMP
+ip prefix-list PL-FABRIC-IN permit 10.0.0.0/22 ge 32 le 32
+!
+route-map RM-FABRIC-IN permit 10
+ match ip address prefix-list PL-FABRIC-IN
+exit
+!
+! --- GLOBAL BGP UNDERLAY ROUTING ---
+router bgp 65000
+ bgp router-id 10.0.0.10
+ no bgp default ipv4-unicast
+ !
+ ! Peer with SONiC Leafs over L3 BGP Unnumbered
+ neighbor FABRIC peer-group
+ neighbor FABRIC remote-as external
+ neighbor FABRIC capability extended-nexthop
+ neighbor enp1s0f0 interface peer-group FABRIC
+ neighbor enp1s0f1 interface peer-group FABRIC
+ !
+ address-family ipv4 unicast
+  ! Redistribute the local loopback and local MetalLB L3 VIP paths
+  network 10.0.0.10/32
+  ! If MetalLB passes routes locally to FRR via static/kernel redistribution:
+  redistribute static route-map RM-FABRIC-OUT
+  !
+  neighbor FABRIC activate
+  neighbor FABRIC route-map RM-FABRIC-IN in
+  neighbor FABRIC route-map RM-FABRIC-OUT out
+  maximum-paths 64
+ exit-address-family
+exit
+!
+! --- ISOLATED VRF BGP INSTANCES (NO LEAKING) ---
+! The following instances maintain strict local context. No neighbor statements 
+! export these networks to the public leaf fabric.
+!
+router bgp 65000 vrf mgmt-vrf
+ bgp router-id 192.168.1.10
+ address-family ipv4 unicast
+  ! Connected routes (like the L2 MetalLB subnet on OOB interface) stay here
+  redistribute connected
+ exit-address-family
+exit
+!
+router bgp 65000 vrf ceph-storage-vrf
+ bgp router-id 10.50.0.10
+ address-family ipv4 unicast
+  ! Inter-OSD backend replication traffic is structurally locked inside this VRF
+  redistribute connected
+ exit-address-family
+exit
+
+------------------------------
+## 3. OpenStack on Hybrid (OSH) Tenant Security & Isolation via ovn-bgp-agent
+When deploying OpenStack on top of this Kubernetes fabric with an all-L3 BGP path, the integration of OVN (Open Virtual Network) and ovn-bgp-agent controls tenant multi-tenancy.
+Rather than relying on classic L2 VLAN/Geneve overlay encapsulation terminating on dedicated network nodes, ovn-bgp-agent extends the L3 routed-to-host boundary natively right into the tenant space. It enforces network boundaries through the following mechanisms:
+
+[ Tenant Pod/VM ] ➔ [ OVN Logical Switch ] ➔ [ OVN Distributed Router ]
+                                                     │
+                                        (Enforced EVPN Tenant VRF)
+                                                     │
+                                         [ ovn-bgp-agent (FRR) ]
+                                                     │  (BGP Unnumbered)
+                                                     ▼
+                                          [ SONiC Fabric Spine ]
+
+
+* 
+* Dynamic BGP VRF Leak Prevention: The ovn-bgp-agent runs as a helper daemon on the host. When an OpenStack user creates a Router or an External Tenant Network, the agent automatically instructs the host infrastructure to spin up a matching EVPN VRF or separate BGP Address Family instance. It isolates tenant network routes inside their respective VRF contexts before they are pushed to the physical SONiC switches.
+* EVPN-VXLAN Tenant Encapsulation: Traffic traversing the physical fabric between different compute nodes for the same tenant is wrapped in EVPN-VXLAN headers. The core SONiC switches only pass the Outer IPs (the Node /32 loopbacks). They remain blind to the internal tenant IPs, making it architecturally impossible for a tenant to sniff or cross-contaminate another tenant's IP payload space.
+* Enforcement of Logical Distributed Routing: The security boundary is enforced at the source. Routers are fully distributed (DVR). Inter-tenant traffic is evaluated against OVN ACLs and OpenFlow rules directly within the Open vSwitch (OVS) kernel/DPDK datapath of the host node before the packet ever touches the NIC pipeline (enp1s0f0/enp1s0f1). If an ACL drops the traffic, it never enters the L3 fabric.
+* Decoupled Control Planes: By using specific Route Targets (RT) and Route Distinguishers (RD) inside the automated ovn-bgp-agent driver, OpenStack tenant spaces can utilize overlapping IP allocations (e.g., multiple tenants using 10.0.0.0/24) without interfering with each other or colliding with the primary /32 Kubernetes management loopbacks.
+* 
+
+Would you like to generate the complete Kubespray extra-vars configuration or an Ansible task block to automate the generation of this multi-VRF FRR configuration on your Ubuntu server nodes?
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Here is the comprehensive production-grade FRR configuration, prefix list routing architecture, and OVN-BGP-Agent integration strategy designed for your all-L3 multi-homed SONiC and Routed-to-Host topology.
+------------------------------
+## Network Subnet Architecture Blueprint
+To ensure absolute isolation, we allocate explicit IP boundaries. The L2 MetalLB Pool and Management Prefix must be strictly tagged or filtered to ensure they never leak into the L3 Spine-Leaf Fabric.
+
+| Network Component | Subnet Prefix / Type | Purpose | Fabric Advertising Rule |
+|---|---|---|---|
+| Node Loopbacks | 10.254.0.0/24 (Hosts: /32) | Local identification, etcd quorum, K8s Control Plane | Permit (Advertise to Spine/Leaf) |
+| Switch Loopbacks | 10.254.1.0/24 (Switches: /32) | Router IDs, BGP Next-Hops | Permit (Advertise to Hosts) |
+| K8s Pod Network | 10.240.0.0/16 | Dynamic intra-cluster pod routing | Permit (Advertised via dynamic Calico/OVN) |
+| K8s Service Network | 10.96.0.0/16 | K8s ClusterIP services | Deny (Kept local to Node/Kube-Proxy) |
+| MetalLB L3 Pool | 198.51.100.0/24 | Exposed external applications/Ingress | Permit (Injected by MetalLB into FRR) |
+| MetalLB L2 Pool | 192.168.200.0/24 | Air-gapped / Local rack services | Deny (Filtered at Host VRF edge) |
+| Management Block | 192.168.100.0/24 | Out-Of-Band (OOB) Node Access & API | Deny (Isolated inside mgmt-vrf) |
+| Ceph Storage Network | 172.16.10.0/24 | East-West OSD replication traffic | Deny / VRF Confined (Kept in ceph-vrf) |
+
+------------------------------
+## Ubuntu Host FRR Configuration (/etc/frr/frr.conf)
+This configuration runs natively on the host OS. It leverages BGP Unnumbered interfaces (enp1s0f0, enp1s0f1) connected to your multi-homed SONiC Leaf switches. It guarantees that etcd communication scales cleanly while preventing leakage of administrative networks via exact Prefix-Lists and Route-Maps.
+
+# /etc/frr/frr.conf
+frr version 10.0
+frr defaults traditional
+hostname ubuntu-node-01
+log syslog informational
+!
+ip vrf mgmt-vrf
+  vni 1000
+exit
+!
+ip vrf ceph-storage
+  vni 2000
+exit
+!
+# ==========================================
+# PREFIX LISTS (Edge Safeguards)
+# ==========================================
+# Only permit local Node Loopbacks (/32s) to bootstrap the fabric
+ip prefix-list PL-ALLOWED-HOST-ROUTES permit 10.254.0.0/24 ge 32 le 32
+# Permit External L3 VIPs advertised out to the fabric
+ip prefix-list PL-ALLOWED-METALLB-L3 permit 198.51.100.0/24 le 32
+!
+# Explicitly block leaks (Optional safety layer, maps drop implicitly)
+ip prefix-list PL-BLOCKED-NETWORKS deny 192.168.100.0/24
+ip prefix-list PL-BLOCKED-METALLB-L2 deny 192.168.200.0/24
+ip prefix-list PL-BLOCKED-CEPH deny 172.16.10.0/24
+!
+# ==========================================
+# ROUTE MAPS
+# ==========================================
+route-map RM-FABRIC-OUT permit 10
+  match ip address prefix-list PL-ALLOWED-HOST-ROUTES
+exit
+!
+route-map RM-FABRIC-OUT permit 20
+  match ip address prefix-list PL-ALLOWED-METALLB-L3
+exit
+!
+# Implicit Deny catch-all drops Management, L2 Pools, and Ceph Replications
+route-map RM-FABRIC-OUT deny 100
+exit
+!
+# Allow all standard infrastructure routes down from SONiC switches (Spine/Leaf routes)
+route-map RM-FABRIC-IN permit 10
+exit
+!
+# ==========================================
+# DEFAULT CORE VRF (Fabric Datapath)
+# ==========================================
+router bgp 65000
+  bgp router-id 10.254.0.11
+  no bgp default ipv4-unicast
+  bgp bestpath as-path multipath-relax
+  
+  # Multihomed Peer Group to SONiC Leafs
+  neighbor LEAF-FABRIC peer-group
+  neighbor LEAF-FABRIC remote-as external
+  neighbor LEAF-FABRIC bfd
+  neighbor LEAF-FABRIC capability extended-nexthop
+  
+  # Bind BGP Unnumbered physical interfaces
+  neighbor enp1s0f0 interface peer-group LEAF-FABRIC
+  neighbor enp1s0f1 interface peer-group LEAF-FABRIC
+  
+  address-family ipv4 unicast
+    # Redeposit the Node's Loopback into the fabric
+    network 10.254.0.11/32
+    
+    # Redistribute K8s / MetalLB prefixes safely using the route-map
+    neighbor LEAF-FABRIC activate
+    neighbor LEAF-FABRIC route-map RM-FABRIC-IN in
+    neighbor LEAF-FABRIC route-map RM-FABRIC-OUT out
+    maximum-paths 64
+  exit-address-family
+exit
+!
+# ==========================================
+# STORAGE VRF (Isolated East-West Replication)
+# ==========================================
+router bgp 65000 vrf ceph-storage
+  bgp router-id 10.254.0.11
+  no bgp default ipv4-unicast
+  
+  # Dedicated replication links or sub-interfaces 
+  neighbor enp2s0f0 interface remote-as external
+  neighbor enp2s0f1 interface remote-as external
+  
+  address-family ipv4 unicast
+    network 172.16.10.11/32
+    neighbor enp2s0f0 activate
+    neighbor enp2s0f1 activate
+    maximum-paths 2
+  exit-address-family
+exit
+
+------------------------------
+## OVN-BGP-Agent: Tenant Security & L3 Fabric Isolation
+When OpenStack on Hybrid (OSH) introduces multi-tenant networks on top of this Kubernetes deployment, tenant traffic isolation is preserved by mapping OpenStack Virtual Routing and Forwarding (VRFs) into isolated hardware execution contexts.
+
+       [ OpenStack Tenant Space ]
+    Tenant A (VRF 100)    Tenant B (VRF 200)
+
+           |                     |
+  =========================================
+         [  OVN-BGP-AGENT (Driver) ]
+  Dynamically detects OpenStack L3 EVPN Virtual Ports
+  =========================================
+
+           |                     |
+     (Leaking Prevented via VRF EVPN RD/RT)
+           v                     v
+   [ FRR Engine ]  --->  [ SONiC Leaf Switches ]
+
+## How OVN-BGP-Agent Secures and Isolates Tenant Traffic
+
+   1. Dynamic EVPN Mapping (No Static Overhead): Instead of manually managing multi-tenant route-maps, ovn-bgp-agent runs as a background system daemon that watches the local OVN Southbound Database. The moment an OpenStack router or provider network is provisioned, the agent dynamically triggers FRR to instantiate a dedicated EVPN VRF with structured Route Distinguishers (RD) and Route Targets (RT).
+   2. Infrastructure/Tenant Boundary Separation: The base infrastructure fabric (hosting etcd, host administration, and the Ceph cluster storage layout) operates completely un-aware of Tenant address ranges. Tenant workloads use overlapping IP schemas (e.g., two tenants using 10.0.0.0/24) without collision, because ovn-bgp-agent enforces strict Layer 3 boundary containment inside distinct internal kernel VRF tables.
+   3. Leaking Defended via BGP Address Families: The agent routes tenant interfaces explicitly via address-family l2vpn evpn. Because the underlying native host configuration (detailed above) strictly accepts/transmits explicitly mapped subnets through its address-family ipv4 unicast policy, Management networks, K8s infrastructure internals, and Tenant data lanes remain structurally incapable of crossing planes.
+
+------------------------------
+## Immediate Verification Steps
+To ensure your configurations are executing exactly as intended without route pollution, verify the boundaries from the host bash using these commands:
+
+* Validate that only permitted loopbacks and VIPs escape the host:
+
+vtysh -c "show ip bgp neighbor LEAF-FABRIC advertised-routes"
+
+* Confirm that management networks and L2 pools are missing from the Global Fabric Table:
+
+vtysh -c "show ip route"
+
+* Confirm active isolation tables for Ceph storage and Management components:
+
+vtysh -c "show ip route vrf ceph-storage"
+vtysh -c "show ip route vrf mgmt-vrf"
+
+
+Would you like to build out the Ansible task structure to automatically deploy this specific FRR snippet during the Kubespray pre-task sequence, or should we refine the SONiC Leaf-side BGP configurations to match these parameters?
+
+
