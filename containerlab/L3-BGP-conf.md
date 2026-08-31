@@ -4,18 +4,40 @@ Which network subnet etcd uses to communicate for  building a quoram during k8 e
 
   In a leaf-spine architecture using BGP Routed-to-Host (where L3 extends all the way to the compute nodes), etcd uses the Node Loopback subnet to communicate and build its quorum.Because etcd requires absolute stability, strict ordering, and high availability, binding it to a physical interface (which can go down) is a major anti-pattern. Instead, it binds to a logical Loopback interface (lo) on each host. These Loopback IPs are advertised into the L3 BGP Unnumbered CLOS fabric, ensuring that even if one network link or top-of-rack (ToR/Leaf) switch fails, traffic immediately reroutes over an alternate path without breaking the etcd quorum.The air-gapped L2 Management subnet is completely bypassed for cluster control-plane traffic and is strictly reserved for out-of-band (OOB) administration (e.g., SSH, IPMI/iDRAC).
 
-1. Network Subnet Architecture & Example IPsTo establish this architecture, the network is carved into distinct functional subnets:Subnet FunctionExample CIDR / AllocationDescriptionInfrastructure Loopbacks (L3)10.0.0.0/24Used for Spines, Leafs, and Kubernetes Nodes.Kubernetes Pod Network10.244.0.0/16Internal container-to-container routing.Kubernetes Service Network10.96.0.0/16Virtual IPs for internal load balancing.Air-Gapped L2 Management192.168.10.0/24Isolated OOB management network (No BGP).Individual Node IP Assignments (Example)Spine-01 Loopback (lo): 10.0.0.1/32Leaf-01 Loopback (lo): 10.0.0.11/32K8s-Node-01 (Master/etcd-01) Loopback (lo): 10.0.0.101/32K8s-Node-02 (Master/etcd-02) Loopback (lo): 10.0.0.102/32K8s-Node-03 (Master/etcd-03) Loopback (lo): 10.0.0.103/322.
+1. Network Subnet Architecture & Example IPs. To establish this architecture, the network is carved into distinct functional subnets:
+
+   Subnet Function Example CIDR / Allocation:
+    Description: Infrastructure Loopbacks (L3) 10.0.0.0/24 Used for Spines, Leafs, and Kubernetes Nodes.
+      Individual Node IP Assignments (Example) :
+   Spine-01 Loopback (lo): 10.0.0.1/32
+   Leaf-01 Loopback (lo): 10.0.0.11/32
+   K8s-Node-01 (Master/etcd-01) Loopback (lo): 10.0.0.101/32
+   K8s-Node-02 (Master/etcd-02) Loopback (lo): 10.0.0.102/32
+   K8s-Node-03 (Master/etcd-03) Loopback (lo): 10.0.0.103/322.
+   
+   Kubernetes Pod Network 10.244.0.0/16 Internal container-to-container routing.
+   Kubernetes Service Network 10.96.0.0/16 Virtual IPs for internal load balancing.
+   Air-Gapped L2 Management 192.168.10.0/24 Isolated OOB management network (No BGP).
+
 
 Leaf-Spine Communication & The Route LifecycleHere is exactly how these subnets "come to life" and how etcd traffic moves through the fabric:
 
-A. Bringing the Network to Life (Bootstrapping)Link-Local Peering: Layer 3 interfaces between Leafs and Spines are configured with BGP Unnumbered. Instead of assigning static IPv4 addresses to the point-to-point links, routers use IPv6 Router Advertisements (ICMPv6) to discover neighbors and exchange IPv4 prefixes via Extended Next-Hop Encoding (RFC 8950).Host-to-Leaf Peering: Each Kubernetes node runs a local routing daemon (like FRR or a CNI tool like Cilium/Calico).
+A. Bringing the Network to Life (Bootstrapping)Link-Local Peering: 
+Layer 3 interfaces between Leafs and Spines are configured with BGP Unnumbered. Instead of assigning static IPv4 addresses to the point-to-point links, routers use IPv6 Router Advertisements (ICMPv6) to discover neighbors and exchange IPv4 prefixes via Extended Next-Hop Encoding (RFC 8950). 
 
-It establishes an eBGP unnumbered session over its dual physical links (NIC-1 to Leaf-1, NIC-2 to Leaf-2).Prefix Advertisement: The node advertises its local /32 Loopback IP (10.0.0.101/32) up to the Leafs.
+Host-to-Leaf Peering: Each Kubernetes node runs a local routing daemon (like FRR or a CNI tool like Cilium/Calico).
+
+It establishes an eBGP unnumbered session over its dual physical links (NIC-1 to Leaf-1, NIC-2 to Leaf-2). 
+Prefix Advertisement: 
+The node advertises its local /32 Loopback IP (10.0.0.101/32) up to the Leafs.
 
 The Leafs advertise it to the Spines. Within seconds, every device in the CLOS fabric knows exactly how to route to 10.0.0.101.
 
-B. The etcd Quorum Traffic PathWhen etcd-01 (10.0.0.101) sends a Raft consensus heartbeat to etcd-02 (10.0.0.102), the packet follows this path:[Node-01: 10.0.0.101]
+B. The etcd Quorum Traffic Path
+When etcd-01 (10.0.0.101) sends a Raft consensus heartbeat to etcd-02 (10.0.0.102), the packet follows this path:
 ```
+[Node-01: 10.0.0.101]
+
        │ (Equal-Cost Multi-Pathing / ECMP via BGP Unnumbered)
        ▼
 [Leaf-01 or Leaf-02]
@@ -28,11 +50,11 @@ B. The etcd Quorum Traffic PathWhen etcd-01 (10.0.0.101) sends a Raft consensus 
        │
        ▼
 [Node-02: 10.0.0.102]
-
+```
 <img width="953" height="812" alt="image" src="https://github.com/user-attachments/assets/f21aed9c-387b-42b8-b514-ea953e833672" />
 <img width="953" height="812" alt="image" src="https://github.com/user-attachments/assets/09639192-3f27-42be-83f2-dd45aa469f82" />
 
-  
+ ``` 
 3. Route-Map & BGP ConfigurationTo prevent configuration errors and secure the fabric, Route-Maps are heavily utilized to control exactly what routes enter and exit the network layers.On the Leaf Switch (FRR / Network OS Example)The Leaf must accept /32 host routes from the compute nodes but reject unauthorized prefixes (like a rogue node trying to advertise a spoofed service IP).text! Define a prefix-list allowing only host loopbacks and pod networks
 ip prefix-list ALLOWED-HOST-PREFIXES permit 10.0.0.0/24 ge 32 le 32
 ip prefix-list ALLOWED-HOST-PREFIXES permit 10.244.0.0/16 ge 24 le 24
