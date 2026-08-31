@@ -5,7 +5,7 @@ Which network subnet etcd uses to communicate for  building a quoram during k8 e
   In a leaf-spine architecture using BGP Routed-to-Host (where L3 extends all the way to the compute nodes), etcd uses the Node Loopback subnet to communicate and build its quorum.Because etcd requires absolute stability, strict ordering, and high availability, binding it to a physical interface (which can go down) is a major anti-pattern. Instead, it binds to a logical Loopback interface (lo) on each host. These Loopback IPs are advertised into the L3 BGP Unnumbered CLOS fabric, ensuring that even if one network link or top-of-rack (ToR/Leaf) switch fails, traffic immediately reroutes over an alternate path without breaking the etcd quorum.The air-gapped L2 Management subnet is completely bypassed for cluster control-plane traffic and is strictly reserved for out-of-band (OOB) administration (e.g., SSH, IPMI/iDRAC).
 
 1. Network Subnet Architecture & Example IPs. To establish this architecture, the network is carved into distinct functional subnets:
-
+```text
    Subnet Function Example CIDR / Allocation:
     Description: Infrastructure Loopbacks (L3) 10.0.0.0/24 Used for Spines, Leafs, and Kubernetes Nodes.
       Individual Node IP Assignments (Example) :
@@ -18,7 +18,7 @@ Which network subnet etcd uses to communicate for  building a quoram during k8 e
    Kubernetes Pod Network 10.244.0.0/16 Internal container-to-container routing.
    Kubernetes Service Network 10.96.0.0/16 Virtual IPs for internal load balancing.
    Air-Gapped L2 Management 192.168.10.0/24 Isolated OOB management network (No BGP).
-
+```
 
 Leaf-Spine Communication & The Route LifecycleHere is exactly how these subnets "come to life" and how etcd traffic moves through the fabric:
 
@@ -27,7 +27,8 @@ Layer 3 interfaces between Leafs and Spines are configured with BGP Unnumbered. 
 
 Host-to-Leaf Peering: Each Kubernetes node runs a local routing daemon (like FRR or a CNI tool like Cilium/Calico).
 
-It establishes an eBGP unnumbered session over its dual physical links (NIC-1 to Leaf-1, NIC-2 to Leaf-2). 
+It establishes an eBGP unnumbered session over its dual physical links (NIC-1 to Leaf-1, NIC-2 to Leaf-2).
+
 Prefix Advertisement: 
 The node advertises its local /32 Loopback IP (10.0.0.101/32) up to the Leafs.
 
