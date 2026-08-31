@@ -198,9 +198,11 @@ Would you like to examine a sysctl and interface configuration layout for the Ub
 ## 1. The Architectural Truth
 If vtysh shows a B* (BGP Selected/Best Route) inside the FRR routing table across your hosts, leafs, and spines, your control plane is 100% healthy.
 The breakdown is strictly in the data plane or the OS kernel network stack. The route is visible to the software, but the actual network packets cannot cross the bridge between the kernel (Ubuntu) or the ASIC (SONiC) to the physical wires.
+
 ------------------------------
 ## 2. Ubuntu Host System Configuration Layout
 To fix the most common Linux kernel drops when doing BGP-to-Host with asymmetric routing (ECMP), apply this configuration template to all Kubernetes Nodes.
+
 ## System Controls (/etc/sysctl.d/60-bgp-host.conf)
 Create this file to change the Linux kernel's handling of multi-pathed BGP networks:
 
@@ -276,6 +278,7 @@ Since SONiC shows a perfect B* route inside its internal FRR instance, you must 
 
 # Check if SONiC OS sees it system-wide
 sonic-cli -c "show ip route"
+
 # For Broadcom ASIC switches, check the raw hardware table directly
 bcmcmd "l3 defip show" | grep 10.0.0.10
 
@@ -287,16 +290,17 @@ If the packet leaves Node 1 and passes the switches, it may be arriving at Node 
 * Run on Node 2 while pinging from Node 1:
 
 sudo tcpdump -nni any host 10.0.0.102
-
+```
 * Analyze: If you see incoming ICMP echo requests appearing on the interface but no echo reply leaves the server, the Ubuntu kernel is discarding it. This confirms a loose Reverse Path Forwarding (rp_filter) failure or an aggressive CNI firewall drop.
-```
+
 ------------------------------
-```
+
 ## 4. How to Bind etcd Instances to the Loopback IP
 To guarantee etcd uses the stable loopback ip (10.0.0.102) for cluster operations, you must alter its startup flags.
+
 ## For Custom/Binary Systemd installations (/etc/systemd/system/etcd.service)
 Modify the environment variables or execution arguments to enforce loopback clustering:
-
+```
 [Service]
 ExecStart=/usr/local/bin/etcd \
   --name etcd-node-2 \
@@ -326,8 +330,9 @@ spec:
 ```
 Did Step A or Step B isolate where the route disappears? If you see errors inside the SONiC logs, share them and we can write a specific patch or switch profile workaround.
 
-For the rp-filter setup, is it only for Ubuntu K8s Nodes issue?? How to make sure SONiC Leaves and Spines forwarding the packets appropriately and not filtering/dropping??
-```
+# For the rp-filter setup, is it only for Ubuntu K8s Nodes issue?? How to make sure SONiC Leaves and Spines forwarding the packets appropriately and not filtering/dropping??
+
+
   ## 1. Is rp_filter Only an Ubuntu / K8s Node Issue?
 No. rp_filter (Reverse Path Forwarding) is a native feature of the Linux kernel network stack. Because Enterprise SONiC is a Debian-based Linux operating system under the hood, its control plane (FRR/management) is subject to the same rp_filter kernel rules. [1, 2, 3] 
 The primary difference lies in how packets are handled:
@@ -337,10 +342,12 @@ The primary difference lies in how packets are handled:
 * SONiC Switches: Offload converged routes to a hardware ASIC (silicon). The ASIC generally bypasses standard Linux kernel rp_filter for line-rate data forwarding, relying instead on its own hardware-based source MAC/IP validation tables. However, if a packet is punting to the switch CPU (e.g., icmp, tracert, or management traffic), the switch kernel can drop it. [3, 4] 
 * 
 
-Additionally, standard K8s architectures cause extreme asymmetric patterns via CNIs (e.g., Cilium, Calico). A multi-homed BGP setup naturally triggers strict rp_filter drops on any Linux machine. [5, 6] 
+Additionally, standard K8s architectures cause extreme asymmetric patterns via CNIs (e.g., Cilium, Calico). A multi-homed BGP setup naturally triggers strict rp_filter drops on any Linux machine. [5, 6]
+
 ------------------------------
 ## 2. Ensuring SONiC Leafs and Spines are Forwarding Correctly
-Since your control plane shows a healthy B* across the fabric, you need to verify that SONiC is programming its hardware correctly and not dropping packets silently in the switching pipeline. [3] 
+Since your control plane shows a healthy B* across the fabric, you need to verify that SONiC is programming its hardware correctly and not dropping packets silently in the switching pipeline. [3]
+
 Follow this progressive validation approach on your switches:
 ## Step A: Verify Route Hardware Ingestion (Orchagent)
 The most common point of failure in BGP Unnumbered architectures with SONiC is orchagent failing to push the learned IPv4 prefix over the IPv6 link-local next-hop to the ASIC.
@@ -349,6 +356,7 @@ The most common point of failure in BGP Unnumbered architectures with SONiC is o
 * Run this command on the Leaf/Spine CLI:
 
 # Check if the platform's system-level hardware state has the route
+
 show ip route
 
 * If the route exists in show ip bgp but does not exist in show ip route, the switch kernel has rejected the configuration. Ensure Extended Next-Hop Encoding (ENHE) is explicitly active on the switch BGP interfaces:
@@ -396,7 +404,7 @@ If you suspect the switch is eating the packet, you can mirror the physical inte
 config mirror_session add etcd_trace <destination_interface> <source_interface> rx
 
 * 
-```
+
 If the packet arrives at the Leaf interface (rx) but never appears on the uplink to the Spine, you have confirmed that the issue lies strictly within that particular SONiC switch's internal forwarding logic, pointing back to an ASIC routing table or hardware ACL error. [3] 
 Are you seeing increasing RX_DRP numbers on any of your Leaf switches when running show interfaces counters drop, or is the dropped count completely flat? [3] 
 
@@ -408,12 +416,14 @@ Are you seeing increasing RX_DRP numbers on any of your Leaf switches when runni
 [6] [https://tldp.org](https://tldp.org/HOWTO/Adv-Routing-HOWTO/lartc.kernel.rpf.html)
 
 
-```
-Is there any '/etc/sysctl.d/60-bgp-host.conf' file to be tuned in SONiC Leaf/Spine switches??
+
+# Is there any '/etc/sysctl.d/60-bgp-host.conf' file to be tuned in SONiC Leaf/Spine switches??
 
 No, you should not configure or tune an /etc/sysctl.d/60-bgp-host.conf file on your SONiC Leaf or Spine switches. [1] 
 Tuning sysctl properties like rp_filter directly in the underlying Debian base OS of a network switch is an anti-pattern.
+
 The reasons for bypassing sysctl on network switches, along with how routing is handled, include the following details:
+
 ## 1. Data Plane vs. Control Plane Isolation
 A network OS like SONiC acts as an orchestrator. [2] 
 
@@ -443,7 +453,7 @@ interface Ethernet 0
 ## B. Ensuring ECMP Multi-Pathing is Enabled in the ASIC
 If etcd traffic is black-holing across your multiple columns of Leafs, it is often because the Leaf or Spine has learned the routes in FRR (B*), but the ASIC hasn't enabled ECMP Relax mode. This prevents the switch from installing multiple paths into the hardware forwarding table when the Autonomous System (AS) numbers vary across your nodes. [6] 
 Fix this by ensuring your switch’s BGP configuration explicitly allows asymmetric multi-pathing:
-
+```
 ! Run inside 'sudo vtysh' on SONiC Spines and Leafs
 router bgp 65011
  bgp bestpath as-path multipath-relax
@@ -463,14 +473,14 @@ If the hosts still cannot ping each other, let's look at the output of show ip r
 [6] [https://infohub.delltechnologies.com](https://infohub.delltechnologies.com/en-us/l/dell-technologies-enterprise-sonic-for-powerflex-Dao-Ru-gaido/leaf-switch-configuration-81/9/)
 
 
-  What Prexix-List/Route map to be in running in K8s Nodes Ubuntu FRR to block mgmtblock subnet ip to be broadcasted to leafs and spines?
+ # What Prexix-List/Route map to be in running in K8s Nodes Ubuntu FRR to block mgmt block subnet ip to be broadcasted to leafs and spines?
 
   To completely block your air-gapped L2 Management subnet (e.g., 192.168.10.0/24) from being accidentally advertised or leaked into the L3 BGP Unnumbered CLOS fabric, you must apply a Prefix-List and Route-Map directly to the outbound (out) direction of your BGP neighbor sessions within FRR on the Ubuntu K8s nodes.
 ------------------------------
-```
+
 ## 1. The FRR Configuration (/etc/frr/frr.conf)
 Add the following prefix-list and route-map architecture to the FRR daemon configuration on your Ubuntu hosts. This configuration explicitly denies the management block while allowing your host loopbacks and pod networks to pass through.
-
+```
 ! ----------------------------------------------------
 ! 1. DEFINE PREFIX LISTS
 ! ----------------------------------------------------
@@ -518,12 +528,14 @@ router bgp 65101
   ! Apply the outbound filter map to the peer group
   neighbor PEER-TO-LEAFS route-map RM-OUTBOUND-TO-FABRIC out
  exit-address-family
-
+```
 ------------------------------
 ## 2. Why "Redistribute Connected" Requires This Safeguard
+
 When building a routed-to-host model, administrators frequently use the redistribute connected flag under the BGP address family. This dynamically grabs any interface route on the Ubuntu host and hands it to FRR to advertise upstream.
 Because your air-gapped management network is configured on a secondary physical network card (or sub-interface) on that exact same Ubuntu host, redistribute connected will automatically grab 192.168.10.0/24 and try to send it to Leaf-3 and Leaf-4.
 Applying the route-map ... out rule acts as a strict firewall at the boundary of your server's routing engine, guaranteeing that the management plane never bleeds into the L3 CLOS fabric.
+
 ------------------------------
 ## 3. Verification Commands
 After applying the configuration and restarting FRR (sudo systemctl restart frr), you can verify that the filters are working properly using vtysh:
@@ -538,17 +550,20 @@ Verification: You should see your /32 Loopback and pod subnets listed here, but 
 sudo vtysh -c "show route-map RM-OUTBOUND-TO-FABRIC"
 
 Verification: Look for the policy execution counters. You should see active packet/route match increments on your deny and permit clauses, proving the policy engine is evaluating prefixes.
-```
+
 Do you also need to implement an inbound (in) route-map on the Ubuntu hosts to prevent the Leaf switches from accidentally pushing unwanted global or infrastructure routes back down into your Kubernetes nodes?
 
 
-```
-  Yes please and assuming mgmt-ip is attached to enp1s0, is there any risk pod and fabric service and loopback subnets leak through that?? Anyway to prevent that as well in the ubuntu FRR making leaves the only GW for everything other than the mgmt ip block?/
+
+  # Yes please and assuming mgmt-ip is attached to enp1s0, is there any risk pod and fabric service and loopback subnets leak through that?? Anyway to prevent that as well in the ubuntu FRR making leaves the only GW for everything other than the mgmt ip block?/
 
   ## 1. The Real Risk of Management Interface Leaking
 Yes, there is a major asymmetric routing and traffic leakage risk. Because your management IP is attached to enp1s0, it exists in the main Linux kernel routing table along with your BGP fabric interfaces (enp3s0f0, enp3s0f1).
+
 If a pod or internal Kubernetes service tries to reach a destination that isn't explicitly defined in the BGP-learned routes, the Linux kernel will evaluate all interfaces. If your BGP sessions briefly flap or a route goes missing, traffic can silently failover and start routing out of the enp1s0 management card.
+
 Even worse, if you use a wide catch-all command like redistribute connected in FRR without strict directional maps, FRR might attempt to tell the network that your management gateway can reach your Pod networks, completely breaking your air-gap isolation.
+
 ------------------------------
 ## 2. Comprehensive Ubuntu FRR Security Profile
 To permanently isolate both sides, you need a bidirectional setup:
@@ -556,7 +571,7 @@ To permanently isolate both sides, you need a bidirectional setup:
    1. An Inbound Route-Map ensuring the host accepts only a default route or infrastructure loopbacks from the Leafs, making the Leafs the sole gateway for everything.
    2. An Outbound Route-Map strictly confining what routes leave the host.
    3. Linux Kernel Routing Adjustments to prevent the management gateway from taking over general traffic.
-
+```
 Update your /etc/frr/frr.conf with this complete architecture:
 
 ! ----------------------------------------------------
@@ -609,12 +624,13 @@ router bgp 65101
   neighbor PEER-TO-LEAFS route-map RM-INBOUND-FROM-FABRIC in
   neighbor PEER-TO-LEAFS route-map RM-OUTBOUND-TO-FABRIC out
  exit-address-family
-
+```
 ------------------------------
 ## 3. Making Leafs the Only Gateway (Fixing the Linux Kernel)
 FRR handles what BGP sees, but the Linux Kernel handles where standard server packets go. If your management interface (enp1s0) receives a default gateway via DHCP, it creates a conflicting 0.0.0.0/0 route in your main routing table.
-To force the server to only use enp1s0 for its own local subnet and use the Leafs for everything else, update your Netplan configuration (/etc/netplan/01-netcfg.yaml):
 
+To force the server to only use enp1s0 for its own local subnet and use the Leafs for everything else, update your Netplan configuration (/etc/netplan/01-netcfg.yaml):
+```
 network:
   version: 2
   renderer: networkd
@@ -638,7 +654,7 @@ network:
       dhcp4: no
       accept-ra: true
       link-local: [ ipv6 ]
-
+```
 ## How this behaves in production:
 
 * To reach another management node (192.168.10.X): The kernel looks at enp1s0, sees a direct layer-2 match, and sends it directly out of the management interface.
@@ -647,7 +663,7 @@ network:
 ------------------------------
 ## 4. Verification
 After applying these changes, check the Linux Kernel routing table directly to confirm isolation:
-
+```
 ip route show
 
 Expected output signature:
@@ -657,29 +673,34 @@ default proto bgp metric 20
     nexthop via inet6 fe80::leaf4 dev enp3s0f1 weight 1
 10.0.0.103 proto bgp metric 20 ...
 192.168.10.0/24 dev enp1s0 proto kernel scope link src 192.168.10.102
-
+```
 Notice that there is no default via 192.168.10.1 listing. The Leafs are mathematically the only exit path for non-local traffic.
 Would you like to verify if your Kubernetes CNI (like Calico or Cilium) requires an extra configuration step to make sure it respects this strict host routing isolation, or are you managing pod routing strictly inside FRR?
 
 
-```
-  Can we be more safe isolating enp1s0 and mgmt subnet being part of mgmt-vrf as not using main table?? If it strengthens the separation, how and how to implement?
-```
+
+  # Can we be more safe isolating enp1s0 and mgmt subnet being part of mgmt-vrf as not using main table?? If it strengthens the separation, how and how to implement?
+
   Yes, using a Management VRF (Virtual Routing and Forwarding) significantly strengthens your network separation. It is the gold standard for securing air-gapped infrastructure.
 By moving enp1s0 into a dedicated management VRF, you completely isolate it from the main Linux kernel routing table. Linux effectively treats the VRF as a completely separate, virtual router inside the operating system.
+
 ------------------------------
 ## How VRF Strengthens Separation
 
 * Complete Routing Table Segregation: The main routing table (where your BGP CLOS fabric, Pod networks, and etcd loopbacks live) will contain absolutely no knowledge of the 192.168.10.0/24 subnet.
+* 
 * Zero Leakage Risk: Because the routing tables are completely partitioned, commands like redistribute connected inside your BGP configuration will only look at the main routing table. It becomes mathematically impossible for FRR to accidentally leak or advertise your management IP block to the Leaf and Spine switches.
+* 
 * Elimination of Default Route Conflicts: The management network can have its own independent default gateway (e.g., to reach a centralized administrative bastion or utility server) without ever conflicting with the default ECMP fabric route learned via BGP.
-```
+* 
+
 ------------------------------
 ## Implementation Guide on Ubuntu
 To implement this, you will configure a VRF interface in Linux, bind your physical management interface to it, and tell the system to handle routing independently.
+
 ## Step 1: Configure Netplan with VRF support (/etc/netplan/01-netcfg.yaml)
 Modern Netplan supports native VRF creation. Update your configuration to define a mgmt-vrf and bind enp1s0 to it:
-
+```
 network:
   version: 2
   renderer: networkd
@@ -717,21 +738,24 @@ network:
       addresses:
         - 10.0.0.102/32
 
-Apply the configuration changes: sudo netplan apply
+Apply the configuration changes:
+ sudo netplan apply
+```
 ## Step 2: Operating Within the Management VRF
 Because your management interface is no longer in the global space, standard administrative commands (like SSH, curl, or apt updates running over the management network) need to know which table to use.
 
-* To run a command explicitly out of the management network: Use ip vrf exec:
+* To run a command explicitly out of the management network:
+  Use ip vrf exec:
 
 sudo ip vrf exec mgmt-vrf ping 192.168.10.1
 
 * Inbound Administrative Access (SSH): The Linux kernel is smart enough to handle inbound connections natively. If an administrator SSHs into 192.168.10.102, Linux automatically forces the reply traffic back out through the mgmt-vrf routing table.
-```
+
 ------------------------------
-```
+
 ## Verification of the Isolation
 Once applied, verify that the separation is absolute by looking at the split tables.
-
+```
    1. Check the Main Routing Table (Fabric & K8s space):
    
    ip route show
@@ -746,25 +770,27 @@ Once applied, verify that the separation is absolute by looking at the split tab
    default via 192.168.10.1 dev enp1s0
    192.168.10.0/24 dev enp1s0 proto kernel scope link src 192.168.10.102
    
-   
+```   
 Because your management infrastructure is locked inside Table 1000, your FRR application on the host—which defaults to looking only at the main routing table—has zero exposure to it. Your air-gap is securely enforced at the operating system kernel layer.
 Now that your management plane is securely isolated into a VRF, would you like to review how to ensure system daemons (like sshd or NTP) explicitly bind to this mgmt-vrf, or are you ready to test your etcd cluster connectivity?
 
 
 
-Without 'redistribute connected', is there any other mechanisms to broadcast loopbacl ips of the whole leaf/spine fabric and eventually heading towards exit-routers for internet connectivity??
+# Without 'redistribute connected', is there any other mechanisms to broadcast loopback ips of the whole leaf/spine fabric and eventually heading towards exit-routers for internet connectivity??
 
 Yes. Relying on redistribute connected is generally discouraged in production carrier-grade networks because it lacks granular control.
 Without using redistribution, you can broadcast your loopbacks and control external internet egress across your leaf/spine fabric to your exit routers using three foundational architectural mechanisms.
-```
+
 ------------------------------
-```
+
 ## 1. The network Statement (Explicit Prefix Injection)
 The most deterministic and secure way to advertise a loopback interface into BGP is by using the network command under the BGP address-family. This injects only the explicitly matching subnet into the BGP table, completely eliminating the risk of leaking other attached interfaces (like management ports).
+
 ## How it works:
 The BGP daemon looks at the Linux kernel routing table. If an exact match for the defined subnet exists (such as a /32 on your loopback device), BGP begins advertising it upstream to the Leafs.
-## Ubuntu / Host FRR Implementation (/etc/frr/frr.conf):
 
+## Ubuntu / Host FRR Implementation (/etc/frr/frr.conf):
+```
 router bgp 65102
  bgp router-id 10.0.0.102
  no bgp default ipv4-unicast
@@ -778,7 +804,7 @@ router bgp 65102
  exit-address-family
 ```
 ------------------------------
-```
+
 ## 2. Upstream Default Route Origination (For Internet Egress)
 To establish internet connectivity through your exit routers without flooding your Kubernetes nodes with a massive global internet routing table (which would overwhelm host memory), you use Default Route Origination.
 The traffic flow moves symmetrically down the fabric, while the default route propagates upwards:
@@ -787,15 +813,16 @@ The traffic flow moves symmetrically down the fabric, while the default route pr
 
 ## How it is configured on the Exit Routers / Spines:
 Instead of your hosts searching for the internet, your exit routers generate a default gateway path and announce it downward using the default-originate command.
-
+```
 ! Configured on Exit Routers facing the Spines (and Spines facing the Leafs)
 router bgp 65000
  address-family ipv4 unicast
   ! Conditionally inject a default route down to the fabric neighbors
   neighbor PEER-TO-SPINES default-originate
  exit-address-family
-
+```
 As this flows down the L3 BGP Unnumbered CLOS fabric, every switch and host automatically installs 0.0.0.0/0 pointing up to its respective upstream neighbors via Equal-Cost Multi-Pathing (ECMP).
+
 ------------------------------
 ## 3. EVPN VXLAN (The Overlay Alternative)
 If you want to completely decouple your Kubernetes control plane and pod traffic from the physical infrastructure routing tables, you can implement an EVPN VXLAN Overlay.
@@ -807,7 +834,7 @@ If you want to completely decouple your Kubernetes control plane and pod traffic
 ------------------------------
 ## Summary of the Production Workflow
 By combining explicit network statements with default routing, your fabric operates safely and deterministically:
-
+```
 | Mechanism | Component | Purpose |
 |---|---|---|
 | network 10.0.0.X/32 | Ubuntu K8s Hosts | Securely advertises individual etcd node identities to the Leafs. |
@@ -818,15 +845,18 @@ Would you like assistance in drafting the exact BGP configuration for the SONiC 
 
 
 
-  What about the Leaf/Spine loopback+internet ingress/egress GW / default Route frr setup for the same??
+  # What about the Leaf/Spine loopback+internet ingress/egress GW / default Route frr setup for the same??
 
   To complete this architecture, the SONiC Leaf and Spine switches must be configured to propagate the host loopbacks upward to your Edge/Exit routers, while simultaneously filtering and pushing a 0.0.0.0/0 default route downward to the Kubernetes nodes for internet egress.
+  
 The complete FRR configuration architecture (/etc/frr/frr.conf pattern) for the Spines, Leafs, and Edge routers ensures stable control-plane propagation and line-rate hardware forwarding.
+
 ------------------------------
-```
+
 ## 1. Edge / Exit Router FRR Setup (The Internet Gateway)
 The Edge routers act as the bridge between your external internet upstream and the internal L3 CLOS fabric. They originate the default route down to the Spines.
 
+```
 ! Edge Router Configuration
 ! Autonomous System: AS 65000
 router bgp 65000
@@ -852,10 +882,11 @@ router bgp 65000
   aggregate-address 10.0.0.0/24 summary-only
  exit-address-family
 
+```
 ------------------------------
 ## 2. Spine Switch FRR Setup
 The Spines accept the default route from the Edge, multi-path it, and pass it down to the Leafs. They also aggregate the host loopbacks coming up from the lower tiers.
-
+```
 ! Spine Switch Configuration (e.g., Spine-01)
 ! Autonomous System: AS 65001
 router bgp 65001
@@ -891,11 +922,11 @@ router bgp 65001
   ! Pass the default route down to the Leaf switches
   neighbor PEER-TO-LEAFS default-originate
  exit-address-family
-
+```
 ------------------------------
 ## 3. Leaf Switch FRR Setup (The Critical Boundary)
 The Leaf switches (Leaf-3 through Leaf-6) handle the most filtering logic. They must only accept a default route from the Spines, block the Spines from pushing any external internet tables down to the hosts, and explicitly advertise their own infrastructure components.
-
+```
 ! Leaf Switch Configuration (e.g., Leaf-3)
 ! Autonomous System: AS 65103
 ! ----------------------------------------------------
@@ -960,16 +991,17 @@ Would you like to examine how to verify ECMP hashing algorithms inside the SONiC
 
 
 
-  Leaf-Spine fabric also has 'eth0' connected to L2 mgmt-subnet block, how it is placed on frr not to leak to wards fabric as well??
+ # Leaf-Spine fabric also has 'eth0' connected to L2 mgmt-subnet block, how it is placed on frr not to leak to wards fabric as well??
 
   Just like we did on the Ubuntu Kubernetes hosts, the industry-standard way to handle eth0 on a SONiC Leaf or Spine switch is by isolating it into a native Management VRF (mgmt-vrf). [1, 2] 
 By default, modern enterprise SONiC installations automatically spawn a distinct, hardcoded namespace/routing table for eth0. This completely decouples out-of-band management traffic from the global BGP routing table handled by the FRR container. [1] 
+
 ------------------------------
-```
+
 ## 1. Enabling the Management VRF in SONiC
 In SONiC, you do not configure network interfaces directly inside FRR. Instead, you declare the system architecture inside the primary configuration database (config_db.json). [3] 
 To guarantee that eth0 is safely isolated into its own VRF and cannot leak prefixes into the L3 CLOS fabric, the configuration signature matches this profile:
-
+```
 {
     "MGMT_INTERFACE": {
         "eth0|192.168.10.31/24": {
@@ -990,11 +1022,12 @@ To guarantee that eth0 is safely isolated into its own VRF and cannot leak prefi
 * 
 ```
 ------------------------------
-```
+
 ## 2. Guarding the FRR Configuration (Belts and Suspenders)
 If your version of SONiC uses a "split" or "unified" FRR profile where you manually configure lines via vtysh, you should implement defensive Prefix-Lists as an absolute safeguard. This mimics the isolation strategy used on the Ubuntu K8s hosts to explicitly drop the management block if a route leaking error ever occurs. [4, 5] 
 ## Defensive Prefix Filtering inside SONiC FRR:
 
+```
 ! Match the management subnet to block it
 ip prefix-list PL-BLOCK-MGMT permit 192.168.10.0/24 ge 24 le 32
 
@@ -1010,8 +1043,9 @@ router bgp 65103
  address-family ipv4 unicast
   neighbor PEER-TO-SPINES route-map RM-OUTBOUND-FABRIC out
  exit-address-family
-
+```
 ------------------------------
+
 ## 3. Verifying the Switch Segregation
 Once configured, verify that the data plane and the management plane are running on entirely isolated parallel tracks on the switch:
 
@@ -1034,8 +1068,8 @@ default via 192.168.10.1 dev eth0
 [6] 
 * 
 
-With this segregation active, eth0 handles management traffic (SNMP, SSH, telemetry) exclusively inside its own sandboxed VRF table, guaranteeing that an accidental configuration leak inside the L3 BGP CLOS routing domain is structurally impossible.
 ```
+With this segregation active, eth0 handles management traffic (SNMP, SSH, telemetry) exclusively inside its own sandboxed VRF table, guaranteeing that an accidental configuration leak inside the L3 BGP CLOS routing domain is structurally impossible.
 Would you like to review how SNMP or Syslog daemons are natively directed to use the mgmt-vrf in SONiC, or are we ready to look at a traffic simulation test between the nodes?
 
 [1] [https://metal-stack.io](https://metal-stack.io/community/MEP-10-sonic-support)
@@ -1046,10 +1080,11 @@ Would you like to review how SNMP or Syslog daemons are natively directed to use
 [6] [https://www.juniper.net](https://www.juniper.net/documentation/us/en/software/apstra4.2/apstra-user-guide/topics/topic-map/agent-sonic.html)
 
 
-  If I am downloading an apt package on an ubuntu node, how would I know it is happening through fabric route or through L2 mgmt-subnet route since both has internet access via exit-router?
-```
+  # If I am downloading an apt package on an ubuntu node, how would I know it is happening through fabric route or through L2 mgmt-subnet route since both has internet access via exit-router?
+
   To know precisely which path your apt download is taking, you need to check which routing table handles the destination repository IP address, or observe the active traffic socket in real time.
 Because you configured Management VRF (mgmt-vrf) on your Ubuntu nodes, your operating system maintains two entirely separate network stacks. Unless you explicitly force a command into the management VRF, it will always default to the global (main) routing table.
+
 ------------------------------
 ## Method 1: The Quick Route Lookup (Deterministic Check)
 Before or during the download, find out where your system will send traffic destined for the Ubuntu archive servers.
@@ -1076,7 +1111,7 @@ If it is going through the management block, the output will explicitly show the
 
 91.189.91.83 dev enp1s0 table mgmt-vrf src 192.168.10.102 uid 0
 
-
+```
 ------------------------------
 ## Method 2: Check Active Connections (ss or netstat)
 While the apt install or apt download command is actively running, open a secondary terminal window and inspect the live network socket.
@@ -1117,15 +1152,18 @@ Are you planning to restrict all external internet access from the management VR
 
 
 
-  Which option is better for a data center operation?
-```
+  # Which option is better for a data center operation?
+
   For an enterprise-grade data center operation, isolating all external internet access from the Management VRF (completely dropping external internet egress/ingress for out-of-band networks) is by far the superior option.
-  ```
+ 
 While keeping dual-egress active offers minor administrative convenience, it introduces severe architectural and security risks that conflict with data center design principles.
+
 ------------------------------
+
 ## Why Strict Management Isolation is Better
 A comparison of how these two configurations impact data center stability and security outlines the clear advantages of isolation:
 
+ ```
 | Operational Dimension | Option A: Strict Isolation (Recommended) | Option B: Dual-Egress Active |
 |---|---|---|
 | Security & Attack Surface | Maximum Security. The management plane is completely invisible to the internet. | High Risk. An internet-exposed management port allows attackers to scan and exploit critical OS services (e.g., SSH, IPMI, gRPC). |
@@ -1148,16 +1186,18 @@ Instead of your Kubernetes nodes pulling apt packages or container images direct
 
 ## 3. Strict Perimeter Firewall Filtering
 At your data center's edge firewall, write a rule that explicitly blocks your management subnet block (192.168.10.0/24) from reaching any external IP address space. The only network allowed to communicate out to the web should be your L3 CLOS fabric via the Exit Router gateways.
+```
 ------------------------------
+
 ## Summary
 By strictly isolating the Management VRF, you ensure that if an application pod running on the fabric is ever compromised, the attacker cannot reach the physical management interface (eth0/enp1s0) or the underlying hypervisor OS.
 This design protects the core compute infrastructure from external threats, maintaining high availability for critical services like your etcd consensus cluster.
 Would you like to explore how to set up an internal Apt proxy configuration (/etc/apt/apt.conf.d/) so that your nodes automatically route their package requests through an internal management repository rather than hitting public servers?
-```
 
 
-  Running wireguard on Exit Router which is connected to ISP, how incoming/outgoing traffic for mgmt vs. fabric be controlled and also 'Strict Perimeter Firewall Filtering', can we implement that on Exit-Router(assuming another Ubuntu machine that has wireguard, frr etc) smartly??
-```
+
+  # Running wireguard on Exit Router which is connected to ISP, how incoming/outgoing traffic for mgmt vs. fabric be controlled and also 'Strict Perimeter Firewall Filtering', can we implement that on Exit-Router(assuming another Ubuntu machine that has wireguard, frr etc) smartly??
+
   ## The Ultimate Blueprint: Safe, Automated Zero-Trust Exit Routing
 When your Exit Router is an Ubuntu machine running WireGuard, FRR, and standard Linux firewalling (nftables or iptables), it acts as the security enforcement boundary for your entire infrastructure.
 To achieve maximum data center security, you must treat your Exit Router as a Tri-Homed Gateway with three distinct zones:
@@ -1168,12 +1208,15 @@ To achieve maximum data center security, you must treat your Exit Router as a Tr
 
 To automate this setup and prevent manual errors, you can run a Python script to generate a production-ready system configuration file.
 ------------------------------
-```
+
+
 ## 1. Generating Your Security Policies Automatically
 The script below builds a comprehensive, structured nftables firewall configuration script (/etc/nftables.conf) designed specifically for this architecture. It automatically drops any unauthorized traffic, isolates the management network from the internet, and securely terminates WireGuard traffic.
-
+```
 import os
-# Define the network topology constraintsconfig_content = """#!/usr/sbin/nftcreate -f
+# Define the network topology constraints
+config_content = """
+#!/usr/sbin/nftcreate -f
 
 flush ruleset
 
@@ -1267,11 +1310,11 @@ print("File generated successfully inside the target directory.")
 
 ## Running the script:
 To generate this script on your machine, run the following code block in your terminal:
-
+```
 python3 -c 'import os; config_content = """#!/usr/sbin/nftables -f\n\nflush ruleset\n\ntable inet filter {\n    define DEV_WAN = "enp1s0f0"\n    define DEV_WG  = "wg0"\n    define DEV_MGMT = "enp1s0"\n    define NET_MGMT = 192.168.10.0/24\n    define NET_CLOS_INFRA = 10.0.0.0/24\n    define NET_K8S_PODS = 10.244.0.0/16\n\n    chain input {\n        type filter hook input priority filter; policy drop;\n        iif "lo" accept\n        ct state established,related accept\n        ct state invalid drop\n        tcp dport 179 accept\n        iif $DEV_WAN udp dport 51820 accept\n        iif $DEV_MGMT ip saddr $NET_MGMT tcp dport 22 accept\n        iif $DEV_WG tcp dport 22 accept\n    }\n\n    chain forward {\n        type filter hook forward priority filter; policy drop;\n        ct state established,related accept\n        ct state invalid drop\n        iifname "enp3s0*" oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } accept\n        iif $DEV_WG oif $DEV_MGMT ip daddr $NET_MGMT accept\n        iif $DEV_MGMT oif $DEV_WAN counter log prefix \"AIRGAP_VIOLATION_DROP: \" drop\n    }\n\n    chain postrouting {\n        type nat hook postrouting priority srcnat; policy accept;\n        oif $DEV_WAN ip saddr { $NET_CLOS_INFRA, $NET_K8S_PODS } masquerade\n    }\n}\n"""; os.makedirs("generated", exist_ok=True); f = open("generated/nftables.conf", "w"); f.write(config_content); f.close()'
 ```
 ------------------------------
-```
+
 ## 2. How Inbound and Outbound Traffic Moves Smartly
 This configuration sets up clear, deterministic data paths through the Exit Router:
 ## A. WireGuard VPN Administration (The Secure Entrance)
@@ -1306,22 +1349,24 @@ iif $DEV_MGMT oif $DEV_WAN counter log prefix "AIRGAP_VIOLATION_DROP: " drop
 Once you load your ruleset (sudo nft -f /etc/nftables.conf), you can track your drops and rule matches in real time:
 
 sudo nft list ruleset -a
-```
+
 Look closely at the packet counters at the end of the lines. Your AIRGAP_VIOLATION_DROP metric should always read zero. If the counter increments, your firewall is doing its job—intercepting leaked packets at the perimeter before they can compromise your infrastructure.
 Would you like to write a WireGuard configuration profile (wg0.conf) matching this ruleset to make sure keys and routing definitions match smoothly, or should we trace how DNS requests behave within this split-horizon framework?
 
 
 
-  I need a visual picture of cabling for this Exit Router. Assume Two Border-Leaf switches connects to this Exit Router\s fabric side ports, also a mgmt switch which aggregates all fabric/server devices mgmt ports that includes this exit-roter mgmt port, will have one port to be connected to go out to internet. will that be connected to Exit Router's another port or directly to ISP Router port??. The exit router itself has outward port to ISP , let's say two ports connected to two ISP provider, give me visual diagram as well if possible along with any corrections needed. I am assuming, this exit router also can behave as a jump server for the management we discussed.
-```
+  # I need a visual picture of cabling for this Exit Router. Assume Two Border-Leaf switches connects to this Exit Router\s fabric side ports, also a mgmt switch which aggregates all fabric/server devices mgmt ports that includes this exit-roter mgmt port, will have one port to be connected to go out to internet. will that be connected to Exit Router's another port or directly to ISP Router port??. The exit router itself has outward port to ISP , let's say two ports connected to two ISP provider, give me visual diagram as well if possible along with any corrections needed. I am assuming, this exit router also can behave as a jump server for the management we discussed.
+
 ## 1. Architectural Correction & Core Rule
 Crucial Correction: The Management Switch must connect directly to a dedicated port on the Exit Router, not to the ISP Router.
 Connecting the Management Switch directly to the ISP router would completely bypass your security policies. This would breach the air gap, exposing critical management endpoints (like IPMI/iDRAC, switch SSH ports, and internal nodes) directly to public scanning or routing errors.
+
 By routing the Management Switch through a dedicated interface on your Exit Router, you establish a single point of enforcement. This allows the Exit Router's firewall rules and WireGuard configuration to actively inspect and drop any unauthorized traffic.
+
 ------------------------------
 ## 2. Linear Cabling & Topology Diagram
 This text-based linear block diagram outlines the physical connections and isolated network layers:
-
+```
 ========================= INTERNET BOUNDARY =========================
    [ ISP Provider 1 ]             [ ISP Provider 2 ]
            │                              │
@@ -1347,7 +1392,7 @@ This text-based linear block diagram outlines the physical connections and isola
 ------------------------------
 ## 3. Physical Interface Mapping Table
 To clarify the layout, the physical cables on your Exit Router map to these specific functional zones:
-
+```
 | Interface Name | Destination Component | Network Layer | Firewall Zone |
 |---|---|---|---|
 | enp1s0f0 | ISP Provider 1 (Primary WAN) | Public Internet | Public WAN |
@@ -1356,7 +1401,9 @@ To clarify the layout, the physical cables on your Exit Router map to these spec
 | enp3s0f1 | Border Leaf 02 (Fabric Uplink) | L3 BGP Unnumbered | Fabric Data Plane |
 | enp2s0 | Management Switch Port 1 | L2 Isolated Subnet | Management VRF (OOB) |
 
+```
 ------------------------------
+
 ## 4. Running the Dual-Purpose Exit Router & Jump Host
 Configuring the Exit Router to double as your administrative Jump Host ensures secure access to internal systems without exposing them directly to the web.
 ## Remote Administrative Access Flow
@@ -1368,23 +1415,24 @@ Configuring the Exit Router to double as your administrative Jump Host ensures s
    # SSH into a Kubernetes Node or a Spine Switch via the OOB line
    sudo ip vrf exec mgmt-vrf ssh admin@192.168.10.102
    
-   ```
+   
 This architecture keeps your management line isolated at the network perimeter. The data center infrastructure remains completely air-gapped from the public web, while remaining easily accessible to authorized engineers through a secure gateway.
 Would you like to examine the Linux systemd profile adjustments to ensure the local sshd daemon on this Exit Router listens correctly on both the incoming WireGuard adapter and the internal management interface?
 
 
 
-  yes, please and also explain how an ops-member laptop be identified in the exit router vs. a tenant who has pods running in fabric compute and accessing that pod??
-```
+  # yes, please and also explain how an ops-member laptop be identified in the exit router vs. a tenant who has pods running in fabric compute and accessing that pod??
+
   ## 1. Differentiating an Ops Member vs. a Tenant Pod User
 The Exit Router distinguishes between administrative operations traffic and standard user application traffic by evaluating the Ingress Interface, the Source IP space, and the Cryptographic Session Context.
+
 Because your architecture isolates functional components, an Ops member and a tenant user follow completely separate network paths through the router:
 
 [ Ops Laptop ]     ──(UDP 51820 / wg0 Tunnel)──► [ EXIT ROUTER ] ──(mgmt-vrf / enp2s0)─► [ L2 MGMT Switch ]
 [ Tenant User ]    ──(HTTP/S / Public WAN)   ──► [ EXIT ROUTER ] ──(main-table / enp3s0)► [ L3 CLOS Fabric ]
 
 A comparison of how the router identifies and handles these two user profiles highlights this separation:
-
+```
 | Identification vector | Ops Member (Administrator) | Tenant / Application User |
 |---|---|---|
 | Incoming Interface | wg0 (Virtual WireGuard adapter). | enp1s0f0 or enp1s0f1 (Physical ISP WAN). |
@@ -1392,10 +1440,11 @@ A comparison of how the router identifies and handles these two user profiles hi
 | Assigned Source IP | Mapped static VPN pool (e.g., 10.8.0.2). | Dynamic public IP provided by their cellular/home ISP. |
 | Routing Domain | mgmt-vrf (Table 1000). | main Routing Table. |
 | Allowed Destinement | Internal hardware management IPs (192.168.10.0/24). | Kubernetes Service Virtual IPs or NodePorts (10.96.0.0/16). |
-
+```
 ------------------------------
 ## 2. Linux Systemd SSHD Configuration (/etc/ssh/sshd_config.d/)
 To secure the Exit Router when acting as a jump host, you must restrict the SSH daemon. It should only listen on the WireGuard tunnel interface (for remote ops access) and the Internal Management Interface (for local data center triage). It must never accept connections on the public ISP interfaces.
+```
 Create a dedicated systemd override file /etc/ssh/sshd_config.d/hardened-jump.conf:
 
 # Hardened SSH configuration for the Exit Router Gateway
@@ -1421,12 +1470,12 @@ AllowGroups sysops datacenter-admins
 Since sshd defaults to binding to the global space, restarting it after modifying ListenAddress parameters to bind to specific interfaces ensures the rules apply correctly:
 
 sudo systemctl restart ssh
-
+```
 ------------------------------
 ## 3. Smart nftables Firewall Rules for Strict Traffic Identification
 To enforce this isolation at the packet layer, your nftables configuration ruleset evaluates incoming traffic strings and maps them directly to the appropriate operational zones.
 Add these specific rules to your forwarding and input logic on the Exit Router to handle both paths:
-
+```
 # Inside /etc/nftables.conf
 
 table inet filter {
@@ -1455,11 +1504,13 @@ table inet filter {
         iifname "enp1s0f*" oif "enp2s0" drop comment "Block public traffic to Management plane"
     }
 }
-
+```
 ------------------------------
+
 ## 4. Verifying Traffic Flows
 You can verify that this traffic segregation works correctly by tracing connections directly on the Exit Router:
 
+```
 * To see active Ops members connected via VPN:
 
 sudo wg show wg0
@@ -1475,12 +1526,13 @@ Would you like to draft a WireGuard client configuration file (client.conf) for 
 
 
 
-Ops member sitting at home wanting to connect to ExitRouter/Jump Host using the same enp1s0f0/1 interface through his vpn connection, isn't it, so, when wg0 comes into the picture ?? It happens once he is already into the ExitRouter I guess??
+# Ops member sitting at home wanting to connect to ExitRouter/Jump Host using the same enp1s0f0/1 interface through his vpn connection, isn't it, so, when wg0 comes into the picture ?? It happens once he is already into the ExitRouter I guess??
 
 No, the wg0 interface comes into the picture the exact moment the Ops member initiates the connection from home, before they even touch the command line or log into the Exit Router. It does not happen after they are already inside.
 Here is the exact step-by-step breakdown of how a connection flows from a home laptop to the data center network stack:
+
 ------------------------------
-```
+
 ## Step 1: Initiating the Connection from Home
 
    1. The Ops member sits at home and runs wg-quick up wg0 on their laptop.
@@ -1510,7 +1562,7 @@ Now that the encrypted tunnel is established, the actual SSH handshake occurs th
 ------------------------------
 ## Summary of Packet Flow
 The table below traces how a single packet changes form as it passes through the network stack:
-
+```
 | Location | Packet Type | Source IP | Destination IP | Interface |
 |---|---|---|---|---|
 | On the Internet | Encrypted UDP | Home Public IP | Exit Router Public IP | Passing through ISP |
@@ -1522,12 +1574,13 @@ Would you like to review the WireGuard client configuration file (wg0.conf) for 
 
 
 
-How on the otherhand tenant flow works?? Tenant will have two types of flow, one is accessing their pod http server through http REST url, the other is pod ssh for their deployment/mgmt etc.
-```
+# How on the otherhand tenant flow works?? Tenant will have two types of flow, one is accessing their pod http server through http REST url, the other is pod ssh for their deployment/mgmt etc.
+
+
 ## 1. The Two Tenant Traffic Flows
 Tenant traffic behaves entirely differently from Ops traffic. Tenants never connect to your WireGuard VPN (wg0), and they never land on your Exit Router's shell as a jump host. Instead, their traffic passes cleanly through the Exit Router's data plane directly into the L3 CLOS fabric.
 To manage these two workflows, your data center implements standard cloud-provider design patterns:
-
+```
    1. HTTP/REST Traffic: Routes through an external Kubernetes Ingress Controller or Layer 4 Load Balancer Virtual IP (VIP).
    2. Pod SSH/Management Traffic: Routes through an Application-Level Bastion (Jump Host) or a Kubernetes NodePort / LoadBalancer Service mapping to the specific pod.
 
@@ -1536,10 +1589,11 @@ A. TENANT HTTP/REST FLOW:
 
 B. TENANT POD SSH FLOW:
 [ Tenant Laptop ]  ──► [Exit Router WAN] ──► [Border Leaf] ──► [Tenant Bastion Pod] ──► [Target Pod]
-
+```
 ------------------------------
 ## 2. Deep-Dive: How the Router Evaluates the Tenant Flows
 When tenant packets hit the Exit Router's physical WAN interfaces (enp1s0f0/1), the router evaluates the Destination IP and Destination Port. It routes them using the global main routing table to your Border Leafs over the BGP Unnumbered links.
+
 ## Flow A: The HTTP REST Service URL
 
    1. The tenant makes an API request to https://tenant-app.com.
@@ -1558,8 +1612,9 @@ Tenants need shell access to their code environments, but letting them SSH direc
 
 ------------------------------
 ## 3. Hardened nftables Rules for Tenant Segregation
-To guarantee that a tenant cannot exploit their access to hit your internal L2 out-of-band management network, update your Exit Router firewall ruleset (/etc/nftables.conf). This ensures total separation between the customer data plane and the infrastructure management plane:
 
+To guarantee that a tenant cannot exploit their access to hit your internal L2 out-of-band management network, update your Exit Router firewall ruleset (/etc/nftables.conf). This ensures total separation between the customer data plane and the infrastructure management plane:
+```
 table inet filter {
     define DEV_WAN = "enp1s0f0"
     define DEV_FABRIC = "enp3s0*"   # Matches your Border Leaf interfaces
@@ -1586,11 +1641,11 @@ table inet filter {
         iif $DEV_FABRIC oif $DEV_WAN ct state established,related accept
     }
 }
-
+```
 ------------------------------
 ## 4. Summary of Operational Isolation
 The table below illustrates how the Exit Router keeps your Ops team and tenants on entirely parallel tracks:
-
+```
 | Parameter | Ops Member Flow | Tenant Service Flow | Tenant SSH Flow |
 |---|---|---|---|
 | Authentication Layer | WireGuard Core (Kernel) [1] | Application TLS / SSL | Tenant Bastion / SSH Key |
@@ -1598,14 +1653,15 @@ The table below illustrates how the Exit Router keeps your Ops team and tenants 
 | Network Path | Virtual interface wg0. | Physical fabric links (enp3s0fX). | Physical fabric links (enp3s0fX). |
 | Ultimate Destination | Network hardware management engines (192.168.10.X). | Cluster Ingress / Web Load Balancer. | Internal code container or project workspace. |
 
-By separating these flows, your infrastructure components remain secure. Tenants can deploy code and receive API calls through the fabric, while remaining completely unaware of your secure, out-of-band management network.
 ```
+By separating these flows, your infrastructure components remain secure. Tenants can deploy code and receive API calls through the fabric, while remaining completely unaware of your secure, out-of-band management network.
+
 Would you like to explore how to configure the BGP routing rules on your Exit Router to smoothly advertise these tenant public IPs (198.51.100.0/24) down into the fabric, or should we review NAT masquerade settings for multi-tenant isolation?
 
 
 
-Go for detail BGP Exit Router setup by implementing vrf-internet, vrf-mgmt and else if needed to completely securing the communication for each type of use case. Also '9022 mapping to an internal deployment tool' for a tenant-elaborate on that. Does it have to be for each tenant?? For each tenant's vm?clusters? How granular it becomes??
-```
+# Go for detail BGP Exit Router setup by implementing vrf-internet, vrf-mgmt and else if needed to completely securing the communication for each type of use case. Also '9022 mapping to an internal deployment tool' for a tenant-elaborate on that. Does it have to be for each tenant?? For each tenant's vm? clusters? How granular it becomes??
+
 To achieve absolute, carrier-grade isolation on your Ubuntu Exit Router, you must transition from a simple multi-table setup to an explicit Multi-VRF BGP Architecture.
 Instead of letting any traffic mix in the default OS space, you carve the machine into three isolated virtual routers at the kernel level:
 
@@ -1614,9 +1670,11 @@ Instead of letting any traffic mix in the default OS space, you carve the machin
    3. vrf-mgmt: Owns the physical connection to the L2 Management Switch. It handles the air-gapped out-of-band administration.
 
 ------------------------------
+
 ## 1. The Multi-VRF Network Topology (/etc/netplan/01-netcfg.yaml)
 First, we define these separate routing domains in the Linux kernel using Netplan. This forces the operating system to maintain three distinct physical network stacks.
 
+```
 network:
   version: 2
   renderer: networkd
@@ -1664,11 +1722,13 @@ network:
       interfaces: [ enp2s0 ]
       addresses:
         - 192.168.10.1/24 # Local OOB Gateway IP
-
+```
 ------------------------------
+
 ## 2. Secure BGP VRF Routing Setup (/etc/frr/frr.conf)
 Inside FRR, we instantiate independent BGP instances for each VRF. To allow public tenant users on vrf-internet to reach their pods in vrf-fabric, we use BGP VRF Leaking (EVPN/MPLS-style local leaking). This allows us to strictly select which prefixes cross the boundary.
 
+```
 ! FRR Configuration for Multi-VRF Isolation
 ! ---------------------------------------------------------------------
 ! GLOBAL SETTINGS
@@ -1735,10 +1795,12 @@ route-map RM-LEAK-DEFAULT-ONLY permit 10
 
 route-map RM-LEAK-K8S-DESTINATIONS permit 10
  match ip address prefix-list PL-K8S-NETWORKS
-
+```
 ------------------------------
+
 ## 3. Tenant Deployment Port Mapping (Elaborating Port 9022)
 When managing external access for deployments (e.g., SSH, Git-over-SSH, or internal deployment tool actions), mapping specific high-numbered ports (like 9022) provides an effective solution.
+
 How granular this becomes depends heavily on your scale and multi-tenancy model:
 ## Option A: Per-Tenant Granularity (Recommended Architecture)
 You allocate one unique port per tenant, which maps directly to that tenant's dedicated, isolated Bastion Pod / Jump VM inside Kubernetes.
