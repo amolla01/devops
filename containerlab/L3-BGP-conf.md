@@ -55,7 +55,14 @@ When etcd-01 (10.0.0.101) sends a Raft consensus heartbeat to etcd-02 (10.0.0.10
 <img width="953" height="812" alt="image" src="https://github.com/user-attachments/assets/09639192-3f27-42be-83f2-dd45aa469f82" />
 
  ``` 
-3. Route-Map & BGP ConfigurationTo prevent configuration errors and secure the fabric, Route-Maps are heavily utilized to control exactly what routes enter and exit the network layers.On the Leaf Switch (FRR / Network OS Example)The Leaf must accept /32 host routes from the compute nodes but reject unauthorized prefixes (like a rogue node trying to advertise a spoofed service IP).text! Define a prefix-list allowing only host loopbacks and pod networks
+3. Route-Map & BGP Configuration
+
+To prevent configuration errors and secure the fabric, Route-Maps are heavily utilized to control exactly what routes enter and exit the network layers.On the Leaf Switch (FRR / Network OS Example)
+The Leaf must accept /32 host routes from the compute nodes but reject unauthorized prefixes (like a rogue node trying to advertise a spoofed service IP).
+```
+text
+
+! Define a prefix-list allowing only host loopbacks and pod networks
 ip prefix-list ALLOWED-HOST-PREFIXES permit 10.0.0.0/24 ge 32 le 32
 ip prefix-list ALLOWED-HOST-PREFIXES permit 10.244.0.0/16 ge 24 le 24
 
@@ -77,10 +84,20 @@ router bgp 65011
  exit-address-family
 ```
 Use code with caution.
-```
-4. Network Filtering & Security (ACLs)Because the L3 CLOS fabric handles high-performance data plane traffic, network-level security controls (Access Control Lists) must isolate etcd from standard application workloads while leaving the L2 Management subnet isolated.Core Filtering RulesL3 Fabric Port Isolation: etcd communicates on ports 2379 (client requests) and 2380 (peer-to-peer quorum). Infrastructure ACLs applied on the Leaf interfaces ensure that only the IP addresses belonging to the Master Node Loopback pool (10.0.0.100 - 10.0.0.105) can talk to each other on port 2380.Air-Gap Enforcement: The physical switches are configured to ensure that no routing engine leaks routes between the L3 BGP domain and the L2 Management VLAN. Nodes handle this locally via policy-based routing or strict interface binding.
 
-5. Summary of etcd ConfigurationWhen you bootstrap Kubernetes (e.g., using kubeadm), you configure the etcd static pod manifest to explicitly bind to this newly minted loopback address rather than the default ethernet interface. Your configuration looks like this:yaml# Snippet from /etc/kubernetes/manifests/etcd.yaml
+4. Network Filtering & Security (ACLs)
+Because the L3 CLOS fabric handles high-performance data plane traffic, network-level security controls (Access Control Lists) must isolate etcd from standard application workloads while leaving the L2 Management subnet isolated.
+
+Core Filtering Rules
+L3 Fabric Port Isolation:
+etcd communicates on ports 2379 (client requests) and 2380 (peer-to-peer quorum). Infrastructure ACLs applied on the Leaf interfaces ensure that only the IP addresses belonging to the Master Node Loopback pool (10.0.0.100 - 10.0.0.105) can talk to each other on port 2380.
+
+Air-Gap Enforcement: The physical switches are configured to ensure that no routing engine leaks routes between the L3 BGP domain and the L2 Management VLAN. Nodes handle this locally via policy-based routing or strict interface binding.
+
+5. Summary of etcd Configuration
+When you bootstrap Kubernetes (e.g., using kubeadm), you configure the etcd static pod manifest to explicitly bind to this newly minted loopback address rather than the default ethernet interface. Your configuration looks like this:
+```yaml
+# Snippet from /etc/kubernetes/manifests/etcd.yaml
 containers:
 - command:
   - etcd
@@ -91,7 +108,9 @@ containers:
   - --initial-cluster=etcd-01=https://10.0.0.101:2380,etcd-02=https://10.0.0.102:2380,etcd-03=https://10.0.0.103:2380
 
 ```
-Use code with caution.Would you like to explore a specific CNI implementation (like Cilium or Calico) for managing these BGP host announcements, or would you prefer a sample FRR configuration file for the Kubernetes hosts?AI can make mistakes, so double-check responses 
+Use code with caution.
+
+Would you like to explore a specific CNI implementation (like Cilium or Calico) for managing these BGP host announcements, or would you prefer a sample FRR configuration file for the Kubernetes hosts?AI can make mistakes, so double-check responses 
 
 
 Extend the above picture where Leaf-3 & Leaf-4 represents 2nd column of leafs connects K8s Node 2 and Leaf-5, Leaf-6 as third leaf columns connects to K8s Node 3 and explain even though Host servers(assume ubuntu running frr) shows clear bgp listing of other Nodes loopback ip, fails to communicate(assume SONiC running on switches)
