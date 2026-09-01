@@ -1885,16 +1885,19 @@ The physical switches route the encapsulated packets across the fabric. Even if 
 ## Summary for Your Topology
 For your architecture deploying Kubernetes with an explicit air-gapped management network, keep the Leaf and Spine data planes simple and VRF-free. Rely on the explicit Inbound/Outbound Route-Maps and Prefix-Lists we built to control traffic propagation. Let the Exit Router handle the perimeter VRF security, and let your switches focus entirely on fast hardware forwarding.
 
-```
+
 Would you like to examine a SONiC BGP EVPN configuration blueprint to see how a Tenant VRF maps to a VXLAN tunnel, or are you ready to look at verification tools for your multi-VRF Exit Router?
 
 
 
-For bandwidth gurantee for for ceph OSD replication, we need one vrf though I think, elaborate on your thought and solution.
-```
+#For bandwidth guarantee for for ceph OSD replication, we need one vrf though I think, elaborate on your thought and solution.
+
 You are entirely correct to focus on isolating and guaranteeing network capacity for Ceph OSD replication. A Ceph cluster experiences massive, bursty East-West traffic spikes when an OSD fails, nodes rebalance, or heavy write workloads arrive. If replication packets end up competing with sensitive Kubernetes etcd heartbeats or user application traffic over the same lanes, it can lead to high latency, etcd election timeouts, and cascading cluster failures.
+
 However, from a networking architecture perspective, a VRF alone does not guarantee bandwidth. A VRF provides logical isolation (a separate routing table), but it does not natively throttle or prioritize traffic at the physical port level.
+
 To guarantee Ceph replication bandwidth while preserving your L3 Routed-to-Host CLOS design, you must combine Layer 3 Isolation (via a dedicated Ceph VRF or unique subnet topology) with Layer 2 Hardware Quality of Service (QoS) and Traffic Engineering.
+
 ------------------------------
 ## 1. Two Architectural Approaches for Ceph Isolation
 Depending on your hardware capability and how your Ubuntu nodes are cabled, you can choose between two main implementation models:
@@ -1909,10 +1912,13 @@ If your budget allows, the gold-standard enterprise design is to completely sepa
 * 
 
 ## Option B: Converged Multi-VRF/Multi-Subnet Fabric with Hardware QoS
+
 If you are running everything over a shared pair of high-bandwidth physical links (e.g., dual 100GbE NICs) to the Leaf switches, you must implement a Ceph VRF (vrf-storage) on the hosts paired with strict ASIC-enforced Quality of Service (QoS) across the SONiC Leafs and Spines.
+
 ------------------------------
 ## 2. Implementing the Converged Solution (vrf-storage)
 If you proceed with Option B (Converged Network), you must carve out a dedicated IP block for Ceph and isolate it to prevent general traffic leakage.
+
 ## Step 1: Ubuntu Host Netplan Setup (/etc/netplan/01-netcfg.yaml)
 Create a separate storage loopback address on the host and assign it to a dedicated storage VRF:
 
@@ -1937,6 +1943,7 @@ router bgp 65102 vrf vrf-storage
  exit-address-family
 
 ------------------------------
+
 ## 3. Enforcing the Bandwidth Guarantee (The QoS Solution)
 Once the VRF isolates the routing paths, you must configure the SONiC switches and the Ubuntu kernel to ensure Ceph replication traffic does not starve your etcd or application traffic.
 ## Action 1: Differentiated Services Code Point (DSCP) Tagging
@@ -1971,10 +1978,10 @@ Configure your SONiC switches (via config_db.json or CLI scheduler profiles) to 
 A VRF provides the logical segregation required to keep storage management and Ceph clustering paths hidden from tenant container networks. However, to achieve a true bandwidth guarantee, you must pair that VRF structure with DSCP marking on the Ubuntu hosts and DWRR hardware queue profiles on the SONiC switches.
 Would you like to review the SONiC QoS profile configuration template to map these specific DSCP classes to hardware egress queues, or should we examine how Ceph splits its public vs. cluster networks within the Linux network stack?
 
-```
 
-These days, each compute server will have storage disks such as hdd/sdd/nvme etc. so, how to use these resources for option 1? The other thing is we can easily run HTB TC on the ubuntu hosts and split muti-homing nic interfaces for osd traffic as well using vrf/vlan sub-interfaces etc. Can't we?
-```
+
+# These days, each compute server will have storage disks such as hdd/sdd/nvme etc. so, how to use these resources for option 1? The other thing is we can easily run HTB TC on the ubuntu hosts and split muti-homing nic interfaces for osd traffic as well using vrf/vlan sub-interfaces etc. Can't we?
+
 ## 1. Implementing Option 1 (Dedicated Storage Fabric) on Hyperconverged Compute Nodes
 In modern data centers, nodes that host both compute containers and physical storage disks (HDDs, SSDs, NVMe) are called Hyperconverged Infrastructure (HCI).
 To use these local resources for Option 1 (Physically Dedicated Storage Fabric), you do not separate the servers; you separate the network data paths within the same server.
@@ -2002,9 +2009,11 @@ Each hyperconverged Ubuntu node is built with two distinct physical network inte
 * The Result: The Kubernetes workloads and sensitive etcd control-plane traffic moving through enp3s0f0/1 into the Data Leafs remain completely untouched by the storage burst.
 
 ------------------------------
+
 ## 2. The Shared-NIC Alternative: HTB TC + Multi-Homing VRF Sub-Interfaces
 If your servers only have one set of high-bandwidth multi-homing interfaces (e.g., a single dual-port 100GbE card) and you cannot run physically dedicated fabrics, yes, you can absolutely use Linux Hierarchical Token Bucket (HTB) Traffic Control (tc) combined with VRF/VLAN sub-interfaces.
 This is a highly elegant, cost-effective design pattern for converged networks. You use VLAN sub-interfaces to split the physical link into logical lanes, VRFs to keep the routing tables separate, and HTB tc to enforce hard bandwidth limits at the egress of the Ubuntu kernel.
+
 ## Step A: Configure the Kernel Network Stack (Netplan)
 We build two tagged VLAN sub-interfaces over the physical interfaces and place them into their respective VRFs.
 
@@ -2075,15 +2084,16 @@ sudo tc filter add dev enp3s0f0 parent 1:0 protocol 802.1q u32 match u16 0x0064 
 
 * Option 1 (Physical Separation): Is the most reliable and zero-overhead solution. It completely eliminates network troubleshooting headaches because a hardware failure or traffic burst on one fabric cannot physically cross into the other.
 * The HTB TC + VRF Alternative: Is a highly sophisticated software-defined networking pattern. It saves significant capital costs on network switches and extra cabling. However, it requires careful management; if your tc scripts fail to initialize during a host boot, your bandwidth protection boundary drops instantly.
-```
+
 Would you like to explore how to persist these tc rules across host reboots smoothly using network interface up-hooks, or do you want to configure the Ceph Public vs. Cluster networks to map exactly to these specific VLAN targets?
 
 
-Please review your working memory. it is mentioned above: Bootstrap Phase (Host OS): Install the native frr package directly on Ubuntu using an automation tool like Ansible or Kubespray pre-tasks. Configure it to peer with your two Leafs using BGP Unnumbered or IP link-locals to advertise the Node IPs only. This establishes the stable L3 mesh needed for etcd and cluster lifecycle communication.....Now, we will have pod network and pod service network subnets in cluster.yml when we we deploy k8s first on nodes using kubespray. since we employing  routed-to-host architecture, an all L3 bgp un-numbered architecture, there will be /32 Loopback IP's only to identify Ubuntu Nodes and SONiC switches, etcd builds quoram of ubuntu primary servers using this /32 lo IP's in this fabric, on top of that we will have a MetalLB subnet that has both L2/L3 pool of ip's divided so, L3 can be distributed through fabric whereas L2 will happen through mgmt route, an air-gapped one, On top of this k8 deployment we are deploying OSH which will handle individual tenant traffic totally isolated through L3 fabric datapath. Provide a comple and comprehensive subnet prefix list, and route maps for ubuntu host frr connecting to multihomed SONiC Switch fabric that does not leak mgmt-ip block and L2 MetalLb pools into the fabric and also consider mgmt-vrf and ceph-storage vrf to be in place for osd storage replication. And also add a section how ovn-bgp-agent will keep the tenants vrf from OpenStack perspective keep security and isolation in place.
+# Please review your working memory. it is mentioned above: Bootstrap Phase (Host OS): Install the native frr package directly on Ubuntu using an automation tool like Ansible or Kubespray pre-tasks. Configure it to peer with your two Leafs using BGP Unnumbered or IP link-locals to advertise the Node IPs only. This establishes the stable L3 mesh needed for etcd and cluster lifecycle communication.....Now, we will have pod network and pod service network subnets in cluster.yml when we we deploy k8s first on nodes using kubespray. since we employing  routed-to-host architecture, an all L3 bgp un-numbered architecture, there will be /32 Loopback IP's only to identify Ubuntu Nodes and SONiC switches, etcd builds quoram of ubuntu primary servers using this /32 lo IP's in this fabric, on top of that we will have a MetalLB subnet that has both L2/L3 pool of ip's divided so, L3 can be distributed through fabric whereas L2 will happen through mgmt route, an air-gapped one, On top of this k8 deployment we are deploying OSH which will handle individual tenant traffic totally isolated through L3 fabric datapath. Provide a comple and comprehensive subnet prefix list, and route maps for ubuntu host frr connecting to multihomed SONiC Switch fabric that does not leak mgmt-ip block and L2 MetalLb pools into the fabric and also consider mgmt-vrf and ceph-storage vrf to be in place for osd storage replication. And also add a section how ovn-bgp-agent will keep the tenants vrf from OpenStack perspective keep security and isolation in place.
 
-```
+
 To implement this all-L3 routed-to-host model, the Ubuntu host native frr daemon handles core node networking, while the containerized FRR instances (via MetalLB / FRR-K8s) and the ovn-bgp-agent handle service and tenant routing.
 To maintain strict network isolation, prevent unauthorized route leaks, and ensure multi-tenancy, you must implement the specific prefix lists, route maps, and architectural controls outlined below.
+
 ------------------------------
 ## 1. Network Subnet Reference Architecture
 Below is the unified IP schema mapping the separate domains of the fabric.
@@ -2217,7 +2227,7 @@ Rather than relying on classic L2 VLAN/Geneve overlay encapsulation terminating 
 * Enforcement of Logical Distributed Routing: The security boundary is enforced at the source. Routers are fully distributed (DVR). Inter-tenant traffic is evaluated against OVN ACLs and OpenFlow rules directly within the Open vSwitch (OVS) kernel/DPDK datapath of the host node before the packet ever touches the NIC pipeline (enp1s0f0/enp1s0f1). If an ACL drops the traffic, it never enters the L3 fabric.
 * Decoupled Control Planes: By using specific Route Targets (RT) and Route Distinguishers (RD) inside the automated ovn-bgp-agent driver, OpenStack tenant spaces can utilize overlapping IP allocations (e.g., multiple tenants using 10.0.0.0/24) without interfering with each other or colliding with the primary /32 Kubernetes management loopbacks.
 * 
-```
+
 Would you like to generate the complete Kubespray extra-vars configuration or an Ansible task block to automate the generation of this multi-VRF FRR configuration on your Ubuntu server nodes?
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -2238,7 +2248,7 @@ To ensure absolute isolation, we allocate explicit IP boundaries. The L2 MetalLB
 | MetalLB L2 Pool | 192.168.200.0/24 | Air-gapped / Local rack services | Deny (Filtered at Host VRF edge) |
 | Management Block | 192.168.100.0/24 | Out-Of-Band (OOB) Node Access & API | Deny (Isolated inside mgmt-vrf) |
 | Ceph Storage Network | 172.16.10.0/24 | East-West OSD replication traffic | Deny / VRF Confined (Kept in ceph-vrf) |
-
+```
 ------------------------------
 ## Ubuntu Host FRR Configuration (/etc/frr/frr.conf)
 This configuration runs natively on the host OS. It leverages BGP Unnumbered interfaces (enp1s0f0, enp1s0f1) connected to your multi-homed SONiC Leaf switches. It guarantees that etcd communication scales cleanly while preventing leakage of administrative networks via exact Prefix-Lists and Route-Maps.
@@ -2379,7 +2389,7 @@ vtysh -c "show ip route"
 vtysh -c "show ip route vrf ceph-storage"
 vtysh -c "show ip route vrf mgmt-vrf"
 
-```
+
 Would you like to build out the Ansible task structure to automatically deploy this specific FRR snippet during the Kubespray pre-task sequence, or should we refine the SONiC Leaf-side BGP configurations to match these parameters?
 
 
