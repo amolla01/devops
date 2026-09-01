@@ -1393,8 +1393,9 @@ This text-based linear block diagram outlines the physical connections and isola
                    ▼                              ▼   ▼   ▼   ▼   ▼  Connections)
          [ L3 CLOS FABRIC ]                 [ To Spines, Leafs, & K8s Nodes ]
      (Spines, Leafs, K8s Nodes)             (Physical eth0 / enp1s0 ports)
-
+```
 ------------------------------
+
 ## 3. Physical Interface Mapping Table
 To clarify the layout, the physical cables on your Exit Router map to these specific functional zones:
 ```
@@ -1411,6 +1412,7 @@ To clarify the layout, the physical cables on your Exit Router map to these spec
 
 ## 4. Running the Dual-Purpose Exit Router & Jump Host
 Configuring the Exit Router to double as your administrative Jump Host ensures secure access to internal systems without exposing them directly to the web.
+
 ## Remote Administrative Access Flow
 
    1. The Secure Connection: An administrator outside the data center establishes a connection over the public internet to the Exit Router's WireGuard VPN address.
@@ -1432,12 +1434,12 @@ Would you like to examine the Linux systemd profile adjustments to ensure the lo
 The Exit Router distinguishes between administrative operations traffic and standard user application traffic by evaluating the Ingress Interface, the Source IP space, and the Cryptographic Session Context.
 
 Because your architecture isolates functional components, an Ops member and a tenant user follow completely separate network paths through the router:
-
+```
 [ Ops Laptop ]     ──(UDP 51820 / wg0 Tunnel)──► [ EXIT ROUTER ] ──(mgmt-vrf / enp2s0)─► [ L2 MGMT Switch ]
 [ Tenant User ]    ──(HTTP/S / Public WAN)   ──► [ EXIT ROUTER ] ──(main-table / enp3s0)► [ L3 CLOS Fabric ]
 
 A comparison of how the router identifies and handles these two user profiles highlights this separation:
-```
+
 | Identification vector | Ops Member (Administrator) | Tenant / Application User |
 |---|---|---|
 | Incoming Interface | wg0 (Virtual WireGuard adapter). | enp1s0f0 or enp1s0f1 (Physical ISP WAN). |
@@ -1567,6 +1569,7 @@ Now that the encrypted tunnel is established, the actual SSH handshake occurs th
 ------------------------------
 ## Summary of Packet Flow
 The table below traces how a single packet changes form as it passes through the network stack:
+
 ```
 | Location | Packet Type | Source IP | Destination IP | Interface |
 |---|---|---|---|---|
@@ -1585,6 +1588,7 @@ Would you like to review the WireGuard client configuration file (wg0.conf) for 
 ## 1. The Two Tenant Traffic Flows
 Tenant traffic behaves entirely differently from Ops traffic. Tenants never connect to your WireGuard VPN (wg0), and they never land on your Exit Router's shell as a jump host. Instead, their traffic passes cleanly through the Exit Router's data plane directly into the L3 CLOS fabric.
 To manage these two workflows, your data center implements standard cloud-provider design patterns:
+
 ```
    1. HTTP/REST Traffic: Routes through an external Kubernetes Ingress Controller or Layer 4 Load Balancer Virtual IP (VIP).
    2. Pod SSH/Management Traffic: Routes through an Application-Level Bastion (Jump Host) or a Kubernetes NodePort / LoadBalancer Service mapping to the specific pod.
@@ -1619,6 +1623,7 @@ Tenants need shell access to their code environments, but letting them SSH direc
 ## 3. Hardened nftables Rules for Tenant Segregation
 
 To guarantee that a tenant cannot exploit their access to hit your internal L2 out-of-band management network, update your Exit Router firewall ruleset (/etc/nftables.conf). This ensures total separation between the customer data plane and the infrastructure management plane:
+
 ```
 table inet filter {
     define DEV_WAN = "enp1s0f0"
