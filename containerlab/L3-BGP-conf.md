@@ -2097,7 +2097,7 @@ To maintain strict network isolation, prevent unauthorized route leaks, and ensu
 ------------------------------
 ## 1. Network Subnet Reference Architecture
 Below is the unified IP schema mapping the separate domains of the fabric.
-
+```
 | Network Domain / Function | Prefix Block / Example | Routing Context (VRF) | Propagation Rules / Fabric Leak Control |
 |---|---|---|---|
 | Underlay Loopbacks (Nodes/Switches) | 10.0.0.0/22 (e.g., Node 10.0.0.10/32) | default (Global) | Allowed. Explicitly announced to build the base etcd mesh and k8s underlay. |
@@ -2108,11 +2108,11 @@ Below is the unified IP schema mapping the separate domains of the fabric.
 | MetalLB L2 Address Pool | 172.16.50.0/24 | mgmt-vrf (Isolated) | Dropped. Bound to air-gapped management broadcast domains. Static or ARP only. |
 | Host Management Network | 192.168.1.0/24 | mgmt-vrf | Dropped. Out-of-Band (OOB) plane; strictly filtered from BGP. |
 | Ceph Storage Cluster (OSD Replica) | 10.50.0.0/22 | ceph-storage-vrf | Dropped/Isolated. Storage replication backend traffic; confined to the storage VRF. |
-
+```
 ------------------------------
 ## 2. Ubuntu Host Native FRR Configuration (/etc/frr/frr.conf)
 This configuration establishes the multi-VRF BGP unnumbered underlay fabric over interfaces enp1s0f0 and enp1s0f1 (connecting to Leaf-1 and Leaf-2 running SONiC). It selectively announces the /32 host loopback and MetalLB L3 VIPs, while completely blocking the management and Ceph networks from leaking into the core.
-
+```
 !
 frr version 10.0
 frr defaults traditional
@@ -2205,12 +2205,12 @@ router bgp 65000 vrf ceph-storage-vrf
   redistribute connected
  exit-address-family
 exit
-
+```
 ------------------------------
 ## 3. OpenStack on Hybrid (OSH) Tenant Security & Isolation via ovn-bgp-agent
 When deploying OpenStack on top of this Kubernetes fabric with an all-L3 BGP path, the integration of OVN (Open Virtual Network) and ovn-bgp-agent controls tenant multi-tenancy.
 Rather than relying on classic L2 VLAN/Geneve overlay encapsulation terminating on dedicated network nodes, ovn-bgp-agent extends the L3 routed-to-host boundary natively right into the tenant space. It enforces network boundaries through the following mechanisms:
-
+```
 [ Tenant Pod/VM ] ➔ [ OVN Logical Switch ] ➔ [ OVN Distributed Router ]
                                                      │
                                         (Enforced EVPN Tenant VRF)
@@ -2220,7 +2220,7 @@ Rather than relying on classic L2 VLAN/Geneve overlay encapsulation terminating 
                                                      ▼
                                           [ SONiC Fabric Spine ]
 
-
+```
 * 
 * Dynamic BGP VRF Leak Prevention: The ovn-bgp-agent runs as a helper daemon on the host. When an OpenStack user creates a Router or an External Tenant Network, the agent automatically instructs the host infrastructure to spin up a matching EVPN VRF or separate BGP Address Family instance. It isolates tenant network routes inside their respective VRF contexts before they are pushed to the physical SONiC switches.
 * EVPN-VXLAN Tenant Encapsulation: Traffic traversing the physical fabric between different compute nodes for the same tenant is wrapped in EVPN-VXLAN headers. The core SONiC switches only pass the Outer IPs (the Node /32 loopbacks). They remain blind to the internal tenant IPs, making it architecturally impossible for a tenant to sniff or cross-contaminate another tenant's IP payload space.
@@ -2252,7 +2252,7 @@ To ensure absolute isolation, we allocate explicit IP boundaries. The L2 MetalLB
 ------------------------------
 ## Ubuntu Host FRR Configuration (/etc/frr/frr.conf)
 This configuration runs natively on the host OS. It leverages BGP Unnumbered interfaces (enp1s0f0, enp1s0f1) connected to your multi-homed SONiC Leaf switches. It guarantees that etcd communication scales cleanly while preventing leakage of administrative networks via exact Prefix-Lists and Route-Maps.
-
+```
 # /etc/frr/frr.conf
 frr version 10.0
 frr defaults traditional
@@ -2347,11 +2347,11 @@ router bgp 65000 vrf ceph-storage
     maximum-paths 2
   exit-address-family
 exit
-
+```
 ------------------------------
 ## OVN-BGP-Agent: Tenant Security & L3 Fabric Isolation
 When OpenStack on Hybrid (OSH) introduces multi-tenant networks on top of this Kubernetes deployment, tenant traffic isolation is preserved by mapping OpenStack Virtual Routing and Forwarding (VRFs) into isolated hardware execution contexts.
-
+```
        [ OpenStack Tenant Space ]
     Tenant A (VRF 100)    Tenant B (VRF 200)
 
@@ -2365,7 +2365,7 @@ When OpenStack on Hybrid (OSH) introduces multi-tenant networks on top of this K
      (Leaking Prevented via VRF EVPN RD/RT)
            v                     v
    [ FRR Engine ]  --->  [ SONiC Leaf Switches ]
-
+```
 ## How OVN-BGP-Agent Secures and Isolates Tenant Traffic
 
    1. Dynamic EVPN Mapping (No Static Overhead): Instead of manually managing multi-tenant route-maps, ovn-bgp-agent runs as a background system daemon that watches the local OVN Southbound Database. The moment an OpenStack router or provider network is provisioned, the agent dynamically triggers FRR to instantiate a dedicated EVPN VRF with structured Route Distinguishers (RD) and Route Targets (RT).
