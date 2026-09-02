@@ -1,0 +1,730 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure genisoimage is installed (for cloud-init seed ISO)] *******************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Host VM 150 GB data disks required by topology bind mounts] ***********************************************************************************
+ok: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Guardrail - assert required Host VM data disk files exist on R810] ***********************************************************************************
+ok: [poweredge_r810] => (item=Host12-1-data.qcow2)
+ok: [poweredge_r810] => (item=Host12-2-data.qcow2)
+ok: [poweredge_r810] => (item=Host12-3-data.qcow2)
+ok: [poweredge_r810] => (item=Host34-1-data.qcow2)
+ok: [poweredge_r810] => (item=Host34-2-data.qcow2)
+ok: [poweredge_r810] => (item=MonSrv-data.qcow2)
+ok: [poweredge_r810] => (item=HostB12-1-data.qcow2)
+ok: [poweredge_r810] => (item=HostB12-2-data.qcow2)
+
+TASK [Guardrail - fail if any Host VM data disk file is missing] *******************************************************************************************
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2"
+            }
+        },
+        "item": "Host12-1-data.qcow2",
+        "stat": {
+            "atime": 1788313917.3113499,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "550ab33828aaaac32231752f6fd8a54147d80ab6",
+            "ctime": 1788313917.243349,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515100,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313917.243349,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "998771509",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2"
+            }
+        },
+        "item": "Host12-2-data.qcow2",
+        "stat": {
+            "atime": 1788313923.8394456,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "f184f1d1ecf73dc2bb62bf07bab491ebaebf29fd",
+            "ctime": 1788313923.8324456,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515104,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313923.8324456,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "1238939450",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2"
+            }
+        },
+        "item": "Host12-3-data.qcow2",
+        "stat": {
+            "atime": 1788313932.059566,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "54c9e245685eec8c230eb0c63bb8af6523cbc72a",
+            "ctime": 1788313932.0325656,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515113,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313932.0325656,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "2643988093",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2"
+            }
+        },
+        "item": "Host34-1-data.qcow2",
+        "stat": {
+            "atime": 1788313939.0716689,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "973f4d4135709120da90702e7469ebb3bcfd5689",
+            "ctime": 1788313939.0356684,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515115,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313939.0356684,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "3041399734",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2"
+            }
+        },
+        "item": "Host34-2-data.qcow2",
+        "stat": {
+            "atime": 1788313946.3337753,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "a40ff7593485e2356ac256c7082ff4d869628873",
+            "ctime": 1788313946.3277752,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515116,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313946.3277752,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "1046099883",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2"
+            }
+        },
+        "item": "MonSrv-data.qcow2",
+        "stat": {
+            "atime": 1788313952.862871,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "a1b379b9d95db09db4fcabe0fb63e0bf3174e40c",
+            "ctime": 1788313952.8498707,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515560,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313952.8498707,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "3843549923",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2"
+            }
+        },
+        "item": "HostB12-1-data.qcow2",
+        "stat": {
+            "atime": 1788313959.0159612,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "779554c8acbb633aca64b75fd49f37b8c322b175",
+            "ctime": 1788313958.9889607,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515566,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313958.9889607,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "2637964930",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2"
+            }
+        },
+        "item": "HostB12-2-data.qcow2",
+        "stat": {
+            "atime": 1788313968.093094,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "999309f011dab2065d85a96a4a90de0eaa12e918",
+            "ctime": 1788313967.9800925,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515568,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788313967.9800925,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "2972228154",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+[DEPRECATION WARNING]: Conditional result at location /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/lab/deploy.yml 143:14 was of type 'int'.
+Conditional results should only be True or False. The result was interpreted as True. This feature will be removed in version 2.19. Deprecation warnings
+can be disabled by setting deprecation_warnings=False in ansible.cfg.
+ok: [poweredge_r810] => (item=Syncing status for JID: j355569347470.448489)
+ok: [poweredge_r810] => (item=Syncing status for JID: j268356456102.449941)
+ok: [poweredge_r810] => (item=Syncing status for JID: j575922329568.450579)
+ok: [poweredge_r810] => (item=Syncing status for JID: j521825093444.450942)
+ok: [poweredge_r810] => (item=Syncing status for JID: j58360413412.451424)
+ok: [poweredge_r810] => (item=Syncing status for JID: j477143174706.452234)
+ok: [poweredge_r810] => (item=Syncing status for JID: j536761747225.452611)
+ok: [poweredge_r810] => (item=Syncing status for JID: j869672305571.453210)
+ok: [poweredge_r810] => (item=Syncing status for JID: j651346646088.453997)
+ok: [poweredge_r810] => (item=Syncing status for JID: j585235816286.454456)
+ok: [poweredge_r810] => (item=Syncing status for JID: j431008508425.454720)
+ok: [poweredge_r810] => (item=Syncing status for JID: j62542281299.454988)
+ok: [poweredge_r810] => (item=Syncing status for JID: j110758773875.455699)
+ok: [poweredge_r810] => (item=Syncing status for JID: j869824989517.456307)
+ok: [poweredge_r810] => (item=Syncing status for JID: j220795313755.456572)
+ok: [poweredge_r810] => (item=Syncing status for JID: j876089393703.456841)
+ok: [poweredge_r810] => (item=Syncing status for JID: j276370718646.457362)
+ok: [poweredge_r810] => (item=Syncing status for JID: j47326092882.457780)
+ok: [poweredge_r810] => (item=Syncing status for JID: j658192044658.458046)
+ok: [poweredge_r810] => (item=Syncing status for JID: j884632994103.458315)
+ok: [poweredge_r810] => (item=Syncing status for JID: j627357225885.458867)
+ok: [poweredge_r810] => (item=Syncing status for JID: j867151702432.459260)
+ok: [poweredge_r810] => (item=Syncing status for JID: j239415981136.459620)
+ok: [poweredge_r810] => (item=Syncing status for JID: j668960326601.459885)
+ok: [poweredge_r810] => (item=Syncing status for JID: j171623302239.460381)
+ok: [poweredge_r810] => (item=Syncing status for JID: j764946735566.460823)
+
+TASK [Bootstrap QEMU Nodes over Serial Consoles (Base64 Payload Injection)] ********************************************************************************
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-master-01 -> 172.16.2.51) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.51/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-master-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.019314", "end": "2026-09-01 21:02:10.885358", "item": "k8s-master-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:09.866044", "stderr": "Error response from daemon: No such container: k8s-master-01", "stderr_lines": ["Error response from daemon: No such container: k8s-master-01"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-master-02 -> 172.16.2.61) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.61/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-master-02 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.020501", "end": "2026-09-01 21:02:13.322407", "item": "k8s-master-02", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:12.301906", "stderr": "Error response from daemon: No such container: k8s-master-02", "stderr_lines": ["Error response from daemon: No such container: k8s-master-02"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-master-03 -> 172.16.2.71) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.71/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-master-03 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.019206", "end": "2026-09-01 21:02:15.713494", "item": "k8s-master-03", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:14.694288", "stderr": "Error response from daemon: No such container: k8s-master-03", "stderr_lines": ["Error response from daemon: No such container: k8s-master-03"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-db-01 -> 172.16.2.52) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.52/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-db-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.022927", "end": "2026-09-01 21:02:18.713542", "item": "k8s-db-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:17.690615", "stderr": "Error response from daemon: No such container: k8s-db-01", "stderr_lines": ["Error response from daemon: No such container: k8s-db-01"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-db-02 -> 172.16.2.62) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.62/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-db-02 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.033736", "end": "2026-09-01 21:02:21.831247", "item": "k8s-db-02", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:20.797511", "stderr": "Error response from daemon: No such container: k8s-db-02", "stderr_lines": ["Error response from daemon: No such container: k8s-db-02"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: k8s-db-03 -> 172.16.2.72) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.72/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i k8s-db-03 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.022987", "end": "2026-09-01 21:02:25.317110", "item": "k8s-db-03", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:24.294123", "stderr": "Error response from daemon: No such container: k8s-db-03", "stderr_lines": ["Error response from daemon: No such container: k8s-db-03"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-ctrl-01 -> 172.16.2.53) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.53/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-ctrl-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.019629", "end": "2026-09-01 21:02:27.870521", "item": "osh-ctrl-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:26.850892", "stderr": "Error response from daemon: No such container: osh-ctrl-01", "stderr_lines": ["Error response from daemon: No such container: osh-ctrl-01"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-ctrl-02 -> 172.16.2.63) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.63/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-ctrl-02 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.020038", "end": "2026-09-01 21:02:30.629861", "item": "osh-ctrl-02", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:29.609823", "stderr": "Error response from daemon: No such container: osh-ctrl-02", "stderr_lines": ["Error response from daemon: No such container: osh-ctrl-02"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-ctrl-03 -> 172.16.2.73) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.73/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-ctrl-03 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.021479", "end": "2026-09-01 21:02:33.358869", "item": "osh-ctrl-03", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:32.337390", "stderr": "Error response from daemon: No such container: osh-ctrl-03", "stderr_lines": ["Error response from daemon: No such container: osh-ctrl-03"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-net-01 -> 172.16.2.54) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.54/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-net-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.020618", "end": "2026-09-01 21:02:36.025203", "item": "osh-net-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:35.004585", "stderr": "Error response from daemon: No such container: osh-net-01", "stderr_lines": ["Error response from daemon: No such container: osh-net-01"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-net-02 -> 172.16.2.64) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.64/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-net-02 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.023136", "end": "2026-09-01 21:02:38.658987", "item": "osh-net-02", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:37.635851", "stderr": "Error response from daemon: No such container: osh-net-02", "stderr_lines": ["Error response from daemon: No such container: osh-net-02"], "stdout": "", "stdout_lines": []}
+changed: [poweredge_r810] => (item=Bootstrapping VM: MonSrv -> 172.16.2.74)
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-comp-01 -> 172.16.2.55) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.55/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-comp-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.024470", "end": "2026-09-01 21:02:48.732259", "item": "osh-comp-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:47.707789", "stderr": "Error response from daemon: No such container: osh-comp-01", "stderr_lines": ["Error response from daemon: No such container: osh-comp-01"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-comp-02 -> 172.16.2.65) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.65/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-comp-02 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.020516", "end": "2026-09-01 21:02:51.301097", "item": "osh-comp-02", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:50.280581", "stderr": "Error response from daemon: No such container: osh-comp-02", "stderr_lines": ["Error response from daemon: No such container: osh-comp-02"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-comp-03 -> 172.16.2.75) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.75/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-comp-03 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.023432", "end": "2026-09-01 21:02:54.661564", "item": "osh-comp-03", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:53.638132", "stderr": "Error response from daemon: No such container: osh-comp-03", "stderr_lines": ["Error response from daemon: No such container: osh-comp-03"], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-comp-04 -> 172.16.2.56) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.56/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-comp-04 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.024404", "end": "2026-09-01 21:02:58.096990", "item": "osh-comp-04", "msg": "non-zero return code", "rc": 1, "start": "2026-09-01 21:02:57.072586", "stderr": "Error response from daemon: No such container: osh-comp-04", "stderr_lines": ["Error response from daemon: No such container: osh-comp-04"], "stdout": "", "stdout_lines": []}
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router2 -> 172.16.2.42)
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+poweredge_r810             : ok=17   changed=8    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
