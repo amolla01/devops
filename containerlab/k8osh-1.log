@@ -1,0 +1,869 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+changed: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure ISO utilities are installed (for cloud-init seed ISO)] ****************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Host VM 150 GB data disks required by topology bind mounts] ***********************************************************************************
+ok: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Guardrail - assert required Host VM data disk files exist on R810] ***********************************************************************************
+ok: [poweredge_r810] => (item=Host12-1-data.qcow2)
+ok: [poweredge_r810] => (item=Host12-2-data.qcow2)
+ok: [poweredge_r810] => (item=Host12-3-data.qcow2)
+ok: [poweredge_r810] => (item=Host34-1-data.qcow2)
+ok: [poweredge_r810] => (item=Host34-2-data.qcow2)
+ok: [poweredge_r810] => (item=MonSrv-data.qcow2)
+ok: [poweredge_r810] => (item=HostB12-1-data.qcow2)
+ok: [poweredge_r810] => (item=HostB12-2-data.qcow2)
+
+TASK [Guardrail - fail if any Host VM data disk file is missing] *******************************************************************************************
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2"
+            }
+        },
+        "item": "Host12-1-data.qcow2",
+        "stat": {
+            "atime": 1788318750.635208,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "8e15487f3d2a9672788c980a9da2d2628419e376",
+            "ctime": 1788318750.6212075,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515082,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318750.6212075,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "1906325874",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2"
+            }
+        },
+        "item": "Host12-2-data.qcow2",
+        "stat": {
+            "atime": 1788318757.5593092,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "26f33461882946d3244591358d08ce5d0fce6490",
+            "ctime": 1788318757.546309,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515097,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318757.546309,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "1348774958",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2"
+            }
+        },
+        "item": "Host12-3-data.qcow2",
+        "stat": {
+            "atime": 1788318764.8164153,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "9221bddb97b1674f2bf4c1b5242f3d739fca6a55",
+            "ctime": 1788318764.7624147,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515100,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318764.7624147,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host12-3-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "2655575276",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2"
+            }
+        },
+        "item": "Host34-1-data.qcow2",
+        "stat": {
+            "atime": 1788318772.0045207,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "d57047bd195d385a0942c0fb1805a822c3adeb9c",
+            "ctime": 1788318771.814518,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515101,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318771.814518,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "370729677",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2"
+            }
+        },
+        "item": "Host34-2-data.qcow2",
+        "stat": {
+            "atime": 1788318779.3206277,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "a91f0c6418bee64de370925b4967de38cccb0135",
+            "ctime": 1788318779.273627,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515104,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318779.273627,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/Host34-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "1747172690",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2"
+            }
+        },
+        "item": "MonSrv-data.qcow2",
+        "stat": {
+            "atime": 1788318786.3587308,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "dd94b7217c9e8d5ad8ba8d1df0333a53248078e1",
+            "ctime": 1788318786.3197303,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515115,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318786.3197303,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/MonSrv-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "2691446663",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2"
+            }
+        },
+        "item": "HostB12-1-data.qcow2",
+        "stat": {
+            "atime": 1788318792.652823,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "a5225cfbe99593d7d49b20afd79e8c1058afea75",
+            "ctime": 1788318792.6458228,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515116,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318792.6458228,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-1-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "237952271",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+ok: [poweredge_r810] => (item=/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2) => {
+    "ansible_loop_var": "item",
+    "changed": false,
+    "item": {
+        "ansible_loop_var": "item",
+        "changed": false,
+        "failed": false,
+        "invocation": {
+            "module_args": {
+                "checksum_algorithm": "sha1",
+                "follow": false,
+                "get_attributes": true,
+                "get_checksum": true,
+                "get_mime": true,
+                "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2"
+            }
+        },
+        "item": "HostB12-2-data.qcow2",
+        "stat": {
+            "atime": 1788318798.867914,
+            "attr_flags": "e",
+            "attributes": [
+                "extents"
+            ],
+            "block_size": 4096,
+            "blocks": 65040,
+            "charset": "binary",
+            "checksum": "e7a3e94b82934bb6ee3245129caa8cb8a7a9d695",
+            "ctime": 1788318798.8449137,
+            "dev": 2050,
+            "device_type": 0,
+            "executable": false,
+            "exists": true,
+            "gid": 0,
+            "gr_name": "root",
+            "inode": 16515560,
+            "isblk": false,
+            "ischr": false,
+            "isdir": false,
+            "isfifo": false,
+            "isgid": false,
+            "islnk": false,
+            "isreg": true,
+            "issock": false,
+            "isuid": false,
+            "mimetype": "application/x-qemu-disk",
+            "mode": "0644",
+            "mtime": 1788318798.8449137,
+            "nlink": 1,
+            "path": "/opt/containerlab/sheba/configs/vmdisks/HostB12-2-data.qcow2",
+            "pw_name": "root",
+            "readable": true,
+            "rgrp": true,
+            "roth": true,
+            "rusr": true,
+            "size": 33357824,
+            "uid": 0,
+            "version": "867980081",
+            "wgrp": false,
+            "woth": false,
+            "writeable": true,
+            "wusr": true,
+            "xgrp": false,
+            "xoth": false,
+            "xusr": false
+        }
+    },
+    "msg": "All assertions passed"
+}
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+ok: [poweredge_r810] => (item=Syncing status for JID: j914964584895.644423)
+ok: [poweredge_r810] => (item=Syncing status for JID: j618093056808.646100)
+ok: [poweredge_r810] => (item=Syncing status for JID: j543835770978.647779)
+ok: [poweredge_r810] => (item=Syncing status for JID: j322992267738.650024)
+ok: [poweredge_r810] => (item=Syncing status for JID: j798626633443.650948)
+ok: [poweredge_r810] => (item=Syncing status for JID: j150981958130.653944)
+ok: [poweredge_r810] => (item=Syncing status for JID: j476695763500.656396)
+ok: [poweredge_r810] => (item=Syncing status for JID: j646314284061.657085)
+ok: [poweredge_r810] => (item=Syncing status for JID: j939597072864.657956)
+ok: [poweredge_r810] => (item=Syncing status for JID: j469680625455.658298)
+ok: [poweredge_r810] => (item=Syncing status for JID: j80778800850.658629)
+ok: [poweredge_r810] => (item=Syncing status for JID: j833708215233.659210)
+ok: [poweredge_r810] => (item=Syncing status for JID: j719751841849.659814)
+ok: [poweredge_r810] => (item=Syncing status for JID: j444427192083.660287)
+ok: [poweredge_r810] => (item=Syncing status for JID: j272047512462.660722)
+ok: [poweredge_r810] => (item=Syncing status for JID: j637021430858.661040)
+ok: [poweredge_r810] => (item=Syncing status for JID: j740341059136.661457)
+ok: [poweredge_r810] => (item=Syncing status for JID: j850576130284.662412)
+ok: [poweredge_r810] => (item=Syncing status for JID: j219248004954.662668)
+ok: [poweredge_r810] => (item=Syncing status for JID: j756929308271.662989)
+ok: [poweredge_r810] => (item=Syncing status for JID: j163569543192.663278)
+ok: [poweredge_r810] => (item=Syncing status for JID: j890334919652.663584)
+ok: [poweredge_r810] => (item=Syncing status for JID: j325742080008.664485)
+ok: [poweredge_r810] => (item=Syncing status for JID: j363139109302.664834)
+ok: [poweredge_r810] => (item=Syncing status for JID: j413592159840.665094)
+ok: [poweredge_r810] => (item=Syncing status for JID: j401408757604.665349)
+
+TASK [Bootstrap QEMU Nodes over Serial Consoles (Base64 Payload Injection)] ********************************************************************************
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-01 -> 172.16.2.51)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-02 -> 172.16.2.61)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-03 -> 172.16.2.71)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-01 -> 172.16.2.52)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-02 -> 172.16.2.62)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-03 -> 172.16.2.72)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-01 -> 172.16.2.53)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-02 -> 172.16.2.63)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-03 -> 172.16.2.73)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-net-01 -> 172.16.2.54)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-net-02 -> 172.16.2.64)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: MonSrv -> 172.16.2.74)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-01 -> 172.16.2.55)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-02 -> 172.16.2.65)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-03 -> 172.16.2.75)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-04 -> 172.16.2.56)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router1 -> 172.16.2.41)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router2 -> 172.16.2.42)
+skipping: [poweredge_r810]
+
+TASK [Dynamically Configure Hypervisor Gateway NAT for Pass-Through Links (Once)] **************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - collect first exited generic_vm name] ****************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Guardrail - show failure log for first exited generic_vm] ********************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [Guardrail - fail with actionable diagnostics if any generic_vm SSH is down] **************************************************************************
+ok: [poweredge_r810] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+PLAY [Verify Persistent Dracut Storage Integrity] **********************************************************************************************************
+
+TASK [Capture directory capacity statistics] ***************************************************************************************************************
+fatal: [k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-master-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-db-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-master-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-db-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-db-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-ctrl-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-net-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-ctrl-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-ctrl-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-net-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [MonSrv]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-04]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: channel 0: open failed: connect failed: No route to host\r\nstdio forwarding failed\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Exit-Router1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Exit-Router2               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+poweredge_r810             : ok=20   changed=9    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+nh1221@PowerEdge-R810:/opt/containerlab/sheba$
+nh1221@PowerEdge-R810:/opt/containerlab/sheba$
+nh1221@PowerEdge-R810:/opt/containerlab/sheba$ sudo docker exec -it Exit-Router1 telnet 127.0.0.1 5000
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+
+ubuntu login: ubuntu
+Password:
+Login incorrect
+
+ubuntu login: ^C
+Password:
+Login incorrect
+
+ubuntu login: nh1221
+Password:
+Login incorrect
+
+ubuntu login: nh1221
+Password:
+Login incorrect
+
+ubuntu login:
+telnet> quit
+Connection closed.
+nh1221@PowerEdge-R810:/opt/containerlab/sheba$ sudo docker exec -it Exit-Router1 telnet 127.0.0.1 5000
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+
+ubuntu login: admin
+Password:
+Login incorrect
+
+ubuntu login: root
+Password:
+Login incorrect
+
+
+Ubuntu 26.04 LTS ubuntu ttyS0
+
+ubuntu login: client_loop: send disconnect: Connection reset
+
+C:\Users\nh1221>ssh R810
+
+nh1221@PowerEdge-R810:~$ sudo clab ins -a
++----+------------------------------------------------+----------+---------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+| #  |                   Topo Path                    | Lab Name |     Name      | Container ID |               Image                |   Kind   |  State  |  IPv4 Address   | IPv6 Address |
++----+------------------------------------------------+----------+---------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+|  1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | Border-Leaf1  | 66c26c4f32b0 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.31/24  | N/A          |
+|  2 |                                                |          | Border-Leaf2  | abccfbb70739 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.32/24  | N/A          |
+|  3 |                                                |          | Exit-Router1  | c2019258c26f | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.41/24  | N/A          |
+|  4 |                                                |          | Exit-Router2  | a4b6e73f6485 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.42/24  | N/A          |
+|  5 |                                                |          | ISP-1         | 37d4ca3c2bdc | quay.io/frrouting/frr:10.0.1       | linux    | running | 172.16.2.98/24  | N/A          |
+|  6 |                                                |          | ISP-2         | e7773c4ee677 | quay.io/frrouting/frr:10.0.1       | linux    | running | 172.16.2.99/24  | N/A          |
+|  7 |                                                |          | Leaf-L1       | 1cc67a702415 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.21/24  | N/A          |
+|  8 |                                                |          | Leaf-L2       | 126f7233e2cc | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.22/24  | N/A          |
+|  9 |                                                |          | Leaf-L3       | 7c249b6fc97d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.23/24  | N/A          |
+| 10 |                                                |          | Leaf-L4       | e0d4e42e79e4 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.24/24  | N/A          |
+| 11 |                                                |          | MonSrv        | c4083fd3d2cc | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.74/24  | N/A          |
+| 12 |                                                |          | Spine-S1      | 432e857a91ab | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.11/24  | N/A          |
+| 13 |                                                |          | Spine-S2      | 816f2a2eb8bd | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.12/24  | N/A          |
+| 14 |                                                |          | k8s-db-01     | bd67c7bc0f60 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.52/24  | N/A          |
+| 15 |                                                |          | k8s-db-02     | 16aee6fb384f | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.62/24  | N/A          |
+| 16 |                                                |          | k8s-db-03     | 7e3758eaf76d | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.72/24  | N/A          |
+| 17 |                                                |          | k8s-master-01 | dc5eb38074f6 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.51/24  | N/A          |
+| 18 |                                                |          | k8s-master-02 | 214b9febc70a | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.61/24  | N/A          |
+| 19 |                                                |          | k8s-master-03 | 3c0b872ca3cc | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.71/24  | N/A          |
+| 20 |                                                |          | oob-mgmt-node | 91a66ad0bbdb | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.254/24 | N/A          |
+| 21 |                                                |          | osh-comp-01   | da9de17c7e5d | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.55/24  | N/A          |
+| 22 |                                                |          | osh-comp-02   | 3cbf4749668b | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.65/24  | N/A          |
+| 23 |                                                |          | osh-comp-03   | 679a5fc32c9f | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.75/24  | N/A          |
+| 24 |                                                |          | osh-comp-04   | 24e07c7697ce | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.56/24  | N/A          |
+| 25 |                                                |          | osh-ctrl-01   | a0bdb865da8c | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.53/24  | N/A          |
+| 26 |                                                |          | osh-ctrl-02   | fca145eec9a5 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.63/24  | N/A          |
+| 27 |                                                |          | osh-ctrl-03   | 05a7b8014326 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.73/24  | N/A          |
+| 28 |                                                |          | osh-net-01    | 340584c6259c | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.54/24  | N/A          |
+| 29 |                                                |          | osh-net-02    | dcf440065cf8 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.64/24  | N/A          |
++----+------------------------------------------------+----------+---------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$
