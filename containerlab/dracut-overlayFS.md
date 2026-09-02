@@ -706,4 +706,234 @@ Now that the purpose of the ISO generation pipeline is clear, let me know:
 
 
 
+# I have clab/vrnetlab/ubuntu:resolute kind which I need to overlay a qcow2 disk to extend the disk size so, I do not run out of disk during software installation.
+
+To safely attach and overlay an additional .qcow2 disk to extend storage in a vrnetlab/containerlab Ubuntu environment, you should not modify GRUB or rebuild the initramfs.
+In vrnetlab-based containers, the VM boots using a specific, locked-down virtual machine wrapper (usually qemu-kvm managed by a Python launch script like vr.py). Modifying GRUB within the base image will often be ignored, or worse, can break the internal automated boot sequence that vrnetlab relies on to detect when the OS is ready.
+Instead, the extension must be handled at the QEMU orchestration layer (via containerlab/vrnetlab) and then mounted or combined via LVM inside the OS after it boots.
+------------------------------
+## Step 1: Create the Extension .qcow2 Disk
+On your containerlab host machine, create a separate .qcow2 file of the size you need (e.g., 50 GB):
+
+qemu-img create -f qcow2 extra_storage.qcow2 50G
+
+## Step 2: Inject the Disk via Containerlab Topology
+vrnetlab scripts typically scan for specific disk image naming conventions or look for additional drives mapped to the container's environment. Update your clab YAML file to bind-mount the newly created disk into the container's virtual drive directory.
+
+topology:
+  nodes:
+    ubuntu-node:
+      kind: vr-ubuntu # Or your specific vrnetlab flavor definition
+      image: clab/vrnetlab/ubuntu:resolute
+      binds:
+        - ./extra_storage.qcow2:/vnetlab/disk2.qcow2 # Maps as the secondary QEMU drive
+
+(Note: Verify the internal path of your specific vrnetlab container. Most vrnetlab variations look inside /vnetlab/ or / for disk images sequentially like disk1.qcow2, disk2.qcow2, etc., to pass them to the qemu binary launch string).
+## Step 3: Combine or Mount the Space Inside Ubuntu
+Once the container boots, the VM will automatically see the secondary drive via the QEMU bus (typically as /dev/sdb or /dev/vdb).
+Log into your Ubuntu node and check if the disk is present:
+
+lsblk
+
+Depending on your installation needs, choose Option A or Option B:
+## Option A: Safest & Easiest (Mount directly to your install directory)
+If your software installs to a specific directory (like /opt or /var/lib/docker), format the new drive and mount it directly there:
+
+sudo mkfs.ext4 /dev/vdb
+sudo mkdir -p /opt/software
+sudo mount /dev/vdb /opt/software
+
+## Option B: Use LVM to expand the existing Root partition
+If the base clab/vrnetlab/ubuntu:resolute image was built using LVM, you can non-destructively grow your current root filesystem into the new disk:
+
+# 1. Create a physical volume on the new disk
+sudo pvcreate /dev/vdb
+# 2. Find your Volume Group name (look for VG Name in the output)
+sudo vgdisplay
+# 3. Extend the volume group with the new disk
+sudo vgextend <your_volume_group_name> /dev/vdb
+# 4. Extend the logical volume to use 100% of the new space
+sudo lvextend -l +100%FREE /dev/mapper/<your_root_lv>
+# 5. Resize the filesystem live
+sudo resize2fs /dev/mapper/<your_root_lv>
+
+------------------------------
+To ensure this maps perfectly to your environment, let me know:
+
+* What does the output of lsblk look like inside that Ubuntu node right now?
+* Do you know the exact path where your software installer writes its heavy files?
+
+
+# It has to be overlayFS b/c my software installation deploys in /etc and just adding a vda does not resolve the issue since /etc is on original vrnetlab disk
+
+To overlay /etc (or the entire root filesystem) onto your secondary disk without altering GRUB or breaking the vrnetlab boot scripts, you can use a systemd-init early boot script or a live script via a container entrypoint.
+Because vrnetlab uses standard QEMU to launch the VM, modifying /etc/fstab directly for an OverlayFS on a root directory like /etc will cause boot loops or race conditions during the multi-stage vrnetlab startup.
+The most reliable, non-destructive method is to configure a systemd service that mounts the secondary drive, sets up the OverlayFS directories, and mounts the overlay over /etc right before your software installation script runs.
+------------------------------
+## Step 1: Format your Secondary Disk
+Once your secondary disk (e.g., /dev/vdb or /dev/sdb) is attached via containerlab, format it with an ext4 filesystem inside the Ubuntu VM:
+
+sudo mkfs.ext4 /dev/vdb
+
+## Step 2: Create the Overlay Directory Structure
+An OverlayFS requires a upper directory (where new changes are written) and a work directory (used for atomic metadata operations) on the same underlying persistent storage.
+
+# Mount the secondary disk to a temporary staging area
+sudo mkdir -p /mnt/extra_storage
+sudo mount /dev/vdb /mnt/extra_storage
+# Create the required overlay folders
+sudo mkdir -p /mnt/extra_storage/etc_upper
+sudo mkdir -p /mnt/extra_storage/etc_work
+
+## Step 3: Mount the OverlayFS Live
+You can apply the overlay immediately to your live session. Any software installed after running this command will write its /etc configurations directly to the secondary disk:
+
+sudo mount -t overlay overlay \
+  -o lowerdir=/etc,upperdir=/mnt/extra_storage/etc_upper,workdir=/mnt/extra_storage/etc_work \
+  /etc
+
+## Step 4: Make it Persistent Across Container Boots
+Because containerlab nodes can be restarted, hardcoding this into /etc/fstab can prevent the VM from booting if the disk mounts in a different order. Instead, create a dedicated systemd service file to handle this cleanly at boot.
+Create the file /etc/systemd/system/overlay-etc.service:
+
+[Unit]
+Description=OverlayFS for /etc using Secondary Disk
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/mkdir -p /mnt/extra_storage
+ExecStartPre=/bin/mount /dev/vdb /mnt/extra_storage
+ExecStartPre=/bin/mkdir -p /mnt/extra_storage/etc_upper /mnt/extra_storage/etc_work
+ExecStart=/bin/mount -t overlay overlay -o lowerdir=/etc,upperdir=/mnt/extra_storage/etc_upper,workdir=/mnt/extra_storage/etc_work /etc
+
+[Install]
+WantedBy=sysinit.target
+
+Enable the service so it runs automatically:
+
+sudo systemctl daemon-reload
+sudo systemctl enable overlay-etc.service
+
+------------------------------
+## Alternative: Overlay the Entire Root Filesystem (/)
+If your software writes to multiple systemic directories beyond just /etc (like /usr, /var, or /opt), you can overlay the entire root directory instead. Repeat Step 2 & 3 but substitute /etc for /:
+
+sudo mkdir -p /mnt/extra_storage/root_upper /mnt/extra_storage/root_work
+sudo mount -t overlay overlay -o lowerdir=/,upperdir=/mnt/extra_storage/root_upper,workdir=/mnt/extra_storage/root_work /
+
+Note: If overlaying the entire root, you must use the systemd unit approach outlined above, as doing it purely live can disrupt currently open ssh/bash sessions.
+To help ensure this integrates smoothly with your deployment pipeline, let me know:
+
+* Are you executing this software installation manually or via an automated CI/CD / Ansible pipeline?
+* Do you need assistance mapping out the automated script to initialize this structure on the first boot?
+
+
+# When to add that systemd-init script and execute that is able to Overlay the Entire Root Filesystem (/)
+
+To overlay the entire root filesystem (/) using systemd, the configuration script and systemd service must be injected into the .qcow2 image before it is ever booted by vrnetlab/containerlab.
+Trying to overlay / while the system is already booted into a normal multi-user target will fail or cause an immediate system crash, because vital system files, systemd sockets, and logging daemons are already open and locked by the kernel.
+## The Injection Window: Off-line Image Modification
+You must modify the .qcow2 image from your host machine (the server running containerlab) while the virtual machine is powered off.
+## 1. Mount the .qcow2 image on the host
+Use guestmount (from libguestfs-tools) to mount the Ubuntu image filesystem directly to a folder on your host machine:
+
+mkdir -p /tmp/ubuntu-mnt
+guestmount -a /path/to/your/original.qcow2 -i --rw /tmp/ubuntu-mnt
+
+## 2. Create the Systemd Unit File
+While the image is mounted, create the systemd service file inside the image at /tmp/ubuntu-mnt/etc/systemd/system/overlay-root.service.
+Because you are overlaying /, the systemd dependency parameters must be strictly set to DefaultDependencies=no and hooked into local-fs.target so it executes before any standard system services initialize.
+
+[Unit]
+Description=OverlayFS for Entire Root using Secondary Disk
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Ensure mount point exists and mount the second disk
+ExecStartPre=/bin/mkdir -p /mnt/extra_storage
+ExecStartPre=/bin/mount /dev/vdb /mnt/extra_storage
+# Create the overlay structure on the second disk if they don't exist
+ExecStartPre=/bin/mkdir -p /mnt/extra_storage/root_upper /mnt/extra_storage/root_work
+# Apply the OverlayFS directly over the live root
+ExecStart=/bin/mount -t overlay overlay -o lowerdir=/,upperdir=/mnt/extra_storage/root_upper,workdir=/mnt/extra_storage/root_work /
+
+[Install]
+WantedBy=local-fs.target
+
+## 3. Enable the Service inside the Image
+To make sure systemd runs this on boot, create the symbolic link manually within the image filesystem (simulating a systemctl enable command):
+
+mkdir -p /tmp/ubuntu-mnt/etc/systemd/system/local-fs.target.wants/
+ln -s /etc/systemd/system/overlay-root.service /tmp/ubuntu-mnt/etc/systemd/system/local-fs.target.wants/overlay-root.service
+
+## 4. Unmount and Deploy
+Unmount the image cleanly so changes are written back to the .qcow2 file:
+
+guestunmount /tmp/ubuntu-mnt
+
+------------------------------
+## What Happens at Next Boot
+When Containerlab starts the vrnetlab container with this modified .qcow2 image and your secondary extra_storage.qcow2 attached as /dev/vdb:
+
+   1. The kernel boots and mounts the original narrow vrnetlab disk as a read-only or small root filesystem.
+   2. Systemd kicks off and hits local-fs.target.
+   3. Your overlay-root.service triggers immediately: it formats/mounts /dev/vdb to /mnt/extra_storage, merges the storage space, and pivots the live / to the OverlayFS.
+   4. The rest of the operating system (sysinit.target, networking, SSH, and your vrnetlab boot-detection python scripts) loads on top of this newly expanded OverlayFS.
+   5. Your software installation will now run with the combined storage capacity of the second disk.
+
+Would you like the exact QEMU command options vrnetlab uses to ensure /dev/vdb maps predictably inside the VM, or do you need help setting up the guestmount tool on your host?
+
+# we are talking about the extra disk .qcow2 here? Not  the vrnetlab ubuntu image.
+
+To overlay the root filesystem (/) using the extra disk (.qcow2), you do not need to touch the base vrnetlab image at all. You can do everything by preparing the extra disk beforehand on your host machine or by formatting it correctly via Containerlab.
+However, a standard systemd service inside the VM cannot successfully pivot or overlay the entire root filesystem (/) after the OS has already started booting from the vrnetlab image. By the time systemd runs services, directories like /sbin, /lib, and /etc are actively locked by the kernel.
+If you want to use the extra disk to overlay the entire system without touching the original vrnetlab image, you have two precise options:
+------------------------------
+## Option A: Use a custom dracut hook via an external file (Cleanest)
+Since vrnetlab boots using standard Linux kernels, it likely supports loading external initramfs/dracut configuration hooks, or you can leverage dracut's built-in kernel parameters directly inside your clab topology configuration without editing files inside the Ubuntu image.
+If vrnetlab allows you to pass custom kernel command-line arguments (append parameters) in your topology file, you can instruct dracut to handle the overlay at early boot using the attached extra disk:
+
+# Inside your containerlab topology filetopology:
+  nodes:
+    ubuntu-node:
+      kind: vr-ubuntu
+      image: clab/vrnetlab/ubuntu:resolute
+      # Pass kernel arguments directly via environment or qemu args if supported by the vr-kind
+      env:
+        QEMU_APPEND: "root=overlay rootfstype=overlay rootflags=lowerdir=/,upperdir=/dev/vdb/upper,workdir=/dev/vdb/work"
+
+(Note: This requires the extra disk /dev/vdb to already be formatted with a standard filesystem like ext4).
+------------------------------
+## Option B: The "Live Pivot" Script (Run instantly inside the VM)
+If you cannot pass custom kernel arguments, you cannot overlay / directly using a standard systemd service, but you can mount individual critical directories (/etc, /usr, /var) to the extra disk simultaneously.
+Run this initialization script inside your VM right before installing your software. It will format your extra disk, partition it, and seamlessly layer the extra disk over /etc and any other heavy directory:
+
+#!/bin/bash# 1. Format the extra disk (e.g., /dev/vdb)
+sudo mkfs.ext4 -F /dev/vdb
+# 2. Mount it to a staging zone
+sudo mkdir -p /mnt/extra_disk
+sudo mount /dev/vdb /mnt/extra_disk
+# 3. Create upper and work structures for the folders you need to expand
+sudo mkdir -p /mnt/extra_disk/etc_upper /mnt/extra_disk/etc_work
+sudo mkdir -p /mnt/extra_disk/var_upper /mnt/extra_disk/var_work
+# 4. Live-overlay /etc so your software installation doesn't run out of space
+sudo mount -t overlay overlay -o lowerdir=/etc,upperdir=/mnt/extra_disk/etc_upper,workdir=/mnt/extra_disk/etc_work /etc
+# 5. Live-overlay /var (where packages and caches are downloaded)
+sudo mount -t overlay overlay -o lowerdir=/var,upperdir=/mnt/extra_disk/var_upper,workdir=/mnt/extra_disk/var_work /var
+
+## Why this works perfectly for your scenario:
+
+* Zero changes to vrnetlab: The base Ubuntu image remains completely untouched.
+* Targeted expansion: By overlaying /etc and /var, you absorb 100% of the files written by standard software installers (apt, custom binaries, configuration scripts) onto the extra .qcow2 disk.
+
+If you want to automate this, we can look at how your software installer is triggered. Would you like to see how to pack this logic into a startup script inside Containerlab so it executes automatically when the node boots?
+
 
