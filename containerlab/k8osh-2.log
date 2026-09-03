@@ -1,0 +1,674 @@
+Please have a task in 'deploy' to inject the pulic key to our clab instances. Disn't we have that task before?  Also still, the user name /pwd for linux as 'ubuntu/ubuntu' not working at all.
+
+I can log in to SONiC Switches using ssh 'admin/admin' but no success for linux. Log for a vm: nh1221@PowerEdge-R810:~$ sudo clab ins -a
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+| #  |                   Topo Path                    | Lab Name |      Name       | Container ID |               Image                |   Kind   |  State  |  IPv4 Address   | IPv6 Address |
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+|  1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | Border-Leaf1    | 3c16b7574e0d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.31/24  | N/A          |
+|  2 |                                                |          | Border-Leaf2    | c587f8dbc36a | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.32/24  | N/A          |
+|  3 |                                                |          | Exit-Router1    | c3d5e210b1d6 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.41/24  | N/A          |
+|  4 |                                                |          | Exit-Router2    | 941c2a0f09bb | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.42/24  | N/A          |
+|  5 |                                                |          | External-Router | e9c5b13408e9 | quay.io/frrouting/frr:10.0.1       | linux    | running | 172.16.2.253/24 | N/A          |
+|  6 |                                                |          | ISP-1           | 58365601a0ad | quay.io/frrouting/frr:10.0.1       | linux    | running | 172.16.2.98/24  | N/A          |
+|  7 |                                                |          | ISP-2           | d9954dfd615b | quay.io/frrouting/frr:10.0.1       | linux    | running | 172.16.2.99/24  | N/A          |
+|  8 |                                                |          | Leaf-L1         | 5b0369941b15 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.21/24  | N/A          |
+|  9 |                                                |          | Leaf-L2         | 3656c713c57d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.22/24  | N/A          |
+| 10 |                                                |          | Leaf-L3         | d8d4bf7373e8 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.23/24  | N/A          |
+| 11 |                                                |          | Leaf-L4         | 594386c1ff6d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.24/24  | N/A          |
+| 12 |                                                |          | MonSrv          | 264c2eeec8c1 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.74/24  | N/A          |
+| 13 |                                                |          | Spine-S1        | c01a960c2398 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.11/24  | N/A          |
+| 14 |                                                |          | Spine-S2        | 755ef19dd056 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm | running | 172.16.2.12/24  | N/A          |
+| 15 |                                                |          | k8s-db-01       | f3982d3ee50b | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.52/24  | N/A          |
+| 16 |                                                |          | k8s-db-02       | 72e23d38c137 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.62/24  | N/A          |
+| 17 |                                                |          | k8s-db-03       | b09ff8662921 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.72/24  | N/A          |
+| 18 |                                                |          | k8s-master-01   | e2e23008835c | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.51/24  | N/A          |
+| 19 |                                                |          | k8s-master-02   | dae838c3c763 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.61/24  | N/A          |
+| 20 |                                                |          | k8s-master-03   | bfb07561bb52 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.71/24  | N/A          |
+| 21 |                                                |          | oob-mgmt-node   | d17033752eba | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.254/24 | N/A          |
+| 22 |                                                |          | osh-comp-01     | 4a2b235835bb | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.55/24  | N/A          |
+| 23 |                                                |          | osh-comp-02     | af3fcb85b6e7 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.65/24  | N/A          |
+| 24 |                                                |          | osh-comp-03     | 27b894b3a8fd | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.75/24  | N/A          |
+| 25 |                                                |          | osh-comp-04     | a9e1c64cd960 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.56/24  | N/A          |
+| 26 |                                                |          | osh-ctrl-01     | 91206b962eb3 | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.53/24  | N/A          |
+| 27 |                                                |          | osh-ctrl-02     | 32c1b2aef73c | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.63/24  | N/A          |
+| 28 |                                                |          | osh-ctrl-03     | 1eb93167f2bf | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.73/24  | N/A          |
+| 29 |                                                |          | osh-net-01      | 573835423bad | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.54/24  | N/A          |
+| 30 |                                                |          | osh-net-02      | 5f9ea36451db | vrnetlab/canonical_ubuntu:resolute | linux    | running | 172.16.2.64/24  | N/A          |
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+----------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$ sudo docker logs k8s-master-01
+2026-09-03 00:17:36,266: vrnetlab       DEBUG Creating overlay disk image: /resolute-ubuntu-cloud-overlay.qcow2
+wrote /cloud_init.iso with filesystem=iso9660 and diskformat=raw
+2026-09-03 00:17:36,320: vrnetlab       DEBUG Starting vrnetlab Ubuntu
+2026-09-03 00:17:36,321: vrnetlab       DEBUG VMs: [<__main__.Ubuntu_vm object at 0x76e00fda0440>]
+2026-09-03 00:17:36,321: vrnetlab       DEBUG VM not started; starting!
+2026-09-03 00:17:36,321: vrnetlab       INFO ----------------START ENVIRONMENT VARIABLES-----------------
+2026-09-03 00:17:36,321: vrnetlab       INFO CLAB_INTFS: 2
+2026-09-03 00:17:36,321: vrnetlab       INFO CLAB_LABEL_ANSIBLE_GROUP: kube_control_plane
+2026-09-03 00:17:36,321: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_GROUP:
+2026-09-03 00:17:36,321: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_KIND: linux
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_LAB_DIR: /home/nh1221/clab-sheba/k8s-master-01
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_NAME: k8s-master-01
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_LABEL_CLAB_NODE_TYPE:
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_LABEL_CLAB_TOPO_FILE: /opt/containerlab/sheba/topology.clab.yml
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_LABEL_CONTAINERLAB: sheba
+2026-09-03 00:17:36,322: vrnetlab       INFO CLAB_MGMT_PASSTHROUGH: true
+2026-09-03 00:17:36,322: vrnetlab       INFO HOME: /root
+2026-09-03 00:17:36,322: vrnetlab       INFO HOSTNAME: k8s-master-01
+2026-09-03 00:17:36,322: vrnetlab       INFO LC_CTYPE: C.UTF-8
+2026-09-03 00:17:36,322: vrnetlab       INFO PASSWORD: admin
+2026-09-03 00:17:36,322: vrnetlab       INFO PATH: /.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+2026-09-03 00:17:36,322: vrnetlab       INFO QEMU_ADDITIONAL_ARGS: -drive file=/seed.iso,media=cdrom,readonly=on -drive file=/data.qcow2,if=none,id=drvSystem,format=qcow2 -device virtio-blk-pci,drive=drvSystem,id=vblkSystem,addr=0x4
+2026-09-03 00:17:36,322: vrnetlab       INFO QEMU_CPU: host
+2026-09-03 00:17:36,323: vrnetlab       INFO QEMU_MEMORY: 4096
+2026-09-03 00:17:36,323: vrnetlab       INFO QEMU_SMP: 2
+2026-09-03 00:17:36,323: vrnetlab       INFO SONIC_CONFIG_MODE: unified
+2026-09-03 00:17:36,323: vrnetlab       INFO TERM: xterm
+2026-09-03 00:17:36,323: vrnetlab       INFO USERNAME: admin
+2026-09-03 00:17:36,323: vrnetlab       INFO UV: /usr/bin/uv
+2026-09-03 00:17:36,323: vrnetlab       INFO UV_RUN_RECURSION_DEPTH: 1
+2026-09-03 00:17:36,323: vrnetlab       INFO VIRTUAL_ENV: /.venv
+2026-09-03 00:17:36,323: vrnetlab       INFO -----------------END ENVIRONMENT VARIABLES------------------
+2026-09-03 00:17:36,323: vrnetlab       INFO Launching Ubuntu_vm arch x86_64 with 2 SMP/VCPU and 4096 M of RAM
+2026-09-03 00:17:36,323: vrnetlab       INFO Transparent mgmt interface: Enabled
+2026-09-03 00:17:36,324: vrnetlab       DEBUG number of provisioned data plane interfaces is 2
+2026-09-03 00:17:36,324: vrnetlab       DEBUG waiting for provisioned interfaces to appear...
+2026-09-03 00:17:36,325: vrnetlab       DEBUG highest allocated interface id determined to be: 2...
+2026-09-03 00:17:36,325: vrnetlab       DEBUG interfaces provisioned, continuing...
+2026-09-03 00:17:36,329: vrnetlab       DEBUG Found MAC address aa:c1:ab:ca:05:5e for interface eth1
+2026-09-03 00:17:36,329: vrnetlab       INFO Using container interface MAC aa:c1:ab:ca:05:5e for VM NIC eth1
+2026-09-03 00:17:36,333: vrnetlab       DEBUG Found MAC address aa:c1:ab:49:b9:5a for interface eth2
+2026-09-03 00:17:36,333: vrnetlab       INFO Using container interface MAC aa:c1:ab:49:b9:5a for VM NIC eth2
+2026-09-03 00:17:36,333: vrnetlab       DEBUG qemu cmd: qemu-system-x86_64 -enable-kvm -display none -machine pc -chardev socket,id=monitor0,host=::,port=4000,server=on,wait=off -monitor chardev:monitor0 -chardev socket,id=serial0,host=::,port=5000,server=on,wait=off,telnet=on -serial chardev:serial0 -m 4096 -cpu host -smp 2 -drive if=ide,file=/resolute-ubuntu-cloud-overlay.qcow2 -drive file=/seed.iso,media=cdrom,readonly=on -drive file=/data.qcow2,if=none,id=drvSystem,format=qcow2 -device virtio-blk-pci,drive=drvSystem,id=vblkSystem,addr=0x4 -cdrom /cloud_init.iso -device pci-bridge,chassis_nr=1,id=pci.1 -device virtio-net-pci,netdev=p00,mac=0C:00:5c:3a:b3:00,bus=pci.1 -netdev tap,id=p00,ifname=tap0,script=/etc/tc-tap-mgmt-ifup,downscript=no -device virtio-net-pci,netdev=p01,mac=aa:c1:ab:ca:05:5e,bus=pci.1,addr=0x2 -netdev tap,id=p01,ifname=tap1,script=/etc/tc-tap-ifup,downscript=no -device virtio-net-pci,netdev=p02,mac=aa:c1:ab:49:b9:5a,bus=pci.1,addr=0x3 -netdev tap,id=p02,ifname=tap2,script=/etc/tc-tap-ifup,downscript=no
+2026-09-03 00:17:38,336: base_driver    INFO closing connection to '127.0.0.1' on port '4000'
+2026-09-03 00:17:38,336: base_driver    INFO connection to '127.0.0.1' on port '4000' closed successfully
+2026-09-03 00:17:38,337: base_driver    INFO opening connection to '127.0.0.1' on port '4000'
+2026-09-03 00:17:38,341: base_driver    INFO connection to '127.0.0.1' on port '4000' opened successfully
+2026-09-03 00:17:38,341: base_driver    INFO closing connection to '127.0.0.1' on port '5000'
+2026-09-03 00:17:38,341: base_driver    INFO connection to '127.0.0.1' on port '5000' closed successfully
+2026-09-03 00:17:38,341: base_driver    INFO opening connection to '127.0.0.1' on port '5000'
+2026-09-03 00:17:38,342: base_driver    INFO connection to '127.0.0.1' on port '5000' opened successfully
+[    0.000000] Linux version 7.0.0-28-generic (buildd@lcy02-amd64-047) (x86_64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0, GNU ld (GNU Binutils for Ubuntu) 2.46) #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 01:01:36 UTC 2026 (Ubuntu 7.0.0-28.28-generic 7.0.12)
+[    0.000000] Command line: BOOT_IMAGE=/vmlinuz-7.0.0-28-generic root=UUID=1af52c72-24ee-46b6-8e75-be5adce5e9d3 ro console=tty1 console=ttyS0 rd.overlay=/dev/vda rd.overlay.rw
+
+Looks like, it executed 'BOOT_IMAGE=/vmlinuz-7.0.0-28-generic root=UUID=1af52c72-24ee-46b6-8e75-be5adce5e9d3 ro console=tty1 console=ttyS0 rd.overlay=/dev/vda rd.overlay.rw', what does it means, does it mean that I somehow injected this in the image already?
+
+your playbook template for 'clab-topo-prep.yml' is not generating right 'topology.clab.yml': Please replace that with the following which is working:
+{% set workers = [
+  'k8s-master-01', 'k8s-db-01', 'osh-ctrl-01', 'osh-net-01', 'osh-comp-01', 'osh-comp-04',
+  'k8s-master-02', 'k8s-db-02', 'osh-ctrl-02', 'osh-net-02', 'osh-comp-02',
+  'k8s-master-03', 'k8s-db-03', 'osh-ctrl-03', 'MonSrv', 'osh-comp-03'
+] %}
+{% set host_label_map = {
+  'k8s-master-01': 'kube_control_plane',
+  'k8s-master-02': 'kube_control_plane',
+  'k8s-master-03': 'kube_control_plane',
+  'k8s-db-01': 'kube_node, etcd, osh_databases',
+  'k8s-db-02': 'kube_node, etcd, osh_databases',
+  'k8s-db-03': 'kube_node, etcd, osh_databases',
+  'osh-ctrl-01': 'kube_node, osh_controllers',
+  'osh-ctrl-02': 'kube_node, osh_controllers',
+  'osh-ctrl-03': 'kube_node, osh_controllers',
+  'osh-net-01': 'kube_node, osh_networks',
+  'osh-net-02': 'kube_node, osh_networks',
+  'osh-comp-01': 'kube_node, osh_computes',
+  'osh-comp-02': 'kube_node, osh_computes',
+  'osh-comp-03': 'kube_node, osh_computes',
+  'osh-comp-04': 'kube_node, osh_computes',
+  'MonSrv': 'monitoring_hosts'
+} %}
+name: sheba
+
+prefix: ""
+
+mgmt:
+  network: sonic_oob_mgmt
+  ipv4-subnet: 172.16.2.0/24
+
+topology:
+  defaults:
+    env:
+      USERNAME: "admin"
+      PASSWORD: "admin"
+      SONIC_CONFIG_MODE: "unified"
+      QEMU_CPU: "qemu64"
+      QEMU_SMP: "4"
+      CLAB_MGMT_PASSTHROUGH: "true"
+  kinds:
+    sonic-vm:
+      image: vrnetlab/sonic_sonic-vs:202605
+    linux:
+      image: vrnetlab/canonical_ubuntu:resolute
+
+  nodes:
+    # ==========================================
+    # SPINE LAYER — Celestica Seastone-DX010 (32x40G QSFP+)
+    # ==========================================
+    Spine-S1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.11
+      binds:
+        - configs/celestica-dx010/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    Spine-S2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.12
+      binds:
+        - configs/celestica-dx010/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    # ==========================================
+    # LEAF COLUMN 1 — Accton AS5712-54X (48x10G + 6x40G)
+    # ==========================================
+    Leaf-L1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.21
+      binds:
+        - configs/accton-as5712/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    Leaf-L2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.22
+      binds:
+        - configs/accton-as5712/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    # ==========================================
+    # LEAF COLUMN 2 — Arista 7050-QX-32 (32x40G QSFP+)
+    # ==========================================
+    Leaf-L3:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.23
+      binds:
+        - configs/arista-7050qx-32/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    Leaf-L4:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.24
+      binds:
+        - configs/arista-7050qx-32/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    # ==========================================
+    # BORDER LEAF COLUMN — Arista 7050-QX-32S (32x40G QSFP+)
+    # ==========================================
+    Border-Leaf1:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.31
+      binds:
+        - configs/arista-7050qx-32s/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    Border-Leaf2:
+      kind: sonic-vm
+      mgmt-ipv4: 172.16.2.32
+      binds:
+        - configs/arista-7050qx-32s/config.sh:/etc/rc.local.d/init-platform.sh
+      exec:
+        - bash /etc/rc.local.d/init-platform.sh &
+
+    # ==========================================
+    # EXIT ROUTERS (2 Nodes)
+    # ==========================================
+    Exit-Router1:
+      kind: linux
+      mgmt-ipv4: 172.16.2.41
+      labels: { ansible_group: exit_routers }
+    Exit-Router2:
+      kind: linux
+      mgmt-ipv4: 172.16.2.42
+      labels: { ansible_group: exit_routers }
+
+    # ==========================================
+    # ISP ROUTERS (2 Nodes)
+    # ==========================================
+    ISP-1:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.98
+      labels: { ansible_group: isp_routers }
+    ISP-2:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.99
+      labels: { ansible_group: isp_routers }
+
+    # Exit-Router1:
+    #   kind: linux
+    #   mgmt-ipv4: {{ hostvars['Exit-Router1']['ansible_host'] }}
+    #   labels: { ansible_group: exit_routers }
+
+    # Exit-Router2:
+    #   kind: linux
+    #      CLAB_MGMT_PASSTHROUGH: "true"
+    #   mgmt-ipv4: {{ hostvars['Exit-Router2']['ansible_host'] }}
+    #   labels: { ansible_group: exit_routers }
+
+    # ISP-1:
+    #   kind: linux
+    #   image: quay.io/frrouting/frr:10.0.1
+    #   mgmt-ipv4: 172.16.2.98
+    #   labels: { ansible_group: isp_routers }
+
+    # ISP-2:
+    #   kind: linux
+    #   image: quay.io/frrouting/frr:10.0.1
+    #   mgmt-ipv4: 172.16.2.99
+    #   labels: { ansible_group: isp_routers }
+
+{% for host_name in workers %}
+    {{ host_name }}:
+      kind: linux
+      mgmt-ipv4: {{ hostvars[host_name]['ansible_host'] }}
+      env:
+        QEMU_CPU: "host"
+        QEMU_SMP: "{{ '8' if host_name in ['osh-comp-01', 'osh-comp-02', 'osh-comp-03'] else ('6' if host_name in ['k8s-db-01', 'k8s-db-02', 'k8s-db-03', 'MonSrv', 'osh-comp-04'] else '2') }}"
+        QEMU_MEMORY: "{{ '20480' if host_name in ['osh-comp-01', 'osh-comp-02', 'osh-comp-03'] else ('10240' if host_name in ['k8s-db-01', 'k8s-db-02', 'k8s-db-03', 'MonSrv', 'osh-comp-04'] else '4096') }}"
+        QEMU_ADDITIONAL_ARGS: >-
+          -drive file=/seed.iso,media=cdrom,readonly=on
+          -drive file=/data.qcow2,if=none,id=drvSystem,format=qcow2
+          -device virtio-blk-pci,drive=drvSystem,id=vblkSystem,addr=0x4
+{% if host_name in ['osh-comp-01', 'osh-comp-02', 'osh-comp-03'] %}
+          -drive file={{ hostvars[host_name].physical_ceph_disk_a | default('/dev/sdb') }},if=none,id=drvCephA,format=raw
+          -device virtio-blk-pci,drive=drvCephA,id=vblkCephA,addr=0x5
+{% endif %}
+      binds:
+        - configs/cloud-init/seed.iso:/seed.iso:ro
+        - configs/vmdisks/{{ host_name }}-data.qcow2:/data.qcow2
+        - ~/.ssh/id_dc_lab.pub:/home/ubuntu/.ssh/authorized_keys:ro
+{% if host_name in ['osh-comp-01', 'osh-comp-02', 'osh-comp-03'] %}
+        - {{ hostvars[host_name].physical_ceph_disk_a | default('/dev/sdb') }}:{{ hostvars[host_name].physical_ceph_disk_a | default('/dev/sdb') }}:rw
+{% endif %}
+      labels: { ansible_group: "{{ host_label_map[host_name] }}" }
+{% endfor %}
+
+    oob-mgmt-node:
+      kind: linux
+      mgmt-ipv4: 172.16.2.254
+      # L2 bridge over its data ports (represents the OOB mgmt switch instance)
+      exec:
+        - ip link add name br-mgmt type bridge
+        - ip link set br-mgmt up
+        - ip link set eth1 master br-mgmt
+        - ip link set eth2 master br-mgmt
+        - ip link set eth1 up
+        - ip link set eth2 up
+      labels: { ansible_group: management_nodes }
+
+    External-Router:
+      kind: linux
+      image: quay.io/frrouting/frr:10.0.1
+      mgmt-ipv4: 172.16.2.253
+      binds:
+        - configs/frr/daemons:/etc/frr/daemons:ro
+      labels: { ansible_group: external_routers }
+      
+  links:
+    # =========================================================================
+    # SPINE-S1 FABRIC UPLINKS (Spine eth1-6 = Spine Ethernet0,4,8,12,16,20)
+    # Leaf/BL ethN = name-sorted position AFTER breakout (35 ports):
+    #   Eth120=pos34→eth34, Eth124=pos35→eth35
+    # Accton ethN = name-sorted position (72 ports):
+    #   Eth68=pos69→eth69, Eth64=pos65→eth65
+    # =========================================================================
+    - endpoints: ["Spine-S1:eth1", "Leaf-L1:eth69"]      # Spine Eth0  <---> Leaf-L1 Eth68 (40G)
+    - endpoints: ["Spine-S1:eth2", "Leaf-L2:eth69"]      # Spine Eth4  <---> Leaf-L2 Eth68 (40G)
+    - endpoints: ["Spine-S1:eth3", "Leaf-L3:eth35"]      # Spine Eth8  <---> Leaf-L3 Eth124 (40G)
+    - endpoints: ["Spine-S1:eth4", "Leaf-L4:eth35"]      # Spine Eth12 <---> Leaf-L4 Eth124 (40G)
+    - endpoints: ["Spine-S1:eth5", "Border-Leaf1:eth35"] # Spine Eth16 <---> Border-Leaf1 Eth124 (40G)
+    - endpoints: ["Spine-S1:eth6", "Border-Leaf2:eth35"] # Spine Eth20 <---> Border-Leaf2 Eth124 (40G)
+
+    # =========================================================================
+    # SPINE-S2 FABRIC UPLINKS
+    # =========================================================================
+    - endpoints: ["Spine-S2:eth1", "Leaf-L1:eth65"]      # Spine Eth0  <---> Leaf-L1 Eth64 (40G)
+    - endpoints: ["Spine-S2:eth2", "Leaf-L2:eth65"]      # Spine Eth4  <---> Leaf-L2 Eth64 (40G)
+    - endpoints: ["Spine-S2:eth3", "Leaf-L3:eth34"]      # Spine Eth8  <---> Leaf-L3 Eth120 (40G)
+    - endpoints: ["Spine-S2:eth4", "Leaf-L4:eth34"]      # Spine Eth12 <---> Leaf-L4 Eth120 (40G)
+    - endpoints: ["Spine-S2:eth5", "Border-Leaf1:eth34"] # Spine Eth16 <---> Border-Leaf1 Eth120 (40G)
+    - endpoints: ["Spine-S2:eth6", "Border-Leaf2:eth34"] # Spine Eth20 <---> Border-Leaf2 Eth120 (40G)
+
+    # =========================================================================
+    # LEAF-L1 ACCESS CONNECTIONS (Eth0=eth1, Eth1=eth2, Eth2=eth3)
+    # =========================================================================
+    # - endpoints: ["Leaf-L1:eth1", "Host12-1:eth1"]       # Leaf-L1 Eth0 <---> Host12-1 Port 1 (10G)
+    # - endpoints: ["Leaf-L1:eth2", "Host12-2:eth1"]       # Leaf-L1 Eth1 <---> Host12-2 Port 1 (10G)
+    # - endpoints: ["Leaf-L1:eth3", "Host12-3:eth1"]       # Leaf-L1 Eth2 <---> Host12-3 Port 1 (10G)
+
+    - endpoints: ["Leaf-L1:eth1", "k8s-master-01:eth1"]       # Leaf-L1 Eth0 <---> Host12-1 Port 1 (10G)
+    - endpoints: ["Leaf-L1:eth2", "k8s-db-01:eth1"]       # Leaf-L1 Eth1 <---> Host12-2 Port 1 (10G)
+    - endpoints: ["Leaf-L1:eth3", "osh-ctrl-01:eth1"]       # Leaf-L1 Eth2 <---> Host12-3 Port 1 (10G)
+    - endpoints: ["Leaf-L1:eth4", "osh-net-01:eth1"]       # Leaf-L1 Eth0 <---> Host12-1 Port 1 (10G)
+    - endpoints: ["Leaf-L1:eth5", "osh-comp-01:eth1"]       # Leaf-L1 Eth1 <---> Host12-2 Port 1 (10G)
+    - endpoints: ["Leaf-L1:eth6", "osh-comp-04:eth1"]       # Leaf-L1 Eth2 <---> Host12-3 Port 1 (10G)
+    # =========================================================================
+    # LEAF-L2 ACCESS CONNECTIONS (Mirrored to Leaf-L1 for Multi-Homing)
+    # =========================================================================
+    # - endpoints: ["Leaf-L2:eth1", "Host12-1:eth2"]       # Leaf-L2 Eth0 <---> Host12-1 Port 2 (10G)
+    # - endpoints: ["Leaf-L2:eth2", "Host12-2:eth2"]       # Leaf-L2 Eth1 <---> Host12-2 Port 2 (10G)
+    # - endpoints: ["Leaf-L2:eth3", "Host12-3:eth2"]       # Leaf-L2 Eth2 <---> Host12-3 Port 2 (10G)
+
+    - endpoints: ["Leaf-L2:eth1", "k8s-master-01:eth2"]       # Leaf-L2 Eth0 <---> Host12-1 Port 2 (10G)
+    - endpoints: ["Leaf-L2:eth2", "k8s-db-01:eth2"]       # Leaf-L2 Eth1 <---> Host12-2 Port 2 (10G)
+    - endpoints: ["Leaf-L2:eth3", "osh-ctrl-01:eth2"]       # Leaf-L2 Eth2 <---> Host12-3 Port 2 (10G)
+    - endpoints: ["Leaf-L2:eth4", "osh-net-01:eth2"]       # Leaf-L2 Eth0 <---> Host12-1 Port 2 (10G)
+    - endpoints: ["Leaf-L2:eth5", "osh-comp-01:eth2"]       # Leaf-L2 Eth1 <---> Host12-2 Port 2 (10G)
+    - endpoints: ["Leaf-L2:eth6", "osh-comp-04:eth2"]       # Leaf-L2 Eth2 <---> Host12-3 Port 2 (10G)
+    # =========================================================================
+    # LEAF-L3 ACCESS BREAKOUTS (Eth0=eth1, Eth1=eth2, Eth2=eth3)
+    # =========================================================================
+    # - endpoints: ["Leaf-L3:eth1", "Host34-1:eth1"]       # Leaf-L3 Eth0 <---> Host34-1 Port 1 (10G)
+    # - endpoints: ["Leaf-L3:eth2", "Host34-2:eth1"]       # Leaf-L3 Eth1 <---> Host34-2 Port 1 (10G)
+    # - endpoints: ["Leaf-L3:eth3", "MonSrv:eth1"]         # Leaf-L3 Eth2 <---> MonSrv Port 1 (10G)
+
+    - endpoints: ["Leaf-L3:eth1", "k8s-master-02:eth1"]       # Leaf-L3 Eth0 <---> Host34-1 Port 1 (10G)
+    - endpoints: ["Leaf-L3:eth2", "k8s-db-02:eth1"]       # Leaf-L3 Eth1 <---> Host34-2 Port 1 (10G)
+    - endpoints: ["Leaf-L3:eth3", "osh-ctrl-02:eth1"]         # Leaf-L3 Eth2 <---> MonSrv Port 1 (10G)
+    - endpoints: ["Leaf-L3:eth4", "osh-net-02:eth1"]       # Leaf-L3 Eth0 <---> Host34-1 Port 1 (10G)
+    - endpoints: ["Leaf-L3:eth5", "osh-comp-02:eth1"]       # Leaf-L3 Eth1 <---> Host34-2 Port 1 (10G)
+    
+    # =========================================================================
+    # LEAF-L4 ACCESS BREAKOUTS (Mirrored to Leaf-L3 for Multi-Homing)
+    # =========================================================================
+    # - endpoints: ["Leaf-L4:eth1", "Host34-1:eth2"]       # Leaf-L4 Eth0 <---> Host34-1 Port 2 (10G)
+    # - endpoints: ["Leaf-L4:eth2", "Host34-2:eth2"]       # Leaf-L4 Eth1 <---> Host34-2 Port 2 (10G)
+    # - endpoints: ["Leaf-L4:eth3", "MonSrv:eth2"]         # Leaf-L4 Eth2 <---> MonSrv Port 2 (10G)
+
+    - endpoints: ["Leaf-L4:eth1", "k8s-master-02:eth2"]       # Leaf-L4 Eth0 <---> Host34-1 Port 2 (10G)
+    - endpoints: ["Leaf-L4:eth2", "k8s-db-02:eth2"]       # Leaf-L4 Eth1 <---> Host34-2 Port 2 (10G)
+    - endpoints: ["Leaf-L4:eth3", "osh-ctrl-02:eth2"]         # Leaf-L4 Eth2 <---> MonSrv Port 2 (10G)
+    - endpoints: ["Leaf-L4:eth4", "osh-net-02:eth2"]       # Leaf-L4 Eth0 <---> Host34-1 Port 2 (10G)
+    - endpoints: ["Leaf-L4:eth5", "osh-comp-02:eth2"]       # Leaf-L4 Eth1 <---> Host34-2 Port 2 (10G)
+
+    # =========================================================================
+    # BORDER-LEAF1 EDGE/ISP CONNECTIONS (Eth0=eth1, Eth1=eth2, Eth2=eth3, Eth3=eth4)
+    # =========================================================================
+    # - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:enp2s0"] # BL1 Eth0 <---> Exit-Router1 enp2s0 (10G)
+    # - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"]   # BL1 Eth1 <---> Exit-Router2 eth1 (10G)
+    # - endpoints: ["Border-Leaf1:eth3", "HostB12-1:eth1"]      # BL1 Eth2 <---> HostB12-1 Port 1 (10G)
+    # - endpoints: ["Border-Leaf1:eth4", "HostB12-2:eth1"]      # BL1 Eth3 <---> HostB12-2 Port 1 (1G)
+
+    - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:eth1"] # BL1 Eth0 <---> Exit-Router1 enp2s0 (10G)
+    - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"]   # BL1 Eth1 <---> Exit-Router2 eth1 (10G)
+    - endpoints: ["Border-Leaf1:eth3", "k8s-master-03:eth1"]      # BL1 Eth2 <---> HostB12-1 Port 1 (10G)
+    - endpoints: ["Border-Leaf1:eth4", "k8s-db-03:eth1"]      # BL1 Eth3 <---> HostB12-2 Port 1 (1G)
+    - endpoints: ["Border-Leaf1:eth5", "osh-ctrl-03:eth1"] # BL1 Eth0 <---> Exit-Router1 enp2s0 (10G)
+    - endpoints: ["Border-Leaf1:eth6", "MonSrv:eth1"]   # BL1 Eth1 <---> Exit-Router2 eth1 (10G)
+    - endpoints: ["Border-Leaf1:eth7", "osh-comp-03:eth1"]      # BL1 Eth2 <---> HostB12-1 Port 1 (10G)
+  
+    # =========================================================================
+    # BORDER-LEAF2 EDGE/ISP CONNECTIONS (Mirrored to Border-Leaf1)
+    # =========================================================================
+    # - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"]   # BL2 Eth0 <---> Exit-Router2 eth2 (10G)
+    # - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:enp3s0"] # BL2 Eth1 <---> Exit-Router1 enp3s0 (10G)
+    # - endpoints: ["Border-Leaf2:eth3", "HostB12-1:eth2"]      # BL2 Eth2 <---> HostB12-1 Port 2 (10G)
+    # - endpoints: ["Border-Leaf2:eth4", "HostB12-2:eth2"]      # BL2 Eth3 <---> HostB12-2 Port 2 (10G)
+
+    - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"]   # BL2 Eth0 <---> Exit-Router2 eth2 (10G)
+    - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:eth2"] # BL2 Eth1 <---> Exit-Router1 enp3s0 (10G)
+    - endpoints: ["Border-Leaf2:eth3", "k8s-master-03:eth2"]      # BL2 Eth2 <---> HostB12-1 Port 2 (10G)
+    - endpoints: ["Border-Leaf2:eth4", "k8s-db-03:eth2"]      # BL2 Eth3 <---> HostB12-2 Port 2 (10G)
+    - endpoints: ["Border-Leaf2:eth5", "osh-ctrl-03:eth2"] # BL2 Eth0 <---> Exit-Router2 eth2 (10G)
+    - endpoints: ["Border-Leaf2:eth6", "MonSrv:eth2"] # BL2 Eth1 <---> Exit-Router1 enp3s0 (10G)
+    - endpoints: ["Border-Leaf2:eth7", "osh-comp-03:eth2"]      # BL2 Eth2 <---> HostB12-1 Port 2 (10G)
+   
+
+
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+[WARNING]: Invalid characters were found in group names but not replaced, use -vvvv to see details
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+changed: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure ISO utilities are installed (for cloud-init seed ISO)] ****************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+ok: [poweredge_r810] => (item=Syncing status for JID: j55773806163.2515766)
+ok: [poweredge_r810] => (item=Syncing status for JID: j120024415758.2520529)
+ok: [poweredge_r810] => (item=Syncing status for JID: j151313503225.2521532)
+ok: [poweredge_r810] => (item=Syncing status for JID: j947266670759.2523146)
+ok: [poweredge_r810] => (item=Syncing status for JID: j781810088945.2525377)
+ok: [poweredge_r810] => (item=Syncing status for JID: j460395126950.2527085)
+ok: [poweredge_r810] => (item=Syncing status for JID: j148303830030.2528345)
+ok: [poweredge_r810] => (item=Syncing status for JID: j142009125913.2532536)
+ok: [poweredge_r810] => (item=Syncing status for JID: j673698797242.2533231)
+ok: [poweredge_r810] => (item=Syncing status for JID: j251285193903.2533939)
+ok: [poweredge_r810] => (item=Syncing status for JID: j68036265893.2534911)
+ok: [poweredge_r810] => (item=Syncing status for JID: j460492365526.2535214)
+ok: [poweredge_r810] => (item=Syncing status for JID: j479952210988.2535578)
+ok: [poweredge_r810] => (item=Syncing status for JID: j203529929313.2535998)
+ok: [poweredge_r810] => (item=Syncing status for JID: j534480238942.2536847)
+ok: [poweredge_r810] => (item=Syncing status for JID: j416716372065.2537776)
+ok: [poweredge_r810] => (item=Syncing status for JID: j430190149624.2538036)
+ok: [poweredge_r810] => (item=Syncing status for JID: j892739737360.2538296)
+ok: [poweredge_r810] => (item=Syncing status for JID: j16394937330.2538559)
+ok: [poweredge_r810] => (item=Syncing status for JID: j642398548851.2538827)
+ok: [poweredge_r810] => (item=Syncing status for JID: j513586856121.2539657)
+ok: [poweredge_r810] => (item=Syncing status for JID: j361889811165.2539946)
+ok: [poweredge_r810] => (item=Syncing status for JID: j95900739236.2540315)
+ok: [poweredge_r810] => (item=Syncing status for JID: j257689165491.2540647)
+ok: [poweredge_r810] => (item=Syncing status for JID: j784342813610.2540937)
+ok: [poweredge_r810] => (item=Syncing status for JID: j718970137505.2541798)
+
+TASK [Bootstrap QEMU Nodes over Serial Consoles (Base64 Payload Injection)] ********************************************************************************
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Bootstrapping VM: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router2 -> 172.16.2.42)
+
+TASK [Dynamically Configure Hypervisor Gateway NAT for Pass-Through Links (Once)] **************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - collect first exited generic_vm name] ****************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Guardrail - show failure log for first exited generic_vm] ********************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [Guardrail - fail with actionable diagnostics if any generic_vm SSH is down] **************************************************************************
+ok: [poweredge_r810] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+PLAY [Verify Persistent Dracut Storage Integrity] **********************************************************************************************************
+
+TASK [Capture directory capacity statistics] ***************************************************************************************************************
+fatal: [k8s-master-02]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [k8s-master-03]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [k8s-db-01]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [k8s-db-02]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [osh-ctrl-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-ctrl-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-ctrl-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-net-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [k8s-db-03]: UNREACHABLE! => {"changed": false, "msg": "Invalid/incorrect password: Permission denied, please try again.", "unreachable": true}
+fatal: [osh-net-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [MonSrv]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-04]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [External-Router]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [oob-mgmt-node]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Exit-Router1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Exit-Router2               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+External-Router            : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+oob-mgmt-node              : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+poweredge_r810             : ok=18   changed=10   unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml site.yml --extra-vars "ansible_password=ubuntu ans
+ible_ssh_pass=ubuntu"
+ERROR! the playbook: site.yml could not be found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/site.yml --extra-vars "ansible_password=
+ubuntu ansible_ssh_pass=ubuntu"
+[WARNING]: Invalid characters were found in group names but not replaced, use -vvvv to see details
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+ok: [localhost]
+
+PLAY [Preflight - wait for SONiC nodes to be ready] ********************************************************************************************************
+
+TASK [Wait for SSH transport] ******************************************************************************************************************************
+^C [ERROR]: User interrupted execution
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
