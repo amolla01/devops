@@ -1,0 +1,612 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+ok: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure ISO utilities are installed (for cloud-init seed ISO)] ****************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+ok: [poweredge_r810] => (item=Syncing status for JID: j620358501429.3153248)
+ok: [poweredge_r810] => (item=Syncing status for JID: j378454324197.3158818)
+ok: [poweredge_r810] => (item=Syncing status for JID: j561617641876.3160802)
+ok: [poweredge_r810] => (item=Syncing status for JID: j94919567498.3162577)
+ok: [poweredge_r810] => (item=Syncing status for JID: j153677237164.3164991)
+ok: [poweredge_r810] => (item=Syncing status for JID: j531572562222.3166358)
+ok: [poweredge_r810] => (item=Syncing status for JID: j223331866011.3167993)
+ok: [poweredge_r810] => (item=Syncing status for JID: j18658845511.3170377)
+ok: [poweredge_r810] => (item=Syncing status for JID: j101117025372.3171627)
+ok: [poweredge_r810] => (item=Syncing status for JID: j290655706973.3171938)
+ok: [poweredge_r810] => (item=Syncing status for JID: j916405588377.3172532)
+ok: [poweredge_r810] => (item=Syncing status for JID: j864856911276.3173467)
+ok: [poweredge_r810] => (item=Syncing status for JID: j720671156428.3173807)
+ok: [poweredge_r810] => (item=Syncing status for JID: j656409353013.3174141)
+ok: [poweredge_r810] => (item=Syncing status for JID: j916867708408.3174445)
+ok: [poweredge_r810] => (item=Syncing status for JID: j744427500964.3174808)
+ok: [poweredge_r810] => (item=Syncing status for JID: j822221941932.3176071)
+ok: [poweredge_r810] => (item=Syncing status for JID: j329334598322.3176540)
+ok: [poweredge_r810] => (item=Syncing status for JID: j985336951070.3176798)
+ok: [poweredge_r810] => (item=Syncing status for JID: j938791800953.3177056)
+ok: [poweredge_r810] => (item=Syncing status for JID: j357738521084.3177313)
+ok: [poweredge_r810] => (item=Syncing status for JID: j113817095091.3178156)
+ok: [poweredge_r810] => (item=Syncing status for JID: j65465181749.3178483)
+ok: [poweredge_r810] => (item=Syncing status for JID: j575962126203.3178765)
+ok: [poweredge_r810] => (item=Syncing status for JID: j825117917880.3179061)
+ok: [poweredge_r810] => (item=Syncing status for JID: j813426791798.3179453)
+
+TASK [Read control-node SSH public key for VM bootstrap] ***************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Inject SSH public key into all Linux VM nodes over serial console] ***********************************************************************************
+changed: [poweredge_r810] => (item=Serial key injection: k8s-master-01)
+changed: [poweredge_r810] => (item=Serial key injection: k8s-master-02)
+changed: [poweredge_r810] => (item=Serial key injection: k8s-master-03)
+changed: [poweredge_r810] => (item=Serial key injection: k8s-db-01)
+changed: [poweredge_r810] => (item=Serial key injection: k8s-db-02)
+changed: [poweredge_r810] => (item=Serial key injection: k8s-db-03)
+changed: [poweredge_r810] => (item=Serial key injection: osh-ctrl-01)
+changed: [poweredge_r810] => (item=Serial key injection: osh-ctrl-02)
+changed: [poweredge_r810] => (item=Serial key injection: osh-ctrl-03)
+changed: [poweredge_r810] => (item=Serial key injection: osh-net-01)
+changed: [poweredge_r810] => (item=Serial key injection: osh-net-02)
+changed: [poweredge_r810] => (item=Serial key injection: MonSrv)
+changed: [poweredge_r810] => (item=Serial key injection: osh-comp-01)
+changed: [poweredge_r810] => (item=Serial key injection: osh-comp-02)
+changed: [poweredge_r810] => (item=Serial key injection: osh-comp-03)
+changed: [poweredge_r810] => (item=Serial key injection: osh-comp-04)
+changed: [poweredge_r810] => (item=Serial key injection: Exit-Router1)
+changed: [poweredge_r810] => (item=Serial key injection: Exit-Router2)
+
+TASK [Verify SSH key login works for all Linux VM nodes] ***************************************************************************************************
+failed: [poweredge_r810] (item=SSH key login check: k8s-master-01) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.51", "id -u"], "delta": "0:00:00.012807", "end": "2026-09-02 21:54:50.699929", "item": "k8s-master-01", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:50.687122", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: k8s-master-02) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.61", "id -u"], "delta": "0:00:00.014986", "end": "2026-09-02 21:54:52.346051", "item": "k8s-master-02", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:52.331065", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: k8s-master-03) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.71", "id -u"], "delta": "0:00:00.013095", "end": "2026-09-02 21:54:53.550775", "item": "k8s-master-03", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:53.537680", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: k8s-db-01) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.52", "id -u"], "delta": "0:00:00.013825", "end": "2026-09-02 21:54:54.518785", "item": "k8s-db-01", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:54.504960", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: k8s-db-02) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.62", "id -u"], "delta": "0:00:00.014041", "end": "2026-09-02 21:54:55.374420", "item": "k8s-db-02", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:55.360379", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: k8s-db-03) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.72", "id -u"], "delta": "0:00:00.013567", "end": "2026-09-02 21:54:56.473821", "item": "k8s-db-03", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:56.460254", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-ctrl-01) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.53", "id -u"], "delta": "0:00:00.012591", "end": "2026-09-02 21:54:57.388711", "item": "osh-ctrl-01", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:57.376120", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-ctrl-02) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.63", "id -u"], "delta": "0:00:00.014041", "end": "2026-09-02 21:54:58.345820", "item": "osh-ctrl-02", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:58.331779", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-ctrl-03) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.73", "id -u"], "delta": "0:00:00.013919", "end": "2026-09-02 21:54:59.303115", "item": "osh-ctrl-03", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:54:59.289196", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-net-01) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.54", "id -u"], "delta": "0:00:00.015493", "end": "2026-09-02 21:55:00.234925", "item": "osh-net-01", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:00.219432", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-net-02) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.64", "id -u"], "delta": "0:00:00.013203", "end": "2026-09-02 21:55:01.118020", "item": "osh-net-02", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:01.104817", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: MonSrv) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.74", "id -u"], "delta": "0:00:00.012457", "end": "2026-09-02 21:55:02.026863", "item": "MonSrv", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:02.014406", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-comp-01) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.55", "id -u"], "delta": "0:00:00.014708", "end": "2026-09-02 21:55:03.206192", "item": "osh-comp-01", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:03.191484", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-comp-02) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.65", "id -u"], "delta": "0:00:00.013048", "end": "2026-09-02 21:55:04.135655", "item": "osh-comp-02", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:04.122607", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-comp-03) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.75", "id -u"], "delta": "0:00:00.012440", "end": "2026-09-02 21:55:05.068460", "item": "osh-comp-03", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:05.056020", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: osh-comp-04) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.56", "id -u"], "delta": "0:00:00.015402", "end": "2026-09-02 21:55:06.052548", "item": "osh-comp-04", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:06.037146", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: Exit-Router1) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.41", "id -u"], "delta": "0:00:00.012624", "end": "2026-09-02 21:55:07.640502", "item": "Exit-Router1", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:07.627878", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+failed: [poweredge_r810] (item=SSH key login check: Exit-Router2) => {"ansible_loop_var": "item", "changed": false, "cmd": ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "/home/nh1221/.ssh/id_dc_lab", "-o", "ProxyJump=nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null", "ubuntu@172.16.2.42", "id -u"], "delta": "0:00:00.011972", "end": "2026-09-02 21:55:08.599713", "item": "Exit-Router2", "msg": "non-zero return code", "rc": 255, "start": "2026-09-02 21:55:08.587741", "stderr": "command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\"", "stderr_lines": ["command-line line 0: Invalid ProxyJump \"nh1221@192.168.9.198 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\""], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+poweredge_r810             : ok=16   changed=9    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+ok: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure ISO utilities are installed (for cloud-init seed ISO)] ****************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+ok: [poweredge_r810] => (item=Syncing status for JID: j991434008939.3237222)
+ok: [poweredge_r810] => (item=Syncing status for JID: j415498803415.3241888)
+ok: [poweredge_r810] => (item=Syncing status for JID: j857483667791.3243131)
+ok: [poweredge_r810] => (item=Syncing status for JID: j684096367050.3244438)
+ok: [poweredge_r810] => (item=Syncing status for JID: j765576442233.3246330)
+ok: [poweredge_r810] => (item=Syncing status for JID: j407623501226.3249214)
+ok: [poweredge_r810] => (item=Syncing status for JID: j746435756460.3250054)
+ok: [poweredge_r810] => (item=Syncing status for JID: j436111024902.3251244)
+ok: [poweredge_r810] => (item=Syncing status for JID: j690347790984.3253120)
+ok: [poweredge_r810] => (item=Syncing status for JID: j241980854382.3253448)
+ok: [poweredge_r810] => (item=Syncing status for JID: j317638079998.3253824)
+ok: [poweredge_r810] => (item=Syncing status for JID: j662566934105.3254549)
+ok: [poweredge_r810] => (item=Syncing status for JID: j696057316728.3255314)
+ok: [poweredge_r810] => (item=Syncing status for JID: j495546453706.3255710)
+ok: [poweredge_r810] => (item=Syncing status for JID: j336804550868.3256156)
+ok: [poweredge_r810] => (item=Syncing status for JID: j300250492197.3256525)
+ok: [poweredge_r810] => (item=Syncing status for JID: j571690262204.3257745)
+ok: [poweredge_r810] => (item=Syncing status for JID: j902759250684.3258101)
+ok: [poweredge_r810] => (item=Syncing status for JID: j98798654080.3258362)
+ok: [poweredge_r810] => (item=Syncing status for JID: j319066405051.3258662)
+ok: [poweredge_r810] => (item=Syncing status for JID: j883309073406.3258983)
+ok: [poweredge_r810] => (item=Syncing status for JID: j978245766275.3259873)
+ok: [poweredge_r810] => (item=Syncing status for JID: j940072160640.3260170)
+ok: [poweredge_r810] => (item=Syncing status for JID: j484647429828.3260454)
+ok: [poweredge_r810] => (item=Syncing status for JID: j3555197361.3260793)
+ok: [poweredge_r810] => (item=Syncing status for JID: j846804404681.3261090)
+
+TASK [Legacy serial bootstrap path (optional)] *************************************************************************************************************
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-01 -> 172.16.2.51)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-02 -> 172.16.2.61)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-03 -> 172.16.2.71)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-01 -> 172.16.2.52)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-02 -> 172.16.2.62)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-03 -> 172.16.2.72)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-01 -> 172.16.2.53)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-02 -> 172.16.2.63)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-03 -> 172.16.2.73)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-net-01 -> 172.16.2.54)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-net-02 -> 172.16.2.64)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: MonSrv -> 172.16.2.74)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-01 -> 172.16.2.55)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-02 -> 172.16.2.65)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-03 -> 172.16.2.75)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-04 -> 172.16.2.56)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router1 -> 172.16.2.41)
+skipping: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router2 -> 172.16.2.42)
+skipping: [poweredge_r810]
+
+TASK [Dynamically Configure Hypervisor Gateway NAT for Pass-Through Links (Once)] **************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - collect first exited generic_vm name] ****************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Guardrail - show failure log for first exited generic_vm] ********************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [Guardrail - fail with actionable diagnostics if any generic_vm SSH is down] **************************************************************************
+ok: [poweredge_r810] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+PLAY [Verify Persistent Dracut Storage Integrity] **********************************************************************************************************
+
+TASK [Capture directory capacity statistics] ***************************************************************************************************************
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-master-01: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-master-02: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-master-03: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-db-01: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-db-02: unexpected output from Python interpreter discovery
+[WARNING]: Platform unknown on host k8s-master-03 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-master-03]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host k8s-master-02 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-master-02]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host k8s-master-01 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-master-01]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host k8s-db-01 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-db-01]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host k8s-db-02 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-db-02]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Unhandled error in Python interpreter discovery for host k8s-db-03: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host osh-ctrl-01: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host osh-ctrl-02: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host osh-ctrl-03: unexpected output from Python interpreter discovery
+[WARNING]: Unhandled error in Python interpreter discovery for host osh-net-01: unexpected output from Python interpreter discovery
+[WARNING]: Platform unknown on host k8s-db-03 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [k8s-db-03]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host osh-ctrl-02 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [osh-ctrl-02]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+fatal: [osh-net-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.54\". Make sure this host can be reached over ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535\r\n", "unreachable": true}
+[WARNING]: Platform unknown on host osh-ctrl-01 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [osh-ctrl-01]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+[WARNING]: Platform unknown on host osh-ctrl-03 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+fatal: [osh-ctrl-03]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": false, "module_stderr": "Host key verification failed.\r\n", "module_stdout": "", "msg": "MODULE FAILURE: No start of json char found\nSee stdout/stderr for the exact error", "rc": 6}
+fatal: [osh-net-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [MonSrv]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-02]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-03]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [osh-comp-04]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: read: Connection reset by peer\r\nConnection reset by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by 192.168.9.198 port 22\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+Exit-Router1               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Exit-Router2               : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+poweredge_r810             : ok=17   changed=9    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inv-osh.yml playbooks/lab/fabric-full.yml
+
+PLAY [Control-node preflight and transport setup] **********************************************************************************************************
+
+TASK [Validate networking mode] ****************************************************************************************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [Remove stale host keys for SONiC nodes] **************************************************************************************************************
+ok: [localhost] => (item=Spine-S1)
+ok: [localhost] => (item=Spine-S2)
+ok: [localhost] => (item=Leaf-L1)
+ok: [localhost] => (item=Leaf-L2)
+ok: [localhost] => (item=Leaf-L3)
+ok: [localhost] => (item=Leaf-L4)
+ok: [localhost] => (item=Border-Leaf1)
+ok: [localhost] => (item=Border-Leaf2)
+[WARNING]: Platform linux on host localhost is using the discovered Python interpreter at /mnt/c/Users/nh1221/data-center/venv/bin/python3.12, but future
+installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-
+core/2.18/reference_appendices/interpreter_discovery.html for more information.
+
+TASK [Ensure route mode has network path to SONiC mgmt subnet] *********************************************************************************************
+skipping: [localhost]
+
+TASK [Check ssh command exists for socks mode] *************************************************************************************************************
+skipping: [localhost]
+
+TASK [Check nc command exists for socks mode] **************************************************************************************************************
+skipping: [localhost]
+
+TASK [Detect existing SOCKS tunnel] ************************************************************************************************************************
+skipping: [localhost]
+
+TASK [Start SOCKS tunnel to R810] **************************************************************************************************************************
+skipping: [localhost]
+
+PLAY [Orchestrate Sheba Laboratory Cloud Architecture Environment] *****************************************************************************************
+
+TASK [clab_topology_prep : Generate finalized topology configuration from Jinja2 template] *****************************************************************
+ok: [localhost]
+
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+[WARNING]: Platform linux on host poweredge_r810 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python
+interpreter could change the meaning of that path. See https://docs.ansible.com/ansible-core/2.18/reference_appendices/interpreter_discovery.html for more
+information.
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Sync project tree to R810] ***************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Ensure ISO utilities are installed (for cloud-init seed ISO)] ****************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Generate cloud-init seed ISO for generic_vm nodes] ***************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create Ceph OSD backing disks required by topology bind mounts] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Create K8/OSH VM data disks required by topology bind mounts] ****************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Guardrail - fail if topology still contains unsupported serial=hostdata] *****************************************************************************
+ok: [poweredge_r810]
+
+TASK [Destroy existing topology if present] ****************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Remove stale containerlab state directories] *********************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Deploy topology on R810] *****************************************************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Probe All Datacenter SSH Ports Concurrently (Non-Blocking)] ******************************************************************************************
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S1 -> 172.16.2.11)
+changed: [poweredge_r810] => (item=Checking socket readiness: Spine-S2 -> 172.16.2.12)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L1 -> 172.16.2.21)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L2 -> 172.16.2.22)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L3 -> 172.16.2.23)
+changed: [poweredge_r810] => (item=Checking socket readiness: Leaf-L4 -> 172.16.2.24)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf1 -> 172.16.2.31)
+changed: [poweredge_r810] => (item=Checking socket readiness: Border-Leaf2 -> 172.16.2.32)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Checking socket readiness: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Checking socket readiness: MonSrv -> 172.16.2.74)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-01 -> 172.16.2.55)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Checking socket readiness: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Checking socket readiness: Exit-Router2 -> 172.16.2.42)
+
+TASK [Synchronize and Await Port Validation Results] *******************************************************************************************************
+ok: [poweredge_r810] => (item=Syncing status for JID: j410048197710.3314885)
+ok: [poweredge_r810] => (item=Syncing status for JID: j639219997969.3318223)
+ok: [poweredge_r810] => (item=Syncing status for JID: j51526213140.3319738)
+ok: [poweredge_r810] => (item=Syncing status for JID: j184113672381.3321873)
+ok: [poweredge_r810] => (item=Syncing status for JID: j784046120526.3323802)
+ok: [poweredge_r810] => (item=Syncing status for JID: j154656735410.3324877)
+ok: [poweredge_r810] => (item=Syncing status for JID: j743916125694.3325961)
+ok: [poweredge_r810] => (item=Syncing status for JID: j471713551411.3328113)
+ok: [poweredge_r810] => (item=Syncing status for JID: j767250138350.3328417)
+ok: [poweredge_r810] => (item=Syncing status for JID: j554303986148.3328903)
+ok: [poweredge_r810] => (item=Syncing status for JID: j104532189586.3329935)
+ok: [poweredge_r810] => (item=Syncing status for JID: j250275369137.3330257)
+ok: [poweredge_r810] => (item=Syncing status for JID: j379156568396.3330662)
+ok: [poweredge_r810] => (item=Syncing status for JID: j913773529509.3331033)
+ok: [poweredge_r810] => (item=Syncing status for JID: j7355250396.3331757)
+ok: [poweredge_r810] => (item=Syncing status for JID: j820869835696.3332508)
+ok: [poweredge_r810] => (item=Syncing status for JID: j503167184563.3332833)
+ok: [poweredge_r810] => (item=Syncing status for JID: j692406953497.3333333)
+ok: [poweredge_r810] => (item=Syncing status for JID: j742458429052.3333593)
+ok: [poweredge_r810] => (item=Syncing status for JID: j374173524517.3333851)
+ok: [poweredge_r810] => (item=Syncing status for JID: j70928277753.3334466)
+ok: [poweredge_r810] => (item=Syncing status for JID: j676246180646.3334938)
+ok: [poweredge_r810] => (item=Syncing status for JID: j764921332983.3335289)
+ok: [poweredge_r810] => (item=Syncing status for JID: j869243031919.3335612)
+ok: [poweredge_r810] => (item=Syncing status for JID: j629889881037.3335978)
+ok: [poweredge_r810] => (item=Syncing status for JID: j458902178889.3336242)
+
+TASK [Legacy serial bootstrap path (optional)] *************************************************************************************************************
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-01 -> 172.16.2.51)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-02 -> 172.16.2.61)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-master-03 -> 172.16.2.71)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-01 -> 172.16.2.52)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-02 -> 172.16.2.62)
+changed: [poweredge_r810] => (item=Bootstrapping VM: k8s-db-03 -> 172.16.2.72)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-01 -> 172.16.2.53)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-02 -> 172.16.2.63)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-ctrl-03 -> 172.16.2.73)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-net-01 -> 172.16.2.54)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-net-02 -> 172.16.2.64)
+changed: [poweredge_r810] => (item=Bootstrapping VM: MonSrv -> 172.16.2.74)
+failed: [poweredge_r810] (item=Bootstrapping VM: osh-comp-01 -> 172.16.2.55) => {"ansible_loop_var": "item", "changed": true, "cmd": "# 1. Compress the key installation string into an airtight Base64 payload block\nB64_PAYLOAD=$(echo '\nmkdir -p /home/ubuntu/.ssh\necho \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode\" > /home/ubuntu/.ssh/authorized_keys\nchmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys\nchown -R 1000:1000 /home/ubuntu/.ssh\nsudo ip addr add 172.16.2.55/24 dev enp1s0 2>/dev/null || true\nsudo ip link set dev enp1s0 up\n' | base64 -w 0)\n\n# 2. Pipe the automated execution strings straight into the active QEMU console socket\n(\n  sleep 1; echo \"\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"ubuntu\";\n  sleep 1; echo \"echo $B64_PAYLOAD | base64 -d > /tmp/init.sh\";\n  sleep 1; echo \"sh /tmp/init.sh\";\n  sleep 1; echo \"exit\";\n) | docker exec -i osh-comp-01 python3 -c '\nimport socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect((\"127.0.0.1\", 5000))\nwhile True:\n    try:\n        line = input() + \"\\n\"\n        s.sendall(line.encode(\"utf-8\"))\n    except EOFError:\n        break\ns.close()\n'\n", "delta": "0:00:01.032980", "end": "2026-09-02 22:16:53.698961", "item": "osh-comp-01", "msg": "non-zero return code", "rc": 1, "start": "2026-09-02 22:16:52.665981", "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 4, in <module>\n    s.connect((\"127.0.0.1\", 5000))\n    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nConnectionRefusedError: [Errno 111] Connection refused", "stderr_lines": ["Traceback (most recent call last):", "  File \"<string>\", line 4, in <module>", "    s.connect((\"127.0.0.1\", 5000))", "    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^", "ConnectionRefusedError: [Errno 111] Connection refused"], "stdout": "", "stdout_lines": []}
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-02 -> 172.16.2.65)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-03 -> 172.16.2.75)
+changed: [poweredge_r810] => (item=Bootstrapping VM: osh-comp-04 -> 172.16.2.56)
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router1 -> 172.16.2.41)
+changed: [poweredge_r810] => (item=Bootstrapping VM: Exit-Router2 -> 172.16.2.42)
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+poweredge_r810             : ok=14   changed=8    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
