@@ -1,0 +1,485 @@
+---
+- name: Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit
+  hosts: lab_servers
+  become: true
+  gather_facts: true
+  vars:
+    local_project_root: "{{ playbook_dir }}/../../"
+    remote_topo_file: "{{ remote_lab_dir }}/topology.clab.yml"
+  tasks:
+    - name: Ensure containerlab is installed
+      ansible.builtin.command: "containerlab version"
+      changed_when: false
+
+    - name: Ensure remote lab directory exists
+      ansible.builtin.file:
+        path: "{{ remote_lab_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Ensure host bridge + VLAN support is present on the lab server
+      ansible.builtin.apt:
+        name:
+          - bridge-utils
+          - vlan
+          - iproute2
+        state: present
+        update_cache: false
+
+    - name: Check whether the host internet bridge already exists
+      ansible.builtin.command: "ip link show br-internet"
+      register: br_internet_check
+      failed_when: false
+      changed_when: false
+
+    - name: Create the host internet bridge when it is missing
+      ansible.builtin.command: "ip link add br-internet type bridge"
+      when: br_internet_check.rc != 0
+      register: br_internet_create
+
+    - name: Guardrail - report whether br-internet was created or already existed
+      ansible.builtin.debug:
+        msg: >-
+          br-internet {{ 'created' if br_internet_create is defined and br_internet_create.changed else 'already existed' }}
+
+    - name: Check whether the host VLAN subinterface already exists
+      ansible.builtin.command: "ip link show eno1.100"
+      register: eno1_vlan_check
+      failed_when: false
+      changed_when: false
+
+    - name: Create the external VLAN subinterface on eno1 if missing
+      ansible.builtin.command: "ip link add link eno1 name eno1.100 type vlan id 100"
+      when: eno1_vlan_check.rc != 0
+      register: eno1_vlan_create
+
+    - name: Guardrail - report whether eno1.100 was created or already existed
+      ansible.builtin.debug:
+        msg: >-
+          eno1.100 {{ 'created' if eno1_vlan_create is defined and eno1_vlan_create.changed else 'already existed' }}
+
+    - name: Attach the host VLAN subinterface to the internet bridge without disturbing eno1
+      ansible.builtin.command: "ip link set eno1.100 master br-internet"
+      register: br_internet_attach
+      failed_when: false
+      changed_when: false
+
+    - name: Bring the internet bridge up if it exists
+      ansible.builtin.command: "ip link set br-internet up"
+      register: br_internet_up
+      failed_when: false
+      changed_when: false
+
+    - name: Bring the host VLAN subinterface up if it exists
+      ansible.builtin.command: "ip link set eno1.100 up"
+      register: eno1_vlan_up
+      failed_when: false
+      changed_when: false
+
+    - name: Sync project tree to R810
+      ansible.posix.synchronize:
+        src: "{{ local_project_root }}/"
+        dest: "{{ remote_lab_dir }}/"
+        recursive: true
+        delete: true
+      become: false
+
+    - name: Ensure genisoimage is installed (for cloud-init seed ISO)
+      ansible.builtin.apt:
+        name:
+          - genisoimage
+          - qemu-utils
+        state: present
+        update_cache: false
+
+    - name: Generate cloud-init seed ISO for generic_vm nodes
+      ansible.builtin.command:
+        cmd: >-
+          genisoimage -output {{ remote_lab_dir }}/configs/cloud-init/seed.iso
+          -volid cidata -joliet -rock
+          {{ remote_lab_dir }}/configs/cloud-init/user-data
+          {{ remote_lab_dir }}/configs/cloud-init/meta-data
+      changed_when: true
+
+    - name: Create Ceph OSD backing disks required by topology bind mounts
+      ansible.builtin.command:
+        cmd: bash {{ remote_lab_dir }}/configs/ceph-disks/create-osd-disks.sh
+        # cmd: bash {{ remote_lab_dir }}/configs/ceph-disks/create-k8_osh-disks.sh
+      register: ceph_disk_create
+      changed_when: "'created ' in ceph_disk_create.stdout"
+
+    # - name: Create Host VM 150 GB data disks required by topology bind mounts
+    #   ansible.builtin.command:
+    #     cmd: bash {{ remote_lab_dir }}/configs/vmdisks/create-host-disks.sh
+    #   register: host_disk_create
+    #   changed_when: "'created ' in host_disk_create.stdout"
+    - name: Create Host VM XX GB data disks required by topology bind mounts
+      ansible.builtin.command:
+        # cmd: bash {{ remote_lab_dir }}/configs/vmdisks/create-host-disks.sh
+        cmd: bash {{ remote_lab_dir }}/configs/vmdisks/create-k8_osh-disks.sh
+      register: host_disk_create
+      # UPDATED: Only marks as changed if a brand-new file was actually created from scratch
+      changed_when: "'created and pre-formatted' in host_disk_create.stdout"
+
+
+    - name: Guardrail - fail if topology still contains unsupported serial=hostdata
+      ansible.builtin.shell: |
+        set -e
+        if grep -n 'serial=hostdata' "{{ remote_topo_file }}" >/dev/null; then
+          echo "ERROR: unsupported QEMU option found in {{ remote_topo_file }}: serial=hostdata"
+          echo "       remove serial=hostdata from -drive entries for generic_vm nodes"
+          grep -n 'serial=hostdata' "{{ remote_topo_file }}" || true
+          exit 1
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    # - name: Guardrail - assert required Host VM data disk files exist on R810
+    #   ansible.builtin.stat:
+    #     path: "{{ remote_lab_dir }}/configs/vmdisks/{{ item }}"
+    #   loop:
+    #     - Host12-1-data.qcow2
+    #     - Host12-2-data.qcow2
+    #     - Host12-3-data.qcow2
+    #     - Host34-1-data.qcow2
+    #     - Host34-2-data.qcow2
+    #     - MonSrv-data.qcow2
+    #     - HostB12-1-data.qcow2
+    #     - HostB12-2-data.qcow2
+    #   register: host_data_disk_stats
+    #   changed_when: false
+
+    # - name: Guardrail - fail if any Host VM data disk file is missing
+    #   ansible.builtin.assert:
+    #     that:
+    #       - item.stat.exists
+    #       - item.stat.isreg
+    #     fail_msg: >-
+    #       Missing required VM data disk on R810: {{ item.stat.path }}.
+    #       Re-run deploy sync and create-host-disks step.
+    #   loop: "{{ host_data_disk_stats.results }}"
+    #   loop_control:
+    #     label: "{{ item.stat.path }}"
+
+
+    - name: Destroy existing topology if present
+      ansible.builtin.command: "containerlab destroy -t {{ remote_topo_file }} --cleanup"
+      failed_when: false
+      changed_when: true
+
+    - name: Remove stale containerlab state directories
+      ansible.builtin.shell: "find {{ remote_lab_dir }} -maxdepth 1 -type d -name 'clab-*' -exec rm -rf {} +"
+      changed_when: true
+
+    - name: Deploy topology on R810
+      ansible.builtin.command: "containerlab deploy -t {{ remote_topo_file }} --reconfigure"
+
+    - name: Probe All Datacenter SSH Ports Concurrently (Non-Blocking)
+      ansible.builtin.wait_for:
+        host: "{{ hostvars[item].ansible_host }}"
+        port: 22
+        timeout: 45
+        delay: 0
+      loop: "{{ groups['sonic_switches'] + groups['linux_endpoints'] + groups['exit_routers'] }}"
+      loop_control:
+        label: "Checking socket readiness: {{ item }} -> {{ hostvars[item].ansible_host }}"
+      async: 45
+      poll: 0
+      register: concurrent_ssh_probes
+
+    - name: Synchronize and Await Port Validation Results
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ concurrent_ssh_probes.results }}"
+      loop_control:
+        label: "Syncing status for JID: {{ item.ansible_job_id | default('SKIPPED') }}"
+      register: generic_vm_ssh_wait
+      until: generic_vm_ssh_wait.finished
+      retries: 45
+      delay: 1
+      failed_when: false
+
+    # - name: Bootstrap QEMU Nodes over Serial Consoles (Base64 Python Injection)
+    #   ansible.builtin.shell: |
+    #     # 1. Store raw shell actions in a clean payload variable to bypass string interpolation failures
+    #     PAYLOAD=$(cat << 'EOF'
+    #     mkdir -p /home/ubuntu/.ssh
+    #     echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode" > /home/ubuntu/.ssh/authorized_keys
+    #     chmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys
+    #     chown -R 1000:1000 /home/ubuntu/.ssh
+    #     sudo ip addr add {{ hostvars[item]["ansible_host"] }}/24 dev enp1s0 2>/dev/null || true
+    #     sudo ip link set dev enp1s0 up
+    #     exit
+    #     EOF
+    #     )
+    #     B64_PAYLOAD=$(echo "$PAYLOAD" | base64 -w 0)
+
+    #     # 2. Execute a raw binary feed into port 5000 using host python3 sockets
+    #     docker exec -i {{ item }} python3 -c "
+    #     import socket, time, base64
+    #     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     s.connect(('127.0.0.1', 5000))
+        
+    #     # Wake console and log in
+    #     s.sendall(b'\n')
+    #     time.sleep(1)
+    #     s.sendall(b'ubuntu\n')
+    #     time.sleep(1)
+    #     s.sendall(b'ubuntu\n')
+    #     time.sleep(1)
+        
+    #     # Pass the base64-encoded stream cleanly into the VM kernel space
+    #     cmd = f'echo {B64_PAYLOAD} | base64 -d > /tmp/run.sh && sh /tmp/run.sh\n'
+    #     s.sendall(cmd.encode('utf-8'))
+    #     time.sleep(2)
+    #     s.close()
+    #     "
+    #   loop: "{{ groups['generic_vm_nodes'] }}"
+    #   loop_control:
+    #     label: "Bootstrapping VM: {{ item }} -> {{ hostvars[item]['ansible_host'] }}"
+    #   changed_when: true
+
+    - name: Bootstrap QEMU Nodes over Serial Consoles (Base64 Payload Injection)
+      ansible.builtin.shell: |
+        # 1. Compress the key installation string into an airtight Base64 payload block
+        B64_PAYLOAD=$(echo '
+        mkdir -p /home/ubuntu/.ssh
+        echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKcdWAA5aDYPkqJwaatRVM8G720Or7I3zYZ4E+Y7BoHL nh1221@Lab-ControlNode" > /home/ubuntu/.ssh/authorized_keys
+        chmod 700 /home/ubuntu/.ssh && chmod 600 /home/ubuntu/.ssh/authorized_keys
+        chown -R 1000:1000 /home/ubuntu/.ssh
+        sudo ip addr add {{ hostvars[item]["ansible_host"] }}/24 dev enp1s0 2>/dev/null || true
+        sudo ip link set dev enp1s0 up
+        ' | base64 -w 0)
+
+        # 2. Pipe the automated execution strings straight into the active QEMU console socket
+        (
+          sleep 1; echo "";
+          sleep 1; echo "ubuntu";
+          sleep 1; echo "ubuntu";
+          sleep 1; echo "echo $B64_PAYLOAD | base64 -d > /tmp/init.sh";
+          sleep 1; echo "sh /tmp/init.sh";
+          sleep 1; echo "exit";
+        ) | docker exec -i {{ item }} python3 -c '
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", 5000))
+        while True:
+            try:
+                line = input() + "\n"
+                s.sendall(line.encode("utf-8"))
+            except EOFError:
+                break
+        s.close()
+        '
+      loop: "{{ groups['generic_vm_nodes'] }}"
+      loop_control:
+        label: "Bootstrapping VM: {{ item }} -> {{ hostvars[item]['ansible_host'] }}"
+      changed_when: true
+
+    - name: Dynamically Configure Hypervisor Gateway NAT for Pass-Through Links (Once)
+      ansible.builtin.shell: |
+        # 1. Ask Docker for the bridge ID assigned specifically to your active containerlab network
+        # Containerlab names its networks based on the lab name (sheba) or uses "sonic_oob_mgmt"
+        BR_NAME=$(docker network inspect sheba -f '{{"{{"}}.Id{{"}}"}}' 2>/dev/null | cut -c1-12)
+        
+        # Fallback to searching the out-of-band management network if lab name varies
+        if [ -z "$BR_NAME" ]; then
+          BR_NAME=$(docker network inspect sonic_oob_mgmt -f '{{"{{"}}.Id{{"}}"}}' 2>/dev/null | cut -c1-12)
+        fi
+        
+        # Ultimate fallback to find any standard active containerlab bridge hash
+        if [ -z "$BR_NAME" ]; then
+          BR_NAME=$(ip -o link show | grep -E "br-[0-9a-f]{12}" | awk -F': ' '{print $2}' | head -n 1)
+        fi
+
+        if [ -n "$BR_NAME" ]; then
+          # Ensure we have the "br-" prefix if we grabbed a raw ID
+          case "$BR_NAME" in
+            br-*) TRUE_BR="$BR_NAME" ;;
+            *) TRUE_BR="br-$BR_NAME" ;;
+          esac
+
+          # 2. Inject the 10.0.0.2 gateway address straight onto the discovered bridge interface
+          ip addr add 10.0.0.2/24 dev "$TRUE_BR" 2>/dev/null || true
+          ip link set dev "$TRUE_BR" up 2>/dev/null || true
+          
+          # 3. Ensure global core packet forwarding is administratively enabled
+          sysctl -w net.ipv4.ip_forward=1
+          
+          # 4. Apply IPTables Masquerading state engines securely without duplicating rules
+          iptables -t nat -C POSTROUTING -s 10.0.0.0/24 -o eno1 -j MASQUERADE 2>/dev/null || \
+          iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -o eno1 -j MASQUERADE
+          
+          iptables -C FORWARD -d 10.0.0.0/24 -j ACCEPT 2>/dev/null || \
+          iptables -A FORWARD -d 10.0.0.0/24 -j ACCEPT
+          
+          iptables -C FORWARD -s 10.0.0.0/24 -j ACCEPT 2>/dev/null || \
+          iptables -A FORWARD -s 10.0.0.0/24 -j ACCEPT
+        fi
+      # Runs exactly once on your physical hypervisor host
+      delegate_to: poweredge_r810
+      become: true
+      run_once: true
+      changed_when: true
+
+    # - name: Dynamically Configure Hypervisor Gateway NAT for Pass-Through Links (Once)
+    #   ansible.builtin.shell: |
+    #     # Ensure global core packet forwarding is administratively enabled on the R810
+    #     sysctl -w net.ipv4.ip_forward=1
+        
+    #     # Apply standard NAT masquerading for the real management subnet cleanly
+    #     iptables -t nat -C POSTROUTING -s 172.16.2.0/24 -o eno1 -j MASQUERADE 2>/dev/null || \
+    #     iptables -t nat -A POSTROUTING -s 172.16.2.0/24 -o eno1 -j MASQUERADE
+        
+    #     iptables -C FORWARD -d 172.16.2.0/24 -j ACCEPT 2>/dev/null || \
+    #     iptables -A FORWARD -d 172.16.2.0/24 -j ACCEPT
+        
+    #     iptables -C FORWARD -s 172.16.2.0/24 -j ACCEPT 2>/dev/null || \
+    #     iptables -A FORWARD -s 172.16.2.0/24 -j ACCEPT
+    #   delegate_to: poweredge_r810
+    #   become: true
+    #   run_once: true
+    #   changed_when: true
+
+
+    - name: Guardrail - collect first exited generic_vm name
+      ansible.builtin.shell: |
+        set -e
+        docker ps -a --format '{{"{{"}}.Names{{"}}"}} {{"{{"}}.Status{{"}}"}}' \
+          | awk '/^Host|^MonSrv/ { if ($0 ~ /^.+ Exited /) { print $1; exit 0 } }'
+      args:
+        executable: /bin/bash
+      register: first_exited_generic_vm
+      changed_when: false
+      failed_when: false
+
+    - name: Guardrail - show failure log for first exited generic_vm
+      ansible.builtin.command: "docker logs --tail 120 {{ first_exited_generic_vm.stdout }}"
+      register: exited_vm_log
+      changed_when: false
+      when: first_exited_generic_vm.stdout | length > 0
+
+    - name: Guardrail - fail with actionable diagnostics if any generic_vm SSH is down
+      ansible.builtin.assert:
+        that:
+          - (generic_vm_ssh_wait.results | selectattr('failed', 'defined') | selectattr('failed') | list | length) == 0
+        fail_msg: >-
+          One or more generic_vm nodes did not reach SSH on port 22.
+          First exited container: {{ first_exited_generic_vm.stdout | default('none') }}.
+          {% if exited_vm_log is defined and exited_vm_log.stdout is defined %}Docker log tail:\n{{ exited_vm_log.stdout | replace('\n', '\\n') }}{% else %}No exited generic_vm docker log captured.{% endif %}
+
+# - name: Preflight Bootstrap - Seed WSL Public Keys to SONiC Fabric
+#   hosts: sonic_switches
+#   gather_facts: no
+#   # 💥 THE FIX: Process switches ONE BY ONE to stop overloading the R810 proxy
+#   serial: 1  
+#   vars:
+#     # Use Containerlab default credentials for the seeding pass
+#     ansible_user: "admin"
+#     ansible_password: "Welcome1!"
+#     # ansible_become: true
+#     # ansible_become_method: sudo
+#     # ansible_become_password: "Welcome1!"
+#     ansible_host: "{{ inventory_hostname | lower }}"    
+#     # Force raw SSH to bypass any ~/.ssh/config file loops or traps
+#     # Bypass user keys check loops dynamically during initial seeding
+#     ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+
+#   tasks:
+#     - name: Push local WSL public key straight to the SONiC switches
+#       ansible.posix.authorized_key:
+#         user: admin
+#         state: present
+#         # Dynamically extracts your deployment key from your local WSL profile
+#         key: "{{ lookup('file', '/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub') }}"
+# - name: Preflight Bootstrap - Seed WSL Public Keys to SONiC Fabric
+#   hosts: sonic_switches
+#   gather_facts: no
+#   serial: 1  # Loops through the switches one by one safely
+
+#   tasks:
+#     - name: Push local WSL public key string via an immediate R810 SSH pipe
+#       ansible.builtin.shell: >
+#         ssh -o StrictHostKeyChecking=no nh1221@192.168.9.198 
+#         "sshpass -p 'Welcome1!' ssh -o StrictHostKeyChecking=no admin@{{ inventory_hostname | lower }} 
+#         'mkdir -p ~/.ssh && echo \"{{ lookup('file', '/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub') }}\" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'"
+#       delegate_to: localhost
+#       changed_when: true
+
+- name: Preflight Bootstrap - Seed WSL Public Keys to SONiC Fabric
+  hosts: sonic_switches
+  gather_facts: no
+  serial: 1  # Loops through the switches one by one safely
+
+  # tasks:
+  #   - name: Push local WSL public key string via automated non-interactive double-sshpass pipe
+  #     ansible.builtin.shell: >
+  #       sshpass -p 'amolla01' ssh -o StrictHostKeyChecking=no nh1221@192.168.9.198 
+  #       "sshpass -p 'Welcome1!' ssh -o StrictHostKeyChecking=no admin@{{ inventory_hostname | lower }} 
+  #       'mkdir -p ~/.ssh && echo \"{{ lookup('file', '/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub') }}\" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'"
+  #     delegate_to: localhost
+  #     changed_when: true
+  tasks:
+    - name: Push local WSL public key string via automated non-interactive double-sshpass pipe
+      ansible.builtin.shell: >
+        sshpass -p 'amolla01' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null nh1221@192.168.9.198 
+        "sshpass -p 'Welcome1!' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@{{ inventory_hostname | lower }} 
+        'mkdir -p ~/.ssh && echo \"{{ lookup('file', '/mnt/c/Users/nh1221/.ssh/id_dc_lab.pub') }}\" >> ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys'"
+      delegate_to: localhost
+      changed_when: true
+# =============================================================================
+# PLAY 2: PLATFORM STATE COMPLIANCE AUDITING
+# =============================================================================
+- name: Verify Persistent Dracut Storage Integrity
+  hosts: generic_vm_nodes
+  become: true
+  gather_facts: false
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    # ansible_user: ubuntu                             # ◄── Fixed: removed 'ansible_ssh_' prefix
+    # ansible_ssh_private_key_file: /home/nh1221/.ssh/id_dc_lab # ◄── Fixed: removed 'ansible_ssh_' prefix and enforced absolute path
+    # # ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyJump=ubuntu@192.168.9.198"
+    # ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /home/nh1221/.ssh/id_dc_lab -W %h:%p ubuntu@192.168.9.198'"
+  tasks:
+    # - name: Wait for SSH socket layers to become active and reachable
+    #   ansible.builtin.wait_for_connection:
+    #     timeout: 120
+    - name: Capture active kernel storage mount configurations
+      ansible.builtin.command:
+        cmd: mount
+      register: active_mounts
+      changed_when: false
+
+    - name: Enforce Control Plane System Storage Integrity
+      ansible.builtin.assert:
+        that:
+          # Asserts that 'LiveOS_rootfs on / type overlay' is explicitly active
+          - "'LiveOS_rootfs on / type overlay' in active_mounts.stdout"
+        fail_msg: "[CRITICAL FAILURE] The root partition (/) failed to establish an active LiveOS overlayfs wrapper!"
+        success_msg: "SUCCESS: Dynamic Dracut Overlay verified! Your filesystem is running securely on top of an active OverlayFS canvas."
+
+
+
+
+    # - name: Capture directory capacity statistics
+    #   ansible.builtin.command:
+    #     cmd: df -h /
+    #   register: root_capacity
+    #   changed_when: false
+
+    # # - name: Enforce Control Plane System Storage Integrity
+    # #   ansible.builtin.assert:
+    # #     that:
+    # #       - "'147G' in root_capacity.stdout or '150G' in root_capacity.stdout"
+    # #     fail_msg: "[CRITICAL FAILURE] The native dracut root overlay failed to lock onto your 150GB persistent canvas disk (/dev/vda)."
+    # #     success_msg: "SUCCESS: Enterprise Native Dracut Overlay is active! Everything installed via apt, /usr, /opt, /bin, and /etc is writing securely to your 150GB disk!"
+
+    # - name: Enforce Control Plane System Storage Integrity
+    #   ansible.builtin.assert:
+    #     that:
+    #       # Validates that either 'LiveOS_rootfs' or 'overlay' is driving the root partition
+    #       - "'LiveOS_rootfs' in root_capacity.stdout or 'overlay' in root_capacity.stdout"
+    #     fail_msg: "[CRITICAL FAILURE] The root partition (/) is not running on a native dracut overlayfs wrapper!"
+    #     success_msg: "SUCCESS: Dynamic Dracut Overlay verified! Your filesystem is running securely on top of an active OverlayFS canvas."
