@@ -1319,4 +1319,99 @@ ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
 
 To help you monitor progress as the fabric comes online, would you like me to provide some specific vtysh or docker validation commands to test the failover convergence across your 200 corporate tenant boundaries?
 
+# I have currently the following as you suggested before in topology clab yml, do I need to adjust anything??    # =========================================================================
+    # FINALIZED EDGE INTERCONNECTS & INTERNET INJECTION
+    # =========================================================================
+    # 1. Internal Sync Channel: iBGP synchronization loop between your ISP engines
+    - endpoints: ["ISP-1:eth5", "ISP-2:eth5"]
+
+    # 2. Shared Demarcation: Wire both ISPs directly into your R810 host data bridge
+    - endpoints: ["ISP-1:eth6", "bridge:br-internet"]
+    - endpoints: ["ISP-2:eth6", "bridge:br-internet"]
+
+    # 3. Dynamic Validation Vector: Wire the External-Router to inject testing paths
+    - endpoints: ["External-Router:eth1", "bridge:br-internet"]
+
+Yes, you must adjust those last three lines.
+Because Containerlab threw the error unable to find node bridge, we changed the name of the bridge node to explicitly match your pre-created Linux bridge device: br-internet [containerlab.dev].
+If you leave the literal text "bridge:br-internet" in those endpoints, Containerlab will crash again on the next deployment run because it is still looking for a generic node named bridge.
+## 🛠️ The Final Topology Update
+Open your topology.clab.yml file and update your final links section to match this structure exactly:
+
+    # =========================================================================
+    # FINALIZED EDGE INTERCONNECTS & INTERNET INJECTION
+    # =========================================================================
+    # 1. Internal Sync Channel: iBGP synchronization loop between your ISP engines
+    - endpoints: ["ISP-1:eth5", "ISP-2:eth5"]
+
+    # 2. Shared Demarcation: Wire both ISPs directly into your R810 host data bridge
+    # 💥 FIXED: Points directly to the br-internet node name
+    - endpoints: ["ISP-1:eth6", "br-internet:isp1-port"]
+    - endpoints: ["ISP-2:eth6", "br-internet:isp2-port"]
+
+    # 3. Dynamic Validation Vector: Wire the External-Router to inject testing paths
+    # 💥 FIXED: Points directly to the br-internet node name
+    - endpoints: ["External-Router:eth1", "br-internet:ext-port"]
+
+## 🧠 Why this change fixes the loop:
+By rewriting the destination to "br-internet:port-name", you align the link definition directly with the custom br-internet bridge node we registered in your nodes block. Containerlab will now map those interfaces straight into your live host kernel bridge without searching for a non-existent parent container.
+Save this file change, and you are ready to fire off your master playbook run:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+Let me know if Containerlab successfully compiles and passes the initialization phase now!
+
+# where is isp1/2-port & ext-port defined?? Do we ned to update respective Host var files with anything??
+
+## 1. Where are isp1-port, isp2-port, and ext-port defined?
+These port names are defined right there on that line inside your topology.clab.yml file. [1] 
+In [Containerlab](https://containerlab.dev/), a node of kind: bridge represents a shared broadcast domain. Unlike network containers where data interface names (eth1, eth2) map directly to internal OS adapters, a bridge interface name acts as an arbitrary label. [1, 2] 
+When you define br-internet:isp1-port, Containerlab treats isp1-port as a user-defined string. It automatically creates a virtual ethernet patch cable (veth), names the host-side endpoint clab-sheba-isp1-port, and plugs it into your pre-existing br-internet bridge. You do not need to register these port names anywhere else. [1, 3] 
+------------------------------
+## 2. Do we need to update the Host Var files with anything?
+No, your host variable files are already 100% complete and do not need to be updated.
+Your Ansible playbooks and FRRouting templates do not know or care about the host-side bridge labels (isp1-port). They only care about what the interface is named inside the container namespace (which is explicitly eth6 for your ISPs and eth1 for the External Router). [4] 
+Let's double-check how your host variables cleanly map to your topology links to see why it fits perfectly:
+
+* 
+* For ISP-1:
+* Topology Link: ["ISP-1:eth6", "br-internet:isp1-port"] → Inside the container, this is eth6.
+   * Your host_vars/ISP-1.yml:
+   
+   internet_breakout_interfaces:
+     - { device: eth6, ip_addr: "100.64.0.1/30", ... }
+   
+   (Matches perfectly! Your playbook executes docker exec ISP-1 ip addr replace 100.64.0.1/30 dev eth6 and hits the exact pipe wired to the bridge) [5] 
+* For ISP-2:
+* Topology Link: ["ISP-2:eth6", "br-internet:isp2-port"] → Inside the container, this is eth6.
+   * Your host_vars/ISP-2.yml:
+   
+   internet_breakout_interfaces:
+     - { device: eth6, ip_addr: "100.64.0.5/30", ... }
+   
+   (Matches perfectly!)
+* For External-Router:
+* Topology Link: ["External-Router:eth1", "br-internet:ext-port"] → Inside the container, this is eth1.
+   * Your host_vars/External-Router.yml:
+   
+   isp_uplinks:
+     - { device: eth1, ip_addr: "100.64.0.3/30", ... }
+     - { device: eth1, ip_addr: "100.64.0.2/30", ... }
+   
+   (Matches perfectly! The External Router uses a single data interface eth1 inside its container to multi-home broadcast straight to both ISPs via the shared host bridge).
+* 
+
+------------------------------
+## 🧪 What to do next
+Since your R810 host kernel bridge br-internet is up and matches your single-cable VLAN trunk tracking rules, you are clear to launch. Run your master playbook to deploy your 200-company lab environment:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+Once Containerlab completes its orchestration sweep, let me know if your FRR BGP verification summaries (show bgp summary) print out as successfully established!
+
+[1] [https://containerlab.dev](https://containerlab.dev/manual/kinds/ovs-bridge/)
+[2] [https://containerlab.dev](https://containerlab.dev/manual/kinds/bridge/)
+[3] [https://containerlab.dev](https://containerlab.dev/manual/kinds/cisco_vios/)
+[4] [https://containerlab.dev](https://containerlab.dev/manual/kinds/vr-ros/)
+[5] [https://containerlab.dev](https://containerlab.dev/manual/kinds/linux/)
 
