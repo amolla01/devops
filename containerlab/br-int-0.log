@@ -1,0 +1,37 @@
+PLAY [Deploy containerlab topology on R810, Storage & OverlayFS Fabric Audit] ******************************************************************************
+
+TASK [Gathering Facts] *************************************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure containerlab is installed] ********************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure remote lab directory exists] ******************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Ensure host bridge + VLAN support is present on the lab server] **************************************************************************************
+changed: [poweredge_r810]
+
+TASK [Check whether the host internet bridge already exists] ***********************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Create the host internet bridge when it is missing] **************************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [Check whether the host VLAN subinterface already exists] *********************************************************************************************
+ok: [poweredge_r810]
+
+TASK [Create the external VLAN subinterface on eno1 if missing] ********************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [Attach the host VLAN subinterface to the internet bridge without disturbing eno1] ********************************************************************
+ok: [poweredge_r810]
+
+TASK [Bring the host bridge and VLAN subinterface up] ******************************************************************************************************
+fatal: [poweredge_r810]: FAILED! => {"changed": false, "cmd": ["ip", "link", "set", "br-internet", "up", "&&", "ip", "link", "set", "eno1.100", "up"], "delta": "0:00:00.007932", "end": "2026-09-06 14:00:44.856637", "msg": "non-zero return code", "rc": 255, "start": "2026-09-06 14:00:44.848705", "stderr": "Error: either \"dev\" is duplicate, or \"&&\" is garbage.", "stderr_lines": ["Error: either \"dev\" is duplicate, or \"&&\" is garbage."], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+poweredge_r810             : ok=7    changed=1    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
