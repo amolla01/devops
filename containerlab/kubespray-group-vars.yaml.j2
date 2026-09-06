@@ -1,0 +1,125 @@
+# ==============================================================================
+# KubeSpray cluster.yml overrides for sheba-cluster (Validated Air-Gapped Layout)
+# ==============================================================================
+kube_version: "{{ k8s_version | default('1.35.4') }}"
+kube_network_plugin: "{{ k8s_cni | default('calico') }}"
+kube_pods_subnet: "{{ k8s_pod_cidr | default('10.233.64.0/18') }}"
+kube_service_addresses: "{{ k8s_service_cidr | default('10.233.0.0/18') }}"
+dns_domain: "{{ k8s_dns_domain | default('cluster.local') }}"
+container_manager: "{{ k8s_container_runtime | default('containerd') }}"
+
+# -- Calico CNI: no-backend mode — no BIRD, no encapsulation ------------------
+calico_network_backend: "{{ calico_network_backend | default('none') }}"
+calico_ipip_mode: "Never"
+calico_vxlan_mode: "Never"
+calico_pool_blocksize: "{{ calico_pool_blocksize | default('26') }}"
+calico_pool_name: "{{ calico_pool_name | default('default-ipv4-ippool') }}"
+calico_felix_logseverityscreen: "{{ calico_felix_logseverityscreen | default('Warning') }}"
+calico_node_extra_envs:
+  IP_AUTODETECTION_METHOD: "interface=ens2"
+
+# -- MetalLB: native BGP speaker, peers with local FRR ------------------------
+metallb_enabled: {{ metallb_enabled | default(true) | bool | lower }}
+metallb_namespace: "{{ metallb_namespace | default('metallb-system') }}"
+metallb_speaker_frr_enabled: {{ metallb_frr_enabled | default(false) | bool | lower }}
+
+# -- kube-proxy ----------------------------------------------------------------
+kube_proxy_strict_arp: true
+kube_proxy_mode: "ipvs"
+
+# Audit logs
+kubernetes_audit: true
+
+# Etcd and runtime settings
+etcd_deployment_type: host
+etcd_compaction_retention: "8"
+
+# -- Unblock containerd registry mirrors --------------------------------------
+download_run_once: false
+download_localhost: false
+download_force_local_only: false
+download_force_pull: false
+skip_downloads: false
+
+# Crucial system components version tags aligned with active cache
+calico_version: "{{ calico_version | default('3.29.2') }}"
+coredns_version: "{{ coredns_version | default('1.12.0') }}"
+etcd_version: "{{ etcd_version | default('3.5.17') }}"
+
+# Component image tag overrides (match registry catalog format)
+calico_cni_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
+calico_node_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
+calico_policy_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
+calico_typha_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
+calico_kube_controllers_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
+coredns_image_tag: "v{{ coredns_version | default('1.12.0') | regex_replace('^v', '') }}"
+etcd_image_tag: "v{{ etcd_version | default('3.5.17') | regex_replace('^v', '') }}"
+
+# -- Multus meta-CNI -----------------------------------------------------------
+kube_network_plugin_multus: true
+multus_version: "{{ multus_version | default('4.1.0') }}"
+unsafe_show_logs: true
+validate_container_runtime_ips: false
+system_namespace: kube-system
+
+# Align with cached pause image tag
+pause_version: "{{ pause_version | default('3.10') }}"
+
+# -- Disable optional internal ingress ----------------------------------------
+nginx_ingress_enabled: false
+ingress_nginx_enabled: false
+
+# -- Bypass inventory checksum gatekeeper -------------------------------------
+ignore_assert_errors: true
+kubeadm_verify_checksum: false
+download_verify_checksum: false
+download_validate_as_group: false
+
+# -- Insecure registry settings ------------------------------------------------
+nerdctl_insecure_registry: true
+containerd_insecure_registries:
+  - "{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+
+# -- Standard air-gapped containerd mirror maps -------------------------------
+containerd_registries_mirrors:
+  - prefix: "docker.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+  - prefix: "registry.k8s.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+  - prefix: "quay.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+
+# -- Universal mirror overrides for clean offline runs ------------------------
+r810_management_ip: "{{ r810_management_ip | default(r810_clab_bridge_ip | default('172.16.2.1')) }}"
+my_file_server_port: "{{ my_file_server_port | default('8080') }}"
+r810_binary_server: "http://{{ r810_management_ip }}:{{ my_file_server_port }}"
+
+# 1. Container image registry authority (port 5000)
+kube_image_repo: "{{ r810_management_ip }}:5000"
+gcr_image_repo: "{{ r810_management_ip }}:5000"
+github_image_repo: "{{ r810_management_ip }}:5000"
+docker_image_repo: "{{ r810_management_ip }}:5000"
+quay_image_repo: "{{ r810_management_ip }}:5000"
+
+# 2. Raw binary file server authority (port 8080)
+kubeadm_download_url: "{{ r810_binary_server }}/kubeadm-v{{ k8s_version | default('1.35.4') }}-amd64"
+kubectl_download_url: "{{ r810_binary_server }}/kubectl-v{{ k8s_version | default('1.35.4') }}-amd64"
+kubelet_download_url: "{{ r810_binary_server }}/kubelet-v{{ k8s_version | default('1.35.4') }}-amd64"
+etcd_download_url: "{{ r810_binary_server }}/etcd-v{{ etcd_version | default('3.5.17') | regex_replace('^v', '') }}-linux-amd64.tar.gz"
+cni_download_url: "{{ r810_binary_server }}/cni-plugins-linux-amd64-v1.9.1.tgz"
+calicoctl_download_url: "{{ r810_binary_server }}/calicoctl-{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}-linux-amd64"
+
+# Extra engine container transport mirror overrides
+containerd_download_url: "{{ r810_binary_server }}/containerd-{{ containerd_version | default('2.2.3') }}-linux-amd64.tar.gz"
+nerdctl_download_url: "{{ r810_binary_server }}/nerdctl-{{ nerdctl_version | default('2.2.2') }}-linux-amd64.tar.gz"
+crictl_download_url: "{{ r810_binary_server }}/crictl-v{{ crictl_version | default('1.35.0') | regex_replace('^v', '') }}-linux-amd64.tar.gz"
+runc_download_url: "{{ r810_binary_server }}/runc.amd64"
+
+# -- Persistent air-gapped delegation overrides --------------------------------
+local_release_dir: "{{ fabric_cache_release_dir | default('/opt/fabric-cache') }}"
