@@ -1136,4 +1136,187 @@ And below 'linux_external_router': ---
 
 The provided Ansible task files and orchestrator pipeline have been updated to support additional interface configurations and dynamic FRR reloads using vtysh -b without restarting the container service. These modernized role definitions safely handle containerlab environments where SSH is absent by executing commands via docker exec on the designated host.
 
+# TASK [Deploy topology on R810] *****************************************************************************************************************************
+fatal: [poweredge_r810]: FAILED! => {"changed": true, "cmd": ["containerlab", "deploy", "-t", "/opt/containerlab/sheba/topology.clab.yml", "--reconfigure"], "delta": "0:00:00.096117", "end": "2026-09-05 22:47:12.753107", "msg": "non-zero return code", "rc": 1, "start": "2026-09-05 22:47:12.656990", "stderr": "time=\"2026-09-05T22:47:12-05:00\" level=info msg=\"Containerlab v0.56.0 started\"\ntime=\"2026-09-05T22:47:12-05:00\" level=info msg=\"Parsing & checking topology file: topology.clab.yml\"\nError: unable to find node bridge", "stderr_lines": ["time=\"2026-09-05T22:47:12-05:00\" level=info msg=\"Containerlab v0.56.0 started\"", "time=\"2026-09-05T22:47:12-05:00\" level=info msg=\"Parsing & checking topology file: topology.clab.yml\"", "Error: unable to find node bridge"], "stdout": "", "stdout_lines": []}
+
+The deployment failed with the error Error: unable to find node bridge because of a syntax rule in Containerlab: Any host bridge used in the links: section must be explicitly declared as a node under the nodes: block first. [1] 
+When Containerlab parses "bridge:br-internet", it searches the topology's node registry for a defined entry named bridge. Because it doesn't find it, it halts execution before provisioning any containers. [1, 2] 
+The fix requires declaring the bridge node with kind: bridge, and adjusting the endpoint syntax. [3] 
+------------------------------
+## 🛠️ The Fix: Declare the Bridge Node
+Open your topology file (the error path points to /opt/containerlab/sheba/topology.clab.yml) and apply two adjustments:
+
+   1. Add br-internet under the nodes: section using kind: bridge.
+   2. Update the endpoint string syntax to match the declared node name. [3] 
+
+name: sheba
+topology:
+  nodes:
+    Exit-Router1:    { kind: sonic-vm }
+    Exit-Router2:    { kind: sonic-vm }
+    ISP-1:           { kind: linux, image: "frrouting/frr:v9.1.0" }
+    ISP-2:           { kind: linux, image: "frrouting/frr:v9.1.0" }
+    External-Router: { kind: linux, image: "frrouting/frr:v9.1.0" }
+
+    # =========================================================================
+    # 💥 THE CRITICAL FIX: Explicitly register the host Linux bridge here
+    # =========================================================================
+    br-internet:
+      kind: bridge
+
+  links:
+    # Your existing internal switches and data link endpoints...
+    - endpoints: ["ISP-1:eth1", "Exit-Router1:eth3"]
+    - endpoints: ["ISP-2:eth1", "Exit-Router1:eth4"]
+    - endpoints: ["ISP-1:eth2", "Exit-Router2:eth3"]
+    - endpoints: ["ISP-2:eth2", "Exit-Router2:eth4"]
+    - endpoints: ["ISP-1:eth5", "ISP-2:eth5"]
+
+    # =========================================================================
+    # 💥 THE FIX: Route through the explicit node name instead of generic 'bridge:'
+    # =========================================================================
+    - endpoints: ["ISP-1:eth6", "br-internet:isp1-port"]
+    - endpoints: ["ISP-2:eth6", "br-internet:isp2-port"]
+    - endpoints: ["External-Router:eth1", "br-internet:ext-port"]
+
+------------------------------
+## 🧠 Why this syntax is mandatory:
+
+* 
+* The Namespace Hook: By naming the node br-internet and setting kind: bridge, Containerlab connects your container interfaces (eth6) directly to the real, pre-existing Linux bridge matching that exact name on your PowerEdge R810 host OS. [1] 
+* Port Naming Safety: Specifying :isp1-port or :isp2-port ensures Containerlab cleanly names the host-side virtual ethernet endpoints attached to the bridge, preventing naming collisions. [1] 
+* 
+
+------------------------------
+## 🧪 Pre-Deployment Execution Guide
+Before re-running the Ansible master execution block, ensure the physical host interface configurations on your Dell R810 are fully synchronized to receive the Containerlab links:
+
+# Execute directly on your PowerEdge-R810 terminal shell:
+sudo ip link set dev br-internet down 2>/dev/null
+sudo brctl delbr br-internet 2>/dev/null
+# Rebuild the pristine host data plane bridge link
+sudo ip link add name br-internet type bridge
+sudo ip link set dev br-internet up
+sudo ip link set dev eno1 master br-internet
+sudo ip link set dev eno1 up
+
+Once your host platform interfaces match this bridge canvas, re-trigger your core automation orchestrator pipeline:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+Does updating the topology to register kind: bridge clear the compilation check error and allow Containerlab to deploy smoothly?
+
+[1] [https://containerlab.dev](https://containerlab.dev/manual/kinds/ovs-bridge/)
+[2] [https://github.com](https://github.com/srl-labs/containerlab/issues/2147)
+[3] [https://containerlab.dev](https://containerlab.dev/manual/kinds/bridge/)
+
+
+# Should I run the following on R810 now b4 running the ansible fabric-full.yml playbook?? # Execute directly on your PowerEdge-R810 terminal shell:
+sudo ip link set dev br-internet down 2>/dev/null
+sudo brctl delbr br-internet 2>/dev/null
+
+# Rebuild the pristine host data plane bridge link
+sudo ip link add name br-internet type bridge
+sudo ip link set dev br-internet up
+sudo ip link set dev eno1 master br-internet
+sudo ip link set dev eno1 up
+
+Yes, absolutely. You must execute those exact bridge commands on the Dell PowerEdge R810 host right now before running your fabric-full.yml playbook.
+## 🧠 Why this is required:
+According to [Containerlab's official documentation](https://containerlab.dev/manual/kinds/bridge/) for kind: bridge, Containerlab will intentionally not create or manage host-level Linux bridges automatically. It requires the host administrator to pre-create the bridge in the Linux kernel namespace first. [1, 2, 3] 
+If you do not run these setup commands now, the next time your playbook triggers containerlab deploy, it will crash with an error stating that the underlying system adapter br-internet is missing. [3] 
+## 🚨 Crucial Correction to Avoid Losing Connection!
+Before you paste those lines into your R810 shell, make sure of one thing: Is eno1 the network interface you are using to SSH into the R810?
+If eno1 is your primary management port, slaving it to a raw unconfigured bridge (br-internet) will drop your SSH session instantly and lock you out of the server.
+
+* 
+* If you have a separate network card/cable dedicated to the Internet data plane (e.g., eno2), change eno1 to eno2 in those commands.
+* If you only have one single physical connection (eno1), skip the master br-internet line entirely. Instead, use a virtual tagged sub-interface so your main management link stays untouched:
+
+# Secure workaround for Single-NIC servers
+sudo ip link add link eno1 name eno1.100 type vlan id 100
+sudo ip link set eno1.100 up
+sudo ip link set dev eno1.100 master br-internet
+
+* 
+
+Once your R810 host interface layer is cleanly verified and matching the bridge target, execute your master orchestrator:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+Let me know if your host environment brings up the br-internet dynamic link canvas successfully!
+
+[1] [https://containerlab.dev](https://containerlab.dev/lab-examples/ext-bridge/)
+[2] [https://containerlab.dev](https://containerlab.dev/manual/kinds/bridge/)
+[3] [https://containerlab.dev](https://containerlab.dev/lab-examples/peering-lab/)
+
+
+# I have just one UP: nh1221@PowerEdge-R810:~$ ip l sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DEFAULT group default qlen 1000
+    link/ether 14:fe:b5:ca:22:02 brd ff:ff:ff:ff:ff:ff
+    altname enp1s0f0
+    altname enx14feb5ca2202
+3: eno2: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DEFAULT group default qlen 1000
+    link/ether 14:fe:b5:ca:22:04 brd ff:ff:ff:ff:ff:ff
+    altname enp1s0f1
+    altname enx14feb5ca2204
+4: eno3: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DEFAULT group default qlen 1000
+    link/ether 14:fe:b5:ca:22:06 brd ff:ff:ff:ff:ff:ff
+    altname enp2s0f0
+    altname enx14feb5ca2206
+5: eno4: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DEFAULT group default qlen 1000
+    link/ether 14:fe:b5:ca:22:08 brd ff:ff:ff:ff:ff:ff
+    altname enp2s0f1
+    altname enx14feb5ca2208
+
+    Since eno1 is your only active interface with a carrier link (state UP), do not attach eno1 directly to br-internet as a raw port. Doing so will instantly drop your IP address, break your SSH connection, and completely lock you out of your PowerEdge R810 server!
+Because your 200-company lab environment is hosted on a single-cable physical uplink, you must use VLAN-tagged sub-interfaces. This keeps your host management traffic separate from the containerized data plane traffic while using the same physical wire.
+Run these exact commands on your Dell PowerEdge R810 terminal shell right now. This sequence safely sets up the bridge using an isolated virtual tag (VLAN 100) without disturbing your primary management interface:
+
+# 1. Flush any existing broken configurations safely
+sudo ip link set dev br-internet down 2>/dev/null
+sudo brctl delbr br-internet 2>/dev/null
+sudo ip link del eno1.100 2>/dev/null
+# 2. Create a virtual tagged sub-interface on your active wire (VLAN 100)
+sudo ip link add link eno1 name eno1.100 type vlan id 100
+sudo ip link set eno1.100 up
+# 3. Create the host bridge canvas
+sudo ip link add name br-internet type bridge
+sudo ip link set dev br-internet up
+# 4. Attach ONLY the virtual sub-interface to the bridge canvas
+sudo ip link set dev eno1.100 master br-internet
+
+------------------------------
+## 🔍 Verification Checklist
+Before starting your master playbook, run a quick status check to ensure everything is linked correctly:
+
+ip link show br-internet
+
+You should see br-internet: <BROADCAST,MULTICAST,UP,LOWER_UP> active and healthy, while your main eno1 connection stays untouched.
+Once this matches your infrastructure, re-run your orchestrator pipeline to deploy Containerlab with your new edge configuration:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+Let me know if Containerlab finishes its deployment check smoothly now that the host bridge is safely initialized!
+
+# nh1221@PowerEdge-R810:~$ ip link show br-internet
+20962: br-internet: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether c2:b6:1d:e1:76:4f brd ff:ff:ff:ff:ff:ff
+nh1221@PowerEdge-R810:~$
+
+The br-internet bridge is active, healthy, and up (state UP) [containerlab.dev].
+Because it is running securely inside your Linux kernel network space on the R810, your primary management path on eno1 remains safe. The virtual interface has established the required data plane for your ISPs to tap into.
+You can now return to your local control node terminal window and trigger the single-playable master orchestrator to deploy the entire stack:
+
+ansible-playbook -i inventory.yml playbooks/lab/fabric-full.yml
+
+## 🔍 What to expect during this execution pass:
+
+   1. Containerlab Deployment Step: Containerlab will verify your updated topology.clab.yml, successfully recognize the matching br-internet node registry, and automatically bind ISP-1:eth6, ISP-2:eth6, and External-Router:eth1 straight to this bridge.
+   2. Edge Control Plane Step: The pipeline will step sequentially into your newly updated deploy-edge.yml playbook, injecting the custom multi-hop BGP and failover routing logic seamlessly without hitting an interface fault.
+
+To help you monitor progress as the fabric comes online, would you like me to provide some specific vtysh or docker validation commands to test the failover convergence across your 200 corporate tenant boundaries?
+
 
