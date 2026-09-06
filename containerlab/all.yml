@@ -1,0 +1,247 @@
+---
+# ansible_python_interpreter: /usr/bin/python3
+
+sonic_user: admin
+sonic_pass: Welcome1!
+
+# Lab control and deployment variables
+lab_server_ip: "192.168.9.198"
+lab_jump_user: "nh1221"
+remote_lab_dir: "/opt/containerlab/sheba"
+local_fabric_cache_root: "/opt/fabric-cache"
+local_fabric_helm_binary: "{{ local_fabric_cache_root }}/bin/helm"
+kubespray_repo_mirror: ""
+# kubespray paths + repo declared here so the 'hosts: localhost' plays can resolve them
+kubespray_dest: "/opt/kubespray"
+kubespray_inventory_dir: "{{ kubespray_dest }}/inventory/sheba-cluster"
+kubespray_repo: "https://github.com/kubernetes-sigs/kubespray.git"
+kubespray_version: "v2.31.0"  # <--- Mirror this exact declaration here
+r810_management_ip: "{{ r810_clab_bridge_ip | default('172.16.2.1') }}"
+# rook-ceph namespace + cluster name — used by both rook-ceph and monitoring roles
+rook_ceph_namespace: "rook-ceph"
+rook_ceph_chart_version: "v1.15.5"
+ceph_cluster_name: "rook-ceph"
+clab_workspace_dir: "{{ remote_lab_dir }}/configs"
+clab_vmdisks_dir: "{{ remote_lab_dir }}/configs/vmdisks"
+clab_cloudinit_dir: "{{ remote_lab_dir }}/configs/cloud-init"
+
+# ── MTU policy (single source of truth for the entire stack) ──────────────────
+# host_data_mtu:  Linux IP MTU — what Ceph/pods/apps send.  A VLAN-tagged
+#                 frame from a host = 9000 + 14 (Ethernet) + 4 (VLAN) = 9018 bytes.
+# sonic_port_mtu: SONiC physical ports and VLAN subinterfaces.  Must be ≥
+#                 host_data_mtu + 18 (Ethernet + 802.1q overhead) = 9018 → 9100.
+# clab_link_mtu:  containerlab veth/tap layer.  Set equal to sonic_port_mtu so
+#                 no layer ever generates a frame larger than the one below it.
+# ceph_dummy_mtu: alias kept for backward compat; equals host_data_mtu.
+host_data_mtu: 9000
+sonic_port_mtu: 9100
+clab_link_mtu: "{{ sonic_port_mtu }}"
+ceph_dummy_mtu: "{{ host_data_mtu }}"
+
+# Control-node to SONiC management reachability model.
+# route: add route to 172.16.2.0/24 via R810
+# socks: use a local SOCKS proxy to R810
+
+sonic_mgmt_subnet: "172.16.2.0/24"
+socks_bind_addr: "127.0.0.1"
+socks_port: 1080
+
+# Kubernetes network CIDRs are defined globally so pre-K8s policy playbooks
+# (for example SONiC host-facing route policy) can run before kubespray-prep.
+k8s_pod_cidr: "10.233.64.0/18"
+k8s_service_cidr: "10.233.0.0/18"
+
+# SSH resiliency
+ssh_server_alive_interval: 30
+ssh_server_alive_count_max: 3
+
+# Common SSH args for all remote hosts (SOCKS proxy when lab_network_mode=socks)
+# ansible_ssh_common_args: >-
+#   -o StrictHostKeyChecking=no
+#   -o UserKnownHostsFile=/dev/null
+#   -o ServerAliveInterval=30
+#   -o ServerAliveCountMax=3
+#   {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+# ── Global Network Orchestration Engine Controls ──────────────────────────────
+# ── Global Network Orchestration Engine Controls ──────────────────────────────
+lab_network_mode: native
+ansible_pipelining: true
+forks: 5
+
+# ── Multi-Threaded OpenSSH Jump Host Pipelining for Virtual Nodes ─────────────
+ansible_ssh_private_key_file: ~/.ssh/id_dc_lab
+
+ansible_ssh_common_args: >-
+  -F /dev/null
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=3
+  {% if inventory_hostname == 'poweredge_r810' or inventory_hostname == 'localhost' %}
+  -o ProxyCommand=none
+  {% else %}
+  -o ProxyCommand="ssh -W [%h]:%p -i /home/nh1221/.ssh/id_dc_lab -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null nh1221@192.168.9.198"
+  {% endif %}
+
+
+# ansible_ssh_common_args: >-
+#   -F /dev/null
+#   -o StrictHostKeyChecking=no
+#   -o UserKnownHostsFile=/dev/null
+#   -o ServerAliveInterval=30
+#   -o ServerAliveCountMax=3
+#   {% if lab_network_mode == 'socks' %}
+#   -o ProxyCommand="nc -x {{ socks_bind_addr | default('127.0.0.1') }}:{{ socks_port | default(1080) }} -X 5 %h %p"
+#   {% else %}
+#   -o ProxyCommand="ssh -W [%h]:%p -i /home/nh1221/.ssh/id_dc_lab -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null nh1221@192.168.9.198"
+#   {% endif %}
+
+# Linux staged netplan defaults (override per host in host_vars as needed)
+netplan_mgmt_prefix: 24
+netplan_mgmt_gateway: 172.16.2.254
+netplan_mgmt_dns: [8.8.8.8, 1.1.1.1]
+netplan_data_interfaces: []
+ceph_dummy_prefix: 32
+# ceph_dummy_mtu defined above as alias for host_data_mtu — duplicate removed
+
+# ── BFD for multihoming (fast failover on BGP unnumbered sessions) ────────────
+# Fast profile: 300ms tx/rx x3 multiplier = 900ms detection.
+bfd_enabled: true
+bfd_rx_interval: 300
+bfd_tx_interval: 300
+bfd_multiplier: 3
+bfd_profile_name: "FABRIC-BFD"
+
+# ── Storage VRF (isolated Ceph replication over the shared multihomed uplinks) ─
+# cephdummy0 (20.0.56.x/32) is advertised only inside vrf-storage / Vrf-storage,
+# carried on a dedicated 802.1q storage VLAN so it never mixes with tenant BGP.
+storage_vlan_id: 100
+storage_vrf_name: "vrf-storage"          # Linux VRF name on the hosts
+storage_vrf_table: 300
+sonic_storage_vrf_name: "Vrf-storage"    # SONiC VRF name on the switches
+storage_subnet: "20.0.56.0/24"
+
+# ── QoS: tc HTB 80/20 split on OSD 10G data links (storage vs tenant) ─────────
+qos_total_bandwidth: "10000mbit"
+qos_storage_bandwidth: "8000mbit"        # 80% guaranteed Ceph replication
+qos_workload_bandwidth: "2000mbit"       # 20% guaranteed tenant/workload
+
+# ── MetalLB (BGP mode, native speaker) ───────────────────────────────────────
+# The speaker peers each node's LOCAL FRR over the node loopback; FRR then
+# re-advertises the LoadBalancer /32s into the fabric via eBGP (RFC5549). Native
+# BGP mode is used (speaker.frr disabled) so it never collides with the host FRR
+# on tcp/179. The pool must NOT overlap the fabric loopbacks (10.10.255.0/24).
+metallb_enabled: true
+metallb_namespace: "metallb-system"
+metallb_chart_version: "0.14.9"
+metallb_asn: 64512                       # MetalLB speaker ASN (private)
+metallb_lb_pool: "10.10.200.0/24"        # LoadBalancer VIP range advertised to fabric
+
+# ── Air-gapped registry mirror ────────────────────────────────────────────────
+# Registry runs on the R810 host itself (not inside a VM) so it persists across
+# containerlab destroy/deploy cycles. Docker binds 0.0.0.0:5000 on R810.
+# Keep endpoints split by traffic origin to avoid brittle HTTPS/insecure-registry
+# mismatches:
+# - airgap_registry_host: used by K8s/containerd PULLS from VMs (bridge IP)
+# - airgap_registry_seed_push_host: used by registry_seed PUSHES on R810 itself
+# - kolla_push_registry: used by kolla-build PUSHES from WSL
+r810_clab_bridge_ip: "172.16.2.1"      # Docker assigns gateway .1 to the mgmt bridge
+airgap_registry_host: "{{ r810_clab_bridge_ip }}:5000"
+airgap_registry_seed_push_host: "127.0.0.1:5000"
+# kolla_push_registry: address used when pushing FROM the WSL control node.
+# WSL cannot reach the bridge IP directly (no SOCKS for Docker push); use
+# the R810 external IP instead. Both point to the same registry container.
+kolla_push_registry: "{{ lab_server_ip }}:5000"
+airgap_registry_scheme: "http"
+
+# ── Monitoring stack (kube-prometheus-stack, pinned to MonSrv) ────────────────
+# Prometheus/Grafana/Alertmanager land on the monitoring node and persist on the
+# Ceph RBD StorageClass. Grafana is exposed via a MetalLB LoadBalancer VIP.
+monitoring_enabled: true
+monitoring_namespace: "monitoring"
+monitoring_chart_version: "65.5.1"
+monitoring_node_selector_key: "topology.kubernetes.io/zone"
+monitoring_node_selector_value: "monitoring"
+monitoring_storageclass: "ceph-block"
+monitoring_prometheus_retention: "15d"
+monitoring_prometheus_pvc_size: "20Gi"
+monitoring_grafana_pvc_size: "5Gi"
+monitoring_grafana_admin_password: "Welcome1!"
+# Flip Rook's Ceph ServiceMonitor on only AFTER the Prometheus Operator CRDs
+# exist (the monitoring role patches this post-install).
+ceph_monitoring_enabled: false
+
+# ── Ops-group access to the Management Subnet (WireGuard on the Exit-Routers) ──
+# The ONLY sanctioned path into the air-gapped mgmt subnet (172.16.2.0/24) is the
+# WireGuard tunnel terminated on Exit-Router1/2. The remote ops laptop / CI runner
+# dials wg0, and the Exit-Router forwards + SNATs the tunnel traffic onto its
+# mgmt interface. Firewalling restricts forwarding to the ops tunnel space only.
+ops_mgmt_access_enabled: true
+ops_mgmt_egress_iface: "eth0"                     # Exit-Router NIC on the mgmt L2
+ops_wireguard_subnet: "10.254.0.0/24"             # WG tunnel address space (ops group)
+ops_mgmt_target_subnet: "{{ sonic_mgmt_subnet }}" # 172.16.2.0/24
+# Public UDP endpoint the ops clients dial (defaults to the ISP-1 facing address
+# of each Exit-Router; overridable per host). Rendered into client configs.
+ops_wireguard_listen_port: 51820
+
+# ── Edge inbound service NAT (storefront reachable from the public internet) ──
+# The Exit-Routers attract a public service /32 toward the ISPs and DNAT it to the
+# in-fabric MetalLB LoadBalancer VIP, with a hairpin SNAT to the Exit-Router
+# loopback so return traffic is symmetric (survives the dual-Exit ECMP edge).
+edge_service_nat_enabled: true
+edge_public_service_subnet: "100.64.100.0/24"     # does NOT overlap 100.64.0.0/29 transit
+storefront_public_ip: "100.64.100.10"             # advertised toward the ISPs / internet
+storefront_lb_ip: "10.10.200.10"                  # MetalLB VIP the Service requests
+storefront_service_ports: [80, 443]
+
+# ── Storefront app (public-facing web workload on the k8s overlay) ────────────
+storefront_enabled: true
+storefront_namespace: "storefront"
+storefront_image: "nginx:1.27-alpine"
+storefront_replicas: 3
+
+# ── Management plane VRF (production physical servers) ────────────────────────
+# Set mgmt_vrf_enabled: true when enp1s0 carries the real OOB management IP.
+# The VRF (table mgmt_vrf_table) isolates the management default route from the
+# main routing table so BGP-learned fabric routes never displace it.
+# Leave false for vrnetlab lab: SLIRP provides the management path and a VRF
+# would break the Ansible SSH proxy.
+mgmt_vrf_enabled: false            # flip to true on production bare-metal
+mgmt_vrf_name: "vrf-mgmt"
+mgmt_vrf_table: 100
+mgmt_interface: "enp1s0"           # management NIC on production servers
+
+# ── MetalLB management (L2) pool ──────────────────────────────────────────────
+# Infrastructure dashboards (Horizon, Grafana, Ceph dashboard) bind to VIPs in
+# this pool. L2 advertisement on the management NIC (enp1s0 / vrf-mgmt) means
+# these VIPs are ONLY reachable via the OOB management network / WireGuard VPN;
+# they are never visible to the tenant internet data plane.
+metallb_mgmt_pool_name: "mgmt-pool"
+metallb_mgmt_pool: "172.16.2.200/29"   # carves .200–.207 from the OOB /24
+
+# ── MetalLB management VIP assignment map ─────────────────────────────────────
+# All entries are L2-only (ARP on enp1s0). Not routed via BGP fabric.
+metallb_vip_horizon:     "172.16.2.200"   # OpenStack Horizon + Keystone API
+metallb_vip_grafana:     "172.16.2.201"   # Grafana (kube-prometheus-stack)
+metallb_vip_ceph:        "172.16.2.202"   # Ceph dashboard (rook-ceph-tools)
+metallb_vip_k8s_dash:    "172.16.2.203"   # Kubernetes Dashboard
+metallb_vip_prometheus:  "172.16.2.204"   # Prometheus (ops queries, alert rule testing)
+metallb_vip_skyline:     "172.16.2.205"   # Skyline modern dashboard (admin/user)
+# .206 reserved; .207 broadcast
+
+# ── MetalLB BGP VIP assignment map ────────────────────────────────────────────
+# BGP-announced via FRR → Leaf → fabric. Internet-reachable via Exit-Router NAT.
+metallb_vip_ingress:     "10.10.200.1"    # ingress-nginx (tenant HTTP/HTTPS entry)
+# storefront_lb_ip: "10.10.200.10"         (defined separately — see storefront vars)
+
+# SONiC host-facing route-policy defaults
+bgp_route_policy_enabled: true
+bgp_policy_node_loopback_prefix: "10.10.255.0/24"
+
+# ── Neutron / OVN underlay ────────────────────────────────────────────────────
+# OVN Geneve tunnels use the fabric loopback IP as the encapsulation endpoint so
+# VM east-west traffic travels via ens2/ens3 (SONiC data-plane fabric), never
+# the management NIC. neutron_ovn_encap_ip is resolved per-host at render time
+# from loopback_ip (strip the /32 prefix).
+neutron_ovn_encap_type: "geneve"
+neutron_bridge_name: "br-tenant"        # OVN external bridge on compute nodes

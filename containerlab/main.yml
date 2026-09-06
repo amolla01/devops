@@ -1,98 +1,225 @@
 ---
-- name: Assert access_ports do not overlap fabric switch_ports
+# SONiC storage VRF — isolated Ceph replication BGP unnumbered over 802.1q
+# subinterfaces (VLAN {{ storage_vlan_id }}) enslaved to Vrf-storage. Mirrors the
+# tenant fabric topology so 20.0.56.x/32 replication routes travel switch-to-
+# switch without ever entering the default-VRF tenant BGP table.
+#
+# Runs ONLY on switches that define storage_ports (the OSD-facing path:
+# Leaf-L3/L4, Border-Leaf1/2, Spine-S1/2).
+
+- name: Skip switches without storage ports
+  ansible.builtin.meta: end_host
+  when: (storage_ports | default([])) | length == 0
+
+- name: Assert storage VRF vars
   ansible.builtin.assert:
     that:
-      - (access_ports.keys() | list | intersect(switch_ports.keys() | list) | length) == 0
-    fail_msg: "access_ports and switch_ports overlap"
-  when:
-    - switch_ports is defined
-    - access_ports is defined
+      - bgp_local_asn is defined
+      - router_id is defined
+      - sonic_storage_vrf_name is defined
+      - storage_vlan_id is defined
 
-- name: Wait for SONiC DB metadata file to be available
-  ansible.builtin.shell: "test -s /var/run/redis/sonic-db/database_config.json"
-  register: db_cfg
+# ─── VRF + subinterfaces ──────────────────────────────────────────────────────
+- name: Create the storage VRF
+  ansible.builtin.command: >-
+    sonic-db-cli CONFIG_DB HSET "VRF|{{ sonic_storage_vrf_name }}" "NULL" "NULL"
   changed_when: false
-  retries: 40
-  delay: 3
-  until: db_cfg.rc == 0
-  when: switch_ports is defined
 
-- name: Wait for CONFIG_DB access to become available
-  ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" hostname
-  register: configdb_probe
-  changed_when: false
-  retries: 40
-  delay: 3
-  until: configdb_probe.rc == 0
-  when: switch_ports is defined
-
-- name: Write port data for config generation
-  ansible.builtin.copy:
-    content: "{{ {'switch_ports': switch_ports, 'access_ports': access_ports | default({}), 'metadata': {'hostname': hostname, 'type': device_type, 'router_id': router_id, 'bgp_asn': bgp_local_asn | string, 'hwsku': hwsku}} | to_nice_json }}"
-    dest: /tmp/port_data.json
-  become: true
-  when: switch_ports is defined
-
-- name: Generate raw config_db from platform port_config.ini
-  ansible.builtin.shell: >
-    sonic-cfggen -H -k {{ hwsku }}
-    -p /usr/share/sonic/device/{{ platform }}/{{ hwsku }}/port_config.ini
-    --preset t1 > /tmp/raw_config_db.json
-  become: true
-  when: switch_ports is defined
-
-- name: Copy customization script to target
-  ansible.builtin.copy:
-    src: customize_config_db.py
-    dest: /tmp/customize_config_db.py
-    mode: '0755'
-  become: true
-  when: switch_ports is defined
-
-- name: Customize raw_config_db.json for this node
-  ansible.builtin.command: python3 /tmp/customize_config_db.py
-  become: true
-  when: switch_ports is defined
-
-- name: Load config into Redis (stop → flush → load → start)
+- name: Remove stale storage subinterfaces before re-programming
   ansible.builtin.shell: |
-    sudo systemctl stop sonic.target
-    redis-cli -n 4 flushdb
-    sudo sonic-cfggen -j /tmp/raw_config_db.json --write-to-db
-    sudo systemctl start sonic.target
+    for key in $(sonic-db-cli CONFIG_DB KEYS "VLAN_SUB_INTERFACE|*.{{ storage_vlan_id }}*"); do
+      sonic-db-cli CONFIG_DB DEL "$key"
+    done
   become: true
-  when: switch_ports is defined
+  changed_when: false
+  failed_when: false
 
-- name: Wait for SONiC to come back after config load
-  ansible.builtin.wait_for_connection:
-    delay: 30
-    timeout: 300
-  when: switch_ports is defined
-
-- name: Render configuration overlay
-  ansible.builtin.template:
-    src: sonic_patch.json.j2
-    dest: "/tmp/{{ inventory_hostname }}_patch.json"
-  delegate_to: localhost
-  vars:
-    ansible_connection: local
-  when: switch_ports is defined
-
-- name: Copy rendered overlay to target SONiC node
-  ansible.builtin.copy:
-    src: "/tmp/{{ inventory_hostname }}_patch.json"
-    dest: "/var/tmp/patch.json"
-  when: switch_ports is defined
-
-- name: Apply configuration overlay to CONFIG_DB
-  ansible.builtin.command: "sonic-cfggen -j /var/tmp/patch.json --write-to-db"
+- name: Program VLAN subinterfaces in the storage VRF (unnumbered / IPv6 LL)
+  ansible.builtin.shell: |
+    SUB="{{ item.port }}.{{ storage_vlan_id }}"
+    sonic-db-cli CONFIG_DB HSET "VLAN_SUB_INTERFACE|${SUB}" admin_status "up"
+    sonic-db-cli CONFIG_DB HSET "VLAN_SUB_INTERFACE|${SUB}" vlan "{{ storage_vlan_id }}"
+    sonic-db-cli CONFIG_DB HSET "VLAN_SUB_INTERFACE|${SUB}" vrf_name "{{ sonic_storage_vrf_name }}"
+    sonic-db-cli CONFIG_DB HSET "VLAN_SUB_INTERFACE|${SUB}" ipv6_use_link_local_only "enable"
+    sonic-db-cli CONFIG_DB HSET "VLAN_SUB_INTERFACE|${SUB}" mtu "{{ sonic_port_mtu | default(9100) }}"
+  loop: "{{ storage_ports }}"
   become: true
-  register: db_write
-  when: switch_ports is defined
+  changed_when: false
 
-- name: Save running configuration to startup config
-  ansible.builtin.command: "config save -y"
+# ─── Per-VRF BGP instance ─────────────────────────────────────────────────────
+- name: Program storage BGP_GLOBALS
+  ansible.builtin.shell: |
+    sonic-db-cli CONFIG_DB HSET "BGP_GLOBALS|{{ sonic_storage_vrf_name }}" local_asn "{{ bgp_local_asn }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_GLOBALS|{{ sonic_storage_vrf_name }}" router_id "{{ router_id }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_GLOBALS|{{ sonic_storage_vrf_name }}" log_nbr_state_changes "true"
+  changed_when: false
+
+- name: Program storage BGP_GLOBALS_AF (ECMP)
+  ansible.builtin.shell: |
+    sonic-db-cli CONFIG_DB HSET "BGP_GLOBALS_AF|{{ sonic_storage_vrf_name }}|ipv4_unicast" max_ebgp_paths "64"
+    sonic-db-cli CONFIG_DB HSET "BGP_GLOBALS_AF|{{ sonic_storage_vrf_name }}|ipv6_unicast" max_ebgp_paths "64"
+  changed_when: false
+
+- name: Remove connected-route redistribution from storage BGP
+  ansible.builtin.shell: |
+    sonic-db-cli CONFIG_DB DEL "ROUTE_REDISTRIBUTE|{{ sonic_storage_vrf_name }}|connected|bgp|ipv4" || true
+    sonic-db-cli CONFIG_DB DEL "ROUTE_REDISTRIBUTE|{{ sonic_storage_vrf_name }}|connected|bgp|ipv6" || true
+  changed_when: false
+
+- name: Remove stale storage BGP neighbors
+  ansible.builtin.shell: |
+    for key in $(sonic-db-cli CONFIG_DB KEYS "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|*"); do
+      sonic-db-cli CONFIG_DB DEL "$key"
+    done
+    for key in $(sonic-db-cli CONFIG_DB KEYS "BGP_NEIGHBOR_AF|{{ sonic_storage_vrf_name }}|*"); do
+      sonic-db-cli CONFIG_DB DEL "$key"
+    done
   become: true
-  when:
-    - switch_ports is defined
-    - db_write.rc == 0
+  changed_when: false
+  failed_when: false
+
+- name: Program storage BGP neighbors
+  ansible.builtin.shell: |
+    SUB="{{ item.port }}.{{ storage_vlan_id }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" asn "{{ item.neighbor_asn }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" name "{{ item.neighbor }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" admin_status "true"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" peer_type "external"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" capability_ext_nexthop "true"
+    {% if bfd_enabled | default(true) %}
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR|{{ sonic_storage_vrf_name }}|${SUB}" bfd "true"
+    {% endif %}
+  loop: "{{ storage_ports }}"
+  become: true
+  changed_when: false
+
+- name: Activate storage BGP neighbor address families
+  ansible.builtin.shell: |
+    SUB="{{ item.port }}.{{ storage_vlan_id }}"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR_AF|{{ sonic_storage_vrf_name }}|${SUB}|ipv4_unicast" admin_status "true"
+    sonic-db-cli CONFIG_DB HSET "BGP_NEIGHBOR_AF|{{ sonic_storage_vrf_name }}|${SUB}|ipv6_unicast" admin_status "true"
+  loop: "{{ storage_ports }}"
+  become: true
+  changed_when: false
+
+- name: Record explicit storage network origination
+  ansible.builtin.shell: |
+    sonic-db-cli CONFIG_DB HSET "BGP_NETWORK|{{ sonic_storage_vrf_name }}|ipv4_unicast|{{ ceph_data_replication_ip }}" "NULL" "NULL"
+  when: ceph_data_replication_ip is defined
+  changed_when: false
+
+# ─── Apply + verify ───────────────────────────────────────────────────────────
+- name: Save SONiC config after storage VRF programming
+  ansible.builtin.command: config save -y
+  become: true
+  changed_when: false
+
+- name: Restart BGP container to sync the storage VRF
+  ansible.builtin.shell: docker restart bgp
+  become: true
+  changed_when: false
+
+- name: Wait for BGP container to be ready
+  ansible.builtin.shell: docker exec bgp vtysh -c "show version" 2>/dev/null
+  register: storage_bgp_ready
+  retries: 20
+  delay: 5
+  until: storage_bgp_ready.rc == 0
+  become: true
+  changed_when: false
+
+# The bgp restart above causes frrcfgd to re-render FRR config, which re-enables
+# suppress-fib-pending for the default VRF (sonic-vs has no ASIC FIB ack). Clear
+# it for both the default and storage VRF, then soft-reconfig so already-Established
+# sessions re-advertise the transit routes (0.0.0.0/0, ISP/External loopbacks).
+- name: Re-apply no bgp suppress-fib-pending after storage VRF bgp restart
+  ansible.builtin.shell: >-
+    docker exec bgp vtysh -c "configure terminal"
+    -c "router bgp {{ bgp_local_asn }}"
+    -c "no bgp suppress-fib-pending"
+    -c "no bgp ebgp-requires-policy"
+    -c "router bgp {{ bgp_local_asn }} vrf {{ sonic_storage_vrf_name }}"
+    -c "no bgp suppress-fib-pending"
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Force re-advertisement of transit routes after storage VRF bgp restart
+  ansible.builtin.shell: |
+    docker exec bgp vtysh -c "clear ip bgp * soft"
+    docker exec bgp vtysh -c "clear bgp ipv4 unicast * soft" 2>/dev/null || true
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Wait for IPv6 link-local on storage subinterfaces
+  ansible.builtin.shell: |
+    missing=0
+    for item in {{ storage_ports | map(attribute='port') | join(' ') }}; do
+      sub="${item}.{{ storage_vlan_id }}"
+      if ! ip -6 addr show dev ${sub} scope link 2>/dev/null | grep -q "fe80::"; then
+        echo "MISSING fe80 on ${sub}"
+        missing=$((missing + 1))
+      fi
+    done
+    echo "missing_count:${missing}"
+    exit ${missing}
+  register: storage_ipv6_wait
+  retries: 20
+  delay: 5
+  until: storage_ipv6_wait.rc == 0
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Show storage VRF BGP summary
+  ansible.builtin.shell: >-
+    docker exec bgp vtysh -c "show bgp vrf {{ sonic_storage_vrf_name }} ipv4 unicast summary"
+  become: true
+  changed_when: false
+  failed_when: false
+  register: storage_bgp_summary
+
+- name: Report storage VRF BGP summary
+  ansible.builtin.debug:
+    var: storage_bgp_summary.stdout_lines
+
+# bgpcfgd in unified mode may not render per-VRF interface-based BGP neighbors for
+# VLAN subinterfaces (Ethernet2.100 etc). Apply the config directly in FRR as a
+# belt-and-braces fix — this survives container restarts because bgpcfgd will
+# reconcile from CONFIG_DB on the next reload.
+- name: Apply vrf-storage BGP neighbors directly in FRR (bgpcfgd gap workaround)
+  ansible.builtin.shell: |
+    docker exec bgp vtysh \
+      -c "configure terminal" \
+      -c "router bgp {{ bgp_local_asn }} vrf {{ sonic_storage_vrf_name }}" \
+      -c "no bgp suppress-fib-pending" \
+      -c "no bgp ebgp-requires-policy" \
+      -c "no bgp default ipv4-unicast" \
+      {% for port in storage_ports %}
+      -c "neighbor {{ port.port }}.{{ storage_vlan_id }} interface remote-as {{ port.neighbor_asn }}" \
+      -c "neighbor {{ port.port }}.{{ storage_vlan_id }} description STORAGE-To-{{ port.neighbor }}" \
+      {% endfor %}
+      -c "address-family ipv4 unicast" \
+      {% for port in storage_ports %}
+      -c "neighbor {{ port.port }}.{{ storage_vlan_id }} activate" \
+      {% endfor %}
+      -c "redistribute connected" \
+      -c "exit-address-family" \
+      -c "end" \
+      -c "clear bgp vrf {{ sonic_storage_vrf_name }} * soft"
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Report final storage VRF BGP state
+  ansible.builtin.shell: >-
+    docker exec bgp vtysh -c "show bgp vrf {{ sonic_storage_vrf_name }} ipv4 unicast summary"
+  become: true
+  changed_when: false
+  failed_when: false
+  register: storage_bgp_final
+
+- name: Show storage VRF BGP state after direct config
+  ansible.builtin.debug:
+    var: storage_bgp_final.stdout_lines
