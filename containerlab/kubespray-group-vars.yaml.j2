@@ -1,7 +1,7 @@
 # ==============================================================================
 # KubeSpray cluster.yml overrides for sheba-cluster (Validated Air-Gapped Layout)
 # ==============================================================================
-kube_version: "{{ k8s_version | default('1.35.4') }}"
+kube_version: "{{ kube_version | default('v' ~ (k8s_version | default('1.35.4'))) }}"
 kube_network_plugin: "{{ k8s_cni | default('calico') }}"
 kube_pods_subnet: "{{ k8s_pod_cidr | default('10.233.64.0/18') }}"
 kube_service_addresses: "{{ k8s_service_cidr | default('10.233.0.0/18') }}"
@@ -79,21 +79,48 @@ download_validate_as_group: false
 nerdctl_insecure_registry: true
 containerd_insecure_registries:
   - "{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+containerd_skip_tls_verify: true
 
 # -- Standard air-gapped containerd mirror maps -------------------------------
+# The lab registry contains the actual air-gapped asset set used here:
+# docker.io, registry.k8s.io, k8s.gcr.io, gcr.io, ghcr.io, and quay.io all
+# resolve through the local mirror at {{ airgap_registry_host }}.
 containerd_registries_mirrors:
+  - prefix: "{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+        skip_verify: true
   - prefix: "docker.io"
     mirrors:
       - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
         capabilities: ["pull", "resolve"]
+        skip_verify: true
   - prefix: "registry.k8s.io"
     mirrors:
       - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
         capabilities: ["pull", "resolve"]
+        skip_verify: true
+  - prefix: "k8s.gcr.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+        skip_verify: true
+  - prefix: "gcr.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+        skip_verify: true
+  - prefix: "ghcr.io"
+    mirrors:
+      - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
+        capabilities: ["pull", "resolve"]
+        skip_verify: true
   - prefix: "quay.io"
     mirrors:
       - host: "{{ airgap_registry_scheme | default('http') }}://{{ airgap_registry_host | default('172.16.2.1:5000') }}"
         capabilities: ["pull", "resolve"]
+        skip_verify: true
 
 # -- Universal mirror overrides for clean offline runs ------------------------
 r810_management_ip: "{{ r810_management_ip | default(r810_clab_bridge_ip | default('172.16.2.1')) }}"
@@ -104,6 +131,7 @@ r810_binary_server: "http://{{ r810_management_ip }}:{{ my_file_server_port }}"
 kube_image_repo: "{{ r810_management_ip }}:5000"
 gcr_image_repo: "{{ r810_management_ip }}:5000"
 github_image_repo: "{{ r810_management_ip }}:5000"
+ghcr_image_repo: "{{ r810_management_ip }}:5000"
 docker_image_repo: "{{ r810_management_ip }}:5000"
 quay_image_repo: "{{ r810_management_ip }}:5000"
 
