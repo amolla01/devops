@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ report_title }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #132238;
+      --muted: #5a6782;
+      --line: #d9e2ef;
+      --accent: #0b5fff;
+      --good: #117a37;
+      --bad: #b42318;
+      --warn: #a15c00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      background: linear-gradient(180deg, #eef3fb 0%, #f8fafc 100%);
+      color: var(--text);
+      padding: 32px;
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; }
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px 28px;
+      box-shadow: 0 12px 30px rgba(18, 40, 77, 0.08);
+      margin-bottom: 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 30px; }
+    .meta { color: var(--muted); font-size: 14px; display: flex; gap: 18px; flex-wrap: wrap; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .kpi .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .kpi .value { font-size: 28px; margin-top: 8px; font-weight: 700; }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .legend-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .legend-card h2 { margin: 0 0 10px; padding: 0; border: 0; background: transparent; font-size: 18px; }
+    .legend-card ul, .legend-card ol { margin: 0 0 0 18px; padding: 0; }
+    .legend-card li { margin: 8px 0; line-height: 1.5; }
+    .grid { display: grid; gap: 18px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 30px rgba(18, 40, 77, 0.08);
+    }
+    .card h2 {
+      margin: 0;
+      padding: 18px 22px;
+      font-size: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; text-align: left; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: #fcfdff; }
+    td { font-size: 14px; }
+    .status-ok { color: var(--good); font-weight: 700; }
+    .status-fail { color: var(--bad); font-weight: 700; }
+    .status-warn { color: var(--warn); font-weight: 700; }
+    pre {
+      margin: 0;
+      padding: 14px;
+      background: #0f172a;
+      color: #dbeafe;
+      border-radius: 12px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 340px;
+    }
+    @media (max-width: 1000px) {
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      body { padding: 18px; }
+    }
+    @media (max-width: 640px) {
+      .kpis { grid-template-columns: 1fr; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>{{ report_title }}</h1>
+      <div class="meta">
+        <span>Generated: {{ report_timestamp_value }}</span>
+        <span>Internet target: {{ report_dns_name }} / {{ report_target }}</span>
+        <span>Mgmt subnet: {{ report_mgmt_subnet }}</span>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Instances</div>
+        <div class="value">{{ report_entries | length }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Ping success</div>
+        <div class="value">{{ report_entries | selectattr('internet_ping', 'equalto', 'OK') | list | length }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Ping failed</div>
+        <div class="value">{{ report_entries | selectattr('internet_ping', 'equalto', 'FAILED') | list | length }}</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Route lookups captured</div>
+        <div class="value">{{ report_entries | length }}</div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-card">
+        <h2>How To Read The Rows</h2>
+        <ul>
+          <li><strong>Host</strong> is the topology instance under test.</li>
+          <li><strong>Mgmt IP</strong> is the SSH endpoint used to collect the data.</li>
+          <li><strong>Route Lookup</strong> shows the live kernel path for the destination and the management subnet.</li>
+          <li><strong>Internet Ping</strong> is the final reachability check for the destination path.</li>
+          <li><strong>BGP Summary</strong> is the control-plane proof that the route should be present.</li>
+        </ul>
+      </div>
+      <div class="legend-card">
+        <h2>How To Interpret Problems</h2>
+        <ol>
+          <li>Route exists but ping fails: next-hop or return-path issue.</li>
+          <li>Default route missing: edge default-originate or transit propagation is broken.</li>
+          <li>Management subnet visible: route-map / prefix-list is too permissive.</li>
+          <li>VRF traffic fails: check `ip vrf exec` context, the enslaved interface, and the route table.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Instance Summary</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Mgmt IP</th>
+              <th>Internet Ping</th>
+              <th>Route Lookup</th>
+              <th>BGP Summary</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in report_entries %}
+            <tr>
+              <td>{{ entry.host }}</td>
+              <td>{{ entry.ip }}</td>
+              <td class="{{ 'status-ok' if entry.internet_ping == 'OK' else 'status-fail' }}">{{ entry.internet_ping }}</td>
+              <td><pre>{{ entry.route_lookup }}</pre></td>
+              <td><pre>{{ entry.bgp_summary }}</pre></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

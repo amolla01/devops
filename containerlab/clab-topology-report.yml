@@ -1,0 +1,68 @@
+---
+- name: Generate containerlab route and reachability dashboard
+  hosts: lab_servers[0]
+  become: true
+  gather_facts: true
+  vars:
+    report_dir: "{{ remote_lab_dir | default(playbook_dir + '/../../') }}/reports"
+    report_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
+    report_file: "{{ report_dir }}/clab-route-report-{{ report_timestamp }}.html"
+    report_title: "containerlab route and reachability report"
+    report_target: "203.0.113.1"
+    report_dns_name: "bbc.com"
+    report_mgmt_subnet: "{{ sonic_mgmt_subnet | default('172.16.2.0/24') }}"
+    report_hosts: >-
+      {{ ((groups['linux_endpoints'] | default([]))
+         + (groups['exit_routers'] | default([]))
+         + (groups['sonic_switches'] | default([]))) | unique }}
+  tasks:
+    - name: Ensure report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Initialize report entries
+      ansible.builtin.set_fact:
+        clab_route_report_entries: []
+
+    - name: Collect route and reachability data for each topology instance
+      ansible.builtin.shell: |
+        set -o pipefail
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          {{ hostvars[item].ansible_user | default('ubuntu') }}@{{ hostvars[item].ansible_host | default('n/a') }} \
+          "printf 'ROUTE_LOOKUP\n'; ip route show; printf '\nINET\n'; ip route get {{ report_target }}; printf '\nMGMT\n'; ip route get {{ report_mgmt_subnet }}; printf '\nPING\n'; ping -c 2 -W 2 {{ report_target }}; printf '\nBGP\n'; vtysh -c 'show ip bgp summary'"
+      loop: "{{ report_hosts }}"
+      register: report_probe
+      changed_when: false
+      failed_when: false
+
+    - name: Build structured report rows
+      ansible.builtin.set_fact:
+        clab_route_report_entries: >-
+          {{ clab_route_report_entries + [{
+            'host': item.item,
+            'ip': hostvars[item.item].ansible_host | default('n/a'),
+            'route_lookup': item.stdout | default(item.stderr | default('n/a')),
+            'internet_ping': 'OK' if ('0% packet loss' in ((item.stdout | default('')) + (item.stderr | default('')))) else 'FAILED',
+            'bgp_summary': item.stdout | default('n/a'),
+            'mgmt_route': report_mgmt_subnet
+          }] }}
+      loop: "{{ report_probe.results | default([]) }}"
+
+    - name: Render HTML report from collected data
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/clab-route-report.html.j2"
+        dest: "{{ report_file }}"
+        mode: "0644"
+      vars:
+        report_entries: "{{ clab_route_report_entries }}"
+        report_title: "{{ report_title }}"
+        report_timestamp_value: "{{ report_timestamp }}"
+        report_target: "{{ report_target }}"
+        report_dns_name: "{{ report_dns_name }}"
+        report_mgmt_subnet: "{{ report_mgmt_subnet }}"
+
+    - name: Print report path
+      ansible.builtin.debug:
+        msg: "Generated dashboard: {{ report_file }}"
