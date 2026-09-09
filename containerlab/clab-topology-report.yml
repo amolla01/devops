@@ -4,19 +4,29 @@
   become: true
   gather_facts: true
   vars:
-    report_dir: "{{ remote_lab_dir | default(playbook_dir + '/../../') }}/reports"
+    clab_root_dir: "{{ playbook_dir | regex_replace('/playbooks$', '') }}"
+    report_dir: "{{ remote_lab_dir | default(clab_root_dir) }}/reports"
+    control_report_dir: "{{ clab_root_dir }}/reports"
     report_timestamp: "{{ ansible_date_time.iso8601_basic_short }}"
     report_file: "{{ report_dir }}/clab-route-report-{{ report_timestamp }}.html"
     report_title: "containerlab route and reachability report"
     report_target: "203.0.113.1"
     report_dns_name: "bbc.com"
     report_mgmt_subnet: "{{ sonic_mgmt_subnet | default('172.16.2.0/24') }}"
-    report_hosts: >-
-      {{ ((groups['linux_endpoints'] | default([]))
-         + (groups['exit_routers'] | default([]))
-         + (groups['sonic_switches'] | default([]))) | unique }}
+    report_sources: >-
+      {{ (groups['all'] | default([]) | reject('equalto', 'localhost') | list | unique) }}
+    report_targets: >-
+      {{ (groups['all'] | default([]) | reject('equalto', 'localhost') | list | unique) }}
   tasks:
-    - name: Ensure report directory exists
+    - name: Ensure report directory exists on the lab control node
+      ansible.builtin.file:
+        path: "{{ control_report_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Ensure report directory exists on the configured lab path
       ansible.builtin.file:
         path: "{{ report_dir }}"
         state: directory
@@ -26,13 +36,40 @@
       ansible.builtin.set_fact:
         clab_route_report_entries: []
 
-    - name: Collect route and reachability data for each topology instance
+    - name: Collect route and reachability data for each VM pair
       ansible.builtin.shell: |
         set -o pipefail
+        set +e
+        src_host='{{ item.0 }}'
+        dst_host='{{ item.1 }}'
+        dst_ip='{{ hostvars[item.1].ansible_host | default("n/a") }}'
+        dst_loop='{{ hostvars[item.1].loopback_ip | default("n/a") }}'
         ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-          {{ hostvars[item].ansible_user | default('ubuntu') }}@{{ hostvars[item].ansible_host | default('n/a') }} \
-          "printf 'ROUTE_LOOKUP\n'; ip route show; printf '\nINET\n'; ip route get {{ report_target }}; printf '\nMGMT\n'; ip route get {{ report_mgmt_subnet }}; printf '\nPING\n'; ping -c 2 -W 2 {{ report_target }}; printf '\nBGP\n'; vtysh -c 'show ip bgp summary'"
-      loop: "{{ report_hosts }}"
+          "{{ hostvars[item.0].ansible_user | default('ubuntu') }}@{{ hostvars[item.0].ansible_host | default('n/a') }}" "
+          printf 'SOURCE=%s\n' \"$src_host\";
+          printf 'TARGET=%s\n' \"$dst_host\";
+          printf 'MGMT_IP=%s\n' \"$dst_ip\";
+          printf 'LOOPBACK_IP=%s\n' \"$dst_loop\";
+          printf '\nROUTE_LOOKUP\n';
+          ip route get \"$dst_loop\" 2>&1 || true;
+          printf '\nPING_LOOPBACK\n';
+          ping -c 2 -W 2 \"$dst_loop\" 2>&1 || true;
+          printf '\nPING_INTERNET\n';
+          ping -c 2 -W 2 '{{ report_target }}' 2>&1 || true;
+          printf '\nBGP_SUMMARY\n';
+          (vtysh -c 'show ip bgp summary' 2>&1 || echo 'BGP summary unavailable') || true;
+        "
+      loop: >-
+        {{
+          (report_sources | list)
+          | product(report_targets | list)
+          | list
+        }}
+      when: >-
+        item.0 != item.1 and
+        hostvars[item.0].ansible_host is defined and
+        hostvars[item.1].ansible_host is defined and
+        (hostvars[item.1].loopback_ip is defined or hostvars[item.1].ansible_host is defined)
       register: report_probe
       changed_when: false
       failed_when: false
@@ -41,12 +78,14 @@
       ansible.builtin.set_fact:
         clab_route_report_entries: >-
           {{ clab_route_report_entries + [{
-            'host': item.item,
-            'ip': hostvars[item.item].ansible_host | default('n/a'),
-            'route_lookup': item.stdout | default(item.stderr | default('n/a')),
-            'internet_ping': 'OK' if ('0% packet loss' in ((item.stdout | default('')) + (item.stderr | default('')))) else 'FAILED',
-            'bgp_summary': item.stdout | default('n/a'),
-            'mgmt_route': report_mgmt_subnet
+            'source_host': item.item[0],
+            'target_host': item.item[1],
+            'mgmt_ip': hostvars[item.item[1]].ansible_host | default('n/a'),
+            'loopback_ip': (hostvars[item.item[1]].loopback_ip | default('n/a')).split('/') | first,
+            'route_lookup': ((item.stdout | default('')) | regex_replace('(?s).*?ROUTE_LOOKUP\\n', '') | regex_replace('\\nPING_LOOPBACK.*', '') | trim) if (item.stdout | default('')) else 'n/a',
+            'internet_ping': 'OK' if (((item.stdout | default('')) | regex_search('0% packet loss|1 packets transmitted, 1 received|2 packets transmitted, 2 received')) is not none) else 'FAILED',
+            'bgp_summary': ((item.stdout | default('')) | regex_replace('(?s).*?BGP_SUMMARY\\n', '') | trim) if (item.stdout | default('')) else 'n/a',
+            'source_ip': hostvars[item.item[0]].ansible_host | default('n/a')
           }] }}
       loop: "{{ report_probe.results | default([]) }}"
 
@@ -63,6 +102,14 @@
         report_dns_name_value: "{{ report_dns_name }}"
         report_mgmt_subnet_value: "{{ report_mgmt_subnet }}"
 
+    - name: Copy generated report into the local clab reports folder on the control node
+      ansible.builtin.copy:
+        src: "{{ report_file }}"
+        dest: "{{ control_report_dir }}/{{ report_file | basename }}"
+        mode: "0644"
+      delegate_to: localhost
+      run_once: true
+
     - name: Print report path
       ansible.builtin.debug:
-        msg: "Generated dashboard: {{ report_file }}"
+        msg: "Generated dashboard: {{ report_file }} and {{ control_report_dir }}/{{ report_file | basename }}"
