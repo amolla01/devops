@@ -412,3 +412,109 @@ storage_ports:
   #     - { name: "Ethernet3", alias: "Ethernet5/4", lanes: "12", index: "5", speed: "10000", neighbor: "HostB12_2",    rem_port: "enp3s0", neighbor_asn: 65251 }
 
 
+
+  links:
+    # =========================================================================
+    # SPINE-S1 FABRIC UPLINKS (Spine eth1-6 = Spine Ethernet0,4,8,12,16,20)
+    # Leaf/BL ethN = name-sorted position AFTER breakout (35 ports):
+    #   Eth120=pos34->eth34, Eth124=pos35->eth35
+    # Accton ethN = name-sorted position (72 ports):
+    #   Eth68=pos69->eth69, Eth64=pos65->eth65
+    # =========================================================================
+    - endpoints: ["Spine-S1:eth1", "Leaf-L1:eth69"]
+    - endpoints: ["Spine-S1:eth2", "Leaf-L2:eth69"]
+    - endpoints: ["Spine-S1:eth3", "Leaf-L3:eth32"]
+    - endpoints: ["Spine-S1:eth4", "Leaf-L4:eth32"]
+    - endpoints: ["Spine-S1:eth5", "Border-Leaf1:eth35"]
+    - endpoints: ["Spine-S1:eth6", "Border-Leaf2:eth35"]
+
+    # =========================================================================
+    # SPINE-S2 FABRIC UPLINKS
+    # =========================================================================
+    - endpoints: ["Spine-S2:eth1", "Leaf-L1:eth65"]
+    - endpoints: ["Spine-S2:eth2", "Leaf-L2:eth65"]
+    - endpoints: ["Spine-S2:eth3", "Leaf-L3:eth31"]
+    - endpoints: ["Spine-S2:eth4", "Leaf-L4:eth31"]
+    - endpoints: ["Spine-S2:eth5", "Border-Leaf1:eth34"]
+    - endpoints: ["Spine-S2:eth6", "Border-Leaf2:eth34"]
+
+    # =========================================================================
+    # LEAF-L1 ACCESS CONNECTIONS
+    # =========================================================================
+    - endpoints: ["Leaf-L1:eth1", "k8s-master-01:eth1"]
+    - endpoints: ["Leaf-L1:eth2", "k8s-db-01:eth1"]
+    - endpoints: ["Leaf-L1:eth3", "osh-ctrl-01:eth1"]
+    - endpoints: ["Leaf-L1:eth4", "osh-net-01:eth1"]
+    - endpoints: ["Leaf-L1:eth5", "osh-comp-01:eth1"]
+    - endpoints: ["Leaf-L1:eth6", "osh-comp-04:eth1"]
+
+    # =========================================================================
+    # LEAF-L2 ACCESS CONNECTIONS (Mirrored to Leaf-L1 for Multi-Homing)
+    # =========================================================================
+    - endpoints: ["Leaf-L2:eth1", "k8s-master-01:eth2"]
+    - endpoints: ["Leaf-L2:eth2", "k8s-db-01:eth2"]
+    - endpoints: ["Leaf-L2:eth3", "osh-ctrl-01:eth2"]
+    - endpoints: ["Leaf-L2:eth4", "osh-net-01:eth2"]
+    - endpoints: ["Leaf-L2:eth5", "osh-comp-01:eth2"]
+    - endpoints: ["Leaf-L2:eth6", "osh-comp-04:eth2"]
+
+    # =========================================================================
+    # LEAF-L3 ACCESS CONNECTIONS
+    # =========================================================================
+    - endpoints: ["Leaf-L3:eth1", "k8s-master-02:eth1"]
+    - endpoints: ["Leaf-L3:eth2", "k8s-db-02:eth1"]
+    - endpoints: ["Leaf-L3:eth3", "osh-ctrl-02:eth1"]
+    - endpoints: ["Leaf-L3:eth4", "osh-net-02:eth1"]
+    - endpoints: ["Leaf-L3:eth5", "osh-comp-02:eth1"]
+
+    # =========================================================================
+    # LEAF-L4 ACCESS CONNECTIONS (Mirrored to Leaf-L3 for Multi-Homing)
+    # =========================================================================
+    - endpoints: ["Leaf-L4:eth1", "k8s-master-02:eth2"]
+    - endpoints: ["Leaf-L4:eth2", "k8s-db-02:eth2"]
+    - endpoints: ["Leaf-L4:eth3", "osh-ctrl-02:eth2"]
+    - endpoints: ["Leaf-L4:eth4", "osh-net-02:eth2"]
+    - endpoints: ["Leaf-L4:eth5", "osh-comp-02:eth2"]
+
+    # =========================================================================
+    # BORDER-LEAF1 EDGE/ACCESS CONNECTIONS
+    # =========================================================================
+    - endpoints: ["Border-Leaf1:eth1", "Exit-Router1:eth1"]
+    - endpoints: ["Border-Leaf1:eth2", "Exit-Router2:eth1"]
+    - endpoints: ["Border-Leaf1:eth3", "k8s-master-03:eth1"]
+    - endpoints: ["Border-Leaf1:eth4", "k8s-db-03:eth1"]
+    - endpoints: ["Border-Leaf1:eth5", "osh-ctrl-03:eth1"]
+    - endpoints: ["Border-Leaf1:eth6", "MonSrv:eth1"]
+    - endpoints: ["Border-Leaf1:eth7", "osh-comp-03:eth1"]
+
+    # =========================================================================
+    # BORDER-LEAF2 EDGE/ACCESS CONNECTIONS (Mirrored to Border-Leaf1)
+    # =========================================================================
+    - endpoints: ["Border-Leaf2:eth1", "Exit-Router2:eth2"]
+    - endpoints: ["Border-Leaf2:eth2", "Exit-Router1:eth2"]
+    - endpoints: ["Border-Leaf2:eth3", "k8s-master-03:eth2"]
+    - endpoints: ["Border-Leaf2:eth4", "k8s-db-03:eth2"]
+    - endpoints: ["Border-Leaf2:eth5", "osh-ctrl-03:eth2"]
+    - endpoints: ["Border-Leaf2:eth6", "MonSrv:eth2"]
+    - endpoints: ["Border-Leaf2:eth7", "osh-comp-03:eth2"]
+
+    - endpoints: ["ISP-1:eth1", "Exit-Router1:eth3"]
+    - endpoints: ["ISP-2:eth1", "Exit-Router1:eth4"]
+    - endpoints: ["ISP-1:eth2", "Exit-Router2:eth3"]
+    - endpoints: ["ISP-2:eth2", "Exit-Router2:eth4"]
+
+    # =========================================================================
+    # FINALIZED EDGE INTERCONNECTS & INTERNET INJECTION
+    # =========================================================================
+    # 1. Internal Sync Channel: iBGP synchronization loop between your ISP engines
+    - endpoints: ["ISP-1:eth5", "ISP-2:eth5"]
+
+    # 2. Shared demarcation: both ISP routers are bridged to the lab internet bridge.
+    - endpoints: ["ISP-1:eth6", "br-internet:isp1-port"]
+    - endpoints: ["ISP-2:eth6", "br-internet:isp2-port"]
+
+    # 3. Dynamic validation vector: the External-Router has one real data-plane link
+    # in this topology, so the valid attachment is eth1 to the br-internet bridge.
+    - endpoints: ["External-Router:eth1", "br-internet:ext-port"]
+
+
