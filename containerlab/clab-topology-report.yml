@@ -82,8 +82,13 @@
             'target_host': item.item[1],
             'mgmt_ip': hostvars[item.item[1]].ansible_host | default('n/a'),
             'loopback_ip': (hostvars[item.item[1]].loopback_ip | default('n/a')).split('/') | first,
-            'route_lookup': ((item.stdout | default('')) | regex_replace('(?s).*?ROUTE_LOOKUP\\n', '') | regex_replace('\\nPING_LOOPBACK.*', '') | trim) if (item.stdout | default('')) else 'n/a',
-            'internet_ping': 'OK' if (((item.stdout | default('')) | regex_search('0% packet loss|1 packets transmitted, 1 received|2 packets transmitted, 2 received')) is not none) else 'FAILED',
+            'route_lookup': ((item.stdout | default('')) | regex_replace('(?s).*?ROUTE_LOOKUP\\n', '') | regex_replace('\\nPING_LOOPBACK.*', '') | trim) if (item.stdout | default('')) else 'n/a',            'status': (
+              'SSH_DENIED' if (((item.stdout | default('')) | regex_search('Permission denied|Connection refused|ssh: connect to host .* port .*|Failed to connect')) is not none) else
+              'NO_ROUTE' if (((item.stdout | default('')) | regex_search('No route to host|Network is unreachable|Destination Host Unreachable|ip route get.*not found')) is not none) else
+              'FRR_UNAVAILABLE' if (((item.stdout | default('')) | regex_search('BGP summary unavailable|vtysh:|Unable to connect to.*bgpd|No such file or directory')) is not none) else
+              'PING_FAILED' if (((item.stdout | default('')) | regex_search('100% packet loss|Destination Host Unreachable|1 packets transmitted, 0 received|2 packets transmitted, 0 received|packet loss')) is not none) else
+              'OK' if (((item.stdout | default('')) | regex_search('0% packet loss|1 packets transmitted, 1 received|2 packets transmitted, 2 received')) is not none) else 'PING_FAILED'
+            ),            'internet_ping': 'OK' if (((item.stdout | default('')) | regex_search('0% packet loss|1 packets transmitted, 1 received|2 packets transmitted, 2 received')) is not none) else 'FAILED',
             'bgp_summary': ((item.stdout | default('')) | regex_replace('(?s).*?BGP_SUMMARY\\n', '') | trim) if (item.stdout | default('')) else 'n/a',
             'source_ip': hostvars[item.item[0]].ansible_host | default('n/a')
           }] }}
@@ -102,14 +107,13 @@
         report_dns_name_value: "{{ report_dns_name }}"
         report_mgmt_subnet_value: "{{ report_mgmt_subnet }}"
 
-    - name: Copy generated report into the local clab reports folder on the control node
-      ansible.builtin.copy:
+    - name: Fetch generated report into the local clab reports folder on the control node
+      ansible.builtin.fetch:
         src: "{{ report_file }}"
-        dest: "{{ control_report_dir }}/{{ report_file | basename }}"
-        mode: "0644"
-      delegate_to: localhost
+        dest: "{{ control_report_dir }}/"
+        flat: true
       run_once: true
 
     - name: Print report path
       ansible.builtin.debug:
-        msg: "Generated dashboard: {{ report_file }} and {{ control_report_dir }}/{{ report_file | basename }}"
+        msg: "Generated dashboard at remote path {{ report_file }} and locally staged at {{ control_report_dir }}/{{ report_file | basename }}"

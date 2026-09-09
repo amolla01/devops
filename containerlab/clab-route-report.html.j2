@@ -122,12 +122,12 @@
         <div class="value">{{ report_entries | length }}</div>
       </div>
       <div class="kpi">
-        <div class="label">Ping success</div>
-        <div class="value">{{ report_entries | selectattr('internet_ping', 'equalto', 'OK') | list | length }}</div>
+        <div class="label">OK</div>
+        <div class="value">{{ report_entries | selectattr('status', 'equalto', 'OK') | list | length }}</div>
       </div>
       <div class="kpi">
-        <div class="label">Ping failed</div>
-        <div class="value">{{ report_entries | selectattr('internet_ping', 'equalto', 'FAILED') | list | length }}</div>
+        <div class="label">Failed</div>
+        <div class="value">{{ report_entries | selectattr('status', 'in', ['SSH_DENIED', 'NO_ROUTE', 'FRR_UNAVAILABLE', 'PING_FAILED']) | list | length }}</div>
       </div>
       <div class="kpi">
         <div class="label">Route lookups captured</div>
@@ -167,6 +167,7 @@
               <th>Target Host</th>
               <th>Mgmt IP</th>
               <th>Loopback IP</th>
+              <th>Status</th>
               <th>Internet Ping</th>
               <th>Route Lookup</th>
               <th>BGP Summary</th>
@@ -179,6 +180,7 @@
               <td>{{ entry.target_host }}</td>
               <td>{{ entry.mgmt_ip }}</td>
               <td>{{ entry.loopback_ip }}</td>
+              <td class="{{ 'status-ok' if entry.status == 'OK' else 'status-fail' if entry.status in ['SSH_DENIED', 'NO_ROUTE', 'FRR_UNAVAILABLE', 'PING_FAILED'] else 'status-warn' }}">{{ entry.status }}</td>
               <td class="{{ 'status-ok' if entry.internet_ping == 'OK' else 'status-fail' }}">{{ entry.internet_ping }}</td>
               <td><pre>{{ entry.route_lookup }}</pre></td>
               <td><pre>{{ entry.bgp_summary }}</pre></td>
