@@ -1,6 +1,6 @@
 admin@Border-Leaf1:~$ show runningconfiguration bgp
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.4
@@ -188,10 +188,10 @@ router bgp 65031
 exit
 !
 end
-
+```
 admin@Border-Leaf1:~$
 admin@Border-Leaf1:~$ show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.2.4, local AS number 65031 vrf-id 0
 BGP table version 120
@@ -213,6 +213,7 @@ Ethernet120    4  65000        129        145       120      0       0  00:50:36
 Ethernet124    4  65000        129        145       120      0       0  00:50:36                0  Spine-S1
 
 Total number of neighbors 9
+```
 admin@Border-Leaf1:~$
 
 admin@Leaf-L1:~$
@@ -221,7 +222,7 @@ admin@Leaf-L1:~$
 admin@Leaf-L1:~$
 admin@Leaf-L1:~$ show runningconfiguration bgp
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.4
@@ -348,10 +349,10 @@ router bgp 65011
 exit
 !
 end
-
+```
 admin@Leaf-L1:~$
 admin@Leaf-L1:~$ show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.2.1, local AS number 65011 vrf-id 0
 BGP table version 255
@@ -372,13 +373,14 @@ Ethernet64     4  65000        201        206       255      0       0  00:49:56
 Ethernet68     4  65000        206        205       255      0       0  00:49:54                0  Spine-S1
 
 Total number of neighbors 8
+```
 admin@Leaf-L1:~$
 
 admin@Leaf-L3:~$
 admin@Leaf-L3:~$
 admin@Leaf-L3:~$ show runningconfiguration bgp
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.4
@@ -538,10 +540,10 @@ router bgp 65021
 exit
 !
 end
-
+```
 admin@Leaf-L3:~$
 admin@Leaf-L3:~$ show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.2.3, local AS number 65021 vrf-id 0
 BGP table version 231
@@ -561,6 +563,7 @@ Ethernet120    4  65000        118        132       231      0       0  00:49:18
 Ethernet124    4  65000        123        127       231      0       0  00:49:18                0  Spine-S1
 
 Total number of neighbors 7
+```
 admin@Leaf-L3:~$
 
 
@@ -575,7 +578,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 Exit-Router1# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -637,8 +640,9 @@ router bgp 65251 vrf vrf-internet
 exit
 !
 end
+```
 Exit-Router1# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.255.255.1, local AS number 65251 VRF default vrf-id 0
 BGP table version 249
@@ -651,7 +655,43 @@ Border-Leaf2(ens3) 4      65032      1337      1389      249    0    0 00:52:47 
 
 Total number of neighbors 2
 Exit-Router1#
+Exit-Router1# show ip route
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
 
+IPv4 unicast VRF default:
+B   0.0.0.0/0 [250/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 04:30:04
+K * 0.0.0.0/0 [0/200] via 172.16.2.254, enp1s0, weight 1, 04:30:04
+K * 0.0.0.0/0 [0/100] via 10.0.0.2, enp1s0, weight 1, 04:30:04
+K>* 0.0.0.0/0 [0/0] via 10.0.0.2, enp1s0, weight 1, 04:30:04
+C>* 10.0.0.0/24 is directly connected, enp1s0, weight 1, 04:30:04
+L>* 10.0.0.15/32 is directly connected, enp1s0, weight 1, 04:30:04
+C>* 10.254.0.0/24 is directly connected, wg0, weight 1, 04:29:45
+L>* 10.254.0.1/32 is directly connected, wg0, weight 1, 04:29:45
+L * 10.255.255.1/32 is directly connected, lo, weight 1, 04:30:04
+C>* 10.255.255.1/32 is directly connected, lo, weight 1, 04:30:04
+B>* 10.255.255.2/32 [20/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 03:48:45
+  *                        via 198.51.100.1, ens5 (vrf vrf-internet), weight 1, 03:48:45
+B>* 10.255.255.11/32 [20/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 04:27:16
+B>* 10.255.255.12/32 [20/0] via 198.51.100.1, ens5 (vrf vrf-internet), weight 1, 04:27:16
+B>* 100.64.0.0/30 [20/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 04:27:16
+B>* 100.64.0.4/30 [20/0] via 198.51.100.1, ens5 (vrf vrf-internet), weight 1, 04:27:16
+B>* 100.64.100.10/32 [1/0] unreachable (blackhole), weight 1, 04:30:04
+C>* 172.16.2.0/24 is directly connected, enp1s0, weight 1, 04:30:04
+L>* 172.16.2.41/32 is directly connected, enp1s0, weight 1, 04:30:04
+B>* 192.0.2.0/30 [20/0] is directly connected, vrf-internet (vrf vrf-internet), weight 1, 04:29:59
+B>* 192.0.2.4/30 [20/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 04:27:16
+B>* 192.168.254.0/30 [20/0] via 192.0.2.1, ens4 (vrf vrf-internet), weight 1, 04:27:16
+  *                         via 198.51.100.1, ens5 (vrf vrf-internet), weight 1, 04:27:16
+B>* 198.51.100.0/30 [20/0] is directly connected, vrf-internet (vrf vrf-internet), weight 1, 04:29:59
+B>* 198.51.100.4/30 [20/0] via 198.51.100.1, ens5 (vrf vrf-internet), weight 1, 04:27:16
+Exit-Router1#
+Exit-Router1#
+```
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ubuntu@Exit-Router2:~$ sudo vtysh
@@ -661,7 +701,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 Exit-Router2# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -723,9 +763,10 @@ router bgp 65252 vrf vrf-internet
 exit
 !
 end
+```
 Exit-Router2#
 Exit-Router2# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.255.255.2, local AS number 65252 VRF default vrf-id 0
 BGP table version 287
@@ -737,7 +778,48 @@ Border-Leaf1(ens2) 4      65031      1332      1385      287    0    0 00:54:24 
 Border-Leaf2(ens3) 4      65032      1367      1409      287    0    0 00:54:24            0       13 To-Border-Leaf2-Ethe
 
 Total number of neighbors 2
+```
 Exit-Router2#
+
+Exit-Router2#
+Exit-Router2# show ip route
+```
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+B   0.0.0.0/0 [250/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 04:31:48
+K * 0.0.0.0/0 [0/200] via 172.16.2.254, enp1s0, weight 1, 04:31:49
+K * 0.0.0.0/0 [0/100] via 10.0.0.2, enp1s0, weight 1, 04:31:49
+K>* 0.0.0.0/0 [0/0] via 10.0.0.2, enp1s0, weight 1, 04:31:49
+C>* 10.0.0.0/24 is directly connected, enp1s0, weight 1, 04:31:49
+L>* 10.0.0.15/32 is directly connected, enp1s0, weight 1, 04:31:49
+C>* 10.254.0.0/24 is directly connected, wg0, weight 1, 04:31:30
+L>* 10.254.0.2/32 is directly connected, wg0, weight 1, 04:31:30
+B>* 10.255.255.1/32 [20/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 03:50:30
+  *                        via 198.51.100.5, ens5 (vrf vrf-internet), weight 1, 03:50:30
+L * 10.255.255.2/32 is directly connected, lo, weight 1, 04:31:48
+C>* 10.255.255.2/32 is directly connected, lo, weight 1, 04:31:48
+B>* 10.255.255.11/32 [20/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 04:29:01
+B>* 10.255.255.12/32 [20/0] via 198.51.100.5, ens5 (vrf vrf-internet), weight 1, 04:29:01
+B>* 100.64.0.0/30 [20/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 04:29:01
+B>* 100.64.0.4/30 [20/0] via 198.51.100.5, ens5 (vrf vrf-internet), weight 1, 04:29:01
+B>* 100.64.100.10/32 [1/0] unreachable (blackhole), weight 1, 04:31:48
+C>* 172.16.2.0/24 is directly connected, enp1s0, weight 1, 04:31:49
+L>* 172.16.2.42/32 is directly connected, enp1s0, weight 1, 04:31:49
+B>* 192.0.2.0/30 [20/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 04:29:01
+B>* 192.0.2.4/30 [20/0] is directly connected, vrf-internet (vrf vrf-internet), weight 1, 04:31:43
+B>* 192.168.254.0/30 [20/0] via 192.0.2.5, ens4 (vrf vrf-internet), weight 1, 03:50:30
+  *                         via 198.51.100.5, ens5 (vrf vrf-internet), weight 1, 03:50:30
+B>* 198.51.100.0/30 [20/0] via 198.51.100.5, ens5 (vrf vrf-internet), weight 1, 04:29:01
+B>* 198.51.100.4/30 [20/0] is directly connected, vrf-internet (vrf vrf-internet), weight 1, 04:31:43
+Exit-Router2#
+```
+
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ubuntu@k8s-master-01:~$ sudo vtysh
 
@@ -746,7 +828,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 k8s-master-01# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -797,10 +879,11 @@ router bgp 65211
 exit
 !
 end
+```
 k8s-master-01#
 k8s-master-01#
 k8s-master-01# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0
 BGP table version 6
@@ -813,11 +896,12 @@ Leaf-L2(ens3)   4      65012       520       523        6    0    0 00:25:40    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 k8s-master-01#
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 osh-ctrl-01# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -868,9 +952,10 @@ router bgp 65213
 exit
 !
 end
+```
 osh-ctrl-01#
 osh-ctrl-01# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.10.3, local AS number 65213 VRF default vrf-id 0
 BGP table version 5
@@ -883,6 +968,7 @@ Leaf-L2(ens3)   4      65012       531       534        5    0    0 00:26:15    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 osh-ctrl-01#
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ubuntu@osh-net-01:~$ sudo vtysh
