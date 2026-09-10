@@ -978,7 +978,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-net-01# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1029,9 +1029,11 @@ router bgp 65214
 exit
 !
 end
-osh-net-01#
-osh-net-01# show ip bgp summary
 
+osh-net-01#
+```
+osh-net-01# show ip bgp summary
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.10.4, local AS number 65214 VRF default vrf-id 0
 BGP table version 6
@@ -1044,6 +1046,7 @@ Leaf-L2(ens3)   4      65012       558       561        6    0    0 00:27:34    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 osh-net-01#
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ubuntu@osh-comp-01:~$ sudo vtysh
@@ -1053,7 +1056,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-comp-01# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1104,9 +1107,10 @@ router bgp 65215
 exit
 !
 end
+```
 osh-comp-01#
 osh-comp-01# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.10.5, local AS number 65215 VRF default vrf-id 0
 BGP table version 5
@@ -1119,6 +1123,7 @@ Leaf-L2(ens3)   4      65012       595       598        5    0    0 00:29:26    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 osh-comp-01#
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ubuntu@osh-comp-04:~$ sudo vtysh
@@ -1128,7 +1133,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-comp-04# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1179,9 +1184,10 @@ router bgp 65216
 exit
 !
 end
+```
 osh-comp-04#
 osh-comp-04# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.10.6, local AS number 65216 VRF default vrf-id 0
 BGP table version 6
@@ -1194,6 +1200,7 @@ Leaf-L2(ens3)   4      65012       672       675        6    0    0 00:33:18    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 osh-comp-04#
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1204,7 +1211,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 k8s-master-02# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1256,9 +1263,10 @@ exit
 !
 end
 k8s-master-02#
+```
 k8s-master-02#
 k8s-master-02# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.20.1, local AS number 65221 VRF default vrf-id 0
 BGP table version 143
@@ -1272,7 +1280,7 @@ Leaf-L4(ens3)   4      65022      1389      1404      143    0    0 01:06:39    
 
 Total number of neighbors 3
 k8s-master-02#
-
+```
 #############################################
 
 ubuntu@k8s-db-02:~$ sudo vtysh
@@ -1282,7 +1290,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 k8s-db-02# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1334,8 +1342,9 @@ exit
 !
 end
 k8s-db-02#
+```
 k8s-db-02# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.20.2, local AS number 65222 VRF default vrf-id 0
 BGP table version 127
@@ -1349,7 +1358,7 @@ Leaf-L4(ens3)   4      65022      1400      1412      127    0    0 01:07:39    
 
 Total number of neighbors 3
 k8s-db-02#
-
+```
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 ubuntu@osh-ctrl-02:~$ sudo vtysh
 
@@ -1358,7 +1367,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-ctrl-02# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1410,9 +1419,10 @@ exit
 !
 end
 osh-ctrl-02#
+```
 osh-ctrl-02#
 osh-ctrl-02# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.20.3, local AS number 65223 VRF default vrf-id 0
 BGP table version 145
@@ -1425,6 +1435,7 @@ Leaf-L4(ens3)   4      65022      1428      1445      145    0    0 01:08:59    
 127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
 
 Total number of neighbors 3
+```
 osh-ctrl-02#
 
 ############################
@@ -1436,7 +1447,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-net-02# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1488,9 +1499,10 @@ exit
 !
 end
 osh-net-02#
+```
 osh-net-02#
 osh-net-02# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.20.4, local AS number 65224 VRF default vrf-id 0
 BGP table version 126
@@ -1504,7 +1516,7 @@ Leaf-L4(ens3)   4      65022      1443      1461      126    0    0 01:10:13    
 
 Total number of neighbors 3
 osh-net-02#
-
+```
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 ubuntu@osh-comp-02:~$ sudo vtysh
 
@@ -1513,7 +1525,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-comp-02# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1565,9 +1577,10 @@ exit
 !
 end
 osh-comp-02#
+```
 osh-comp-02#
 osh-comp-02# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.20.5, local AS number 65225 VRF default vrf-id 0
 BGP table version 95
@@ -1581,7 +1594,7 @@ Leaf-L4(ens3)   4      65022      1469      1473       95    0    0 01:11:44    
 
 Total number of neighbors 3
 osh-comp-02#
-
+```
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ubuntu@k8s-master-03:~$ sudo vtysh
 
@@ -1592,7 +1605,7 @@ k8s-master-03# sudo vtysh
 % Unknown command: sudo vtysh
 k8s-master-03# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1670,8 +1683,9 @@ exit
 !
 end
 k8s-master-03#
+```
 k8s-master-03# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.30.1, local AS number 65231 VRF default vrf-id 0
 BGP table version 115
@@ -1685,6 +1699,7 @@ Border-Leaf2(ens3) 4      65032      1610      1608      115    0    0 01:16:41 
 
 Total number of neighbors 3
 k8s-master-03#
+```
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 ubuntu@k8s-db-03:~$ sudo vtysh
 
@@ -1693,7 +1708,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 k8s-db-03# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1771,8 +1786,9 @@ exit
 !
 end
 k8s-db-03#
+```
 k8s-db-03# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.30.2, local AS number 65232 VRF default vrf-id 0
 BGP table version 146
@@ -1786,13 +1802,14 @@ Border-Leaf2(ens3) 4      65032      1631      1634      146    0    0 01:18:07 
 
 Total number of neighbors 3
 k8s-db-03#
+```
 k8s-db-03#
 
 ##############################
 ubuntu@MonSrv:~$
 ubuntu@MonSrv:~$
 ubuntu@MonSrv:~$ sudo vtysh
-
+```
 Hello, this is FRRouting (version 10.5.1).
 Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
@@ -1876,9 +1893,10 @@ exit
 !
 end
 MonSrv#
+```
 MonSrv#
 MonSrv# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.30.4, local AS number 65234 VRF default vrf-id 0
 BGP table version 112
@@ -1892,6 +1910,7 @@ Border-Leaf2(ens3) 4      65032      1669      1674      112    0    0 01:20:14 
 
 Total number of neighbors 3
 MonSrv#
+```
 MonSrv#
 
 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
@@ -1902,7 +1921,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-ctrl-03# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -1954,8 +1973,9 @@ exit
 !
 end
 osh-ctrl-03#
+```
 osh-ctrl-03# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.30.3, local AS number 65233 VRF default vrf-id 0
 BGP table version 138
@@ -1969,6 +1989,7 @@ Border-Leaf2(ens3) 4      65032      1708      1710      138    0    0 01:21:51 
 
 Total number of neighbors 3
 osh-ctrl-03#
+```
 osh-ctrl-03#
 
 ##########################################
@@ -1980,7 +2001,7 @@ Copyright 1996-2005 Kunihiro Ishiguro, et al.
 
 osh-comp-03# show running-config bgpd
 Building configuration...
-
+```
 Current configuration:
 !
 frr version 10.5.1
@@ -2032,9 +2053,10 @@ exit
 !
 end
 osh-comp-03#
+```
 osh-comp-03#
 osh-comp-03# show ip bgp summary
-
+```
 IPv4 Unicast Summary:
 BGP router identifier 10.0.30.5, local AS number 65235 VRF default vrf-id 0
 BGP table version 98
@@ -2048,5 +2070,5 @@ Border-Leaf2(ens3) 4      65032      1716      1716       98    0    0 01:22:48 
 
 Total number of neighbors 3
 osh-comp-03#
-
+```
 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
