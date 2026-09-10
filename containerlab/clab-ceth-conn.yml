@@ -1,0 +1,277 @@
+nh1221@PowerEdge-R810:~$ #!/bin/bash
+
+# Create an associative array of all container interface links
+declare -A interface_map
+
+# Gather data from all running containers
+for c_id in $(sudo docker ps -q); do
+    c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+
+    # Get all interfaces, their indexes, and their target peer link indexes
+    while read -r line; do
+        if [ ! -z "$line" ]; then
+            ifindex=$(echo "$line" | awk '{print $1}')
+            ifname=$(echo "$line" | awk '{print $2}' | cut -d'@' -f1)
+            iflink=$(echo "$line" | awk '{print $3}')
+
+            # Map this unique global index back to this container/interface combo
+            interface_map["$c_name-$ifindex"]="$ifname"
+            interface_map["idx-$c_name-$ifname"]="$iflink"
+        fi
+    done < <(sudo docker exec $c_id bash -c "
+        for idx in \$(ls /sys/class/net/); do
+            echo \"\$(cat /sys/class/net/\$idx/ifindex) \$idx \$(cat /sys/class/net/\$idx/iflink)\";
+        done 2>/dev/null"
+    )
+done
+
+# Focus specifically on tracing Leaf-L1
+echo "=========================================================================="
+echo "                   Leaf-L1 VIRTUAL WIRE TOPOLOGY MAP                      "
+echo "=========================================================================="
+
+for port in $(sudo docker exec Leaf-L1 ls /sys/class/net/ | grep -E 'eth|Ethernet'); do
+    # Get the global target link index from Leaf-L1's perspective
+    peer_link_idx=${interface_map["idx-Leaf-L1-$port"]}
+
+    # Skip if it links back to itself or is empty
+    if [ -z "$peer_link_idx" ]; then continue; fi
+
+    match_found=false
+
+    # Scan other containers to see who owns that target link index
+    for c_id in $(sudo docker ps -q); do
+        c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+        if [ "$c_name" == "Leaf-L1" ]; then continue; fi # Skip self
+
+        peer_port=${interface_map["$c_name-$peer_link_idx"]}
+        if [ ! -z "$peer_port" ]; then
+            printf "Leaf-L1 Interface: %-7s ===> Connected to Container: %-12s Interface: %s\n" "$port" "$c_name" "$peer_port"
+            match_found=true
+            break
+        fi
+    done
+
+    # If no other container claimed it, it's tied directly to the host machine
+    if [ "$match_found" = false ]; then
+        host_veth=$(ip -o link show | awk -F': ' -v idx="^$peer_link_idx" '$1 ~ idx {print $2}' | cut -d'@' -f1)
+        if [ ! -z "$host_veth" ]; then
+            printf "Leaf-L1 Interface: %-7s ===> Connected to Host Veth:    %s\n" "$port" "$host_veth"
+        else
+            printf "Leaf-L1 Interface: %-7s ===> Connected to Host/Bridge (Index: %s)\n" "$port" "$peer_link_idx"
+        fi
+    fi
+done
+==========================================================================
+                   Leaf-L1 VIRTUAL WIRE TOPOLOGY MAP
+==========================================================================
+Leaf-L1 Interface: eth0    ===> Connected to Host Veth:    vethcd8f950
+Leaf-L1 Interface: eth1    ===> Connected to Container: k8s-master-01 Interface: eth1
+Leaf-L1 Interface: eth2    ===> Connected to Container: k8s-db-01    Interface: eth1
+Leaf-L1 Interface: eth3    ===> Connected to Container: osh-ctrl-01  Interface: eth1
+Leaf-L1 Interface: eth4    ===> Connected to Container: osh-net-01   Interface: eth1
+Leaf-L1 Interface: eth5    ===> Connected to Container: osh-comp-01  Interface: eth1
+Leaf-L1 Interface: eth6    ===> Connected to Container: osh-comp-04  Interface: eth1
+Leaf-L1 Interface: eth65   ===> Connected to Container: Spine-S2     Interface: eth1
+Leaf-L1 Interface: eth69   ===> Connected to Container: Spine-S1     Interface: eth1
+nh1221@PowerEdge-R810:~$
+
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ for port in $(sudo docker exec Leaf-L3 ip -o link show | awk -F': ' '{print $2}' | grep -E 'eth|Ethernet' | cut -d'@' -f1); do
+    # Get the host-side link index for this specific container port
+    iflink=$(sudo docker exec Leaf-L1 cat /sys/class/net/$port/iflink 2>/dev/null)
+
+    if [ ! -z "$iflink" ]; then
+        # Match that index to the specific veth interface name on your host
+        host_veth=$(ip -o link show | awk -F': ' -v idx="^$iflink" '$1 ~ idx {print $2}' | cut -d'@' -f1)
+        echo "Leaf-L1 Interface: $port  ===>  Host Virtual Link: $host_veth"
+    fi
+done
+Leaf-L1 Interface: eth0  ===>  Host Virtual Link: vethcd8f950
+Leaf-L1 Interface: eth1  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth2  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth3  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth4  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth5  ===>  Host Virtual Link:
+nh1221@PowerEdge-R810:~$ for port in $(sudo docker exec Border-Leaf1 ip -o link show | awk -F': ' '{print $2}' | grep -E 'eth|Ethernet' | cut -d'@' -f1); do
+    # Get the host-side link index for this specific container port
+    iflink=$(sudo docker exec Leaf-L1 cat /sys/class/net/$port/iflink 2>/dev/null)
+
+    if [ ! -z "$iflink" ]; then
+        # Match that index to the specific veth interface name on your host
+        host_veth=$(ip -o link show | awk -F': ' -v idx="^$iflink" '$1 ~ idx {print $2}' | cut -d'@' -f1)
+        echo "Leaf-L1 Interface: $port  ===>  Host Virtual Link: $host_veth"
+    fi
+done
+Leaf-L1 Interface: eth0  ===>  Host Virtual Link: vethcd8f950
+Leaf-L1 Interface: eth5  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth1  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth2  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth6  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth3  ===>  Host Virtual Link:
+Leaf-L1 Interface: eth4  ===>  Host Virtual Link:
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+
+XXXXXXXXXXXXXXXX
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ #!/bin/bash
+
+# Create an associative array of all container interface links
+declare -A interface_map
+
+# Gather data from all running containers
+for c_id in $(sudo docker ps -q); do
+    c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+
+    # Get all interfaces, their indexes, and their target peer link indexes
+    while read -r line; do
+        if [ ! -z "$line" ]; then
+            ifindex=$(echo "$line" | awk '{print $1}')
+            ifname=$(echo "$line" | awk '{print $2}' | cut -d'@' -f1)
+            iflink=$(echo "$line" | awk '{print $3}')
+
+            # Map this unique global index back to this container/interface combo
+            interface_map["$c_name-$ifindex"]="$ifname"
+            interface_map["idx-$c_name-$ifname"]="$iflink"
+        fi
+    done < <(sudo docker exec $c_id bash -c "
+        for idx in \$(ls /sys/class/net/); do
+            echo \"\$(cat /sys/class/net/\$idx/ifindex) \$idx \$(cat /sys/class/net/\$idx/iflink)\";
+        done 2>/dev/null"
+    )
+done
+
+# Focus specifically on tracing Leaf-L3
+echo "=========================================================================="
+echo "                   Leaf-L3 VIRTUAL WIRE TOPOLOGY MAP                      "
+echo "=========================================================================="
+
+for port in $(sudo docker exec Leaf-L3 ls /sys/class/net/ | grep -E 'eth|Ethernet'); do
+    # Get the global target link index from Leaf-L3's perspective
+    peer_link_idx=${interface_map["idx-Leaf-L3-$port"]}
+
+    # Skip if it links back to itself or is empty
+    if [ -z "$peer_link_idx" ]; then continue; fi
+
+    match_found=false
+
+    # Scan other containers to see who owns that target link index
+    for c_id in $(sudo docker ps -q); do
+        c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+        if [ "$c_name" == "Leaf-L3" ]; then continue; fi # Skip self
+
+        peer_port=${interface_map["$c_name-$peer_link_idx"]}
+        if [ ! -z "$peer_port" ]; then
+            printf "Leaf-L3 Interface: %-7s ===> Connected to Container: %-12s Interface: %s\n" "$port" "$c_name" "$peer_port"
+            match_found=true
+            break
+        fi
+    done
+
+    # If no other container claimed it, it's tied directly to the host machine
+    if [ "$match_found" = false ]; then
+        host_veth=$(ip -o link show | awk -F': ' -v idx="^$peer_link_idx" '$1 ~ idx {print $2}' | cut -d'@' -f1)
+        if [ ! -z "$host_veth" ]; then
+            printf "Leaf-L3 Interface: %-7s ===> Connected to Host Veth:    %s\n" "$port" "$host_veth"
+        else
+            printf "Leaf-L3 Interface: %-7s ===> Connected to Host/Bridge (Index: %s)\n" "$port" "$peer_link_idx"
+        fi
+    fi
+done
+==========================================================================
+                   Leaf-L3 VIRTUAL WIRE TOPOLOGY MAP
+==========================================================================
+Leaf-L3 Interface: eth0    ===> Connected to Host Veth:    vethf6efb92
+Leaf-L3 Interface: eth1    ===> Connected to Container: k8s-master-02 Interface: eth1
+Leaf-L3 Interface: eth2    ===> Connected to Container: k8s-db-02    Interface: eth1
+Leaf-L3 Interface: eth3    ===> Connected to Container: osh-ctrl-02  Interface: eth1
+Leaf-L3 Interface: eth31   ===> Connected to Container: Spine-S2     Interface: eth3
+Leaf-L3 Interface: eth32   ===> Connected to Container: Spine-S1     Interface: eth3
+Leaf-L3 Interface: eth4    ===> Connected to Container: osh-net-02   Interface: eth1
+Leaf-L3 Interface: eth5    ===> Connected to Container: osh-comp-02  Interface: eth1
+nh1221@PowerEdge-R810:~$
+
+DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ #!/bin/bash
+
+# Create an associative array of all container interface links
+declare -A interface_map
+
+# Gather data from all running containers
+for c_id in $(sudo docker ps -q); do
+    c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+
+    # Get all interfaces, their indexes, and their target peer link indexes
+    while read -r line; do
+        if [ ! -z "$line" ]; then
+            ifindex=$(echo "$line" | awk '{print $1}')
+            ifname=$(echo "$line" | awk '{print $2}' | cut -d'@' -f1)
+            iflink=$(echo "$line" | awk '{print $3}')
+
+            # Map this unique global index back to this container/interface combo
+            interface_map["$c_name-$ifindex"]="$ifname"
+            interface_map["idx-$c_name-$ifname"]="$iflink"
+        fi
+    done < <(sudo docker exec $c_id bash -c "
+        for idx in \$(ls /sys/class/net/); do
+            echo \"\$(cat /sys/class/net/\$idx/ifindex) \$idx \$(cat /sys/class/net/\$idx/iflink)\";
+        done 2>/dev/null"
+    )
+done
+
+# Focus specifically on tracing Border-Leaf1
+echo "=========================================================================="
+echo "                   Border-Leaf1 VIRTUAL WIRE TOPOLOGY MAP                      "
+echo "=========================================================================="
+
+for port in $(sudo docker exec Border-Leaf1 ls /sys/class/net/ | grep -E 'eth|Ethernet'); do
+    # Get the global target link index from Border-Leaf1's perspective
+    peer_link_idx=${interface_map["idx-Border-Leaf1-$port"]}
+
+    # Skip if it links back to itself or is empty
+    if [ -z "$peer_link_idx" ]; then continue; fi
+
+    match_found=false
+
+    # Scan other containers to see who owns that target link index
+    for c_id in $(sudo docker ps -q); do
+        c_name=$(sudo docker inspect --format '{{.Name}}' $c_id | sed 's/^\///')
+        if [ "$c_name" == "Border-Leaf1" ]; then continue; fi # Skip self
+
+        peer_port=${interface_map["$c_name-$peer_link_idx"]}
+        if [ ! -z "$peer_port" ]; then
+            printf "Border-Leaf1 Interface: %-7s ===> Connected to Container: %-12s Interface: %s\n" "$port" "$c_name" "$peer_port"
+            match_found=true
+            break
+        fi
+    done
+
+    # If no other container claimed it, it's tied directly to the host machine
+    if [ "$match_found" = false ]; then
+        host_veth=$(ip -o link show | awk -F': ' -v idx="^$peer_link_idx" '$1 ~ idx {print $2}' | cut -d'@' -f1)
+        if [ ! -z "$host_veth" ]; then
+            printf "Border-Leaf1 Interface: %-7s ===> Connected to Host Veth:    %s\n" "$port" "$host_veth"
+        else
+            printf "Border-Leaf1 Interface: %-7s ===> Connected to Host/Bridge (Index: %s)\n" "$port" "$peer_link_idx"
+        fi
+    fi
+done
+==========================================================================
+                   Border-Leaf1 VIRTUAL WIRE TOPOLOGY MAP
+==========================================================================
+Border-Leaf1 Interface: eth0    ===> Connected to Host Veth:    veth8f9c1a3
+Border-Leaf1 Interface: eth1    ===> Connected to Container: Exit-Router1 Interface: eth1
+Border-Leaf1 Interface: eth2    ===> Connected to Container: Exit-Router2 Interface: eth1
+Border-Leaf1 Interface: eth3    ===> Connected to Container: k8s-master-03 Interface: eth1
+Border-Leaf1 Interface: eth34   ===> Connected to Container: Spine-S2     Interface: eth5
+Border-Leaf1 Interface: eth35   ===> Connected to Container: Spine-S1     Interface: eth5
+Border-Leaf1 Interface: eth4    ===> Connected to Container: k8s-db-03    Interface: eth1
+Border-Leaf1 Interface: eth5    ===> Connected to Container: osh-ctrl-03  Interface: eth1
+Border-Leaf1 Interface: eth6    ===> Connected to Container: MonSrv       Interface: eth1
+Border-Leaf1 Interface: eth7    ===> Connected to Container: osh-comp-03  Interface: eth1
+nh1221@PowerEdge-R810:~$
+
+nh1221@PowerEdge-R810:~$ sudo docker exec k8s-master-02 ip -o link show | awk -F': ' '{print $2}' | grep -E 'eth|Ethernet'
+
