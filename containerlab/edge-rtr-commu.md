@@ -1938,3 +1938,55 @@ Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: 
 Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: rcvd End-of-RIB for IPv4 Unicast from ens3 in vrf default
 ubuntu@Exit-Router1:~$
 
+
+
+ubuntu@Exit-Router1:~$ sudo vtysh -c "show bgp vrf all summary"
+
+IPv4 Unicast Summary:
+BGP router identifier 10.255.255.1, local AS number 65251 VRF default vrf-id 0
+BGP table version 16
+RIB entries 29, using 3712 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031        63        63       16    0    0 00:02:21           11       16 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032        63        63       16    0    0 00:02:21           11       16 To-Border-Leaf2-Ethe
+
+Total number of neighbors 2
+
+IPv4 Unicast Summary:
+BGP router identifier 10.255.255.1, local AS number 65251 VRF vrf-internet vrf-id 7
+BGP table version 17
+RIB entries 29, using 3712 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+ISP-1(ens4)     4      65401        52        51       17    0    0 00:02:21            2        1 To-ISP_1
+ISP-2(ens5)     4      65402        52        51       17    0    0 00:02:21            2        1 To-ISP_2
+
+Total number of neighbors 2
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$
+
+ubuntu@Exit-Router1:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Exit-Router1# show bgp vrf vrf-internet summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.255.255.1, local AS number 65251 VRF vrf-internet vrf-id 7
+BGP table version 17
+RIB entries 29, using 3712 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+ISP-1(ens4)     4      65401        71        70       17    0    0 00:03:18            2        1 To-ISP_1
+ISP-2(ens5)     4      65402        71        70       17    0    0 00:03:18            2        1 To-ISP_2
+
+Total number of neighbors 2
+Exit-Router1#
+
