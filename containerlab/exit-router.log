@@ -1,11 +1,128 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh ubuntu@Exit-Router1
-channel 0: open failed: connect failed: No route to host
-stdio forwarding failed
-Connection closed by UNKNOWN port 65535
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/lab/exit-routers-preflight.yml -f 2
-ERROR! the playbook: playbooks/lab/exit-routers-preflight.yml could not be found
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/exit-routers-preflight.yml -f 2
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/lab/switch-fabric.yml
+
+PLAY [Control-node preflight and transport setup] **************************************************************************************************************************************************************
+:
+:
+:
+PLAY [Configure External-Router — FRR BGP to ISPs for WireGuard/VRF validation edge] ***************************************************************************************************************************
+
+TASK [linux_external_router : Assert required external-router vars are present] ********************************************************************************************************************************
+ok: [External-Router] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_external_router : Render FRR config on the containerlab host] **************************************************************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Push FRR config into the container] **********************************************************************************************************************************************
+changed: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Assign IP addresses and bring up external-router interfaces] *********************************************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '100.64.0.3/30', 'description': 'To-ISP-1', 'neighbor_asn': 65401, 'neighbor_ip': '100.64.0.1'})
+ok: [External-Router -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '100.64.0.6/30', 'description': 'To-ISP-2', 'neighbor_asn': 65402, 'neighbor_ip': '100.64.0.5'})
+
+TASK [linux_external_router : Enable IPv4/IPv6 forwarding inside the container] ********************************************************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Ensure FRR daemons are running inside the container (additive; never stops PID 1)] ***********************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Apply integrated FRR configuration (vtysh -b, no restart)] ***********************************************************************************************************************
+changed: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Wait for FRR to initialise] ******************************************************************************************************************************************************
+Pausing for 5 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [External-Router]
+
+TASK [linux_external_router : Verify FRR BGP is running] *******************************************************************************************************************************************************
+ok: [External-Router -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_external_router : Display External-Router BGP summary] *********************************************************************************************************************************************
+ok: [External-Router] => {
+    "msg": [
+        "",
+        "IPv4 Unicast Summary:",
+        "BGP router identifier 10.255.255.21, local AS number 65100 VRF default vrf-id 0",
+        "BGP table version 0",
+        "RIB entries 0, using 0 bytes of memory",
+        "Peers 2, using 26 KiB of memory",
+        "",
+        "Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "100.64.0.1      4      65401         0         0        0    0    0    never      Connect        0 To-ISP-1",
+        "100.64.0.5      4      65402         0         0        0    0    0    never      Connect        0 To-ISP-2",
+        "",
+        "Total number of neighbors 2"
+    ]
+}
+
+PLAY [Configure ISP Routers — FRR BGP with default route advertisement] ****************************************************************************************************************************************
+
+TASK [linux_isp_router : Assert required ISP router vars are present] ******************************************************************************************************************************************
+ok: [ISP-1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [ISP-2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_isp_router : Build complete ISP interface configuration set] ***************************************************************************************************************************************
+ok: [ISP-1]
+ok: [ISP-2]
+
+TASK [linux_isp_router : Render FRR config on the containerlab host] *******************************************************************************************************************************************
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Push FRR config into the container] ***************************************************************************************************************************************************
+changed: [ISP-1 -> poweredge_r810(192.168.9.198)]
+changed: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Assign IP addresses and bring up ISP data interfaces] *********************************************************************************************************************************
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '198.51.100.1/30', 'description': 'Link-to-Exit-Router1', 'neighbor_asn': 65251, 'neighbor_ip': '198.51.100.2'})
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth2', 'ip_addr': '198.51.100.5/30', 'description': 'Link-to-Exit-Router2', 'neighbor_asn': 65252, 'neighbor_ip': '198.51.100.6'})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth1', 'ip_addr': '192.0.2.1/30', 'description': 'Link-to-Exit-Router1', 'neighbor_asn': 65251, 'neighbor_ip': '192.0.2.2'})
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth5', 'ip_addr': '192.168.254.2/30', 'description': 'iBGP-Sync-to-ISP-1', 'neighbor_asn': 65402, 'neighbor_ip': '192.168.254.1'})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth2', 'ip_addr': '192.0.2.5/30', 'description': 'Link-to-Exit-Router2', 'neighbor_asn': 65252, 'neighbor_ip': '192.0.2.6'})
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth6', 'ip_addr': '100.64.0.5/30', 'description': 'Link-to-External-Router-via-Bridge', 'neighbor_asn': 65100, 'neighbor_ip': '100.64.0.3'})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth5', 'ip_addr': '192.168.254.1/30', 'description': 'iBGP-Sync-to-ISP-2', 'neighbor_asn': 65401, 'neighbor_ip': '192.168.254.2'})
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)] => (item={'device': 'eth6', 'ip_addr': '100.64.0.1/30', 'description': 'Link-to-External-Router-via-Bridge', 'neighbor_asn': 65100, 'neighbor_ip': '100.64.0.3'})
+
+TASK [linux_isp_router : Enable IPv4/IPv6 forwarding inside the container] *************************************************************************************************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Ensure vtysh.conf exists in the container] ********************************************************************************************************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Ensure FRR daemons are running inside the container (additive; never stops PID1)] *****************************************************************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Apply integrated FRR configuration (vtysh -b)] ****************************************************************************************************************************************
+changed: [ISP-1 -> poweredge_r810(192.168.9.198)]
+changed: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Wait for FRR routing daemons to initialize] *******************************************************************************************************************************************
+Pausing for 5 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [ISP-1]
+
+TASK [linux_isp_router : Verify FRR BGP is running] ************************************************************************************************************************************************************
+ok: [ISP-1 -> poweredge_r810(192.168.9.198)]
+ok: [ISP-2 -> poweredge_r810(192.168.9.198)]
+
+TASK [linux_isp_router : Display ISP BGP summary] **************************************************************************************************************************************************************
+ok: [ISP-1] => {
+    "msg": false
+}
+ok: [ISP-2] => {
+    "msg": false
+}
 
 PLAY [Exit-router preflight — install FRR and validate tooling before BGP setup] *******************************************************************************************************************************
 
@@ -20,11 +137,368 @@ ok: [Exit-Router2] => {
 }
 
 TASK [linux_exit_router : Refresh APT cache with retries before install] ***************************************************************************************************************************************
-fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by UNKNOWN port 65535", "unreachable": true}
-fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Connection closed by UNKNOWN port 65535", "unreachable": true}
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Install exit-router packages] ********************************************************************************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Confirm FRR tooling is installed and vtysh is usable] ********************************************************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Enable IPv4 and IPv6 forwarding] *****************************************************************************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Flush sysctl to activate forwarding immediately] *************************************************************************************************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy netplan for Border-Leaf uplinks (link-local for BGP unnumbered)] **************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy netplan for ISP interfaces in vrf-internet] ***********************************************************************************************************************************
+skipping: [Exit-Router2]
+skipping: [Exit-Router1]
+
+TASK [linux_exit_router : Apply netplan (Border-Leaf uplinks + ISP vrf-internet)] ******************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Enable bgpd in FRR daemons file] *****************************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy FRR exit-router configuration] ************************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Restart FRR to apply configuration] **************************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Ensure /etc/wireguard directory exists] **********************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Generate a valid WireGuard private key when the configured one is a placeholder] *****************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Select the effective WireGuard private key] ******************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy WireGuard interface configuration] ********************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Enable and start WireGuard tunnel (best-effort)] *************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Report WireGuard tunnel status] ******************************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Derive the WireGuard server public key] **********************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Publish the effective server public key as a fact] ***********************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Ensure WireGuard client-profile directory exists] ************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Render ops-group WireGuard client profiles] ******************************************************************************************************************************************
+skipping: [Exit-Router1] => (item={'name': 'Remote-Ops-Laptop', 'public_key': 'PUBLIC_KEY_TOKEN_REMOTE_CLIENT_LAPTOP_=========', 'allowed_ips': '10.254.0.10/32'})
+skipping: [Exit-Router2] => (item={'name': 'Remote-Ops-Laptop', 'public_key': 'PUBLIC_KEY_TOKEN_REMOTE_CLIENT_LAPTOP_=========', 'allowed_ips': '10.254.0.10/32'})
+skipping: [Exit-Router1] => (item={'name': 'Kepler-CI-Runner', 'public_key': 'PUBLIC_KEY_TOKEN_CI_CD_SERVER_RUNNER_==========', 'allowed_ips': '10.254.0.20/32'})
+skipping: [Exit-Router1]
+skipping: [Exit-Router2] => (item={'name': 'Kepler-CI-Runner', 'public_key': 'PUBLIC_KEY_TOKEN_CI_CD_SERVER_RUNNER_==========', 'allowed_ips': '10.254.0.20/32'})
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Apply NAT MASQUERADE for tenant internet egress on each ISP interface] ***************************************************************************************************************
+skipping: [Exit-Router1] => (item={'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.2/30', 'next_hop': '192.0.2.1', 'neighbor_asn': 65401})
+skipping: [Exit-Router2] => (item={'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.6/30', 'next_hop': '192.0.2.5', 'neighbor_asn': 65401})
+skipping: [Exit-Router1] => (item={'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.2/30', 'next_hop': '198.51.100.1', 'neighbor_asn': 65402})
+skipping: [Exit-Router1]
+skipping: [Exit-Router2] => (item={'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.6/30', 'next_hop': '198.51.100.5', 'neighbor_asn': 65402})
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Insert NAT MASQUERADE rule where missing] ********************************************************************************************************************************************
+skipping: [Exit-Router1] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'not (preflight_only | default(false))', 'item': {'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.2/30', 'next_hop': '192.0.2.1', 'neighbor_asn': 65401}, 'ansible_loop_var': 'item'})
+skipping: [Exit-Router2] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'not (preflight_only | default(false))', 'item': {'device': 'ens4', 'peer_isp': 'ISP_1', 'isp_port': '1', 'ip_addr': '192.0.2.6/30', 'next_hop': '192.0.2.5', 'neighbor_asn': 65401}, 'ansible_loop_var': 'item'})
+skipping: [Exit-Router1] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'not (preflight_only | default(false))', 'item': {'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.2/30', 'next_hop': '198.51.100.1', 'neighbor_asn': 65402}, 'ansible_loop_var': 'item'})
+skipping: [Exit-Router1]
+skipping: [Exit-Router2] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'false_condition': 'not (preflight_only | default(false))', 'item': {'device': 'ens5', 'peer_isp': 'ISP_2', 'isp_port': '2', 'ip_addr': '198.51.100.6/30', 'next_hop': '198.51.100.5', 'neighbor_asn': 65402}, 'ansible_loop_var': 'item'})
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy idempotent edge NAT/forwarding rule script] ***********************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Apply edge NAT/forwarding rules] *****************************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Persist iptables rules across reboots] ***********************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Wait for FRR BGP to initialise] ******************************************************************************************************************************************************
+skipping: [Exit-Router1]
+
+TASK [linux_exit_router : Verify FRR fabric BGP summary is reachable] ******************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Verify FRR internet/VRF BGP summary is reachable] ************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+TASK [linux_exit_router : Verify default route is present in FRR] **********************************************************************************************************************************************
+skipping: [Exit-Router1]
+skipping: [Exit-Router2]
+
+PLAY [Configure Exit-Routers — WireGuard VPN, VRF-Internet, FRR BGP, NAT] **************************************************************************************************************************************
+
+TASK [linux_exit_router : Assert required exit-router vars are present] ****************************************************************************************************************************************
+ok: [Exit-Router1] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+ok: [Exit-Router2] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [linux_exit_router : Refresh APT cache with retries before install] ***************************************************************************************************************************************
+ok: [Exit-Router1]
+ok: [Exit-Router2]
+
+TASK [linux_exit_router : Install exit-router packages] ********************************************************************************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Confirm FRR tooling is installed and vtysh is usable] ********************************************************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Enable IPv4 and IPv6 forwarding] *****************************************************************************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Flush sysctl to activate forwarding immediately] *************************************************************************************************************************************
+ok: [Exit-Router2]
+ok: [Exit-Router1]
+
+TASK [linux_exit_router : Deploy netplan for Border-Leaf uplinks (link-local for BGP unnumbered)] **************************************************************************************************************
+changed: [Exit-Router1]
+changed: [Exit-Router2]
+
+TASK [linux_exit_router : Deploy netplan for ISP interfaces in vrf-internet] ***********************************************************************************************************************************
+changed: [Exit-Router2]
+changed: [Exit-Router1]
+
+TASK [linux_exit_router : Apply netplan (Border-Leaf uplinks + ISP vrf-internet)] ******************************************************************************************************************************
+fatal: [Exit-Router1]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.41\". Make sure this host can be reached over ssh: Warning: Permanently added '172.16.2.41' (ED25519) to the list of known hosts.\r\n", "unreachable": true}
+fatal: [Exit-Router2]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.42\". Make sure this host can be reached over ssh: Warning: Permanently added '172.16.2.42' (ED25519) to the list of known hosts.\r\n", "unreachable": true}
 
 PLAY RECAP *****************************************************************************************************************************************************************************************************
-Exit-Router1               : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-Exit-Router2               : ok=1    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+Border-Leaf1               : ok=77   changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Border-Leaf2               : ok=77   changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Exit-Router1               : ok=16   changed=4    unreachable=1    failed=0    skipped=25   rescued=0    ignored=0
+Exit-Router2               : ok=16   changed=4    unreachable=1    failed=0    skipped=24   rescued=0    ignored=0
+External-Router            : ok=10   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-1                      : ok=12   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-2                      : ok=11   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=78   changed=14   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Leaf-L2                    : ok=78   changed=14   unreachable=0    failed=0    skipped=9    rescued=0    ignored=0
+Leaf-L3                    : ok=77   changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Leaf-L4                    : ok=77   changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+MonSrv                     : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Spine-S1                   : ok=71   changed=14   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Spine-S2                   : ok=71   changed=14   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-db-01                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-02                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-db-03                  : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-02              : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+k8s-master-03              : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+oob-mgmt-node              : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-01                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-02                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-03                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-comp-04                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-01                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-02                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-ctrl-03                : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-01                 : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+osh-net-02                 : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+poweredge_r810             : ok=26   changed=9    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh ubuntu@Exit-Router1
+channel 0: open failed: connect failed: No route to host
+stdio forwarding failed
+Connection closed by UNKNOWN port 65535
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ping -c 3 Exit-Router1
+PING Exit-Router1 (172.16.2.41) 56(84) bytes of data.
+
+--- Exit-Router1 ping statistics ---
+3 packets transmitted, 0 received, 100% packet loss, time 2044ms
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo clab ins -a
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+| #  |                   Topo Path                    | Lab Name |      Name       | Container ID |               Image                |    Kind    |  State  |  IPv4 Address   | IPv6 Address |
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+|  1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | Border-Leaf1    | 0a467f3e6b4f | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.31/24  | N/A          |
+|  2 |                                                |          | Border-Leaf2    | f2eda5a67294 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.32/24  | N/A          |
+|  3 |                                                |          | Exit-Router1    | aac2742f1ad3 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.41/24  | N/A          |
+|  4 |                                                |          | Exit-Router2    | c27403516720 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.42/24  | N/A          |
+|  5 |                                                |          | External-Router | a1765b933958 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.254/24 | N/A          |
+|  6 |                                                |          | ISP-1           | 3f31c44cb943 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.98/24  | N/A          |
+|  7 |                                                |          | ISP-2           | ff492af91d27 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.99/24  | N/A          |
+|  8 |                                                |          | Leaf-L1         | c212033cd96c | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.21/24  | N/A          |
+|  9 |                                                |          | Leaf-L2         | 334094798ad6 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.22/24  | N/A          |
+| 10 |                                                |          | Leaf-L3         | 065e0337f21d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.23/24  | N/A          |
+| 11 |                                                |          | Leaf-L4         | 4fb5b1529c28 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.24/24  | N/A          |
+| 12 |                                                |          | MonSrv          | 570c8589538c | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.74/24  | N/A          |
+| 13 |                                                |          | Spine-S1        | ccc7d51d993d | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.11/24  | N/A          |
+| 14 |                                                |          | Spine-S2        | 49948e88f835 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.12/24  | N/A          |
+| 15 |                                                |          | k8s-db-01       | 520773c0f290 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.52/24  | N/A          |
+| 16 |                                                |          | k8s-db-02       | 0f63031bbf09 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.62/24  | N/A          |
+| 17 |                                                |          | k8s-db-03       | 5181da2d9565 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.72/24  | N/A          |
+| 18 |                                                |          | k8s-master-01   | c02191b0c857 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.51/24  | N/A          |
+| 19 |                                                |          | k8s-master-02   | e918dcd1af36 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.61/24  | N/A          |
+| 20 |                                                |          | k8s-master-03   | 67a9c8ad436d | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.71/24  | N/A          |
+| 21 |                                                |          | oob-mgmt-node   | 59c2a5e7f5ed | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.253/24 | N/A          |
+| 22 |                                                |          | osh-comp-01     | de8904e8368c | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.55/24  | N/A          |
+| 23 |                                                |          | osh-comp-02     | 7bc022cdb513 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.65/24  | N/A          |
+| 24 |                                                |          | osh-comp-03     | 4c7af08c766b | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.75/24  | N/A          |
+| 25 |                                                |          | osh-comp-04     | 97d5d4066457 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.56/24  | N/A          |
+| 26 |                                                |          | osh-ctrl-01     | 947cf9446aca | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.53/24  | N/A          |
+| 27 |                                                |          | osh-ctrl-02     | e794226dae8e | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.63/24  | N/A          |
+| 28 |                                                |          | osh-ctrl-03     | 1de20b03a6c4 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.73/24  | N/A          |
+| 29 |                                                |          | osh-net-01      | 8bb608258e40 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.54/24  | N/A          |
+| 30 |                                                |          | osh-net-02      | 8af29262c193 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.64/24  | N/A          |
++----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$ ssh ubuntu@Exit-Router1
+ssh: connect to host exit-router1 port 22: No route to host
+nh1221@PowerEdge-R810:~$ sudo docker exec -it Exit-Router1 telnet 127.0.0.1 5000
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+
+Exit-Router1 login: ubuntu
+Password:
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Sep 11 19:09:40 CEST 2026
+
+  System load:    0.08      Processes:               138
+  Usage of /home: unknown   Users logged in:         0
+  Memory usage:   2%        IPv4 address for enp1s0: 10.0.0.15
+  Swap usage:     0%
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+129 updates can be applied immediately.
+102 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+ubuntu@Exit-Router1:~$ ls -al /etc/netplan
+total 24
+drwxr-xr-x 1 root root 4096 Sep 11 18:59 .
+drwxr-xr-x 1 root root 4096 Sep 11 18:57 ..
+-rw------- 1 root root  223 Sep 11 18:59 35-bdrl-linklocal.yaml
+-rw-r--r-- 1 root root  464 Sep 11 18:59 40-isp-vrf.yaml
+-rw------- 1 root root  168 Sep 11 18:32 50-cloud-init.yaml
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/35-bdrl-linklocal.yaml
+network:
+  version: 2
+  ethernets:
+    ens2:
+      dhcp4: false
+      dhcp6: false
+      link-local: [ipv6]
+      optional: true
+    ens3:
+      dhcp4: false
+      dhcp6: false
+      link-local: [ipv6]
+      optional: true
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/40-isp-vrf.yaml
+network:
+  version: 2
+  vrfs:
+    vrf-internet:
+      table: 200
+      interfaces:
+        - ens4
+        - ens5
+  ethernets:
+    ens4:
+      dhcp4: false
+      link-local: [ipv6]
+      addresses:
+        - 192.0.2.2/30
+      routing-policy:
+        - from: 192.0.2.2/30
+          table: 200
+    ens5:
+      dhcp4: false
+      link-local: [ipv6]
+      addresses:
+        - 198.51.100.2/30
+      routing-policy:
+        - from: 198.51.100.2/30
+          table: 200
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/50-cloud-init.yaml
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+      - "10.0.0.15/24"
+      nameservers:
+        addresses:
+        - 9.9.9.9
+      gateway4: 10.0.0.2
+ubuntu@Exit-Router1:~$
+telnet> exit
+?Invalid command
+telnet> quit
+Connection closed.
+nh1221@PowerEdge-R810:~$ ip r sh
+default via 192.168.9.1 dev eno1 proto dhcp src 192.168.9.198 metric 100
+10.0.0.0/24 dev br-0aace551cf6b proto kernel scope link src 10.0.0.2
+10.10.1.0/24 dev br-mgmt proto kernel scope link src 10.10.1.1 linkdown
+172.16.2.0/24 dev br-0aace551cf6b proto kernel scope link src 172.16.2.1
+172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1
+192.168.9.0/24 dev eno1 proto kernel scope link src 192.168.9.198 metric 100
+192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1 linkdown
+nh1221@PowerEdge-R810:~$
