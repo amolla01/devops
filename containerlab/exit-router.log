@@ -502,3 +502,76 @@ default via 192.168.9.1 dev eno1 proto dhcp src 192.168.9.198 metric 100
 192.168.9.0/24 dev eno1 proto kernel scope link src 192.168.9.198 metric 100
 192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1 linkdown
 nh1221@PowerEdge-R810:~$
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+nh1221@PowerEdge-R810:~$ ssh ubuntu@Exit-Router1ssh: connect to host exit-router1 port 22: No route to hostnh1221@PowerEdge-R810:~$ sudo docker exec -it Exit-Router1 telnet 127.0.0.1 5000Trying 127.0.0.1...Connected to 127.0.0.1.Escape character is '^]'.Exit-Router1 login: ubuntuPassword:Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64) * Documentation: https://docs.ubuntu.com * Management: https://landscape.canonical.com * Support: https://ubuntu.com/pro System information as of Fri Sep 11 19:09:40 CEST 2026 System load: 0.08 Processes: 138 Usage of /home: unknown Users logged in: 0 Memory usage: 2% IPv4 address for enp1s0: 10.0.0.15 Swap usage: 0%Expanded Security Maintenance for Applications is not enabled.129 updates can be applied immediately.102 of these updates are standard security updates.To see these additional updates run: apt list --upgradableEnable ESM Apps to receive additional future security updates.See https://ubuntu.com/esm or run: sudo pro statusubuntu@Exit-Router1:~$ ls -al /etc/netplantotal 24drwxr-xr-x 1 root root 4096 Sep 11 18:59 .drwxr-xr-x 1 root root 4096 Sep 11 18:57 ..-rw------- 1 root root 223 Sep 11 18:59 35-bdrl-linklocal.yaml-rw-r--r-- 1 root root 464 Sep 11 18:59 40-isp-vrf.yaml-rw------- 1 root root 168 Sep 11 18:32 50-cloud-init.yamlubuntu@Exit-Router1:~$ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/35-bdrl-linklocal.yamlnetwork: version: 2 ethernets: ens2: dhcp4: false dhcp6: false link-local: [ipv6] optional: true ens3: dhcp4: false dhcp6: false link-local: [ipv6] optional: trueubuntu@Exit-Router1:~$ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/40-isp-vrf.yamlnetwork: version: 2 vrfs: vrf-internet: table: 200 interfaces: - ens4 - ens5 ethernets: ens4: dhcp4: false link-local: [ipv6] addresses: - 192.0.2.2/30 routing-policy: - from: 192.0.2.2/30 table: 200 ens5: dhcp4: false link-local: [ipv6] addresses: - 198.51.100.2/30 routing-policy: - from: 198.51.100.2/30 table: 200ubuntu@Exit-Router1:~$ubuntu@Exit-Router1:~$ sudo cat /etc/netplan/50-cloud-init.yamlnetwork: version: 2 ethernets: enp1s0: addresses: - "10.0.0.15/24" nameservers: addresses: - 9.9.9.9 gateway4: 10.0.0.2ubuntu@Exit-Router1:~$telnet> exit?Invalid commandtelnet> quitConnection closed.nh1221@PowerEdge-R810:~$ ip r shdefault via 192.168.9.1 dev eno1 proto dhcp src 192.168.9.198 metric 10010.0.0.0/24 dev br-0aace551cf6b proto kernel scope link src 10.0.0.210.10.1.0/24 dev br-mgmt proto kernel scope link src 10.10.1.1 linkdown172.16.2.0/24 dev br-0aace551cf6b proto kernel scope link src 172.16.2.1172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1192.168.9.0/24 dev eno1 proto kernel scope link src 192.168.9.198 metric 100192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1 linkdownnh1221@PowerEdge-R810:~$ brctl showbridge name bridge id STP enabled interfacesbr-0aace551cf6b 8000.d6335eb553ca no veth05c8ebe veth15b777f veth1b38ffb veth2067307 veth213a1e1 veth313f703 veth38defdc veth3e59ddc veth41e414b veth4b04c06 veth50bdd05 veth631084f veth633c97e veth647bb3e veth65bda46 veth67e1804 veth6d26024 veth6ef58bf veth76f5931 veth8000309 vethaee4b3f vethbd81d24 vethbdae01e vethbde81c1 vethe138cc8 vethe7a3b93 vethea89975 vethef37e1f vethf712b17 vethfc42a78br-internet 8000.c2b61de1764f no eno1.100 ext-port isp1-port isp2-portbr-mgmt 8000.5254002e0cb0 yesdocker0 8000.56cdaba33ca6 no veth7c31b06 vetha57737avirbr0 8000.525400bbefd4 yesnh1221@PowerEdge-R810:~$(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ wslIP=$(hostname -I | awk '{print $1}')(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ echo $wslIP192.168.10.247(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ip r shdefault via 192.168.10.1 dev eth7 proto kernel metric 35172.17.0.0/16 dev docker0 proto kernel scope link src 172.17.0.1 linkdown192.168.10.0/24 dev eth7 proto kernel scope link metric 291192.168.10.1 dev eth7 proto kernel scope link metric 35192.168.122.0/24 dev virbr0 proto kernel scope link src 192.168.122.1 linkdown(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ping -c 3 172.16.2.11PING 172.16.2.11 (172.16.2.11) 56(84) bytes of data.--- 172.16.2.11 ping statistics ---3 packets transmitted, 0 received, 100% packet loss, time 2056ms(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh -J nh1221@192.168.9.198 ubuntu@172.16.2.41channel 0: open failed: connect failed: No route to hoststdio forwarding failedConnection closed by UNKNOWN port 65535(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh admin@172.16.2.11Warning: Permanently added '172.16.2.11' (RSA) to the list of known hosts.Debian GNU/Linux 13 \n \lno such identity: C:\\Users\\nh1221\\.ssh\\id_dc_lab: No such file or directoryLinux Spine-S1 6.12.41+deb13-sonic-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.41-1 (2026-07-08) x86_64You are on ____ ___ _ _ _ ____ / ___| / _ \| \ | (_)/ ___| \___ \| | | | \| | | | ___) | |_| | |\ | | |___ |____/ \___/|_| \_|_|\____|-- Software for Open Networking in the Cloud --Unauthorized access and/or use are prohibited.All access and/or use are subject to monitoring.Help: https://sonic-net.github.io/SONiC/admin@Spine-S1:~$ exitlogoutConnection to 172.16.2.11 closed.(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+The detailed outputs reveal the exact root of your routing mismatch.
+On your PowerEdge-R810 host, both subnets (10.0.0.0/24 and 172.16.2.0/24) share the exact same Docker bridge (br-0aace551cf6b):
+
+10.0.0.0/24 dev br-0aace551cf6b proto kernel scope link src 10.0.0.2
+172.16.2.0/24 dev br-0aace551cf6b proto kernel scope link src 172.16.2.1
+
+## Why .11 (Spine-S1) works but .41 (Exit-Router1) does not
+
+   1. Spine-S1 (172.16.2.11) is a SONiC container. SONiC does not use standard Linux systemd network managers or default netplan configurations on its management interface. It listens straight on the 172.16.2.0/24 broadcast domain and replies directly via the host bridge (172.16.2.1), keeping the route symmetric.
+   2. Exit-Router1 (172.16.2.41) is running a custom vrnetlab/QEMU VM wrapper. Inside its 50-cloud-init.yaml Netplan configuration, it only defines an explicit configuration for 10.0.0.15/24 with a gateway of 10.0.0.2:
+   
+   network:
+     version: 2
+     ethernets:
+       enp1s0:
+         addresses:
+         - "10.0.0.15/24"
+         gateway4: 10.0.0.2
+   
+   The breakdown: The IP address 172.16.2.41 doesn't actually exist inside the virtual machine's netplan profile! The only reason you saw 172.16.2.41 earlier from the host layer is because the outer Docker container namespace is forcefully trying to forward that traffic into the VM via an iptables/tc-tap hook.
+
+When you jump via the proxy jump (ssh -J nh1221@192.168.9.198 ubuntu@172.16.2.41), the packet arrives at the bridge, but the internal QEMU virtual machine does not recognize or route replies for the 172.16.2.x network context back to the host, resulting in a No route to host error.
+------------------------------
+## How to Fix It Permanentally
+To get Exit-Router1 onto your management network cleanly so Ansible can reach it, you need to append the 172.16.2.41 tracking address straight into the VM's netplan.
+## Step 1: Log back into Exit-Router1 via the Host's Serial Console Hook
+Run this on your PowerEdge-R810 host to enter the VM's console session:
+
+sudo docker exec -it Exit-Router1 telnet 127.0.0.1 5000
+
+(Log in using username ubuntu and password ubuntu).
+## Step 2: Update the Netplan Config
+Edit the cloud-init file:
+
+sudo nano /etc/netplan/50-cloud-init.yaml
+
+Modify the file to include the second management address and add an explicit routing policy so it knows how to respond to the host bridge:
+
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      addresses:
+      - "10.0.0.15/24"
+      - "172.16.2.41/24"  # <--- Add this management IP address
+      nameservers:
+        addresses:
+        - 9.9.9.9
+      routes:
+      - to: default
+        via: 10.0.0.2
+
+## Step 3: Apply Netplan and Exit
+Apply the changes inside the router VM:
+
+sudo netplan apply
+exit
+
+(Press Ctrl + ] then type quit to exit telnet).
+## Step 4: Repeat for Exit-Router2
+Do the exact same steps for Exit-Router2, matching its assigned IP (which is likely 172.16.2.42 based on your architecture pattern).
+Once both netplan files are updated, run your playbook from the Lab-ControlNode again. Your SSH proxy chains and your Ansible deployment steps will now succeed.
+To ensure this doesn't get overwritten on subsequent labs, could you verify:
+
+* Is your Containerlab (topology.clab.yml) file passing down custom environment variables like MGMT_IP for these exit routers?
+* Do you need assistance updating the Ansible inventory file variables to keep these static assignments permanent across redeployments?
+
+
+
