@@ -1,0 +1,91 @@
+frr version 10
+frr defaults datacenter
+hostname {{ hostname | default(inventory_hostname) }}
+log syslog informational
+ip forwarding
+ipv6 forwarding
+!
+vrf vrf-internet
+exit-vrf
+!
+{% if loopback_ip is defined %}
+interface lo
+ ip address {{ loopback_ip }}
+exit
+!
+{% endif %}
+{% for isp in isp_interfaces %}
+! Floating backup default (AD 250) — eBGP-learned default from the ISP is preferred
+ip route 0.0.0.0/0 {{ isp.next_hop }} vrf vrf-internet 250
+{% endfor %}
+{% if edge_service_nat_enabled | default(false) %}
+! Attract the public storefront /32 toward the ISPs. Inbound packets are DNAT'd
+! (PREROUTING) to the in-fabric MetalLB VIP before this blackhole is ever hit,
+! so the blackhole only serves to originate the prefix via redistribute static.
+ip route {{ storefront_public_ip }}/32 blackhole vrf vrf-internet
+{% endif %}
+!
+router bgp {{ bgp_local_asn }}
+ bgp router-id {{ router_id }}
+ bgp bestpath as-path multipath-relax
+ no bgp ebgp-requires-policy
+ no bgp default ipv4-unicast
+{% for intf in bdrl_interfaces %}
+ neighbor {{ intf.device }} interface remote-as {{ intf.neighbor_asn }}
+ neighbor {{ intf.device }} description To-{{ intf.peer_switch }}-{{ intf.peer_port }}
+{% endfor %}
+ !
+ address-family ipv4 unicast
+{% for intf in bdrl_interfaces %}
+  neighbor {{ intf.device }} activate
+  neighbor {{ intf.device }} default-originate
+  neighbor {{ intf.device }} next-hop-self
+{% endfor %}
+  import vrf vrf-internet
+{% if loopback_ip is defined %}
+  network {{ loopback_ip }}
+{% endif %}
+{% if storefront_public_ip is defined %}
+  network {{ storefront_public_ip }}/32
+{% endif %}
+  maximum-paths 2
+ exit-address-family
+!
+router bgp {{ bgp_local_asn }} vrf vrf-internet
+ bgp router-id {{ router_id }}
+ no bgp ebgp-requires-policy
+ no bgp default ipv4-unicast
+{% for isp in isp_interfaces %}
+ neighbor {{ isp.device }} interface remote-as {{ isp.neighbor_asn }}
+ neighbor {{ isp.device }} description To-{{ isp.isp_name | default(isp.peer_isp) | default('ISP') }}
+{% endfor %}
+ !
+ address-family ipv4 unicast
+{% for isp in isp_interfaces %}
+  neighbor {{ isp.device }} activate  neighbor {{ isp.device }} route-map RM-TO-ISP-OUT out{% endfor %}
+{% if storefront_public_ip is defined %}
+  network {{ storefront_public_ip }}/32
+{% endif %}
+  redistribute static route-map RM-REDIST-CONN
+  import vrf default
+ exit-address-family
+!
+! Air-gap guard: eth0 is the clab mgmt NIC ({{ sonic_mgmt_subnet | default('172.16.2.0/24') }}).
+! Never let it be redistributed or leaked toward the ISPs / fabric.
+ip prefix-list PL-NO-MGMT seq 5 deny {{ sonic_mgmt_subnet | default('172.16.2.0/24') }}
+ip prefix-list PL-NO-MGMT seq 10 permit 0.0.0.0/0 le 32
+route-map RM-REDIST-CONN permit 10
+ match ip address prefix-list PL-NO-MGMT
+exit
+!
+! Air-gap egress guard: advertise ONLY public service prefixes to the ISPs.
+! Fabric/internal/mgmt prefixes reach the internet via NAT (MASQUERADE), never
+! via BGP, so they must never be leaked upstream to the ISP eBGP sessions.
+{% if storefront_public_ip is defined %}
+ip prefix-list PL-PUBLIC-OUT seq 5 permit {{ storefront_public_ip }}/32
+{% endif %}
+route-map RM-TO-ISP-OUT permit 10
+ match ip address prefix-list PL-PUBLIC-OUT
+route-map RM-TO-ISP-OUT deny 20
+exit
+!
