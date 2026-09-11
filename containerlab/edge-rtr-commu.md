@@ -1695,3 +1695,246 @@ To test "internet" reachability instead, ping a **simulated external prefix by I
 ---
 
 Most likely, your immediate blocker is Layer A: either the run was preflight-only (VRF never created) or FRR restarted before the VRF device existed. Run the full exit-routers.yml, then `sudo systemctl restart frr` on each Exit-Router, and re-check `show bgp vrf all summary`. Want me to add a small guard to the role that waits for the `vrf-internet` device to be present before the FRR restart so this race can't recur?
+
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Exit-Router1# show bgp vrf vrf-internet summary
+% No BGP neighbors found in VRF vrf-internet
+Exit-Router1# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname Exit-Router1
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list PL-NO-MGMT seq 5 deny 172.16.2.0/24
+ip prefix-list PL-NO-MGMT seq 10 permit 0.0.0.0/0 le 32
+ip prefix-list PL-PUBLIC-OUT seq 5 permit 100.64.100.10/32
+!
+route-map RM-REDIST-CONN permit 10
+ match ip address prefix-list PL-NO-MGMT
+exit
+!
+route-map RM-TO-ISP-OUT permit 10
+ match ip address prefix-list PL-PUBLIC-OUT
+exit
+!
+route-map RM-TO-ISP-OUT deny 20
+exit
+!
+vrf vrf-internet
+ ip route 0.0.0.0/0 192.0.2.1 250
+ ip route 0.0.0.0/0 198.51.100.1 250
+ ip route 100.64.100.10/32 blackhole
+exit-vrf
+!
+interface lo
+ ip address 10.255.255.1/32
+exit
+!
+router bgp 65251
+ bgp router-id 10.255.255.1
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65031
+ neighbor ens2 description To-Border-Leaf1-Ethernet0
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65032
+ neighbor ens3 description To-Border-Leaf2-Ethernet1
+ no neighbor ens3 capability link-local
+ !
+ address-family ipv4 unicast
+  network 10.255.255.1/32
+  network 100.64.100.10/32
+  neighbor ens2 activate
+  neighbor ens2 next-hop-self
+  neighbor ens2 default-originate
+  neighbor ens3 activate
+  neighbor ens3 next-hop-self
+  neighbor ens3 default-originate
+  maximum-paths 2
+  import vrf vrf-internet
+ exit-address-family
+exit
+!
+router bgp 65251 vrf vrf-internet
+ bgp router-id 10.255.255.1
+ no bgp default ipv4-unicast
+ neighbor ens4 interface remote-as 65401
+ neighbor ens4 description To-ISP_1
+ no neighbor ens4 capability link-local
+ neighbor ens5 interface remote-as 65402
+ neighbor ens5 description To-ISP_2
+ no neighbor ens5 capability link-local
+ !
+ address-family ipv4 unicast
+  redistribute static route-map RM-REDIST-CONN
+  import vrf default
+ exit-address-family
+exit
+!
+end
+Exit-Router1# proxy: Initiating key re-exchange (timeout)
+proxy: No GSSAPI security context available
+proxy: Doing NTRU Prime / Curve25519 hybrid key exchange, using hash SHA-512 (unaccelerated)
+proxy: Initialised AES-256 SDCTR (AES-NI accelerated) outbound encryption
+proxy: Initialised HMAC-SHA-256 (unaccelerated) outbound MAC algorithm
+proxy: Initialised AES-256 SDCTR (AES-NI accelerated) inbound encryption
+proxy: Initialised HMAC-SHA-256 (unaccelerated) inbound MAC algorithm
+jm,kjkuuujyh
+% Unknown command: jm,kjkuuujyh
+Exit-Router1#
+Exit-Router1#
+Exit-Router1# exit
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$
+ubuntu@Exit-Router1:~$ ip l sh type vrf
+7: vrf-internet: <NOARP,MASTER,UP,LOWER_UP> mtu 65575 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 7a:6a:bc:da:62:b9 brd ff:ff:ff:ff:ff:ff
+ubuntu@Exit-Router1:~$ ip -br l sh master vrf-internet
+ens4             UP             aa:c1:ab:68:59:85 <BROADCAST,MULTICAST,UP,LOWER_UP>
+ens5             UP             aa:c1:ab:49:b8:a3 <BROADCAST,MULTICAST,UP,LOWER_UP>
+ubuntu@Exit-Router1:~$ ip -br a sh ens4
+ens4             UP             192.0.2.2/30 fe80::a8c1:abff:fe68:5985/64
+ubuntu@Exit-Router1:~$ ip -br a sh ens5
+ens5             UP             198.51.100.2/30 fe80::a8c1:abff:fe49:b8a3/64
+ubuntu@Exit-Router1:~$ sudo vtysh -c "show bgp vrf all summary"
+
+IPv4 Unicast Summary:
+BGP router identifier 10.255.255.1, local AS number 65251 VRF default vrf-id 0
+BGP table version 14
+RIB entries 25, using 3200 bytes of memory
+Peers 2, using 47 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031       802       801       14    0    0 00:39:23           13       14 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032       802       801       14    0    0 00:39:23           13       14 To-Border-Leaf2-Ethe
+
+Total number of neighbors 2
+% No BGP neighbors found in VRF vrf-internet
+ubuntu@Exit-Router1:~$ sudo vtysh -c "show running-config" | sed -n '/router bgp .* vrf vrf-internet/,/^!/p'
+router bgp 65251 vrf vrf-internet
+ bgp router-id 10.255.255.1
+ no bgp default ipv4-unicast
+ neighbor ens4 interface remote-as 65401
+ neighbor ens4 description To-ISP_1
+ no neighbor ens4 capability link-local
+ neighbor ens5 interface remote-as 65402
+ neighbor ens5 description To-ISP_2
+ no neighbor ens5 capability link-local
+ !
+ address-family ipv4 unicast
+  redistribute static route-map RM-REDIST-CONN
+  import vrf default
+ exit-address-family
+exit
+!
+ubuntu@Exit-Router1:~$ sudo systemctl status frr --no-pager
+● frr.service - FRRouting
+     Loaded: loaded (/usr/lib/systemd/system/frr.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-09-11 23:13:17 CEST; 41min ago
+ Invocation: ee4fd0d0a8404768a47550d7dc88e7c9
+       Docs: https://frrouting.readthedocs.io/en/latest/setup.html
+    Process: 11659 ExecStart=/usr/lib/frr/frrinit.sh start (code=exited, status=0/SUCCESS)
+   Main PID: 11669 (watchfrr)
+     Status: "FRR Operational"
+      Tasks: 15 (limit: 12666)
+     Memory: 27M (peak: 40.2M)
+        CPU: 9.596s
+     CGroup: /system.slice/frr.service
+             ├─11669 /usr/lib/frr/watchfrr -d mgmtd zebra bgpd staticd
+             ├─11680 /usr/lib/frr/mgmtd -d -F traditional
+             ├─11682 /usr/lib/frr/zebra -d -F traditional
+             ├─11687 /usr/lib/frr/bgpd -d -F traditional
+             └─11694 /usr/lib/frr/staticd -d -F traditional
+
+Sep 11 23:13:17 Exit-Router1 bgpd[11687]: [N9HHH-F8H1M] %ADJCHANGE: neighbor ens3(Border-Leaf2) in vrf default Up
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] mgmtd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+Sep 11 23:13:17 Exit-Router1 frrinit.sh[11659]:  * Started watchfrr
+Sep 11 23:13:17 Exit-Router1 systemd[1]: Started frr.service - FRRouting.
+Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: rcvd End-of-RIB for IPv4 Unicast from ens2 in vrf default
+Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: rcvd End-of-RIB for IPv4 Unicast from ens3 in vrf default
+ubuntu@Exit-Router1:~$ sudo journalctl -u frr --since "45 min ago" --no-pager | tail 70
+tail: cannot open '70' for reading: No such file or directory
+ubuntu@Exit-Router1:~$ sudo journalctl -u frr --since "45 min ago" --no-pager | tail -70
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  Link Node                     :     39 *         24
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  Link List                     :     27 *         40
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  Hash Index                    :     34 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  Hash                          :     68 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: showing active allocations in memory group bgpd
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP MetaQ                     :      8 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP PBR Context               :      2 *         32
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP peer config interface     :      4 *          5
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP node clear queue          :     22 *          8
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP connected                 :      1 *          4
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP node                      :     51 *        128
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP table                     :    134 *         56
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  Peer description              :      4 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP peer hostname             :      4 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP peer connection           :      4 *        384
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP peer                      :      4 *      24072
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP Name data                 :      9 * (variably sized)
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP instance                  :      2 *      12376
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[6437]: bgpd: memstats:  BGP EVPN instance information :      2 *         64
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[11641]:  * Stopped staticd
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[11645]:  * Stopped zebra
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[11643]:  * Stopped bgpd
+Sep 11 23:13:12 Exit-Router1 frrinit.sh[11646]:  * Stopped mgmtd
+Sep 11 23:13:12 Exit-Router1 systemd[1]: frr.service: Deactivated successfully.
+Sep 11 23:13:12 Exit-Router1 systemd[1]: Stopped frr.service - FRRouting.
+Sep 11 23:13:12 Exit-Router1 systemd[1]: frr.service: Consumed 12.471s CPU time over 48min 50.189s wall clock time, 39.4M memory peak.
+Sep 11 23:13:12 Exit-Router1 systemd[1]: Starting frr.service - FRRouting...
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11659]:  * Starting watchfrr with command: '  /usr/lib/frr/watchfrr  -d   mgmtd zebra bgpd staticd'
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [T83RR-8SM5G] watchfrr 10.5.1 starting: vty@0
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [ZCJ3S-SPH5S] mgmtd state -> down : initial connection attempt failed
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [ZCJ3S-SPH5S] zebra state -> down : initial connection attempt failed
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [ZCJ3S-SPH5S] bgpd state -> down : initial connection attempt failed
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [ZCJ3S-SPH5S] staticd state -> down : initial connection attempt failed
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [YFT0P-5Q5YX] Forked background command [pid 11670]: /usr/lib/frr/watchfrr.sh restart all
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11681]: 2026/09/11 23:13:13 ZEBRA: [KGY44-D47GD][EC 4043309111] Disabling MPLS support (no kernel support)
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11698]: [11698|mgmtd] sending configuration
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11699]: [11699|zebra] sending configuration
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11705]: [11705|bgpd] sending configuration
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11713]: [11713|watchfrr] sending configuration
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11715]: [11715|staticd] sending configuration
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11713]: line 57: % Unknown command[31]:   neighbor ens4 activate  neighbor ens4 route-map RM-TO-ISP-OUT out  neighbor ens5 activate  nei
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11696]: Waiting for children to finish applying config...
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11715]: line 57: % Unknown command[31]:   neighbor ens4 activate  neighbor ens4 route-map RM-TO-ISP-OUT out  neighbor ens5 activate  neighbor ens5 route-map RM-TO-ISP-OUT out  network 100.64.100.10/32
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11715]: [11715|staticd] Configuration file[/etc/frr/frr.conf] processing failure: 2
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11698]: line 57: % Unknown command[31]:   neighbor ens4 activate  neighbor ens4 route-map RM-TO-ISP-OUT out  neighbor ens5 activate  neighbor ens5 route-map RM-TO-ISP-OUT out  network 100.64.100.10/32
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11713]: ghbor ens5 route-map RM-TO-ISP-OUT out  network 100.64.100.10/32
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11713]: [11713|watchfrr] Configuration file[/etc/frr/frr.conf] processing failure: 2
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11705]: line 57: % Unknown command[31]:   neighbor ens4 activate  neighbor ens4 route-map RM-TO-ISP-OUT out  neighbor ens5 activate  neighbor ens5 route-map RM-TO-ISP-OUT out  network 100.64.100.10/32
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11699]: line 57: % Unknown command[31]:   neighbor ens4 activate  neighbor ens4 route-map RM-TO-ISP-OUT out  neighbor ens5 activate  neighbor ens5 route-map RM-TO-ISP-OUT out  network 100.64.100.10/32
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11705]: The route-map 'RM-REDIST-CONN' does not exist.
+Sep 11 23:13:13 Exit-Router1 bgpd[11687]: [VTVCM-Y2NW3] Configuration Read in Took: 00:00:00
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11705]: [11705|bgpd] Configuration file[/etc/frr/frr.conf] processing failure: 2
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11699]: [11699|zebra] Configuration file[/etc/frr/frr.conf] processing failure: 2
+Sep 11 23:13:13 Exit-Router1 frrinit.sh[11698]: [11698|mgmtd] Configuration file[/etc/frr/frr.conf] processing failure: 2
+Sep 11 23:13:13 Exit-Router1 watchfrr[11669]: [ZJW5C-1EHNT] restart all process 11670 exited with non-zero status 2
+Sep 11 23:13:14 Exit-Router1 zebra[11682]: [V98V0-MTWPF] client 46 says hello and bids fair to announce only bgp routes vrf=0
+Sep 11 23:13:15 Exit-Router1 bgpd[11687]: [J9K4Q-T8STY][EC 33554466] ens2 [FSM] Failure handling event BGP_Start in state Idle, prior events (null), (null), fd -1, last reset: Address family activated
+Sep 11 23:13:15 Exit-Router1 bgpd[11687]: [J9K4Q-T8STY][EC 33554466] ens3 [FSM] Failure handling event BGP_Start in state Idle, prior events (null), (null), fd -1, last reset: Address family activated
+Sep 11 23:13:17 Exit-Router1 bgpd[11687]: [N9HHH-F8H1M] %ADJCHANGE: neighbor ens2(Border-Leaf1) in vrf default Up
+Sep 11 23:13:17 Exit-Router1 bgpd[11687]: [N9HHH-F8H1M] %ADJCHANGE: neighbor ens3(Border-Leaf2) in vrf default Up
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] mgmtd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] bgpd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] zebra state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [QDG3Y-BY5TN] staticd state -> up : connect succeeded
+Sep 11 23:13:17 Exit-Router1 watchfrr[11669]: [KWE5Q-QNGFC] all daemons up, doing startup-complete notify
+Sep 11 23:13:17 Exit-Router1 frrinit.sh[11659]:  * Started watchfrr
+Sep 11 23:13:17 Exit-Router1 systemd[1]: Started frr.service - FRRouting.
+Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: rcvd End-of-RIB for IPv4 Unicast from ens2 in vrf default
+Sep 11 23:13:18 Exit-Router1 bgpd[11687]: [M59KS-A3ZXZ] bgp_update_receive_eor: rcvd End-of-RIB for IPv4 Unicast from ens3 in vrf default
+ubuntu@Exit-Router1:~$
+
