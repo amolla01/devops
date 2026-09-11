@@ -1,0 +1,308 @@
+---
+- name: Assert required exit-router vars are present
+  ansible.builtin.assert:
+    that:
+      - bgp_local_asn is defined
+      - router_id is defined
+      - bdrl_interfaces is defined and bdrl_interfaces | length > 0
+      - isp_interfaces is defined and isp_interfaces | length > 0
+      - wireguard_configs is defined
+    fail_msg: "bgp_local_asn, router_id, bdrl_interfaces, isp_interfaces, wireguard_configs must all be defined"
+  tags: [preflight]
+
+- name: Refresh APT cache with retries before install
+  ansible.builtin.shell: |
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -o Acquire::Retries=5 -o Acquire::https::Timeout=30 -o Acquire::http::Timeout=30
+  args:
+    executable: /bin/bash
+  become: true
+  changed_when: false
+  register: exit_router_apt_update
+  retries: 5
+  delay: 15
+  until: exit_router_apt_update.rc == 0
+  tags: [preflight]
+
+- name: Install exit-router packages
+  ansible.builtin.apt:
+    name:
+      - frr
+      - wireguard-tools
+      - iptables
+      - iptables-persistent
+      - netfilter-persistent
+    state: present
+    install_recommends: false
+    update_cache: false
+    force_apt_get: true
+  become: true
+  tags: [preflight]
+
+- name: Confirm FRR tooling is installed and vtysh is usable
+  ansible.builtin.command: vtysh -c "show version"
+  become: true
+  changed_when: false
+  register: exit_router_vtysh
+  failed_when: exit_router_vtysh.rc != 0
+  tags: [preflight]
+
+- name: Enable IPv4 and IPv6 forwarding
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-ip-forward.conf
+    content: |
+      net.ipv4.ip_forward = 1
+      net.ipv6.conf.all.forwarding = 1
+    mode: "0644"
+  become: true
+  tags: [preflight, bgp]
+
+- name: Flush sysctl to activate forwarding immediately
+  ansible.builtin.command: sysctl -p /etc/sysctl.d/99-ip-forward.conf
+  become: true
+  changed_when: false
+  tags: [preflight, bgp]
+
+- name: Deploy netplan for Border-Leaf uplinks (link-local for BGP unnumbered)
+  ansible.builtin.template:
+    src: 35-bdrl-linklocal.yaml.j2
+    dest: /etc/netplan/35-bdrl-linklocal.yaml
+    mode: "0600"
+  become: true
+  tags: [bgp]
+
+- name: Deploy netplan for ISP interfaces in vrf-internet
+  ansible.builtin.template:
+    src: 40-isp-vrf.yaml.j2
+    dest: /etc/netplan/40-isp-vrf.yaml
+    mode: "0644"
+  become: true
+  tags: [bgp]
+
+- name: Apply netplan (Border-Leaf uplinks + ISP vrf-internet)
+  ansible.builtin.command: netplan apply
+  become: true
+  tags: [bgp]
+
+- name: Enable bgpd in FRR daemons file
+  ansible.builtin.copy:
+    dest: /etc/frr/daemons
+    content: |
+      zebra=yes
+      bgpd=yes
+      ospfd=no
+      ospf6d=no
+      ripd=no
+      ripngd=no
+      isisd=no
+      pimd=no
+      pim6d=no
+      ldpd=no
+      nhrpd=no
+      eigrpd=no
+      babeld=no
+      sharpd=no
+      pbrd=no
+      bfdd=no
+      fabricd=no
+      vrrpd=no
+      pathd=no
+    mode: "0644"
+  become: true
+  tags: [bgp]
+
+- name: Deploy FRR exit-router configuration
+  ansible.builtin.template:
+    src: frr.conf.j2
+    dest: /etc/frr/frr.conf
+    mode: "0640"
+    owner: frr
+    group: frr
+  become: true
+  tags: [bgp]
+
+- name: Restart FRR to apply configuration
+  ansible.builtin.service:
+    name: frr
+    state: restarted
+    enabled: true
+  become: true
+  tags: [bgp]
+
+- name: Ensure /etc/wireguard directory exists
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    mode: "0700"
+    owner: root
+    group: root
+  become: true
+  tags: [bgp]
+
+# The host_vars ship a placeholder private key ("...TOKEN...") that is not valid
+# base64 and makes wg-quick@wg0 fail, which previously aborted the whole play
+# before NAT + BGP tasks could run. Generate a real key at runtime when the
+# configured value is still a placeholder so the tunnel interface can come up.
+- name: Generate a valid WireGuard private key when the configured one is a placeholder
+  ansible.builtin.command: wg genkey
+  become: true
+  changed_when: false
+  register: wg_genkey
+  when: "'TOKEN' in (wireguard_configs.private_key | default('TOKEN'))"
+  tags: [bgp]
+
+- name: Select the effective WireGuard private key
+  ansible.builtin.set_fact:
+    wg_effective_private_key: >-
+      {{ wg_genkey.stdout if (wg_genkey.stdout is defined and wg_genkey.stdout | length > 0)
+         else wireguard_configs.private_key }}
+  tags: [bgp]
+
+- name: Deploy WireGuard interface configuration
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    mode: "0600"
+    owner: root
+    group: root
+  become: true
+  tags: [bgp]
+
+# Non-fatal: WireGuard is a best-effort convenience tunnel. If it still fails to
+# start (e.g. unresolved peer keys) it must NOT block NAT + BGP bring-up, which
+# are what actually deliver tenant internet reachability.
+- name: Enable and start WireGuard tunnel (best-effort)
+  ansible.builtin.service:
+    name: "wg-quick@{{ wireguard_configs.interface }}"
+    state: started
+    enabled: true
+  become: true
+  register: wg_start
+  failed_when: false
+  tags: [bgp]
+
+- name: Report WireGuard tunnel status
+  ansible.builtin.debug:
+    msg: >-
+      WireGuard {{ wireguard_configs.interface }}
+      {{ 'started' if (wg_start.state | default('') == 'started') else 'did NOT start (non-fatal; NAT/BGP continue)' }}
+  tags: [bgp]
+
+# ── Ops-group client profiles ────────────────────────────────────────────────
+# Derive the server's public key from the effective private key and render a
+# ready-to-complete WireGuard client profile per ops peer. Ops fills in their own
+# private key; the split-tunnel AllowedIPs cover only the mgmt subnet + storefront.
+- name: Derive the WireGuard server public key
+  ansible.builtin.shell:
+    cmd: "echo '{{ wg_effective_private_key }}' | wg pubkey"
+  become: true
+  changed_when: false
+  register: wg_pubkey
+  when: ops_mgmt_access_enabled | default(true)
+  tags: [bgp]
+
+- name: Publish the effective server public key as a fact
+  ansible.builtin.set_fact:
+    wg_server_public_key: "{{ wg_pubkey.stdout }}"
+  when: ops_mgmt_access_enabled | default(true) and wg_pubkey.stdout is defined
+  tags: [bgp]
+
+- name: Ensure WireGuard client-profile directory exists
+  ansible.builtin.file:
+    path: /etc/wireguard/clients
+    state: directory
+    mode: "0700"
+    owner: root
+    group: root
+  become: true
+  when: ops_mgmt_access_enabled | default(true)
+  tags: [bgp]
+
+- name: Render ops-group WireGuard client profiles
+  ansible.builtin.template:
+    src: wg-client.conf.j2
+    dest: "/etc/wireguard/clients/{{ peer.name }}.conf"
+    mode: "0600"
+    owner: root
+    group: root
+  become: true
+  loop: "{{ wireguard_configs.peers | default([]) }}"
+  loop_control:
+    loop_var: peer
+  when: ops_mgmt_access_enabled | default(true)
+  tags: [bgp]
+
+- name: Apply NAT MASQUERADE for tenant internet egress on each ISP interface
+  ansible.builtin.command: >
+    iptables -t nat -C POSTROUTING -o {{ item.device }} -j MASQUERADE
+  loop: "{{ isp_interfaces }}"
+  become: true
+  register: nat_check
+  changed_when: false
+  failed_when: false
+  tags: [bgp]
+
+- name: Insert NAT MASQUERADE rule where missing
+  ansible.builtin.command: >
+    iptables -t nat -A POSTROUTING -o {{ item.item.device }} -j MASQUERADE
+  loop: "{{ nat_check.results }}"
+  become: true
+  when: item.rc != 0
+  tags: [bgp]
+
+# ── Edge NAT/forwarding (ops mgmt access + inbound storefront service) ────────
+- name: Deploy idempotent edge NAT/forwarding rule script
+  ansible.builtin.template:
+    src: edge-nat-rules.sh.j2
+    dest: /usr/local/sbin/edge-nat-rules.sh
+    mode: "0750"
+    owner: root
+    group: root
+  become: true
+  when: (ops_mgmt_access_enabled | default(true)) or (edge_service_nat_enabled | default(false))
+  tags: [bgp]
+
+- name: Apply edge NAT/forwarding rules
+  ansible.builtin.command: /usr/local/sbin/edge-nat-rules.sh
+  become: true
+  changed_when: false
+  when: (ops_mgmt_access_enabled | default(true)) or (edge_service_nat_enabled | default(false))
+  tags: [bgp]
+
+- name: Persist iptables rules across reboots
+  ansible.builtin.command: netfilter-persistent save
+  become: true
+  changed_when: false
+  failed_when: false
+  tags: [bgp]
+
+- name: Wait for FRR BGP to initialise
+  ansible.builtin.pause:
+    seconds: 10
+  tags: [bgp]
+
+- name: Verify FRR fabric BGP summary is reachable
+  ansible.builtin.command: vtysh -c "show bgp summary"
+  become: true
+  changed_when: false
+  register: bgp_check
+  failed_when: bgp_check.rc != 0
+  tags: [bgp]
+
+- name: Verify FRR internet/VRF BGP summary is reachable
+  ansible.builtin.command: vtysh -c "show bgp vrf vrf-internet summary"
+  become: true
+  changed_when: false
+  register: bgp_internet_check
+  failed_when: bgp_internet_check.rc != 0
+  tags: [bgp]
+
+- name: Verify default route is present in FRR
+  ansible.builtin.command: vtysh -c "show ip route 0.0.0.0/0"
+  become: true
+  changed_when: false
+  register: default_route_check
+  failed_when: >-
+    default_route_check.rc != 0 or
+    ('0.0.0.0/0' not in default_route_check.stdout and '0.0.0.0/0' not in default_route_check.stderr)
+  tags: [bgp]
