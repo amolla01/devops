@@ -1,0 +1,31 @@
+---
+# Full SONiC underlay redeploy entrypoint.
+# This playbook intentionally includes topology teardown + redeploy and a fresh
+# provisioning pass so the lab can recover from stale switch state before BGP is
+# validated again.
+#
+# Usage:
+#   ansible-playbook -i inventory.yml playbooks/lab/switch-fabric.yml
+- import_playbook: preflight.yml
+- import_playbook: ../clab-topo-prep.yml
+- import_playbook: deploy.yml
+- import_playbook: ../preflight.yml
+- import_playbook: ../provision.yml
+- import_playbook: ../bgp-unnumbered.yml
+- import_playbook: ../verify.yml
+- import_playbook: ../external-routers.yml
+- import_playbook: ../isp-routers.yml
+
+- name: Exit-router management netplan stage
+  hosts: exit_routers
+  become: true
+  gather_facts: true
+  serial: 1
+  vars:
+    netplan_stage: mgmt
+  roles:
+    - linux_netplan_staged
+
+- import_playbook: ../exit-routers-preflight.yml
+- import_playbook: ../exit-routers.yml
+
