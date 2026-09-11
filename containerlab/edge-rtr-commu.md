@@ -1563,4 +1563,135 @@ echo "Failover evaluation completed successfully!"
 
 Did your fabric-full.yml master orchestrator finish executing completely green? If you're ready, let me know, and we can run this test script to see your border network failover in action!
 
+# Looks, like we are not able to ping ISP-1/2 from Leaf's. See below...also Why not showing 4 neghbors in Exit-Router1/2 which is TWO Border-Leaf1/2 and TWO ISP-1/2??'. And also why not ping to 'bbc.com' working since through fabric, we need access to internet? 
 
+Here's the full diagnosis and the production fix. Two of your three questions are actually by-design behavior; one was a real bug I've now fixed.
+
+Q2 — "Why only 2 neighbors on Exit-Router1/2, not 4?" → By design (not a bug)
+Your Exit-Routers run a two-VRF split:
+
+default VRF = fabric side → peers with the 2 Border-Leaves (BGP unnumbered).
+vrf-internet = ISP side → peers with the 2 ISPs.
+show ip bgp summary only shows the default VRF, so you see just the 2 Border-Leaf peers. The ISP peers are established too — look at:
+
+show bgp vrf vrf-internet summary
+
+Your own logs already prove it: routes tagged (vrf vrf-internet) (e.g. B>* 10.255.255.11 via 192.0.2.1 ens4 (vrf vrf-internet), 0.0.0.0/0 via 192.0.2.1) only exist because those ISP sessions are Established. So it's 2 + 2 = 4, just split across two routing tables.
+
+Q3 — "Why doesn't ping bbc.com work?" → Two reasons, both expected
+No DNS on SONiC. The error is name resolution, not routing — the switches have no resolver/route to one. ping bbc.com can never resolve.
+This lab is air-gapped/simulated — there is no real internet. "The internet" here is the ISP-1/2 + External-Router FRR containers advertising RFC5737 documentation prefixes and the storefront VIP (100.64.100.10).
+To validate internet reachability, ping a simulated external prefix by IP (whatever External-Router advertises down through the ISPs), not a hostname. That path is NAT'd at the Exit-Router.
+
+Q1 — "Leafs can't ping ISP loopbacks 10.255.255.11/12" → Real bug, now fixed
+Root cause: fabric-internal source IPs (10.0.x) are not returnable from the ISP side by air-gap design — the return must rely on NAT at the Exit-Router. But the vrf-internet ISP eBGP sessions had no outbound filter, so import vrf default was silently leaking fabric loopbacks and even mgmt 172.16.2.0/24 up to the ISPs. That both violates the air-gap and makes the return path non-deterministic (which is why it "worked" from a Border-Leaf but not from a Leaf — it depended on whether a leaked /32 happened to be present/converged).
+
+Fix in frr.conf.j2:
+
+Added neighbor <isp> route-map RM-TO-ISP-OUT out on every ISP session, where PL-PUBLIC-OUT permits only storefront_public_ip/32 and everything else is denied. Fabric/mgmt prefixes are no longer advertised upstream.
+Fabric→internet now egresses through NAT MASQUERADE only — deterministic and air-gap-safe.
+Fix in main.yml:
+
+Added net.ipv4.conf.{all,default}.rp_filter = 2 (loose) to 99-ip-forward.conf so the dual-homed asymmetric VRF return path isn't dropped by strict reverse-path filtering. It's reloaded by the existing sysctl -p task.
+
+Then from a Leaf:
+
+ping 10.255.255.11 / ping 10.255.255.12 → now works (NAT'd egress, deterministic return).
+Internet test: ping <External-Router advertised IP> by address (not bbc.com).
+On the Exit-Router confirm the leak is closed: vtysh -c "show bgp vrf vrf-internet neighbors <isp> advertised-routes" should show only the storefront /32.
+One note: your fabric-only run still won't bring up the leaf-facing server BGP neighbors (they need the host-VM stages you intentionally excluded) — that's expected and unrelated to the edge path above.
+
+# When running 'show bgp vrf vrf-internet summary' on Exit-Router1/2, it says, No BGP Neighbors found in VRF vrf-internet.. It is seen that from Leaf-L1/2, 'show ip route' is not publishing "10.255.255.11" or "10.255.255.12", it publishes 100.64.100.10 but ping doesn't work for that prefix. How to test all these??
+
+The reported state changed — now `vrf-internet` has **no BGP neighbors at all**, which means the vrf-internet BGP instance or its underlay isn't coming up. Let me check the exact task ordering in the exit-router role (netplan/VRF creation vs. FRR load) and the VRF netplan template before giving you a targeted test plan.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/linux_exit_router/tasks/main.yml#1-1), lines 1 to 160
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/linux_exit_router/templates/40-isp-vrf.yaml.j2)
+
+Let me check the ISP-side FRR config to know the exact peering style (unnumbered vs IPv4), so the test commands are accurate.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/linux_isp_router/templates/frr.conf.j2)
+
+I found the key structural detail. On the edge the two sides peer differently, and the whole chain hangs off the `vrf-internet` instance actually being up:
+
+- **Exit-Router** (native FRR on the Ubuntu VM) peers to ISPs with `neighbor <ens4> interface remote-as …` inside `router bgp … vrf vrf-internet`.
+- **ISP** containers peer back numbered: `neighbor 192.0.2.2 remote-as …`.
+
+"**No BGP Neighbors found in VRF vrf-internet**" means the `router bgp … vrf vrf-internet` instance isn't loaded (or the VRF device wasn't present when FRR started) — not that a session is merely down. Everything else you're seeing is downstream of that: no ISP session ⇒ no `10.255.255.11/12` imported ⇒ Leafs don't learn them. And `100.64.100.10` is a special case (explained at the end).
+
+Here's the layered test runbook. Work top‑down; the first layer that fails is your root cause.
+
+## A. Exit-Router edge — is `vrf-internet` even up? (run on Exit-Router1/2)
+
+```bash
+# 1) Does the Linux VRF exist and are the ISP ports enslaved + UP (with /30 + fe80 LL)?
+ip link show type vrf
+ip -br link show master vrf-internet
+ip -br addr show ens4 ; ip -br addr show ens5
+
+# 2) Did the vrf-internet BGP instance actually load?
+sudo vtysh -c "show running-config" | sed -n '/router bgp .* vrf vrf-internet/,/^!/p'
+sudo vtysh -c "show bgp vrf all summary"
+
+# 3) FRR health / load errors
+sudo systemctl status frr --no-pager
+sudo journalctl -u frr --since "15 min ago" --no-pager | tail -40
+```
+
+Interpretation:
+- **No `vrf-internet` in `ip link show type vrf`** → netplan `40-isp-vrf.yaml` didn't apply. Most common cause: you ran `playbooks/exit-routers-preflight.yml` (which sets `preflight_only: true` and **skips** netplan/FRR). Re-run the full exit-routers.yml.
+- **VRF exists but `show bgp vrf all summary` has no vrf-internet block** → FRR started before the VRF device existed, so it dropped the stanza. Fix: `sudo systemctl restart frr` then recheck. (Ordering race — the role does `netplan apply` then `frr restart`, but `netplan apply` returns before the VRF is fully realized.)
+- **Neighbors listed but Idle/Connect/Active** → transport/peering issue → Layer B.
+
+## B. ISP side (run on the containerlab host)
+
+```bash
+docker exec clab-sonic-clab-ISP-1 vtysh -c "show bgp summary"
+docker exec clab-sonic-clab-ISP-1 vtysh -c "show ip route 10.255.255.11/32"
+docker exec clab-sonic-clab-ISP-1 sh -c "ip -br addr show; ping -c2 192.0.2.2"
+```
+
+If the ISP shows the Exit-Router peer `Idle`/never up while the Exit side thinks it's configured, that's the numbered↔unnumbered transport not matching — confirm the ISP's `neighbor_ip` (192.0.2.2 / 198.51.100.2) equals the Exit-Router's ens4/ens5 IPv4.
+
+## C. Route propagation into the fabric
+
+```bash
+# On Exit-Router — is the ISP loopback learned, and leaked into the default VRF?
+sudo vtysh -c "show bgp vrf vrf-internet ipv4 unicast 10.255.255.11/32"
+sudo vtysh -c "show bgp ipv4 unicast 10.255.255.11/32"     # needs 'import vrf vrf-internet' in default
+
+# On a Leaf (SONiC)
+show ip route 10.255.255.11/32
+show bgp ipv4 unicast 10.255.255.11/32
+```
+
+If it's in vrf-internet but not the default VRF on the Exit-Router, the `import vrf vrf-internet` leak isn't working; if it's in the default VRF but not on the Leaf, it's not being advertised down (check `next-hop-self` on the Border-Leaf sessions).
+
+## D. Dataplane test — fabric → ISP loopback (NAT return path)
+
+```bash
+# Leaf
+show ip route 10.255.255.11/32     # next-hop must be an Exit-Router
+ping -c3 10.255.255.11
+
+# On the Exit-Router WHILE pinging — confirm NAT is translating fabric source
+sudo iptables -t nat -L POSTROUTING -n -v | grep -E "MASQUERADE|ens4|ens5"   # pkt counters climb
+sudo conntrack -L -d 10.255.255.11 2>/dev/null
+```
+
+If the route exists but the NAT counters don't move, traffic isn't reaching the Exit-Router (fabric forwarding/prefsrc); if counters move but no reply, it's the ISP return path.
+
+## E. `100.64.100.10` — route present, ping fails (expected in fabric-only mode)
+
+That /32 is the **storefront public VIP**. The Exit-Router *originates* it (`network 100.64.100.10/32` + a **blackhole** static) only to *attract* inbound traffic, which is then **DNAT'd** to an in‑fabric MetalLB VIP. In your fabric-only run:
+- k8s/MetalLB isn't deployed, so nothing answers the VIP, and
+- the Exit-Router's own route for it is a blackhole.
+
+So `ping 100.64.100.10` will always fail until the overlay/k8s stage is up — and even then it's a TCP service VIP, not guaranteed ICMP-pingable. Don't use it as a reachability test.
+
+To test "internet" reachability instead, ping a **simulated external prefix by IP** (whatever External-Router advertises down through the ISPs), not a hostname — SONiC has no DNS.
+
+---
+
+Most likely, your immediate blocker is Layer A: either the run was preflight-only (VRF never created) or FRR restarted before the VRF device existed. Run the full exit-routers.yml, then `sudo systemctl restart frr` on each Exit-Router, and re-check `show bgp vrf all summary`. Want me to add a small guard to the role that waits for the `vrf-internet` device to be present before the FRR restart so this race can't recur?
