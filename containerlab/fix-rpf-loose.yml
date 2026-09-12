@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# fix-rpf-loose.yml  ·  Set loose reverse-path filtering for asymmetric ECMP
+# -----------------------------------------------------------------------------
+# WHY: sonic-vs has no hardware ASIC — the container forwards transit traffic in
+# the Linux kernel, so kernel strict rp_filter (=1) drops asymmetric ECMP return
+# paths (the deterministic "checkerboard"). The cluster hosts run FRR + ECMP too
+# and inherit Ubuntu's strict default. The exit routers already run rp_filter=2;
+# this play brings the fabric switches and cluster hosts to the same loose mode.
+#
+# Effective mode = max(conf.all, conf.<iface>). Setting conf.all.rp_filter=2
+# forces LOOSE on every interface regardless of per-interface values, so a single
+# 'all' write is sufficient and overrides any strict per-interface setting.
+#
+# SAFE: only writes sysctls (idempotent, reversible). Nothing is destroyed.
+#
+#   ansible-playbook -i inventory.yml playbooks/fix-rpf-loose.yml
+#   # verify afterwards:
+#   ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml
+# =============================================================================
+- name: "Loose rp_filter for asymmetric ECMP (switches + cluster hosts)"
+  hosts: sonic_switches:k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  tasks:
+    - name: "Persist loose rp_filter + forwarding sysctls"
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/60-ecmp-rpf.conf
+        mode: "0644"
+        content: |
+          # Loose reverse-path filtering is REQUIRED for asymmetric ECMP forwarding.
+          net.ipv4.conf.all.rp_filter = 2
+          net.ipv4.conf.default.rp_filter = 2
+          net.ipv4.ip_forward = 1
+
+    - name: "Apply persisted sysctls now"
+      ansible.builtin.command: sysctl --system
+      changed_when: false
+      failed_when: false
+
+    - name: "Runtime-force loose rp_filter on all + every existing interface"
+      # `sysctl --system` may not touch already-created per-interface entries;
+      # conf.all=2 forces effective loose, but set each iface too for immediacy.
+      ansible.builtin.shell: |
+        set -o pipefail
+        sysctl -w net.ipv4.conf.all.rp_filter=2 >/dev/null
+        sysctl -w net.ipv4.conf.default.rp_filter=2 >/dev/null
+        for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+          echo 2 > "$f" 2>/dev/null || true
+        done
+        echo "rp_filter now: all=$(cat /proc/sys/net/ipv4/conf/all/rp_filter)"
+      args:
+        executable: /bin/bash
+      register: rpf_apply
+      changed_when: true
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ rpf_apply.stdout | default('applied') | trim }}"

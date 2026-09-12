@@ -1,0 +1,445 @@
+---
+# =============================================================================
+# verify-fabric-ecmp.yml  ·  READ-ONLY, NON-FATAL fabric reachability verifier
+# -----------------------------------------------------------------------------
+# Diagnoses the "checkerboard" cluster-subnet ping pattern: dual-homed hosts
+# advertise their /32 via BOTH leaves of their rack, so every remote /32 has two
+# ECMP next-hops. If one leaf of a pair has the session Established but is NOT
+# installing/propagating a given /32, the flows that deterministically hash onto
+# that leg blackhole -> per (src,dst) pair pass/fail that never recovers.
+#
+# This play ONLY reports. Nothing here changes state and nothing fails the run
+# (every task is failed_when:false / any_errors_fatal:false). Safe to run
+# on/off, solo, as often as you like.
+#
+# Run it from a host that can reach the 172.16.2.0/24 OOB mgmt bridge
+# (typically the R810 clab host, or the control node when its route is up):
+#
+#   ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml
+#
+# Narrow scope while triaging:
+#   ... --limit Leaf-L1,Leaf-L2            # just rack1 leaves
+#   ... --limit k8s_cluster                # skip switches, host side only
+#   ... -e verify_ping_matrix=false        # skip the (slower) ping matrix
+# =============================================================================
+
+# ── PLAY 1 · Switch tier: BGP session health + missing cluster /32s ──────────
+- name: "ECMP verify · leaf BGP sessions and route propagation"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    # Cluster IPs come straight from inventory (the 'ip:' on every k8s_cluster host)
+    cluster_expected_ips: >-
+      {{ groups['k8s_cluster']
+         | map('extract', hostvars, 'ip')
+         | select('string') | list }}
+    # vtysh lives inside the FRR/BGP container on SONiC. The container name
+    # varies by image (bgp / bgp0 / frr / sonic-frr). Auto-detect it, and record
+    # rc/stderr so a bad collection can never masquerade as "0 routes installed".
+  tasks:
+    - name: "Detect the FRR/BGP container name on this switch"
+      ansible.builtin.shell: |
+        for c in bgp frr bgp0 sonic-frr; do
+          if docker ps --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -qx "$c"; then
+            echo "$c"; exit 0
+          fi
+        done
+        # last resort: first container whose name contains 'bgp' or 'frr'
+        docker ps --format '{{ '{{' }}.Names{{ '}}' }}' 2>/dev/null | grep -Ei 'bgp|frr' | head -1
+      args:
+        executable: /bin/bash
+      register: frr_ctr
+      changed_when: false
+      failed_when: false
+
+    - name: "Collect BGP ipv4 summary JSON via vtysh"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ctr="{{ frr_ctr.stdout | trim }}"
+        if [ -z "$ctr" ]; then echo '{}'; exit 3; fi
+        docker exec "$ctr" vtysh -c "show ip bgp ipv4 unicast summary json"
+      args:
+        executable: /bin/bash
+      register: bgp_sum_raw
+      changed_when: false
+      failed_when: false
+
+    - name: "Collect full route table JSON via vtysh"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ctr="{{ frr_ctr.stdout | trim }}"
+        if [ -z "$ctr" ]; then echo '{}'; exit 3; fi
+        docker exec "$ctr" vtysh -c "show ip route json"
+      args:
+        executable: /bin/bash
+      register: bgp_route_raw
+      changed_when: false
+      failed_when: false
+
+    - name: "RAW DIAG · what vtysh actually returned"
+      ansible.builtin.debug:
+        msg:
+          - "leaf={{ inventory_hostname }} container='{{ frr_ctr.stdout | trim }}' sum_rc={{ bgp_sum_raw.rc | default('n/a') }} sum_len={{ bgp_sum_raw.stdout | default('') | length }} route_rc={{ bgp_route_raw.rc | default('n/a') }} route_len={{ bgp_route_raw.stdout | default('') | length }}"
+          - "SUM_STDERR: {{ bgp_sum_raw.stderr | default('') | trim }}"
+          - "ROUTE_STDERR: {{ bgp_route_raw.stderr | default('') | trim }}"
+          - "route_slash32_hits={{ bgp_route_raw.stdout | default('') | regex_findall('/32') | length }}  route_10dot_hits={{ bgp_route_raw.stdout | default('') | regex_findall('10\\.0\\.') | length }}"
+          - "ALL_/32_prefixes={{ bgp_route_raw.stdout | default('') | regex_findall('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/32') | unique | sort }}"
+
+    - name: "Count Established sessions (from summary JSON)"
+      ansible.builtin.set_fact:
+        established_count: >-
+          {{ ((bgp_sum_raw.stdout | default('{}') | from_json).peers | default({}))
+             | dict2items | selectattr('value.state', 'equalto', 'Established') | list | length }}
+      failed_when: false
+
+    - name: "Default established_count if summary JSON was unparseable"
+      ansible.builtin.set_fact:
+        established_count: "{{ established_count | default(0) }}"
+
+    - name: "Extract cluster /32s present on this switch"
+      # Build present list by looping and using the Python `in` OPERATOR (reliable
+      # == membership), NOT the Jinja `in` TEST which silently returns False for
+      # every element on this control node's Ansible/Jinja (select->none / reject->all).
+      ansible.builtin.set_fact:
+        present_cluster_ips: >-
+          {{ present_cluster_ips | default([]) + ([item] if item in _found else []) }}
+      loop: "{{ cluster_expected_ips }}"
+      loop_control:
+        label: "{{ item }}"
+      vars:
+        _found: >-
+          {{ bgp_route_raw.stdout | default('')
+             | regex_findall('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/32')
+             | unique | list }}
+      failed_when: false
+
+    - name: "Compute missing cluster /32s (both lists sourced from cluster_expected_ips)"
+      ansible.builtin.set_fact:
+        missing_cluster_ips: "{{ cluster_expected_ips | difference(present_cluster_ips | default([])) }}"
+      failed_when: false
+
+    # ── DATA-PLANE: per-/32 FIB nexthop health ───────────────────────────────
+    # Control plane already proven clean (all /32s in RIB). The checkerboard is a
+    # nexthop that is present in the route but NOT installed in the FIB (fib:true)
+    # because its IPv6 link-local neighbor never resolved. Any /32 whose fib_nh <
+    # total_nh has a dead ECMP leg on THIS switch -> deterministic per-flow drop.
+    - name: "Parse the route table JSON into a dict"
+      ansible.builtin.set_fact:
+        route_tbl: "{{ bgp_route_raw.stdout | default('{}') | from_json }}"
+      failed_when: false
+
+    - name: "Build per-/32 FIB-nexthop health report"
+      ansible.builtin.set_fact:
+        nh_report: >-
+          {{ nh_report | default([])
+             + [ item ~ '/32  total_nh=' ~ (nhs | length)
+                 ~ ' fib_nh=' ~ (nhs | selectattr('fib', 'defined')
+                                     | selectattr('fib', 'equalto', true) | list | length)
+                 ~ ' active_nh=' ~ (nhs | selectattr('active', 'defined')
+                                        | selectattr('active', 'equalto', true) | list | length) ] }}
+      loop: "{{ cluster_expected_ips }}"
+      vars:
+        nhs: "{{ (route_tbl[item ~ '/32'] | default([{}]))[0].nexthops | default([]) }}"
+      failed_when: false
+
+    - name: "Flag /32s with a dead ECMP leg (a nexthop present but not in FIB)"
+      ansible.builtin.set_fact:
+        dead_leg_prefixes: >-
+          {{ dead_leg_prefixes | default([])
+             + [ item ~ '/32 (total_nh=' ~ (nhs | length) ~ ' fib_nh=' ~ fibn ~ ')' ] }}
+      loop: "{{ cluster_expected_ips }}"
+      vars:
+        nhs: "{{ (route_tbl[item ~ '/32'] | default([{}]))[0].nexthops | default([]) }}"
+        fibn: "{{ nhs | selectattr('fib', 'defined') | selectattr('fib', 'equalto', true) | list | length }}"
+      when:
+        - (nhs | length) > 1
+        - (fibn | int) < (nhs | length | int)
+      failed_when: false
+
+    # ── DATA-PLANE: IPv6 link-local neighbor (ND) state on fabric ifaces ──────
+    - name: "Dump non-REACHABLE IPv6 ND neighbors on fabric interfaces"
+      ansible.builtin.shell: |
+        set -o pipefail
+        # Fabric nexthops are fe80::/10 on EthernetXX; flag anything not usable.
+        ip -6 neigh show 2>/dev/null \
+          | grep -Ei 'fe80' \
+          | grep -Ev 'REACHABLE|PERMANENT|STALE|DELAY' \
+          || echo "none-bad"
+      args:
+        executable: /bin/bash
+      register: nd_bad
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg:
+          - "switch={{ inventory_hostname }}  frr_container='{{ frr_ctr.stdout | trim }}'  sum_rc={{ bgp_sum_raw.rc | default('n/a') }}  route_rc={{ bgp_route_raw.rc | default('n/a') }}"
+          - "established_sessions={{ established_count }}"
+          - "installed_cluster_/32={{ present_cluster_ips | length }} / expected={{ cluster_expected_ips | length }}"
+          - "MISSING_ON_THIS_SWITCH={{ missing_cluster_ips }}"
+          - "DEAD_ECMP_LEG_/32 (route present but a nexthop NOT in FIB)={{ dead_leg_prefixes | default([]) }}"
+          - "BAD_IPv6_ND_NEIGHBORS (fabric fe80 not usable)={{ nd_bad.stdout_lines | default([]) }}"
+          - "per_/32_nexthop_health={{ nh_report | default([]) }}"
+          - >-
+            {{ 'COLLECTION FAILED (route_rc=' ~ (bgp_route_raw.rc | default('n/a')) ~ ' route_len=' ~ (bgp_route_raw.stdout | default('') | length) ~ ') - result NOT trustworthy: ' ~ (bgp_route_raw.stderr | default('') | trim)
+               if (bgp_route_raw.rc | default(1) != 0 or (bgp_route_raw.stdout | default('') | length) < 20)
+               else ('>>> CONTROL-PLANE HOLE: this switch is missing cluster /32s (see MISSING) <<<'
+                     if (missing_cluster_ips | length > 0)
+                     else ('>>> DATA-PLANE HOLE: cluster /32(s) have an un-installed (dead) ECMP leg here <<<'
+                           if (dead_leg_prefixes | default([]) | length > 0
+                               or (nd_bad.stdout | default('none-bad') | trim) != 'none-bad')
+                           else 'OK: all cluster /32s present AND every nexthop installed in FIB')) }}
+
+# ── PLAY 2 · Hosts: ECMP next-hop count + non-fatal reachability matrix ───────
+- name: "ECMP verify · host next-hops and cluster-subnet reachability"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    verify_ping_matrix: true
+    peers: "{{ groups['k8s_cluster'] | reject('equalto', inventory_hostname) | list }}"
+  tasks:
+    - name: "Show installed nexthops to each peer /32 (detect single-leg ECMP)"
+      ansible.builtin.shell: |
+        set -o pipefail
+        r="$(ip route show {{ hostvars[item].ip }} 2>/dev/null)"
+        if [ -z "$r" ]; then echo "NOROUTE"; exit 0; fi
+        n="$(printf '%s\n' "$r" | grep -c 'nexthop')"
+        [ "$n" -eq 0 ] && n=1
+        echo "nexthops=$n"
+      args:
+        executable: /bin/bash
+      loop: "{{ peers }}"
+      loop_control:
+        label: "{{ item }} ({{ hostvars[item].ip }})"
+      register: nexthop_check
+      changed_when: false
+      failed_when: false
+
+    - name: "Flag peers with a broken/degraded path (no route or single leg)"
+      ansible.builtin.set_fact:
+        single_leg_or_noroute: >-
+          {{ nexthop_check.results
+             | selectattr('stdout', 'ne', 'nexthops=2')
+             | map(attribute='item') | list }}
+
+    - name: "Non-fatal ping matrix to every peer cluster IP"
+      ansible.builtin.command: ping -c 2 -W 2 {{ hostvars[item].ip }}
+      loop: "{{ peers }}"
+      loop_control:
+        label: "{{ item }} ({{ hostvars[item].ip }})"
+      register: ping_matrix
+      changed_when: false
+      failed_when: false
+      when: verify_ping_matrix | bool
+
+    - name: "Summarise reachability"
+      ansible.builtin.set_fact:
+        unreachable_peers: >-
+          {{ (ping_matrix.results | default([]))
+             | selectattr('rc', 'defined')
+             | selectattr('rc', 'ne', 0)
+             | map(attribute='item') | list }}
+        reachable_peers: >-
+          {{ (ping_matrix.results | default([]))
+             | selectattr('rc', 'defined')
+             | selectattr('rc', 'eq', 0)
+             | map(attribute='item') | list }}
+      when: verify_ping_matrix | bool
+
+    - name: "Show the installed route for each UNREACHABLE peer (nexthop diagnosis)"
+      ansible.builtin.command: ip route show {{ hostvars[item].ip }}
+      loop: "{{ unreachable_peers | default([]) }}"
+      loop_control:
+        label: "{{ item }} ({{ hostvars[item].ip }})"
+      register: unreachable_routes
+      changed_when: false
+      failed_when: false
+      when: (verify_ping_matrix | bool) and (unreachable_peers | default([]) | length > 0)
+
+    - name: "REPORT · {{ inventory_hostname }} ({{ hostvars[inventory_hostname].ip }})"
+      ansible.builtin.debug:
+        msg: >-
+          {{
+            [
+              'host=' ~ inventory_hostname ~ '  cluster_ip=' ~ hostvars[inventory_hostname].ip,
+              'single_leg_or_noroute=' ~ (single_leg_or_noroute | default([]) | join(', ') if (single_leg_or_noroute | default([]) | length > 0) else 'none (full dual-homed ECMP)')
+            ]
+            + (
+              ['reachable=' ~ (reachable_peers | default([]) | length) ~ '/' ~ (peers | length),
+               'UNREACHABLE=' ~ (unreachable_peers | default([]) | join(', ') if (unreachable_peers | default([]) | length > 0) else 'none')]
+              if (verify_ping_matrix | bool) else []
+            )
+          }}
+
+    - name: "REPORT · installed routes for unreachable peers on {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg: "{{ item.item }} ({{ hostvars[item.item].ip }}) -> {{ (item.stdout | default('') | trim) if (item.stdout | default('') | trim | length > 0) else 'NO ROUTE INSTALLED' }}"
+      loop: "{{ unreachable_routes.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: (verify_ping_matrix | bool) and (unreachable_peers | default([]) | length > 0)
+
+# ── PLAY 3 · Switch-sourced ping: localize fabric-internal vs host-leg drop ───
+# Hosts + fabric both show fully-installed FIB, yet host-to-host is a stable
+# checkerboard. Ping every cluster /32 FROM each switch (sourced from Loopback0,
+# because fabric ports carry no IPv4). If a switch reaches all 16 hosts, transit
+# through that switch is clean and the drop is the host's ECMP leg choice; if a
+# switch shows holes, the blackhole is a fabric-internal (spine<->leaf) leg.
+- name: "ECMP verify · switch-sourced reachability to cluster hosts"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    cluster_targets: >-
+      {{ groups['k8s_cluster'] | map('extract', hostvars, 'ip')
+         | select('string') | list }}
+    lo_ip: "{{ (hostvars[inventory_hostname].loopback_ip | default('')).split('/')[0] }}"
+  tasks:
+    - name: "Ping each cluster /32 from Loopback0 (non-fatal)"
+      ansible.builtin.command: "ping -I {{ lo_ip }} -c 2 -W 1 {{ item }}"
+      loop: "{{ cluster_targets }}"
+      register: sw_ping
+      changed_when: false
+      failed_when: false
+
+    - name: "Summarise switch-sourced reachability"
+      ansible.builtin.set_fact:
+        sw_unreachable: >-
+          {{ sw_ping.results | selectattr('rc', 'defined')
+             | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}
+        sw_reachable_count: >-
+          {{ sw_ping.results | selectattr('rc', 'defined')
+             | selectattr('rc', 'eq', 0) | list | length }}
+
+    - name: "REPORT · {{ inventory_hostname }} switch-sourced reachability"
+      ansible.builtin.debug:
+        msg:
+          - "switch={{ inventory_hostname }}  src_loopback={{ lo_ip }}"
+          - "reachable={{ sw_reachable_count }}/{{ cluster_targets | length }}"
+          - "UNREACHABLE_FROM_THIS_SWITCH={{ sw_unreachable | default([]) | join(', ') if (sw_unreachable | default([]) | length > 0) else 'none (this switch reaches every cluster host)' }}"
+
+# ── PLAY 4 · Per-leg host ping: pinpoint which uplink blackholes ──────────────
+# `ping -I <dev>` binds egress to one uplink, bypassing ECMP hashing, so we test
+# each leg (ens2->first leaf, ens3->second leaf) independently. If one leg fails
+# to a peer while the other succeeds, that leg's path (host uplink or that leaf)
+# is the deterministic blackhole the ECMP hash was intermittently selecting.
+- name: "ECMP verify · per-leg reachability (isolate the bad uplink)"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    cluster_targets: >-
+      {{ groups['k8s_cluster'] | map('extract', hostvars, 'ip')
+         | select('string') | list }}
+  tasks:
+    - name: "Ping every peer /32 out each uplink separately"
+      ansible.builtin.shell: |
+        set -o pipefail
+        legs="{{ server_interfaces | map(attribute='device') | join(' ') }}"
+        self="{{ hostvars[inventory_hostname].ip }}"
+        for ip in {{ cluster_targets | join(' ') }}; do
+          [ "$ip" = "$self" ] && continue
+          line="$ip:"
+          for leg in $legs; do
+            if ping -I "$leg" -c 1 -W 1 "$ip" >/dev/null 2>&1; then
+              line="$line ${leg}=OK"
+            else
+              line="$line ${leg}=FAIL"
+            fi
+          done
+          echo "$line"
+        done
+      args:
+        executable: /bin/bash
+      register: per_leg
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }} ({{ hostvars[inventory_hostname].ip }}) per-leg"
+      ansible.builtin.debug:
+        msg: >-
+          {{ ['host=' ~ inventory_hostname ~ '  legs=' ~ (server_interfaces | map(attribute='device') | join('/'))]
+             + (per_leg.stdout_lines | default([])) }}
+
+# ── PLAY 5 · Switch MAC audit: detect duplicate router/base MACs ──────────────
+# sonic-vs assigns the router (base) MAC from DEVICE_METADATA. If several vs
+# switches share the same base MAC, an L3 hop's dst-MAC can pass one switch's
+# MYMAC filter but be silently dropped as "not for me" on another - producing a
+# deterministic, reciprocal, FIB-clean per-path blackhole exactly like this one.
+- name: "ECMP verify · switch router/base MAC audit (duplicate-MAC blackhole)"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  tasks:
+    - name: "Collect base MAC + fabric-port MACs"
+      ansible.builtin.shell: |
+        set -o pipefail
+        base=$(sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" mac 2>/dev/null)
+        echo "base_mac=${base:-unknown}"
+        for n in /sys/class/net/Ethernet*; do
+          [ -e "$n/address" ] || continue
+          echo "$(basename "$n")=$(cat "$n/address")"
+        done
+      args:
+        executable: /bin/bash
+      register: mac_audit
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }} MACs"
+      ansible.builtin.debug:
+        msg: "{{ ['switch=' ~ inventory_hostname] + (mac_audit.stdout_lines | default([])) }}"
+
+# ── PLAY 6 · Reverse-path-filter (rp_filter) audit on switches AND hosts ──────
+# sonic-vs has NO hardware ASIC: the container forwards transit traffic in the
+# Linux kernel, so kernel strict rp_filter (=1) applies to fabric transit. In an
+# ECMP CLOS the return path is often asymmetric, so a packet arrives on an iface
+# that is NOT the best route back to the source -> strict RPF silently drops it.
+# That is a deterministic, reciprocal, per-path, FIB-invisible blackhole -> the
+# exact checkerboard. Effective mode = max(conf.all, conf.<iface>); 1=strict
+# (bad for ECMP), 2=loose (correct), 0=off. Remediate with playbooks/fix-rpf-loose.yml.
+- name: "ECMP verify · reverse-path-filter (rp_filter) audit"
+  hosts: sonic_switches:k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  tasks:
+    - name: "Read rp_filter (all/default + every interface) and flag STRICT"
+      ansible.builtin.shell: |
+        set -o pipefail
+        all=$(cat /proc/sys/net/ipv4/conf/all/rp_filter 2>/dev/null || echo x)
+        def=$(cat /proc/sys/net/ipv4/conf/default/rp_filter 2>/dev/null || echo x)
+        echo "all=${all} default=${def}"
+        strict=""
+        for f in /proc/sys/net/ipv4/conf/*/rp_filter; do
+          ifc=$(basename "$(dirname "$f")")
+          [ "$ifc" = "all" ] || [ "$ifc" = "default" ] || [ "$ifc" = "lo" ] && continue
+          v=$(cat "$f" 2>/dev/null || echo x)
+          eff=$all; [ "$v" != x ] && [ "$v" -gt "${eff:-0}" ] 2>/dev/null && eff=$v
+          [ "$eff" = "1" ] && strict="$strict ${ifc}(iface=${v})"
+        done
+        echo "STRICT_RPF_INTERFACES:${strict:- none}"
+      args:
+        executable: /bin/bash
+      register: rpf
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }} rp_filter"
+      ansible.builtin.debug:
+        msg: >-
+          {{ ['node=' ~ inventory_hostname] + (rpf.stdout_lines | default([]))
+             + ['VERDICT=' ~ ('STRICT RPF PRESENT -> asymmetric ECMP traffic will be dropped; run playbooks/fix-rpf-loose.yml'
+                              if ('STRICT_RPF_INTERFACES: none' not in (rpf.stdout | default('')))
+                              else 'loose/off everywhere (OK for ECMP)')] }}
+
+
+
