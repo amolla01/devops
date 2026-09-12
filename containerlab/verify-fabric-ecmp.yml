@@ -360,4 +360,34 @@
           {{ ['host=' ~ inventory_hostname ~ '  legs=' ~ (server_interfaces | map(attribute='device') | join('/'))]
              + (per_leg.stdout_lines | default([])) }}
 
+# ── PLAY 5 · Switch MAC audit: detect duplicate router/base MACs ──────────────
+# sonic-vs assigns the router (base) MAC from DEVICE_METADATA. If several vs
+# switches share the same base MAC, an L3 hop's dst-MAC can pass one switch's
+# MYMAC filter but be silently dropped as "not for me" on another - producing a
+# deterministic, reciprocal, FIB-clean per-path blackhole exactly like this one.
+- name: "ECMP verify · switch router/base MAC audit (duplicate-MAC blackhole)"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  tasks:
+    - name: "Collect base MAC + fabric-port MACs"
+      ansible.builtin.shell: |
+        set -o pipefail
+        base=$(sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" mac 2>/dev/null)
+        echo "base_mac=${base:-unknown}"
+        for n in /sys/class/net/Ethernet*; do
+          [ -e "$n/address" ] || continue
+          echo "$(basename "$n")=$(cat "$n/address")"
+        done
+      args:
+        executable: /bin/bash
+      register: mac_audit
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }} MACs"
+      ansible.builtin.debug:
+        msg: "{{ ['switch=' ~ inventory_hostname] + (mac_audit.stdout_lines | default([])) }}"
+
 
