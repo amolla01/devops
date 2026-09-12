@@ -98,18 +98,26 @@
       ansible.builtin.set_fact:
         established_count: "{{ established_count | default(0) }}"
 
-    - name: "Extract cluster /32s present on this switch + compute missing"
-      # Match every X.X.X.X/32 in the raw route JSON, then split into present vs
-      # missing by membership test ('in' uses == comparison, unlike intersect's
-      # set hashing which returned empty on the route-JSON-derived strings here).
+    - name: "Extract cluster /32s present on this switch"
+      # Build present list by looping and using the Python `in` OPERATOR (reliable
+      # == membership), NOT the Jinja `in` TEST which silently returns False for
+      # every element on this control node's Ansible/Jinja (select->none / reject->all).
       ansible.builtin.set_fact:
-        present_cluster_ips: "{{ _found | select('in', cluster_expected_ips) | list }}"
-        missing_cluster_ips: "{{ cluster_expected_ips | reject('in', _found) | list }}"
+        present_cluster_ips: >-
+          {{ present_cluster_ips | default([]) + ([item] if item in _found else []) }}
+      loop: "{{ cluster_expected_ips }}"
+      loop_control:
+        label: "{{ item }}"
       vars:
         _found: >-
           {{ bgp_route_raw.stdout | default('')
              | regex_findall('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/32')
              | unique | list }}
+      failed_when: false
+
+    - name: "Compute missing cluster /32s (both lists sourced from cluster_expected_ips)"
+      ansible.builtin.set_fact:
+        missing_cluster_ips: "{{ cluster_expected_ips | difference(present_cluster_ips | default([])) }}"
       failed_when: false
 
     # ── DATA-PLANE: per-/32 FIB nexthop health ───────────────────────────────
