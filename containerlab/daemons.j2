@@ -1,0 +1,34 @@
+zebra=yes
+bgpd=yes
+ospfd=no
+ospf6d=no
+ripd=no
+ripngd=no
+isisd=no
+pimd=no
+pim6d=no
+ldpd=no
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=no
+bfdd={{ 'yes' if (bfd_enabled | default(true)) else 'no' }}
+fabricd=no
+vrrpd=no
+pathd=no
+
+#
+# Per-daemon startup options (upstream/Debian FRR).
+# NOTE: do NOT add "--no-nhg" here — that flag only exists in NVIDIA/Cumulus FRR
+# builds; upstream zebra rejects unknown options and exits ("zebra is not
+# running"). The ECMP-group-teardown failure is instead prevented at the source
+# by keeping the IPv6 link-local neighbors from going FAILED — see
+# nd-stability.conf.j2 (/etc/sysctl.d/60-frr-nd-stability.conf). The larger
+# netlink receive buffer (-s) also helps zebra keep up during neighbour churn.
+vtysh_enable=yes
+zebra_options="  -A 127.0.0.1 -s 90000000"
+mgmtd_options="  -A 127.0.0.1"
+bgpd_options="   -A 127.0.0.1"
+staticd_options="-A 127.0.0.1"
+bfdd_options="   -A 127.0.0.1"
