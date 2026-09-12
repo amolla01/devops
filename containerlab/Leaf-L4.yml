@@ -1,0 +1,53 @@
+---
+hostname: "Leaf-L4"
+router_id: "10.0.2.4"
+bgp_local_asn: 65022
+mgmt_ip: "172.16.2.24/24"
+device_type: "LeafRouter"
+hwsku: "Arista-7050-QX32"
+platform: "x86_64-arista_7050_qx32"
+loopback_ip: "10.0.2.4/32"
+# 7050-QX32: fabric on last QSFP+ (Ethernet124=idx32, Ethernet120=idx31)
+# Access on the first three native QSFP+ front-panel ports. In vrnetlab each
+# container ethN maps to ONE front-panel QSFP (Ethernet(4*(N-1))); a single
+# 40G port has only one backing vNIC, so a 4x10G breakout cannot fan one port
+# out to three hosts. eth1->Ethernet0, eth2->Ethernet4, eth3->Ethernet8.
+switch_ports:
+  Ethernet124: { speed: "40000", role: "fabric", alias: "Ethernet32", lanes: "1,2,3,4", index: "32", neighbor: "Spine-S1", rem_port: "Ethernet12", neighbor_asn: 65000 }
+  Ethernet120: { speed: "40000", role: "fabric", alias: "Ethernet31", lanes: "5,6,7,8", index: "31", neighbor: "Spine-S2", rem_port: "Ethernet12", neighbor_asn: 65000 }
+
+access_ports:
+  Ethernet0:
+    breakout: "4x10G"
+    role: "access"
+    children:
+      - { name: "Ethernet0", alias: "Ethernet1/1", lanes: "128", index: "1", speed: "10000", neighbor: "k8s-master-02", rem_port: "enp3s0", neighbor_asn: 65221 }
+      - { name: "Ethernet1", alias: "Ethernet1/2", lanes: "124", index: "2", speed: "10000", neighbor: "k8s-db-02", rem_port: "enp3s0", neighbor_asn: 65222 }
+      - { name: "Ethernet2", alias: "Ethernet1/3", lanes: "13", index: "3", speed: "10000", neighbor: "osh-ctrl-02", rem_port: "enp3s0", neighbor_asn: 65223 }
+      - { name: "Ethernet3", alias: "Ethernet1/4", lanes: "9", index: "4", speed: "10000", neighbor: "osh-net-02", rem_port: "enp3s0", neighbor_asn: 65224 }
+  Ethernet4:
+    breakout: "4x10G"
+    role: "access"
+    children:
+      - { name: "Ethernet4", alias: "Ethernet2/1", lanes: "17", index: "5", speed: "10000", neighbor: "osh-comp-02", rem_port: "enp3s0", neighbor_asn: 65225 }
+      - { name: "Ethernet5", alias: "Ethernet2/2", lanes: "21", index: "6", speed: "10000", neighbor: "none" }
+      - { name: "Ethernet6", alias: "Ethernet2/3", lanes: "25", index: "7", speed: "10000", neighbor: "none" }
+      - { name: "Ethernet7", alias: "Ethernet2/4", lanes: "29", index: "8", speed: "10000", neighbor: "none" }
+
+  # Legacy flat access model retained for reference:
+  # access_ports:
+  #   Ethernet0: { speed: "10000", role: "server_access", alias: "Ethernet1/1", lanes: "125", index: "1", peer: "k8s-master-02", neighbor_asn: 65221 }
+  #   Ethernet1: { speed: "10000", role: "server_access", alias: "Ethernet1/2", lanes: "126", index: "1", peer: "k8s-db-02", neighbor_asn: 65222 }
+  #   Ethernet2: { speed: "10000", role: "server_access", alias: "Ethernet1/3", lanes: "127", index: "1", peer: "osh-ctrl-02", neighbor_asn: 65223 }
+  #   Ethernet3: { speed: "10000", role: "server_access", alias: "Ethernet1/4", lanes: "128", index: "1", peer: "osh-net-02", neighbor_asn: 65224 }
+  #   Ethernet4: { speed: "10000", role: "server_access", alias: "Ethernet2/1", lanes: "121", index: "2", peer: "osh-comp-02", neighbor_asn: 65225 }
+
+# Ports that carry the isolated Ceph replication VLAN (Vrf-storage over VLAN 100)
+# Only osh-comp-02 is an OSD node in rack-2; it rides Ethernet4.100 (same physical
+# link as its access session). Ethernet124/120 carry storage transit to the spines.
+# NOTE: must match the breakout access_ports numbering above (osh-comp-02 = Ethernet4),
+# not the legacy pre-breakout Ethernet16 mapping, or the switch peers on a dead port.
+storage_ports:
+  - { port: "Ethernet4",   neighbor_asn: 65225, neighbor: "osh-comp-02" }
+  - { port: "Ethernet124", neighbor_asn: 65000, neighbor: "Spine-S1" }
+  - { port: "Ethernet120", neighbor_asn: 65000, neighbor: "Spine-S2" }

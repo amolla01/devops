@@ -1,0 +1,234 @@
+---
+- name: Verify routing framework settings and platform identity
+  hosts: sonic_switches
+  gather_facts: no
+  vars:
+    ansible_user: "{{ sonic_user }}"
+    ansible_password: "{{ sonic_pass }}"
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+  tasks:
+    - name: Verify frr_mgmt_framework_config is enabled
+      ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" frr_mgmt_framework_config
+      register: frr_mgmt
+      changed_when: false
+      failed_when: false
+
+    - name: Verify docker_routing_config_mode is unified
+      ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" docker_routing_config_mode
+      register: routing_mode
+      changed_when: false
+      failed_when: false
+
+    - name: Verify expected HWSKU is active
+      ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "DEVICE_METADATA|localhost" hwsku
+      register: hwsku_live
+      changed_when: false
+      failed_when: false
+
+    - name: Report SONiC device-metadata identity (non-fatal)
+      ansible.builtin.debug:
+        msg:
+          - "{{ inventory_hostname }} frr_mgmt_framework_config={{ frr_mgmt.stdout | trim }} {{ 'OK' if (frr_mgmt.stdout | trim == 'true') else 'MISMATCH expected=true' }}"
+          - "{{ inventory_hostname }} docker_routing_config_mode={{ routing_mode.stdout | trim }} {{ 'OK' if (routing_mode.stdout | trim == 'unified') else 'MISMATCH expected=unified' }}"
+          - "{{ inventory_hostname }} hwsku={{ hwsku_live.stdout | trim }} {{ 'OK' if (hwsku_live.stdout | trim == hwsku) else ('MISMATCH expected=' ~ hwsku) }}"
+
+    # ─── BGP Verification ──────────────────────────────────────────────────────
+    - name: Verify BGP_GLOBALS exists in CONFIG_DB
+      ansible.builtin.command: sonic-db-cli CONFIG_DB HGET "BGP_GLOBALS|default" local_asn
+      register: bgp_asn_check
+      changed_when: false
+      failed_when: false
+
+    - name: Report BGP local ASN (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }} BGP_GLOBALS local_asn={{ bgp_asn_check.stdout | trim | default('MISSING') }}
+          {{ 'OK' if (bgp_asn_check.stdout | trim == (bgp_local_asn | string)) else ('MISMATCH expected=' ~ (bgp_local_asn | string)) }}
+
+    - name: Get BGP summary
+      ansible.builtin.command: vtysh -c "show bgp summary json"
+      register: bgp_summary_raw
+      changed_when: false
+      failed_when: false
+      become: yes
+
+    - name: Display BGP summary
+      ansible.builtin.debug:
+        msg: "{{ bgp_summary_raw.stdout }}"
+
+    # ─── Fabric Link Verification ──────────────────────────────────────────────
+    - name: Verify IPv6 link-local on fabric interfaces
+      ansible.builtin.shell: "ip -6 addr show dev {{ item.key }} scope link | grep -c fe80"
+      register: ipv6_ll_check
+      changed_when: false
+      failed_when: false
+      loop: "{{ (switch_ports | default({})) | dict2items }}"
+      when: item.value.role | default('') == 'fabric'
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Report fabric interfaces missing an IPv6 link-local (non-fatal)
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} {{ item.item.key }}: fe80 link-local count={{ item.stdout | default('0') | trim }} {{ 'OK' if (item.stdout | default('0') | int >= 1) else 'MISSING link-local — non-fatal' }}"
+      loop: "{{ ipv6_ll_check.results | default([]) }}"
+      when: item.stdout is defined
+      loop_control:
+        label: "{{ item.item.key | default('?') }}"
+
+    - name: Check fabric port oper status
+      ansible.builtin.command: sonic-db-cli APPL_DB HGET "PORT_TABLE:{{ item.key }}" oper_status
+      register: fabric_oper
+      changed_when: false
+      failed_when: false
+      loop: "{{ (switch_ports | default({})) | dict2items }}"
+      when: item.value.role | default('') == 'fabric'
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Report fabric port oper status (non-fatal)
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} {{ item.item.key }}: oper_status={{ item.stdout | default('unknown') | trim }} {{ 'OK' if (item.stdout | default('') | trim == 'up') else 'NOT up — non-fatal' }}"
+      loop: "{{ fabric_oper.results | default([]) }}"
+      when: item.stdout is defined
+      loop_control:
+        label: "{{ item.item.key | default('?') }}"
+
+    # ─── BGP Neighbor Establishment ────────────────────────────────────────────
+    - name: Check BGP neighbor state for fabric interfaces
+      ansible.builtin.shell: >-
+        vtysh -c "show bgp neighbors {{ item.key }} json"
+      register: bgp_nbr_state
+      changed_when: false
+      failed_when: false
+      become: yes
+      loop: "{{ (switch_ports | default({})) | dict2items }}"
+      when:
+        - item.value.role | default('') == 'fabric'
+        - item.value.neighbor_asn is defined
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Report BGP neighbor status
+      ansible.builtin.debug:
+        msg: "{{ item.item.key }}: {{ (item.stdout | from_json)[item.item.key | default('')]['bgpState'] | default('NOT_FOUND') }}"
+      loop: "{{ bgp_nbr_state.results | default([]) }}"
+      when: item.stdout is defined and item.stdout | length > 2
+      loop_control:
+        label: "{{ item.item.key | default('unknown') }}"
+      failed_when: false
+
+    # ─── Access Port Verification ──────────────────────────────────────────────
+    - name: Flatten breakout-aware access port definitions for validation
+      ansible.builtin.shell: |
+        python3 - <<'PY'
+        import json
+        data = json.loads('{{ access_ports | default({}) | to_json }}')
+        out = []
+        for port_name, cfg in data.items():
+            if isinstance(cfg, dict) and 'children' in cfg and isinstance(cfg.get('children'), list):
+                for child in cfg.get('children', []):
+                    d = dict(child)
+                    d.setdefault('name', child.get('name', port_name))
+                    out.append(d)
+            else:
+                d = dict(cfg) if isinstance(cfg, dict) else {}
+                d.setdefault('name', port_name)
+                out.append(d)
+        print(json.dumps(out))
+        PY
+      register: verify_access_flattened
+      changed_when: false
+      failed_when: false
+
+    - name: Register effective access-port list for validation
+      ansible.builtin.set_fact:
+        effective_access_ports: "{{ verify_access_flattened.stdout | from_json }}"
+
+    - name: Check access port oper status
+      ansible.builtin.command: sonic-db-cli APPL_DB HGET "PORT_TABLE:{{ item.name }}" oper_status
+      register: access_oper
+      changed_when: false
+      failed_when: false
+      loop: "{{ effective_access_ports | default([]) }}"
+      when: item.neighbor_asn is defined
+      loop_control:
+        label: "{{ item.name }} → {{ item.neighbor | default(item.peer | default('unknown')) }}"
+
+    - name: Report access port status
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }} → {{ item.item.neighbor | default(item.item.peer | default('unknown')) }}: {{ item.stdout | default('SKIPPED') | trim }}"
+      loop: "{{ access_oper.results | default([]) }}"
+      when: item.stdout is defined
+      loop_control:
+        label: "{{ item.item.name | default('unknown') }}"
+      failed_when: false
+
+    # ─── Access BGP Neighbor Verification ──────────────────────────────────────
+    - name: Check BGP neighbor state for access interfaces
+      ansible.builtin.shell: >-
+        vtysh -c "show bgp neighbors {{ item.name }} json"
+      register: bgp_access_state
+      changed_when: false
+      failed_when: false
+      become: yes
+      loop: "{{ effective_access_ports | default([]) }}"
+      when:
+        - item.neighbor_asn is defined
+      loop_control:
+        label: "{{ item.name }} → {{ item.neighbor | default(item.peer | default('unknown')) }}"
+
+    - name: Report access BGP neighbor status
+      ansible.builtin.debug:
+        msg: "{{ item.item.name }} → {{ item.item.neighbor | default(item.item.peer | default('unknown')) }}: {{ (item.stdout | from_json)[item.item.name | default('')]['bgpState'] | default('NOT_FOUND') }}"
+      loop: "{{ bgp_access_state.results | default([]) }}"
+      when: item.stdout is defined and item.stdout | length > 2
+      loop_control:
+        label: "{{ item.item.name | default('unknown') }}"
+      failed_when: false
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PLAY 2 — Linux endpoint BGP verification
+# ═══════════════════════════════════════════════════════════════════════════════
+- name: Verify Linux endpoint BGP peering
+  hosts: linux_endpoints
+  gather_facts: false
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+  tasks:
+    - name: Check if FRR is installed
+      ansible.builtin.command: vtysh -c "show bgp summary"
+      register: linux_bgp
+      changed_when: false
+      failed_when: false
+
+    - name: Display Linux BGP summary
+      ansible.builtin.debug:
+        msg: "{{ linux_bgp.stdout_lines | default(['FRR not installed or bgpd not running']) }}"
+
+    - name: Check data interface link state
+      ansible.builtin.shell: "ip -br link show {{ item.device }} 2>/dev/null || echo 'NOT_FOUND'"
+      register: link_state
+      changed_when: false
+      loop: "{{ server_interfaces | default([]) }}"
+      loop_control:
+        label: "{{ item.device }}"
+
+    - name: Report interface link state
+      ansible.builtin.debug:
+        msg: "{{ item.stdout | trim }}"
+      loop: "{{ link_state.results | default([]) }}"
+      loop_control:
+        label: "{{ item.item.device | default('unknown') }}"

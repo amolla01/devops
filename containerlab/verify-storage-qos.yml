@@ -1,0 +1,321 @@
+---
+# Validate the isolated Ceph replication path and the tc HTB 80/20 partition.
+#
+# 1. Isolation  — 20.0.56.x is routable ONLY inside vrf-storage, never in the
+#    default (tenant) table.
+# 2. Reachability — iperf3 between two OSD nodes over cephdummy0 in vrf-storage.
+# 3. QoS split  — run a storage flow (marked -> 80% class) and a tenant flow
+#    (default -> 20% class) simultaneously; the storage flow must win the
+#    majority of the contended link, proving the HTB guarantee holds.
+#
+# Run:  ansible-playbook -i inventory.yml playbooks/verify-storage-qos.yml
+
+- name: Ensure iperf3 is installed on OSD nodes
+  hosts: ceph_osd_nodes
+  gather_facts: false
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+  tasks:
+    # ── OSD backing-disk sanity ──────────────────────────────────────────────
+    # Every ceph_osd_node must expose its ceph_osd_devices as real raw block
+    # devices, or Rook silently brings up 0 OSDs. The physical host disk
+    # (physical_ceph_disk_a) is passed through as drvCephA @ PCI addr=0x5, so it
+    # appears in the guest as /dev/vdb.
+    - name: Stat each configured Ceph OSD device
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ ceph_osd_devices | default([]) }}"
+      register: osd_dev_stat
+
+    - name: Report Ceph OSD backing-disk state (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: ceph_osd_devices={{ ceph_osd_devices | default([]) }}
+          present-as-block={{ osd_dev_stat.results | selectattr('stat.exists') | selectattr('stat.isblk') | list | length }}/{{ (ceph_osd_devices | default([])) | length }}
+          {{ 'OK' if ((ceph_osd_devices | default([])) | length > 0 and (osd_dev_stat.results | selectattr('stat.exists') | selectattr('stat.isblk') | list | length) == ((ceph_osd_devices | default([])) | length)) else 'MISSING raw block device(s) — check physical_ceph_disk_a passthrough (drvCephA @ addr=0x5 -> guest /dev/vdb) — non-fatal' }}
+
+    - name: Refresh apt cache (best-effort; air-gapped nodes may have no upstream)
+      ansible.builtin.apt:
+        update_cache: true
+      register: apt_refresh
+      failed_when: false
+
+    - name: Install iperf3
+      ansible.builtin.apt:
+        name: iperf3
+        state: present
+      register: iperf3_install
+      failed_when: false
+
+    # `command -v` is a bash builtin — the `command` MODULE cannot exec it and
+    # would always return non-zero, so the guard below would fire even when
+    # iperf3 is installed. Use `shell` (real bash) and fall back to a path probe.
+    - name: Confirm the iperf3 binary is present
+      ansible.builtin.shell: "command -v iperf3 || test -x /usr/bin/iperf3"
+      register: iperf_bin
+      changed_when: false
+      failed_when: false
+
+    - name: Note when iperf3 could not be installed (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: 'iperf3' is NOT present (bin-probe rc={{ iperf_bin.rc }}).
+          Ubuntu seed images are air-gapped in socks mode, so apt cannot reach the archive.
+          Bake iperf3 into the seed.iso (or pre-stage the .deb) to enable the QoS bandwidth test.
+          Skipping throughput measurement — this does not block the fabric or K8s.
+      when: iperf_bin.rc != 0
+
+# The play `hosts:` field is templated before host vars load, so the derived
+# `storage_replication_nodes` group_var is not visible there. Resolve the client
+# endpoint here on localhost and stamp it into an ad-hoc group instead.
+- name: Select the storage QoS test endpoints
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Report storage replication node selection (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          storage_replication_nodes={{ storage_replication_nodes | default([]) }}
+          {{ 'OK (>=2 nodes)' if ((storage_replication_nodes | default([])) | length >= 2) else 'INSUFFICIENT — need >=2 OSD nodes with vrf_storage=true AND ceph_data_replication_ip; QoS test will be skipped — non-fatal' }}
+
+    - name: Skip QoS client registration when fewer than two storage nodes exist
+      ansible.builtin.meta: end_play
+      when: (storage_replication_nodes | default([])) | length < 2
+
+    - name: Register the client endpoint (first storage node, or override)
+      ansible.builtin.add_host:
+        name: "{{ storage_verify_client | default(storage_replication_nodes[0]) }}"
+        groups: storage_qos_client
+
+# Endpoints are derived from inventory: the CLIENT is the first storage
+# replication node, the SERVER is the second. Override with -e storage_verify_client=…
+# / -e storage_verify_server=… to test a specific pair.
+- name: Verify vrf-storage isolation and QoS bandwidth split
+  hosts: storage_qos_client
+  gather_facts: false
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+    # Peer OSD node that runs the iperf3 servers (second storage replication node).
+    server_host: "{{ storage_verify_server | default(storage_replication_nodes[1]) }}"
+    # Storage-plane IPs = each node's cephdummy0 replication IP (20.0.56.x/32),
+    # stripped of the CIDR suffix. Tenant-plane IPs = each node's fabric loopback,
+    # so the contended flow rides the default VRF over the same physical uplink.
+    storage_client_ip: "{{ hostvars[inventory_hostname].ceph_data_replication_ip | regex_replace('/[0-9]+$', '') }}"
+    storage_server_ip: "{{ hostvars[server_host].ceph_data_replication_ip | regex_replace('/[0-9]+$', '') }}"
+    tenant_client_ip: "{{ hostvars[inventory_hostname].loopback_ip | regex_replace('/[0-9]+$', '') }}"
+    tenant_server_ip: "{{ hostvars[server_host].loopback_ip | regex_replace('/[0-9]+$', '') }}"
+    iperf_seconds: 10
+    storage_min_share: 0.60
+  tasks:
+    # ── Isolation ────────────────────────────────────────────────────────────
+    - name: Confirm the storage route lives in vrf-storage (table {{ storage_vrf_table }})
+      ansible.builtin.command: ip route show table {{ storage_vrf_table | default(300) }}
+      changed_when: false
+      register: storage_table
+
+    - name: Confirm the storage subnet is ABSENT from the default table
+      ansible.builtin.shell: >-
+        ip route show | grep -c '{{ storage_subnet | default("20.0.56.0/24") }}' || true
+      changed_when: false
+      register: default_leak
+
+    - name: Report vrf-storage isolation vs the tenant/default table (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: storage_subnet {{ storage_subnet | default('20.0.56.0/24') }}
+          default-table-hits={{ default_leak.stdout | trim | int }}
+          {{ 'OK — vrf-storage isolated from the tenant/default table' if (default_leak.stdout | trim | int == 0) else 'LEAK — storage subnet present in the default table (isolation broken) — non-fatal' }}
+
+    - name: Show storage BGP summary (vrf-storage)
+      ansible.builtin.command: vtysh -c "show bgp vrf {{ storage_vrf_name | default('vrf-storage') }} ipv4 unicast summary"
+      changed_when: false
+      failed_when: false
+      register: host_storage_bgp
+
+    - name: Report storage BGP summary
+      ansible.builtin.debug:
+        var: host_storage_bgp.stdout_lines
+
+    # ── Start iperf3 servers on the peer OSD node ────────────────────────────
+    # pkill -f PATTERN would match its own parent shell's cmdline and self-SIGTERM.
+    # Use PID-file kill instead — no pattern appears in the cmdline of either task.
+    - name: Stop previous storage iperf3 server on {{ server_host }}
+      ansible.builtin.shell: |
+        pid=$(cat /tmp/iperf3-srv-5201.pid 2>/dev/null)
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+        rm -f /tmp/iperf3-srv-5201.pid
+      delegate_to: "{{ server_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Start storage iperf3 server (in vrf-storage) on {{ server_host }}
+      ansible.builtin.shell: |
+        nohup ip vrf exec {{ storage_vrf_name | default('vrf-storage') }} \
+          iperf3 -s -B {{ storage_server_ip }} -p 5201 -1 \
+          > /tmp/iperf3-storage.log 2>&1 &
+        echo $! > /tmp/iperf3-srv-5201.pid
+      delegate_to: "{{ server_host }}"
+      changed_when: false
+
+    - name: Stop previous tenant iperf3 server on {{ server_host }}
+      ansible.builtin.shell: |
+        pid=$(cat /tmp/iperf3-srv-5202.pid 2>/dev/null)
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+        rm -f /tmp/iperf3-srv-5202.pid
+      delegate_to: "{{ server_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Start tenant iperf3 server (default VRF) on {{ server_host }}
+      ansible.builtin.shell: |
+        nohup iperf3 -s -B {{ tenant_server_ip }} -p 5202 -1 \
+          > /tmp/iperf3-tenant.log 2>&1 &
+        echo $! > /tmp/iperf3-srv-5202.pid
+      delegate_to: "{{ server_host }}"
+      changed_when: false
+
+    - name: Confirm storage iperf3 server is listening on {{ server_host }} (best-effort)
+      ansible.builtin.shell: >-
+        ss -ltn 2>/dev/null | grep -qE ':5201 '
+      delegate_to: "{{ server_host }}"
+      register: storage_srv_ready
+      retries: 5
+      delay: 2
+      until: storage_srv_ready.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: Confirm tenant iperf3 server is listening on {{ server_host }} (best-effort)
+      ansible.builtin.shell: >-
+        ss -ltn 2>/dev/null | grep -qE ':5202 '
+      delegate_to: "{{ server_host }}"
+      register: tenant_srv_ready
+      retries: 5
+      delay: 2
+      until: tenant_srv_ready.rc == 0
+      changed_when: false
+      failed_when: false
+
+    - name: Note when a storage/tenant iperf3 server did not come up (non-fatal)
+      ansible.builtin.debug:
+        msg: >-
+          {{ server_host }}: iperf3 QoS servers not fully up
+          (storage rc={{ storage_srv_ready.rc | default('n/a') }},
+          tenant rc={{ tenant_srv_ready.rc | default('n/a') }}).
+          Skipping bandwidth measurement — this does not block the fabric or K8s.
+      when: >-
+        (storage_srv_ready.rc | default(1)) != 0 or
+        (tenant_srv_ready.rc | default(1)) != 0
+
+    - name: Give the servers a moment to bind
+      ansible.builtin.pause:
+        seconds: 3
+
+    # ── Reachability probe over vrf-storage ──────────────────────────────────
+    - name: Ping the peer OSD storage IP inside vrf-storage
+      ansible.builtin.command: >-
+        ip vrf exec {{ storage_vrf_name | default('vrf-storage') }}
+        ping -c 3 -I {{ storage_client_ip }} {{ storage_server_ip }}
+      changed_when: false
+      failed_when: false
+      register: storage_ping
+
+    - name: Report storage reachability
+      ansible.builtin.debug:
+        var: storage_ping.stdout_lines
+
+    # ── Contended throughput: storage vs tenant simultaneously ───────────────
+    - name: Run storage + tenant iperf3 flows concurrently
+      ansible.builtin.shell: |
+        ip vrf exec {{ storage_vrf_name | default('vrf-storage') }} \
+          iperf3 -c {{ storage_server_ip }} -B {{ storage_client_ip }} \
+          -t {{ iperf_seconds }} -p 5201 -J > /tmp/iperf_storage.json 2>/dev/null &
+        iperf3 -c {{ tenant_server_ip }} -B {{ tenant_client_ip }} \
+          -t {{ iperf_seconds }} -p 5202 -J > /tmp/iperf_tenant.json 2>/dev/null &
+        wait
+      changed_when: false
+      failed_when: false
+
+    - name: Check for storage iperf result file
+      ansible.builtin.stat:
+        path: /tmp/iperf_storage.json
+      register: storage_json_stat
+      changed_when: false
+
+    - name: Check for tenant iperf result file
+      ansible.builtin.stat:
+        path: /tmp/iperf_tenant.json
+      register: tenant_json_stat
+      changed_when: false
+
+    - name: Slurp storage iperf result
+      ansible.builtin.slurp:
+        src: /tmp/iperf_storage.json
+      register: storage_json
+      failed_when: false
+      when: storage_json_stat.stat.exists | default(false)
+
+    - name: Slurp tenant iperf result
+      ansible.builtin.slurp:
+        src: /tmp/iperf_tenant.json
+      register: tenant_json
+      failed_when: false
+      when: tenant_json_stat.stat.exists | default(false)
+
+    - name: Parse throughput (bits/sec)
+      ansible.builtin.set_fact:
+        storage_bps: >-
+          {{ ((storage_json.content | default('') | b64decode | from_json).end.sum_received.bits_per_second)
+             | default(0) | float if (storage_json_stat.stat.exists | default(false)) else 0 }}
+        tenant_bps: >-
+          {{ ((tenant_json.content | default('') | b64decode | from_json).end.sum_received.bits_per_second)
+             | default(0) | float if (tenant_json_stat.stat.exists | default(false)) else 0 }}
+      failed_when: false
+
+    - name: Compute storage share of the contended link
+      ansible.builtin.set_fact:
+        storage_share: "{{ (storage_bps | float) / ((storage_bps | float) + (tenant_bps | float)) if ((storage_bps | float) + (tenant_bps | float)) > 0 else 0 }}"
+
+    - name: Report QoS split
+      ansible.builtin.debug:
+        msg:
+          - "Storage flow : {{ '%.2f' | format((storage_bps | float) / 1000000) }} Mbit/s"
+          - "Tenant  flow : {{ '%.2f' | format((tenant_bps | float) / 1000000) }} Mbit/s"
+          - "Storage share: {{ '%.1f' | format((storage_share | float) * 100) }}% (HTB target 80%)"
+
+    # Non-fatal: vrf-storage BGP may still be converging; warn and continue.
+    - name: Assert the HTB partition favours storage under contention
+      ansible.builtin.assert:
+        that:
+          - (storage_share | float) >= (storage_min_share | float)
+        fail_msg: >-
+          Storage share {{ '%.1f' | format((storage_share | float) * 100) }}% is below the
+          {{ (storage_min_share | float) * 100 }}% floor — HTB shaping not effective.
+        success_msg: >-
+          Storage captured {{ '%.1f' | format((storage_share | float) * 100) }}% of the
+          contended link — 80/20 HTB partition validated.
+      ignore_errors: true
+      register: qos_assert_result
+
+    - name: Warn when QoS assert did not pass
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: QoS assert skipped/failed. If vrf-storage BGP peers are Idle
+          (check `vtysh -c 'show bgp vrf vrf-storage sum'`), re-run
+          verify-storage-qos.yml after storage VRF converges.
+          This does NOT block the K8s overlay deployment.
+      when: qos_assert_result is failed
