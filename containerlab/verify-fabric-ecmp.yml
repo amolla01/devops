@@ -98,25 +98,19 @@
       ansible.builtin.set_fact:
         established_count: "{{ established_count | default(0) }}"
 
-    - name: "Extract the /32 cluster prefixes actually installed on this leaf"
-      # Scrape every X.X.X.X/32 key from the raw route JSON, then intersect with
-      # the expected cluster loopbacks. A narrow inline alternation regex silently
-      # matched nothing here, so match all /32s broadly and filter in Jinja.
+    - name: "Extract cluster /32s present on this switch + compute missing"
+      # Match every X.X.X.X/32 in the raw route JSON, then split into present vs
+      # missing by membership test ('in' uses == comparison, unlike intersect's
+      # set hashing which returned empty on the route-JSON-derived strings here).
       ansible.builtin.set_fact:
-        present_cluster_ips: >-
-          {{ (bgp_route_raw.stdout | default('')
-              | regex_findall('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/32')
-              | unique | list)
-             | intersect(cluster_expected_ips) }}
+        present_cluster_ips: "{{ _found | select('in', cluster_expected_ips) | list }}"
+        missing_cluster_ips: "{{ cluster_expected_ips | reject('in', _found) | list }}"
+      vars:
+        _found: >-
+          {{ bgp_route_raw.stdout | default('')
+             | regex_findall('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/32')
+             | unique | list }}
       failed_when: false
-
-    - name: "Fallback: default present list to empty if JSON was unparseable"
-      ansible.builtin.set_fact:
-        present_cluster_ips: "{{ present_cluster_ips | default([]) }}"
-
-    - name: "Compute cluster /32s MISSING from this leaf (blackhole legs)"
-      ansible.builtin.set_fact:
-        missing_cluster_ips: "{{ cluster_expected_ips | difference(present_cluster_ips) }}"
 
     # ── DATA-PLANE: per-/32 FIB nexthop health ───────────────────────────────
     # Control plane already proven clean (all /32s in RIB). The checkerboard is a
@@ -281,3 +275,89 @@
       loop_control:
         label: "{{ item.item }}"
       when: (verify_ping_matrix | bool) and (unreachable_peers | default([]) | length > 0)
+
+# ── PLAY 3 · Switch-sourced ping: localize fabric-internal vs host-leg drop ───
+# Hosts + fabric both show fully-installed FIB, yet host-to-host is a stable
+# checkerboard. Ping every cluster /32 FROM each switch (sourced from Loopback0,
+# because fabric ports carry no IPv4). If a switch reaches all 16 hosts, transit
+# through that switch is clean and the drop is the host's ECMP leg choice; if a
+# switch shows holes, the blackhole is a fabric-internal (spine<->leaf) leg.
+- name: "ECMP verify · switch-sourced reachability to cluster hosts"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    cluster_targets: >-
+      {{ groups['k8s_cluster'] | map('extract', hostvars, 'ip')
+         | select('string') | list }}
+    lo_ip: "{{ (hostvars[inventory_hostname].loopback_ip | default('')).split('/')[0] }}"
+  tasks:
+    - name: "Ping each cluster /32 from Loopback0 (non-fatal)"
+      ansible.builtin.command: "ping -I {{ lo_ip }} -c 2 -W 1 {{ item }}"
+      loop: "{{ cluster_targets }}"
+      register: sw_ping
+      changed_when: false
+      failed_when: false
+
+    - name: "Summarise switch-sourced reachability"
+      ansible.builtin.set_fact:
+        sw_unreachable: >-
+          {{ sw_ping.results | selectattr('rc', 'defined')
+             | selectattr('rc', 'ne', 0) | map(attribute='item') | list }}
+        sw_reachable_count: >-
+          {{ sw_ping.results | selectattr('rc', 'defined')
+             | selectattr('rc', 'eq', 0) | list | length }}
+
+    - name: "REPORT · {{ inventory_hostname }} switch-sourced reachability"
+      ansible.builtin.debug:
+        msg:
+          - "switch={{ inventory_hostname }}  src_loopback={{ lo_ip }}"
+          - "reachable={{ sw_reachable_count }}/{{ cluster_targets | length }}"
+          - "UNREACHABLE_FROM_THIS_SWITCH={{ sw_unreachable | default([]) | join(', ') if (sw_unreachable | default([]) | length > 0) else 'none (this switch reaches every cluster host)' }}"
+
+# ── PLAY 4 · Per-leg host ping: pinpoint which uplink blackholes ──────────────
+# `ping -I <dev>` binds egress to one uplink, bypassing ECMP hashing, so we test
+# each leg (ens2->first leaf, ens3->second leaf) independently. If one leg fails
+# to a peer while the other succeeds, that leg's path (host uplink or that leaf)
+# is the deterministic blackhole the ECMP hash was intermittently selecting.
+- name: "ECMP verify · per-leg reachability (isolate the bad uplink)"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    cluster_targets: >-
+      {{ groups['k8s_cluster'] | map('extract', hostvars, 'ip')
+         | select('string') | list }}
+  tasks:
+    - name: "Ping every peer /32 out each uplink separately"
+      ansible.builtin.shell: |
+        set -o pipefail
+        legs="{{ server_interfaces | map(attribute='device') | join(' ') }}"
+        self="{{ hostvars[inventory_hostname].ip }}"
+        for ip in {{ cluster_targets | join(' ') }}; do
+          [ "$ip" = "$self" ] && continue
+          line="$ip:"
+          for leg in $legs; do
+            if ping -I "$leg" -c 1 -W 1 "$ip" >/dev/null 2>&1; then
+              line="$line ${leg}=OK"
+            else
+              line="$line ${leg}=FAIL"
+            fi
+          done
+          echo "$line"
+        done
+      args:
+        executable: /bin/bash
+      register: per_leg
+      changed_when: false
+      failed_when: false
+
+    - name: "REPORT · {{ inventory_hostname }} ({{ hostvars[inventory_hostname].ip }}) per-leg"
+      ansible.builtin.debug:
+        msg: >-
+          {{ ['host=' ~ inventory_hostname ~ '  legs=' ~ (server_interfaces | map(attribute='device') | join('/'))]
+             + (per_leg.stdout_lines | default([])) }}
+
+
