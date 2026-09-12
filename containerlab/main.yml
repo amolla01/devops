@@ -1,0 +1,181 @@
+---
+- name: Disable swap immediately
+  ansible.builtin.command: swapoff -a
+  become: true
+  changed_when: false
+
+- name: Remove swap from /etc/fstab permanently
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\s+swap\s+.*)$'
+    replace: '# \1'
+  become: true
+
+- name: Load required kernel modules
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/k8s.conf
+    content: |
+      overlay
+      br_netfilter
+    mode: "0644"
+  become: true
+
+- name: Activate kernel modules immediately
+  ansible.builtin.command: "modprobe {{ item }}"
+  loop: [overlay, br_netfilter]
+  become: true
+  changed_when: false
+
+- name: Set kernel parameters for Kubernetes networking
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-k8s.conf
+    content: |
+      net.bridge.bridge-nf-call-iptables  = 1
+      net.bridge.bridge-nf-call-ip6tables = 1
+      net.ipv4.ip_forward                 = 1
+      # Loose reverse-path filtering: REQUIRED so asymmetric ECMP (dual-homed
+      # BGP-unnumbered) return traffic is not silently dropped by strict RPF.
+      net.ipv4.conf.all.rp_filter         = 2
+      net.ipv4.conf.default.rp_filter     = 2
+    mode: "0644"
+  become: true
+
+- name: Apply sysctl parameters
+  ansible.builtin.command: sysctl --system
+  become: true
+  changed_when: false
+
+# ── Disk reclamation ─────────────────────────────────────────────────────────
+# Ubuntu 26.04 desktop/cloud images ship with snapd + large snap packages
+# (gnome, mesa, firefox, thunderbird …) that consume 3–4 GB on the root disk.
+# K8s compute nodes do not need snapd. Remove it first, then clean all cached
+# .deb files, trim the journal, and purge crash dumps before touching dpkg.
+- name: Purge snapd and all snap packages
+  ansible.builtin.apt:
+    name: snapd
+    state: absent
+    purge: true
+  become: true
+  failed_when: false
+
+- name: Remove snap mount-point directories left behind by snapd
+  ansible.builtin.file:
+    path: /snap
+    state: absent
+  become: true
+  failed_when: false
+
+- name: Clear ALL cached apt .deb files (apt-get clean)
+  ansible.builtin.command: apt-get clean
+  become: true
+  changed_when: false
+
+- name: Trim systemd journal to 100 MB
+  ansible.builtin.command: journalctl --vacuum-size=100M
+  become: true
+  changed_when: false
+  failed_when: false
+
+- name: Remove crash and leftover log archives
+  ansible.builtin.shell: |
+    rm -f /var/crash/* 2>/dev/null || true
+    find /var/log -maxdepth 3 -name "*.gz" -delete 2>/dev/null || true
+    find /var/log -maxdepth 3 -name "*.old" -delete 2>/dev/null || true
+  become: true
+  changed_when: false
+
+# Broken kernel: if a previous install was interrupted by disk-full, dpkg may
+# hold linux-image-X in half-configured state, blocking all subsequent apt.
+# Force-remove only the known-broken image; modules may be absent too.
+- name: Force-remove any half-installed kernel packages left by prior disk-full
+  ansible.builtin.shell: |
+    for pkg in $(dpkg -l 'linux-image-*' 'linux-modules-*' 2>/dev/null \
+                 | awk '/^iF|^iU|^iH/{print $2}'); do
+      dpkg --remove --force-remove-reinstreq "$pkg" 2>/dev/null || true
+    done
+  become: true
+  changed_when: false
+
+- name: Fix any remaining broken dpkg/apt state
+  ansible.builtin.shell: |
+    dpkg --configure -a 2>/dev/null || true
+    apt-get -f install -y -o Dpkg::Options::="--force-confdef" \
+                           -o Dpkg::Options::="--force-confold" 2>/dev/null || true
+    apt-get autoremove -y 2>/dev/null || true
+  become: true
+  changed_when: false
+
+# ── Dynamic Storage Expansion for Container Engines ──────────────────────────
+# - name: Format the secondary 150GB data drive with high-performance XFS
+#   community.general.filesystem:
+#     fstype: xfs
+#     dev: /dev/vda  # Inside vrnetlab, /data.qcow2 attaches as VirtIO block device vda
+#     force: false
+#   become: true
+
+# - name: Construct the active container service storage directory
+#   ansible.builtin.file:
+#     path: /var/lib/containerd
+#     state: directory
+#     mode: '0755'
+#   become: true
+
+# - name: Mount the spacious 150GB partition to /var/lib/containerd
+#   ansible.builtin.mount:
+#     path: /var/lib/containerd
+#     src: /dev/vda
+#     fstype: xfs
+#     state: mounted
+#   become: true
+
+# ── Initialize Containerd Directory Trees inside the Fresh 150GB Mount ───
+# - name: Pre-initialize containerd sub-directories on the fresh mount
+#   ansible.builtin.file:
+#     path: "/var/lib/containerd/{{ item }}"
+#     state: directory
+#     mode: '0711'
+#     owner: root
+#     group: root
+#   loop:
+#     - tmpmounts
+#     - io.containerd.content.v1.content
+#     - io.containerd.content.v1.content/ingest
+#     - io.containerd.snapshotter.v1.overlayfs
+#     - io.containerd.runtime.v2.task
+#   become: true
+
+# - name: Force restart containerd to hook into the fresh disk architecture
+#   ansible.builtin.systemd:              # <─── Change this exact line right here
+#     name: containerd
+#     state: restarted
+#     daemon_reload: true
+#   become: true
+
+
+- name: Install prerequisite packages for kubespray
+  ansible.builtin.package:
+    name:
+      - python3
+      - python3-pip
+      - git
+      - curl
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: true
+  become: true
+
+- name: Set hostname to match inventory name
+  ansible.builtin.hostname:
+    name: "{{ hostname | default(inventory_hostname) }}"
+  become: true
+
+- name: Ensure hostname resolves to primary IP in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "^{{ ansible_host }}\\s"
+    line: "{{ ansible_host }} {{ hostname | default(inventory_hostname) }}"
+    state: present
+  become: true
