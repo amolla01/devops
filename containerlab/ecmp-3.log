@@ -1,0 +1,318 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Leaf-L1
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Collect BGP ipv4 summary JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Collect full route table JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L1]
+
+TASK [RAW DIAG · what vtysh actually returned] *************************************************************************************************************
+ok: [Leaf-L1] => {
+    "msg": [
+        "leaf=Leaf-L1 container='bgp' sum_rc=0 sum_len=4980 route_rc=0 route_len=28920",
+        "SUM_STDERR: ",
+        "ROUTE_STDERR: ",
+        "route_slash32_hits=80  route_10dot_hits=113",
+        "route_sample_around_/32: ,\"10.0.1.1/32",
+        "route_head: {\"0.0.0.0/0\":[{\"prefix\":\"0.0.0.0/0\",\"prefixLen\":0,\"protocol\":\"bgp\",\"vrfId\":0,\"vrfName\":\"default\",\"selected\":true,\"destSelected\":true,\"distance\":20,\"metric\":0,\"installed\":true,\"offloaded\":true,\"table\":254,\"internalStatus\":16,\"internalFlags\":"
+    ]
+}
+
+TASK [Count Established sessions (from summary JSON)] ******************************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Default established_count if summary JSON was unparseable] *******************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Leaf-L1]
+
+TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Leaf-L1]
+
+TASK [REPORT · Leaf-L1] ************************************************************************************************************************************
+ok: [Leaf-L1] => {
+    "msg": [
+        "leaf=Leaf-L1  frr_container='bgp'  sum_rc=0  route_rc=0",
+        "established_sessions=8",
+        "installed_cluster_/32=0 / expected=16",
+        "MISSING_ON_THIS_LEAF=['10.0.30.5', '10.0.30.2', '10.0.10.6', '10.0.10.2', '10.0.10.1', '10.0.10.5', '10.0.30.4', '10.0.20.2', '10.0.30.3', '10.0.20.5', '10.0.20.4', '10.0.20.3', '10.0.10.3', '10.0.10.4', '10.0.20.1', '10.0.30.1']",
+        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+    ]
+}
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+Leaf-L1                    : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Leaf-L2
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Collect BGP ipv4 summary JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Collect full route table JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L2]
+
+TASK [RAW DIAG · what vtysh actually returned] *************************************************************************************************************
+ok: [Leaf-L2] => {
+    "msg": [
+        "leaf=Leaf-L2 container='bgp' sum_rc=0 sum_len=4982 route_rc=0 route_len=28918",
+        "SUM_STDERR: ",
+        "ROUTE_STDERR: ",
+        "route_slash32_hits=80  route_10dot_hits=113",
+        "route_sample_around_/32: ,\"10.0.1.1/32",
+        "route_head: {\"0.0.0.0/0\":[{\"prefix\":\"0.0.0.0/0\",\"prefixLen\":0,\"protocol\":\"bgp\",\"vrfId\":0,\"vrfName\":\"default\",\"selected\":true,\"destSelected\":true,\"distance\":20,\"metric\":0,\"installed\":true,\"offloaded\":true,\"table\":254,\"internalStatus\":16,\"internalFlags\":"
+    ]
+}
+
+TASK [Count Established sessions (from summary JSON)] ******************************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Default established_count if summary JSON was unparseable] *******************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Leaf-L2]
+
+TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Leaf-L2]
+
+TASK [REPORT · Leaf-L2] ************************************************************************************************************************************
+ok: [Leaf-L2] => {
+    "msg": [
+        "leaf=Leaf-L2  frr_container='bgp'  sum_rc=0  route_rc=0",
+        "established_sessions=8",
+        "installed_cluster_/32=0 / expected=16",
+        "MISSING_ON_THIS_LEAF=['10.0.10.1', '10.0.10.6', '10.0.20.1', '10.0.10.5', '10.0.20.4', '10.0.20.5', '10.0.30.3', '10.0.20.3', '10.0.30.4', '10.0.10.4', '10.0.10.3', '10.0.20.2', '10.0.10.2', '10.0.30.2', '10.0.30.1', '10.0.30.5']",
+        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+    ]
+}
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+Leaf-L2                    : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Leaf-L3
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Collect BGP ipv4 summary JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Collect full route table JSON via vtysh] *************************************************************************************************************
+ok: [Leaf-L3]
+
+TASK [RAW DIAG · what vtysh actually returned] *************************************************************************************************************
+ok: [Leaf-L3] => {
+    "msg": [
+        "leaf=Leaf-L3 container='bgp' sum_rc=0 sum_len=4393 route_rc=0 route_len=29260",
+        "SUM_STDERR: ",
+        "ROUTE_STDERR: ",
+        "route_slash32_hits=80  route_10dot_hits=115",
+        "route_sample_around_/32: ,\"10.0.1.1/32",
+        "route_head: {\"0.0.0.0/0\":[{\"prefix\":\"0.0.0.0/0\",\"prefixLen\":0,\"protocol\":\"bgp\",\"vrfId\":0,\"vrfName\":\"default\",\"selected\":true,\"destSelected\":true,\"distance\":20,\"metric\":0,\"installed\":true,\"offloaded\":true,\"table\":254,\"internalStatus\":16,\"internalFlags\":"
+    ]
+}
+
+TASK [Count Established sessions (from summary JSON)] ******************************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Default established_count if summary JSON was unparseable] *******************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Leaf-L3]
+
+TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Leaf-L3]
+
+TASK [REPORT · Leaf-L3] ************************************************************************************************************************************
+ok: [Leaf-L3] => {
+    "msg": [
+        "leaf=Leaf-L3  frr_container='bgp'  sum_rc=0  route_rc=0",
+        "established_sessions=7",
+        "installed_cluster_/32=0 / expected=16",
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.30.4', '10.0.30.1', '10.0.30.3', '10.0.20.4', '10.0.30.2', '10.0.10.3', '10.0.20.3', '10.0.30.5', '10.0.20.1', '10.0.10.6', '10.0.10.2', '10.0.20.5', '10.0.10.4', '10.0.10.1', '10.0.20.2']",
+        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+    ]
+}
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+Leaf-L3                    : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Border-Leaf1
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Collect BGP ipv4 summary JSON via vtysh] *************************************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Collect full route table JSON via vtysh] *************************************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [RAW DIAG · what vtysh actually returned] *************************************************************************************************************
+ok: [Border-Leaf1] => {
+    "msg": [
+        "leaf=Border-Leaf1 container='bgp' sum_rc=0 sum_len=5564 route_rc=0 route_len=28748",
+        "SUM_STDERR: ",
+        "ROUTE_STDERR: ",
+        "route_slash32_hits=80  route_10dot_hits=112",
+        "route_sample_around_/32: ,\"10.0.1.1/32",
+        "route_head: {\"0.0.0.0/0\":[{\"prefix\":\"0.0.0.0/0\",\"prefixLen\":0,\"protocol\":\"bgp\",\"vrfId\":0,\"vrfName\":\"default\",\"selected\":true,\"destSelected\":true,\"distance\":20,\"metric\":0,\"installed\":true,\"offloaded\":true,\"table\":254,\"internalStatus\":16,\"internalFlags\":"
+    ]
+}
+
+TASK [Count Established sessions (from summary JSON)] ******************************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Default established_count if summary JSON was unparseable] *******************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Border-Leaf1]
+
+TASK [REPORT · Border-Leaf1] *******************************************************************************************************************************
+ok: [Border-Leaf1] => {
+    "msg": [
+        "leaf=Border-Leaf1  frr_container='bgp'  sum_rc=0  route_rc=0",
+        "established_sessions=9",
+        "installed_cluster_/32=0 / expected=16",
+        "MISSING_ON_THIS_LEAF=['10.0.10.1', '10.0.20.5', '10.0.10.3', '10.0.30.3', '10.0.30.1', '10.0.20.4', '10.0.10.2', '10.0.10.6', '10.0.20.1', '10.0.30.5', '10.0.10.4', '10.0.30.2', '10.0.20.2', '10.0.10.5', '10.0.20.3', '10.0.30.4']",
+        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+    ]
+}
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Border-Leaf2
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Collect BGP ipv4 summary JSON via vtysh] *************************************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Collect full route table JSON via vtysh] *************************************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [RAW DIAG · what vtysh actually returned] *************************************************************************************************************
+ok: [Border-Leaf2] => {
+    "msg": [
+        "leaf=Border-Leaf2 container='bgp' sum_rc=0 sum_len=5568 route_rc=0 route_len=28750",
+        "SUM_STDERR: ",
+        "ROUTE_STDERR: ",
+        "route_slash32_hits=80  route_10dot_hits=112",
+        "route_sample_around_/32: ,\"10.0.1.1/32",
+        "route_head: {\"0.0.0.0/0\":[{\"prefix\":\"0.0.0.0/0\",\"prefixLen\":0,\"protocol\":\"bgp\",\"vrfId\":0,\"vrfName\":\"default\",\"selected\":true,\"destSelected\":true,\"distance\":20,\"metric\":0,\"installed\":true,\"offloaded\":true,\"table\":254,\"internalStatus\":16,\"internalFlags\":"
+    ]
+}
+
+TASK [Count Established sessions (from summary JSON)] ******************************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Default established_count if summary JSON was unparseable] *******************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Border-Leaf2]
+
+TASK [REPORT · Border-Leaf2] *******************************************************************************************************************************
+ok: [Border-Leaf2] => {
+    "msg": [
+        "leaf=Border-Leaf2  frr_container='bgp'  sum_rc=0  route_rc=0",
+        "established_sessions=9",
+        "installed_cluster_/32=0 / expected=16",
+        "MISSING_ON_THIS_LEAF=['10.0.20.3', '10.0.30.2', '10.0.10.3', '10.0.30.4', '10.0.20.4', '10.0.30.5', '10.0.20.2', '10.0.10.2', '10.0.30.1', '10.0.20.5', '10.0.10.5', '10.0.30.3', '10.0.10.4', '10.0.20.1', '10.0.10.1', '10.0.10.6']",
+        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+    ]
+}
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf2               : ok=10   changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Spine-S1
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+skipping: no hosts matched
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Spine-S2
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+skipping: no hosts matched
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml --limit Spine-S1
+
+PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
+skipping: no hosts matched
+
+PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ****************************************************************************************
+skipping: no hosts matched
+
+PLAY RECAP *************************************************************************************************************************************************
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
