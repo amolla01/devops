@@ -1,3 +1,705 @@
+For comparison purposes, I put two hosts routing data below to analyze why routes are not there in 'osh-comp-01'?? 
+
+nh1221@PowerEdge-R810:~$ ssh ubuntu@k8s-master-01
+Warning: Permanently added 'k8s-master-01' (ED25519) to the list of known hosts.
+ubuntu@k8s-master-01's password:
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat Sep 12 17:16:48 CEST 2026
+
+  System load:    0.25      Processes:               125
+  Usage of /home: unknown   Users logged in:         0
+  Memory usage:   8%        IPv4 address for enp1s0: 10.0.0.15
+  Swap usage:     0%        IPv4 address for enp1s0: 172.16.2.51
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+Last login: Sat Sep 12 06:13:53 2026 from 172.16.2.1
+ubuntu@k8s-master-01:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+10.0.1.1 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.1.2 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.2.1 nhid 54 via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 proto bgp metric 20
+10.0.2.2 nhid 52 via inet6 fe80::20af:94ff:fe14:64bb dev ens3 proto bgp metric 20
+10.0.2.3 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.2.4 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.2.5 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.2.6 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.10.2 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.10.3 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.10.4 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.10.5 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.10.6 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.20.1 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.20.2 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.20.3 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.20.4 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.20.5 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.30.1 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.30.2 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.30.3 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.30.4 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.0.30.5 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.1.0.1 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.255.255.1 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.255.255.2 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.255.255.11 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+10.255.255.12 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+100.64.100.10 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.51
+192.168.20.12 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.13 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.14 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.16 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.21 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.22 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.23 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.24 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+192.168.20.33 nhid 62 proto bgp metric 20
+        nexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1
+        nexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1
+ubuntu@k8s-master-01:~$ ip a sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet 10.0.10.1/32 brd 10.0.10.1 scope global lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 0c:00:57:30:40:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c0057304000
+    inet 10.0.0.15/24 brd 10.0.0.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet 172.16.2.51/24 brd 172.16.2.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e00:57ff:fe30:4000/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:26:49:cf brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1ab2649cf
+    inet6 fe80::a8c1:abff:fe26:49cf/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether aa:c1:ab:2c:ed:b3 brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1ab2cedb3
+    inet6 fe80::a8c1:abff:fe2c:edb3/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+5: cephdummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 9000 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/ether ca:09:5b:12:a9:6b brd ff:ff:ff:ff:ff:ff
+    inet 192.168.20.11/32 scope global cephdummy0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::c809:5bff:fe12:a96b/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+ubuntu@k8s-master-01:~$ ip l sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 0c:00:57:30:40:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c0057304000
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:26:49:cf brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1ab2649cf
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:2c:ed:b3 brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1ab2cedb3
+5: cephdummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 9000 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether ca:09:5b:12:a9:6b brd ff:ff:ff:ff:ff:ff
+ubuntu@k8s-master-01:~$
+ubuntu@k8s-master-01:~$
+ubuntu@k8s-master-01:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+k8s-master-01# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0
+BGP table version 101
+RIB entries 81, using 10368 bytes of memory
+Peers 3, using 71 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Leaf-L1(ens2)   4      65011     13158     13155      101    0    0 10:55:34           40       42 To-Leaf-L1-Ethernet0
+Leaf-L2(ens3)   4      65012     13151     13151      101    0    0 10:55:29           40       42 To-Leaf-L2-Ethernet0
+127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
+
+Total number of neighbors 3
+k8s-master-01#
+k8s-master-01# show ip route
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+B   0.0.0.0/0 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+K * 0.0.0.0/0 [0/200] via 172.16.2.254, enp1s0, weight 1, 10:55:47
+K * 0.0.0.0/0 [0/100] via 10.0.0.2, enp1s0, weight 1, 10:55:47
+K>* 0.0.0.0/0 [0/0] via 10.0.0.2, enp1s0, weight 1, 10:55:47
+C>* 10.0.0.0/24 is directly connected, enp1s0, weight 1, 10:55:47
+L>* 10.0.0.15/32 is directly connected, enp1s0, weight 1, 10:55:47
+B>* 10.0.1.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.1.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.2.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:41
+B>* 10.0.2.2/32 [20/0] via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.2.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.2.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.2.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.2.6/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+L * 10.0.10.1/32 is directly connected, lo, weight 1, 10:55:47
+C>* 10.0.10.1/32 is directly connected, lo, weight 1, 10:55:47
+B>* 10.0.10.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.10.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:35
+B>* 10.0.10.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:25
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:25
+B>* 10.0.10.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:22
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:22
+B>* 10.0.10.6/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.20.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.20.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.20.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.20.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:22
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:22
+B>* 10.0.20.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:24
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:24
+B>* 10.0.30.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.30.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.30.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:31
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:31
+B>* 10.0.30.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.0.30.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.1.0.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.255.255.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                        via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.255.255.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                        via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.255.255.11/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 10.255.255.12/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 100.64.100.10/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B   172.16.2.0/24 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+C>* 172.16.2.0/24 is directly connected, enp1s0, weight 1, 10:55:47
+L>* 172.16.2.51/32 is directly connected, enp1s0, weight 1, 10:55:47
+L * 192.168.20.11/32 is directly connected, cephdummy0, weight 1, 10:55:47
+C>* 192.168.20.11/32 is directly connected, cephdummy0, weight 1, 10:55:47
+B>* 192.168.20.12/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 192.168.20.13/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:35
+B>* 192.168.20.14/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:25
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:25
+B>* 192.168.20.16/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 192.168.20.21/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 192.168.20.22/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 192.168.20.23/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:37
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:37
+B>* 192.168.20.24/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:22
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:22
+B>* 192.168.20.33/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:55:31
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:55:31
+k8s-master-01# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname k8s-master-01
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list METALLB-POOL seq 10 permit 10.10.200.0/24 le 32
+ip prefix-list METALLB-POOL seq 20 permit 172.16.2.200/29 le 32
+!
+route-map ACCEPT-METALLB permit 10
+ match ip address prefix-list METALLB-POOL
+exit
+!
+route-map DENY-ALL deny 10
+exit
+!
+interface lo
+ ip address 10.0.10.1/32
+exit
+!
+router bgp 65211
+ bgp router-id 10.0.10.1
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65011
+ neighbor ens2 description To-Leaf-L1-Ethernet0
+ neighbor ens2 bfd
+ neighbor ens2 bfd profile FABRIC-BFD
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65012
+ neighbor ens3 description To-Leaf-L2-Ethernet0
+ neighbor ens3 bfd
+ neighbor ens3 bfd profile FABRIC-BFD
+ no neighbor ens3 capability link-local
+ neighbor 127.0.0.1 remote-as 64512
+ neighbor 127.0.0.1 description MetalLB-speaker
+ neighbor 127.0.0.1 update-source 127.0.0.1
+ bgp allow-martian-nexthop
+ !
+ address-family ipv4 unicast
+  network 10.0.10.1/32
+  network 192.168.20.11/32
+  neighbor ens2 activate
+  neighbor ens3 activate
+  neighbor 127.0.0.1 activate
+  neighbor 127.0.0.1 route-map ACCEPT-METALLB in
+  neighbor 127.0.0.1 route-map DENY-ALL out
+  maximum-paths 2
+  maximum-paths ibgp 2
+ exit-address-family
+exit
+!
+bfd
+ profile FABRIC-BFD
+ exit
+ !
+exit
+!
+end
+k8s-master-01#
+
+
+nh1221@PowerEdge-R810:~$ ssh ubuntu@osh-comp-01
+Warning: Permanently added 'osh-comp-01' (ED25519) to the list of known hosts.
+ubuntu@osh-comp-01's password:
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat Sep 12 17:07:21 CEST 2026
+
+  System load:    0.09      Processes:               176
+  Usage of /home: unknown   Users logged in:         0
+  Memory usage:   3%        IPv4 address for enp1s0: 10.0.0.15
+  Swap usage:     0%        IPv4 address for enp1s0: 172.16.2.55
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+40 updates can be applied immediately.
+13 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+Last login: Sat Sep 12 06:23:24 2026 from 172.16.2.1
+ubuntu@osh-comp-01:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+osh-comp-01# show running-config
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname osh-comp-01
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list METALLB-POOL seq 10 permit 10.10.200.0/24 le 32
+ip prefix-list METALLB-POOL seq 20 permit 172.16.2.200/29 le 32
+ip prefix-list STORAGE-ONLY seq 10 permit 20.0.56.15/32
+!
+route-map ACCEPT-METALLB permit 10
+ match ip address prefix-list METALLB-POOL
+exit
+!
+route-map DENY-ALL deny 10
+exit
+!
+route-map EXPORT-STORAGE permit 10
+ match ip address prefix-list STORAGE-ONLY
+exit
+!
+vrf vrf-storage
+exit-vrf
+!
+interface lo
+ ip address 10.0.10.5/32
+exit
+!
+router bgp 65215
+ bgp router-id 10.0.10.5
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65011
+ neighbor ens2 description To-Leaf-L1-Ethernet4
+ neighbor ens2 bfd
+ neighbor ens2 bfd profile FABRIC-BFD
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65012
+ neighbor ens3 description To-Leaf-L2-Ethernet4
+ neighbor ens3 bfd
+ neighbor ens3 bfd profile FABRIC-BFD
+ no neighbor ens3 capability link-local
+ neighbor 127.0.0.1 remote-as 64512
+ neighbor 127.0.0.1 description MetalLB-speaker
+ neighbor 127.0.0.1 update-source 127.0.0.1
+ bgp allow-martian-nexthop
+ !
+ address-family ipv4 unicast
+  network 10.0.10.5/32
+  network 192.168.20.15/32
+  neighbor ens2 activate
+  neighbor ens3 activate
+  neighbor 127.0.0.1 activate
+  neighbor 127.0.0.1 route-map ACCEPT-METALLB in
+  neighbor 127.0.0.1 route-map DENY-ALL out
+  maximum-paths 2
+  maximum-paths ibgp 2
+ exit-address-family
+exit
+!
+router bgp 65215 vrf vrf-storage
+ bgp router-id 20.0.56.15
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2.100 interface remote-as 65011
+ neighbor ens2.100 description STORAGE-To-Leaf-L1
+ no neighbor ens2.100 capability link-local
+ neighbor ens3.100 interface remote-as 65012
+ neighbor ens3.100 description STORAGE-To-Leaf-L2
+ no neighbor ens3.100 capability link-local
+ !
+ address-family ipv4 unicast
+  network 20.0.56.15/32
+  neighbor ens2.100 activate
+  neighbor ens2.100 route-map EXPORT-STORAGE out
+  neighbor ens3.100 activate
+  neighbor ens3.100 route-map EXPORT-STORAGE out
+  maximum-paths 2
+ exit-address-family
+exit
+!
+bfd
+ profile FABRIC-BFD
+ exit
+ !
+exit
+!
+end
+osh-comp-01# show ip route
+Codes: K - kernel route, C - connected, L - local, S - static,
+       R - RIP, O - OSPF, I - IS-IS, B - BGP, E - EIGRP, N - NHRP,
+       T - Table, v - VNC, V - VNC-Direct, A - Babel, F - PBR,
+       f - OpenFabric, t - Table-Direct,
+       > - selected route, * - FIB route, q - queued, r - rejected, b - backup
+       t - trapped, o - offload failure
+
+IPv4 unicast VRF default:
+B   0.0.0.0/0 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+K * 0.0.0.0/0 [0/200] via 172.16.2.254, enp1s0, weight 1, 10:46:43
+K * 0.0.0.0/0 [0/100] via 10.0.0.2, enp1s0, weight 1, 10:46:43
+K>* 0.0.0.0/0 [0/0] via 10.0.0.2, enp1s0, weight 1, 10:46:43
+C>* 10.0.0.0/24 is directly connected, enp1s0, weight 1, 10:46:43
+L>* 10.0.0.15/32 is directly connected, enp1s0, weight 1, 10:46:43
+B>* 10.0.1.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.1.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.2.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+B>* 10.0.2.2/32 [20/0] via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:38
+B>* 10.0.2.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.2.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.2.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.2.6/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.10.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.10.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.10.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.10.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+L * 10.0.10.5/32 is directly connected, lo, weight 1, 10:46:43
+C>* 10.0.10.5/32 is directly connected, lo, weight 1, 10:46:43
+B>* 10.0.10.6/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.20.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.20.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.20.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.20.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.20.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.30.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.30.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.30.3/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.30.4/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.0.30.5/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                     via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.1.0.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                    via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.255.255.1/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                        via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.255.255.2/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                        via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.255.255.11/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 10.255.255.12/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 100.64.100.10/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B   172.16.2.0/24 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+C>* 172.16.2.0/24 is directly connected, enp1s0, weight 1, 10:46:43
+L>* 172.16.2.55/32 is directly connected, enp1s0, weight 1, 10:46:43
+B>* 192.168.20.11/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.12/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.13/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.14/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.16/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.21/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.22/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.23/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.24/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+B>* 192.168.20.33/32 [20/0] via fe80::2030:a9ff:feb7:70b9, ens2, weight 1, 10:46:35
+  *                         via fe80::20af:94ff:fe14:64bb, ens3, weight 1, 10:46:35
+osh-comp-01# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.10.5, local AS number 65215 VRF default vrf-id 0
+BGP table version 82
+RIB entries 83, using 10624 bytes of memory
+Peers 3, using 71 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Leaf-L1(ens2)   4      65011     12970     12968       82    0    0 10:46:57           41       42 To-Leaf-L1-Ethernet4
+Leaf-L2(ens3)   4      65012     12970     12969       82    0    0 10:46:59           41       42 To-Leaf-L2-Ethernet4
+127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
+
+Total number of neighbors 3
+osh-comp-01# exit
+ubuntu@osh-comp-01:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+10.0.2.1 nhid 33 via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 proto bgp metric 20
+10.0.2.2 nhid 25 via inet6 fe80::20af:94ff:fe14:64bb dev ens3 proto bgp metric 20
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.55
+ubuntu@osh-comp-01:~$ ip l sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP mode DEFAULT group default qlen 1000
+    link/ether 0c:00:45:5b:73:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c00455b7300
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc htb state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:23:75:e4 brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1ab2375e4
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc htb state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:72:fb:4a brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1ab72fb4a
+5: cephdummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether 92:c9:6a:38:90:bf brd ff:ff:ff:ff:ff:ff
+6: vrf-storage: <NOARP,MASTER,UP,LOWER_UP> mtu 65575 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether b2:26:c3:18:89:0d brd ff:ff:ff:ff:ff:ff
+7: ens3.100@ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:72:fb:4a brd ff:ff:ff:ff:ff:ff
+8: ens2.100@ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UP mode DEFAULT group default qlen 1000
+    link/ether aa:c1:ab:23:75:e4 brd ff:ff:ff:ff:ff:ff
+ubuntu@osh-comp-01:~$ ip a sh
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet 10.0.10.5/32 brd 10.0.10.5 scope global lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 0c:00:45:5b:73:00 brd ff:ff:ff:ff:ff:ff
+    altname enx0c00455b7300
+    inet 10.0.0.15/24 brd 10.0.0.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet 172.16.2.55/24 brd 172.16.2.255 scope global enp1s0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e00:45ff:fe5b:7300/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc htb state UP group default qlen 1000
+    link/ether aa:c1:ab:23:75:e4 brd ff:ff:ff:ff:ff:ff
+    altname enp1s2
+    altname enxaac1ab2375e4
+    inet6 fe80::a8c1:abff:fe23:75e4/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+4: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc htb state UP group default qlen 1000
+    link/ether aa:c1:ab:72:fb:4a brd ff:ff:ff:ff:ff:ff
+    altname enp1s3
+    altname enxaac1ab72fb4a
+    inet6 fe80::a8c1:abff:fe72:fb4a/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+5: cephdummy0: <BROADCAST,NOARP,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UNKNOWN group default qlen 1000
+    link/ether 92:c9:6a:38:90:bf brd ff:ff:ff:ff:ff:ff
+    inet 20.0.56.15/32 scope global cephdummy0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::90c9:6aff:fe38:90bf/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+6: vrf-storage: <NOARP,MASTER,UP,LOWER_UP> mtu 65575 qdisc noqueue state UP group default qlen 1000
+    link/ether b2:26:c3:18:89:0d brd ff:ff:ff:ff:ff:ff
+7: ens3.100@ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UP group default qlen 1000
+    link/ether aa:c1:ab:72:fb:4a brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::a8c1:abff:fe72:fb4a/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+8: ens2.100@ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 9000 qdisc noqueue master vrf-storage state UP group default qlen 1000
+    link/ether aa:c1:ab:23:75:e4 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::a8c1:abff:fe23:75e4/64 scope link proto kernel_ll
+       valid_lft forever preferred_lft forever
+ubuntu@osh-comp-01:~$
+
+
 C:\Users\nh1221>wsl -d ubuntu-24.04
 nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ source data-center/venv/bin/activate
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd dc_lab/clab/sonic-clab/
@@ -5,42 +707,58 @@ nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ source data-center/venv/bin/activate
 
 PLAY [ECMP verify · leaf BGP sessions and route propagation] ***********************************************************************************************
 
-TASK [Collect 'show ip bgp ipv4 unicast summary' from the bgp container] ***********************************************************************************
-ok: [Leaf-L1]
+TASK [Detect the FRR/BGP container name on this switch] ****************************************************************************************************
 ok: [Leaf-L4]
 ok: [Leaf-L3]
 ok: [Leaf-L2]
+ok: [Border-Leaf1]
+ok: [Leaf-L1]
+ok: [Border-Leaf2]
+
+TASK [Collect BGP ipv4 summary + full route JSON via vtysh] ************************************************************************************************
+ok: [Leaf-L3]
+ok: [Leaf-L1]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Leaf-L2]
+ok: [Border-Leaf2]
+
+TASK [Split summary and route-JSON sections] ***************************************************************************************************************
+ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
 ok: [Border-Leaf1]
 ok: [Border-Leaf2]
 
 TASK [Count Established sessions] **************************************************************************************************************************
-ok: [Leaf-L1]
-ok: [Leaf-L3]
-ok: [Border-Leaf1]
-ok: [Leaf-L2]
-ok: [Leaf-L4]
-ok: [Border-Leaf2]
-
-TASK [Dump the installed (zebra/FIB) IPv4 routing table as JSON] *******************************************************************************************
-ok: [Leaf-L3]
-ok: [Border-Leaf1]
 ok: [Leaf-L2]
 ok: [Leaf-L1]
+ok: [Leaf-L3]
 ok: [Leaf-L4]
+ok: [Border-Leaf1]
 ok: [Border-Leaf2]
 
 TASK [Extract the /32 cluster prefixes actually installed on this leaf] ************************************************************************************
-ok: [Leaf-L1]
 ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L4]
+ok: [Leaf-L3]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [Fallback: default present list to empty if JSON was unparseable] *************************************************************************************
+ok: [Leaf-L2]
+ok: [Leaf-L1]
 ok: [Leaf-L3]
 ok: [Leaf-L4]
 ok: [Border-Leaf1]
 ok: [Border-Leaf2]
 
 TASK [Compute cluster /32s MISSING from this leaf (blackhole legs)] ****************************************************************************************
+ok: [Leaf-L1]
 ok: [Leaf-L2]
 ok: [Leaf-L3]
-ok: [Leaf-L1]
 ok: [Leaf-L4]
 ok: [Border-Leaf1]
 ok: [Border-Leaf2]
@@ -48,50 +766,56 @@ ok: [Border-Leaf2]
 TASK [REPORT · Leaf-L1] ************************************************************************************************************************************
 ok: [Leaf-L1] => {
     "msg": [
-        "leaf=Leaf-L1  established_sessions=0",
+        "leaf=Leaf-L1  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 ok: [Leaf-L2] => {
     "msg": [
-        "leaf=Leaf-L2  established_sessions=0",
+        "leaf=Leaf-L2  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 ok: [Leaf-L3] => {
     "msg": [
-        "leaf=Leaf-L3  established_sessions=0",
+        "leaf=Leaf-L3  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 ok: [Leaf-L4] => {
     "msg": [
-        "leaf=Leaf-L4  established_sessions=0",
+        "leaf=Leaf-L4  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 ok: [Border-Leaf1] => {
     "msg": [
-        "leaf=Border-Leaf1  established_sessions=0",
+        "leaf=Border-Leaf1  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 ok: [Border-Leaf2] => {
     "msg": [
-        "leaf=Border-Leaf2  established_sessions=0",
+        "leaf=Border-Leaf2  frr_container='bgp'  collect_rc=0",
+        "established_sessions=0",
         "installed_cluster_/32=0 / expected=16",
-        "MISSING_ON_THIS_LEAF=['10.0.30.4', '10.0.20.4', '10.0.10.3', '10.0.30.1', '10.0.30.2', '10.0.10.5', '10.0.20.5', '10.0.30.3', '10.0.20.1', '10.0.30.5', '10.0.20.2', '10.0.20.3', '10.0.10.4', '10.0.10.6', '10.0.10.1', '10.0.10.2']",
-        ">>> This leaf is a blackhole leg for the prefixes above <<<"
+        "MISSING_ON_THIS_LEAF=['10.0.10.5', '10.0.10.6', '10.0.20.3', '10.0.30.2', '10.0.20.1', '10.0.30.4', '10.0.20.5', '10.0.20.4', '10.0.30.1', '10.0.10.4', '10.0.20.2', '10.0.10.2', '10.0.10.1', '10.0.30.5', '10.0.10.3', '10.0.30.3']",
+        "COLLECTION FAILED (see stderr) - result NOT trustworthy: "
     ]
 }
 
@@ -99,229 +823,229 @@ PLAY [ECMP verify · host next-hops and cluster-subnet reachability] ***********
 
 TASK [Show installed nexthops to each peer /32 (detect single-leg ECMP)] ***********************************************************************************
 ok: [k8s-master-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [k8s-db-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-db-01] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-db-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [k8s-db-02] => (item=k8s-master-02 (10.0.20.1))
-ok: [k8s-master-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [k8s-db-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [k8s-master-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-master-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-master-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-db-02] => (item=k8s-master-03 (10.0.30.1))
-ok: [k8s-master-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-db-01] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-master-02] => (item=k8s-db-01 (10.0.10.2))
+ok: [k8s-db-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [k8s-master-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-db-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-master-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [k8s-db-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-master-02] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-master-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-db-01] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-db-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-master-01] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-master-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-master-03] => (item=k8s-db-03 (10.0.30.2))
-ok: [k8s-db-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [k8s-db-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [k8s-db-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [k8s-db-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [k8s-db-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-db-02] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-master-02] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-master-03] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [k8s-db-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-master-03] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-master-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-db-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-master-03] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [k8s-master-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-master-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-db-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-master-03] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-master-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-01] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-master-02] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-02] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-db-01] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-master-03] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-db-02] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-master-03] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-01] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-master-02] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-db-02] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-master-03] => (item=MonSrv (10.0.30.4))
 ok: [k8s-master-01] => (item=MonSrv (10.0.30.4))
+ok: [k8s-db-01] => (item=MonSrv (10.0.30.4))
+ok: [k8s-master-03] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-master-02] => (item=MonSrv (10.0.30.4))
 ok: [k8s-db-02] => (item=MonSrv (10.0.30.4))
-ok: [k8s-db-01] => (item=MonSrv (10.0.30.4))
-ok: [k8s-master-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-01] => (item=osh-comp-01 (10.0.10.5))
+ok: [k8s-master-03] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-db-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-db-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-db-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-master-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [k8s-master-03] => (item=MonSrv (10.0.30.4))
+ok: [k8s-db-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-master-02] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-db-02] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-db-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-master-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-master-03] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-db-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-master-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-db-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-db-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-master-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [k8s-master-03] => (item=osh-comp-04 (10.0.10.6))
-ok: [k8s-db-02] => (item=osh-comp-04 (10.0.10.6))
-ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-master-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-db-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [k8s-db-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-db-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-master-03] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-master-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-ctrl-01] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
-ok: [k8s-db-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [k8s-db-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-ctrl-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-ctrl-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-ctrl-03] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-net-01] => (item=k8s-master-01 (10.0.10.1))
-ok: [k8s-db-03] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-ctrl-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-ctrl-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-ctrl-03] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-net-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [k8s-db-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-01] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-ctrl-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [k8s-db-03] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-ctrl-02] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-ctrl-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-net-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-ctrl-01] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-db-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-net-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-03] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-net-01] => (item=k8s-master-01 (10.0.10.1))
+ok: [osh-ctrl-01] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-ctrl-03] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-03] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-ctrl-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [k8s-db-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-ctrl-03] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-net-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-ctrl-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-ctrl-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [k8s-db-03] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-ctrl-02] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-ctrl-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-db-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-net-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-ctrl-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-ctrl-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-db-03] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-net-01] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-ctrl-03] => (item=k8s-db-02 (10.0.20.2))
+ok: [k8s-db-03] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-01] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-ctrl-02] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-net-01] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-ctrl-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-ctrl-03] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-03] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-ctrl-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-ctrl-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-ctrl-03] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-ctrl-01] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-ctrl-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-ctrl-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [k8s-db-03] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-net-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-db-03] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-ctrl-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-net-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-ctrl-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-03] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-03] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-ctrl-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-net-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-03] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-ctrl-02] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-net-01] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [osh-ctrl-01] => (item=MonSrv (10.0.30.4))
 ok: [osh-ctrl-03] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-db-03] => (item=MonSrv (10.0.30.4))
-ok: [osh-ctrl-02] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-db-03] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-ctrl-02] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-net-01] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-ctrl-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-03] => (item=MonSrv (10.0.30.4))
-ok: [k8s-db-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-ctrl-02] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-net-01] => (item=MonSrv (10.0.30.4))
+ok: [k8s-db-03] => (item=MonSrv (10.0.30.4))
+ok: [osh-ctrl-02] => (item=MonSrv (10.0.30.4))
+ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-db-03] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-ctrl-02] => (item=MonSrv (10.0.30.4))
-ok: [osh-net-01] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-ctrl-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-ctrl-03] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-db-03] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-db-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-ctrl-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-net-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-ctrl-03] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-db-03] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-net-01] => (item=MonSrv (10.0.30.4))
+ok: [osh-ctrl-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-ctrl-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-db-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-02] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-ctrl-03] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-net-01] => (item=osh-comp-01 (10.0.10.5))
+ok: [osh-ctrl-03] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-ctrl-01] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-db-03] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-ctrl-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-net-01] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-net-01] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-ctrl-03] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-db-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-ctrl-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-net-01] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-net-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [MonSrv] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-net-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-01] => (item=k8s-master-01 (10.0.10.1))
-ok: [MonSrv] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-net-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-net-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [MonSrv] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-net-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-comp-02] => (item=k8s-master-02 (10.0.20.1))
+ok: [MonSrv] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-comp-01] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-net-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-comp-03] => (item=k8s-master-01 (10.0.10.1))
-ok: [MonSrv] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-comp-02] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-comp-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-net-02] => (item=k8s-db-02 (10.0.20.2))
-ok: [MonSrv] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-comp-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [MonSrv] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-net-02] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-comp-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-comp-01] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-net-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [MonSrv] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-comp-03] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-net-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-comp-03] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-comp-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-comp-02] => (item=k8s-db-02 (10.0.20.2))
 ok: [MonSrv] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-comp-03] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-net-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-comp-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-comp-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-net-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-comp-03] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-comp-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [MonSrv] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-02] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-comp-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-net-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-comp-03] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-01] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [MonSrv] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-03] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-net-02] => (item=osh-net-01 (10.0.10.4))
-ok: [MonSrv] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-comp-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-comp-03] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-comp-02] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-net-02] => (item=MonSrv (10.0.30.4))
-ok: [MonSrv] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-comp-01] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-comp-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-comp-01] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-comp-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-comp-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-net-02] => (item=MonSrv (10.0.30.4))
+ok: [MonSrv] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-comp-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [MonSrv] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-comp-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-comp-01] => (item=osh-net-01 (10.0.10.4))
+ok: [MonSrv] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-net-02] => (item=osh-comp-01 (10.0.10.5))
+ok: [osh-comp-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-comp-02] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-comp-01] => (item=MonSrv (10.0.30.4))
-ok: [MonSrv] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-03] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [MonSrv] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-net-02] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-comp-01] => (item=MonSrv (10.0.30.4))
 ok: [osh-comp-02] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-comp-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [MonSrv] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-03] => (item=osh-net-01 (10.0.10.4))
+ok: [MonSrv] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-net-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-comp-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-02] => (item=MonSrv (10.0.30.4))
-ok: [osh-comp-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [MonSrv] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-03] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-net-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [MonSrv] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-comp-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [MonSrv] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-03] => (item=MonSrv (10.0.30.4))
-ok: [osh-comp-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [MonSrv] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-comp-01] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-comp-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [MonSrv] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-comp-02] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-04] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-comp-04] => (item=k8s-master-02 (10.0.20.1))
@@ -347,13 +1071,13 @@ ok: [k8s-db-01]
 ok: [k8s-db-02]
 ok: [k8s-db-03]
 ok: [osh-ctrl-01]
-ok: [osh-ctrl-02]
 ok: [osh-ctrl-03]
+ok: [osh-ctrl-02]
 ok: [osh-net-01]
 ok: [osh-net-02]
 ok: [MonSrv]
-ok: [osh-comp-01]
 ok: [osh-comp-02]
+ok: [osh-comp-01]
 ok: [osh-comp-03]
 ok: [osh-comp-04]
 
@@ -361,8 +1085,8 @@ TASK [Non-fatal ping matrix to every peer cluster IP] **************************
 ok: [k8s-db-01] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-db-02] => (item=k8s-master-01 (10.0.10.1))
-ok: [k8s-master-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-master-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-db-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-db-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-master-01] => (item=k8s-master-03 (10.0.30.1))
@@ -373,216 +1097,216 @@ ok: [k8s-master-01] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-db-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [k8s-master-03] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-master-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-master-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-db-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [k8s-master-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-db-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-master-02] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-db-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-master-03] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-db-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-master-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-master-03] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-master-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-db-01] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [k8s-master-03] => (item=k8s-db-03 (10.0.30.2))
-ok: [k8s-db-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-01] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [k8s-db-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [k8s-db-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-db-02] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [k8s-master-03] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-db-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-db-01] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [k8s-master-02] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-db-01] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-01] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-db-01] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-master-01] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-master-03] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-master-01] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-db-01] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-db-02] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-master-03] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-master-02] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-master-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-db-02] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-master-03] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-master-02] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-master-03] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-master-01] => (item=MonSrv (10.0.30.4))
 ok: [k8s-db-02] => (item=MonSrv (10.0.30.4))
 ok: [k8s-master-02] => (item=MonSrv (10.0.30.4))
-ok: [k8s-master-01] => (item=MonSrv (10.0.30.4))
 ok: [k8s-db-01] => (item=MonSrv (10.0.30.4))
-ok: [k8s-master-03] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-master-03] => (item=MonSrv (10.0.30.4))
-ok: [k8s-db-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-master-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-01] => (item=osh-comp-01 (10.0.10.5))
+ok: [k8s-master-02] => (item=osh-comp-01 (10.0.10.5))
+ok: [k8s-db-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-db-01] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-db-02] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-master-02] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-master-03] => (item=osh-comp-01 (10.0.10.5))
+ok: [k8s-master-02] => (item=osh-comp-02 (10.0.20.5))
+ok: [k8s-db-02] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-master-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-db-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-db-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-master-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-master-03] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-db-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-master-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-db-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-master-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-db-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-master-03] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-db-02] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-master-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [k8s-db-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-db-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-db-01] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-db-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-ctrl-01] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-db-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-net-01] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-ctrl-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-db-03] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-ctrl-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-ctrl-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-ctrl-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-ctrl-01] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-ctrl-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-net-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-db-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-03] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-ctrl-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-db-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-ctrl-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-ctrl-03] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-ctrl-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-03] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-ctrl-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-ctrl-03] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-net-01] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-ctrl-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-net-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-db-03] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-ctrl-02] => (item=k8s-db-01 (10.0.10.2))
+ok: [k8s-db-03] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-01] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-ctrl-03] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-ctrl-02] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-ctrl-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-db-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-ctrl-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-net-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [k8s-db-03] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-ctrl-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-ctrl-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-net-01] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-ctrl-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-ctrl-03] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-ctrl-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [k8s-db-03] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-net-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-ctrl-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-ctrl-03] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-03] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-net-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-ctrl-03] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-ctrl-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-ctrl-01] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-03] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-net-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-ctrl-03] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-net-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-db-03] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-ctrl-03] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-net-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-03] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-03] => (item=MonSrv (10.0.30.4))
-ok: [k8s-db-03] => (item=MonSrv (10.0.30.4))
 ok: [osh-ctrl-01] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
+ok: [k8s-db-03] => (item=MonSrv (10.0.30.4))
 ok: [osh-ctrl-02] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-02] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-db-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-01] => (item=MonSrv (10.0.30.4))
+ok: [k8s-db-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-net-01] => (item=MonSrv (10.0.30.4))
 ok: [osh-ctrl-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-02] => (item=MonSrv (10.0.30.4))
-ok: [k8s-db-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-01] => (item=osh-comp-01 (10.0.10.5))
+ok: [k8s-db-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-03] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-net-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-db-03] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-ctrl-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-net-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-01] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-net-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-db-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-ctrl-02] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-ctrl-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-ctrl-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-net-01] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-net-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [osh-ctrl-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-ctrl-01] => (item=osh-comp-04 (10.0.10.6))
 ok: [MonSrv] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-net-02] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-net-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [osh-net-01] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-ctrl-02] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-net-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-net-02] => (item=k8s-master-02 (10.0.20.1))
 ok: [MonSrv] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-net-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-01] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-comp-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [MonSrv] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-net-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-comp-02] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-comp-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-comp-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [MonSrv] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-comp-02] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-net-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-comp-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-net-02] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-comp-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-03] => (item=k8s-master-02 (10.0.20.1))
 ok: [MonSrv] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-comp-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-net-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-03] => (item=k8s-master-03 (10.0.30.1))
 ok: [MonSrv] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-net-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-comp-01] => (item=k8s-db-01 (10.0.10.2))
 ok: [MonSrv] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-net-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-02] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-comp-01] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-comp-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-net-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [MonSrv] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-comp-02] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-comp-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-comp-02] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-net-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-comp-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [MonSrv] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-comp-02] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-net-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-comp-03] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-net-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [MonSrv] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-comp-02] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-net-02] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-comp-01] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-comp-02] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [osh-comp-03] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-comp-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [MonSrv] => (item=osh-net-02 (10.0.20.4))
-ok: [osh-net-02] => (item=MonSrv (10.0.30.4))
+ok: [osh-comp-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-comp-03] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-net-02] => (item=MonSrv (10.0.30.4))
+ok: [osh-comp-03] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-comp-01] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [osh-comp-02] => (item=osh-net-01 (10.0.10.4))
 ok: [MonSrv] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-03] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-net-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-02] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-comp-03] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-comp-01] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [osh-net-02] => (item=osh-comp-02 (10.0.20.5))
-ok: [MonSrv] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-02] => (item=MonSrv (10.0.30.4))
-ok: [osh-comp-03] => (item=osh-net-01 (10.0.10.4))
-ok: [MonSrv] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-03] => (item=osh-net-02 (10.0.20.4))
+ok: [MonSrv] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-01] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-net-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [MonSrv] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-comp-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-03] => (item=MonSrv (10.0.30.4))
+ok: [MonSrv] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-comp-02] => (item=osh-comp-01 (10.0.10.5))
+ok: [MonSrv] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-net-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [osh-comp-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-comp-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-comp-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-04] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-comp-02] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-comp-01] => (item=MonSrv (10.0.30.4))
+ok: [osh-comp-04] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-comp-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-comp-01] => (item=MonSrv (10.0.30.4))
+ok: [osh-comp-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-04] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-comp-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-comp-04] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-04] => (item=k8s-db-01 (10.0.10.2))
@@ -600,9 +1324,9 @@ ok: [osh-comp-04] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-04] => (item=osh-comp-03 (10.0.30.5))
 
 TASK [Summarise reachability] ******************************************************************************************************************************
+ok: [k8s-master-02]
 ok: [k8s-master-01]
 ok: [k8s-master-03]
-ok: [k8s-master-02]
 ok: [k8s-db-01]
 ok: [k8s-db-02]
 ok: [k8s-db-03]
@@ -610,8 +1334,8 @@ ok: [osh-ctrl-01]
 ok: [osh-ctrl-02]
 ok: [osh-ctrl-03]
 ok: [osh-net-01]
-ok: [MonSrv]
 ok: [osh-net-02]
+ok: [MonSrv]
 ok: [osh-comp-01]
 ok: [osh-comp-02]
 ok: [osh-comp-03]
@@ -621,130 +1345,130 @@ TASK [Show the installed route for each UNREACHABLE peer (nexthop diagnosis)] **
 ok: [k8s-master-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-db-01] => (item=k8s-master-02 (10.0.20.1))
 ok: [k8s-db-02] => (item=k8s-master-01 (10.0.10.1))
-ok: [k8s-master-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-master-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-master-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [k8s-db-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [k8s-db-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [k8s-master-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [k8s-master-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [k8s-master-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [k8s-db-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-master-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [k8s-db-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [k8s-db-01] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-master-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [k8s-master-03] => (item=k8s-db-01 (10.0.10.2))
+ok: [k8s-master-02] => (item=k8s-db-01 (10.0.10.2))
+ok: [k8s-db-01] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [k8s-master-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [k8s-db-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [k8s-db-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [k8s-master-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-master-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-master-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-master-02] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [k8s-db-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [k8s-master-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-master-01] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-02] => (item=osh-ctrl-03 (10.0.30.3))
 ok: [k8s-master-03] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [k8s-master-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-master-01] => (item=osh-net-02 (10.0.20.4))
 ok: [k8s-db-02] => (item=osh-net-01 (10.0.10.4))
-ok: [k8s-db-01] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-master-02] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-master-03] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [k8s-master-02] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-db-01] => (item=MonSrv (10.0.30.4))
 ok: [k8s-master-01] => (item=MonSrv (10.0.30.4))
 ok: [k8s-db-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-db-01] => (item=MonSrv (10.0.30.4))
-ok: [k8s-master-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-03] => (item=osh-net-01 (10.0.10.4))
+ok: [k8s-db-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-master-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-db-02] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-db-01] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-master-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-master-03] => (item=osh-net-02 (10.0.20.4))
-ok: [k8s-master-01] => (item=osh-comp-02 (10.0.20.5))
+ok: [k8s-master-02] => (item=osh-comp-01 (10.0.10.5))
 ok: [k8s-db-01] => (item=osh-comp-02 (10.0.20.5))
-ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
+ok: [k8s-master-01] => (item=osh-comp-02 (10.0.20.5))
 ok: [k8s-master-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [k8s-master-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [k8s-master-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-db-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [k8s-master-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [k8s-master-01] => (item=osh-comp-03 (10.0.30.5))
 ok: [k8s-db-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [k8s-master-03] => (item=osh-comp-04 (10.0.10.6))
-ok: [osh-ctrl-02] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-master-03] => (item=osh-comp-02 (10.0.20.5))
+ok: [k8s-master-02] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-db-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
-ok: [osh-ctrl-03] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-ctrl-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-ctrl-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-ctrl-02] => (item=k8s-master-01 (10.0.10.1))
+ok: [k8s-master-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-db-03] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-ctrl-01] => (item=osh-ctrl-02 (10.0.20.3))
-ok: [osh-net-01] => (item=k8s-master-02 (10.0.20.1))
-ok: [osh-ctrl-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-ctrl-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-01] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-ctrl-01] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-ctrl-02] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-ctrl-03] => (item=k8s-master-01 (10.0.10.1))
 ok: [k8s-db-03] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-net-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-ctrl-03] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-ctrl-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-ctrl-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-ctrl-02] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-ctrl-03] => (item=osh-net-01 (10.0.10.4))
 ok: [k8s-db-03] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-ctrl-01] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-net-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-ctrl-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-ctrl-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-01] => (item=MonSrv (10.0.30.4))
-ok: [osh-ctrl-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-ctrl-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [k8s-db-03] => (item=osh-comp-02 (10.0.20.5))
-ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-net-01] => (item=k8s-master-03 (10.0.30.1))
+ok: [osh-ctrl-02] => (item=osh-ctrl-03 (10.0.30.3))
+ok: [osh-ctrl-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-ctrl-01] => (item=osh-comp-01 (10.0.10.5))
+ok: [osh-net-01] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-ctrl-02] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-net-01] => (item=MonSrv (10.0.30.4))
+ok: [osh-ctrl-03] => (item=osh-comp-04 (10.0.10.6))
 ok: [osh-net-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-ctrl-01] => (item=osh-comp-02 (10.0.20.5))
+ok: [osh-net-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-ctrl-02] => (item=MonSrv (10.0.30.4))
-ok: [MonSrv] => (item=k8s-master-01 (10.0.10.1))
-ok: [osh-net-01] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-net-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-ctrl-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [MonSrv] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-ctrl-01] => (item=osh-comp-03 (10.0.30.5))
-ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-net-02] => (item=k8s-db-01 (10.0.10.2))
+ok: [osh-net-01] => (item=MonSrv (10.0.30.4))
+ok: [osh-ctrl-02] => (item=osh-comp-01 (10.0.10.5))
+ok: [MonSrv] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-net-02] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-net-01] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-ctrl-02] => (item=osh-comp-04 (10.0.10.6))
-ok: [MonSrv] => (item=k8s-db-02 (10.0.20.2))
+ok: [MonSrv] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-01] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-net-02] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-02] => (item=k8s-master-01 (10.0.10.1))
-ok: [MonSrv] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-net-01] => (item=osh-comp-03 (10.0.30.5))
+ok: [MonSrv] => (item=k8s-db-02 (10.0.20.2))
 ok: [osh-comp-01] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-comp-02] => (item=k8s-master-01 (10.0.10.1))
 ok: [osh-net-02] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-comp-02] => (item=k8s-master-03 (10.0.30.1))
-ok: [osh-comp-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [MonSrv] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-comp-01] => (item=k8s-master-03 (10.0.30.1))
-ok: [MonSrv] => (item=osh-net-02 (10.0.20.4))
+ok: [osh-comp-02] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-net-02] => (item=MonSrv (10.0.30.4))
-ok: [osh-comp-02] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-comp-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [osh-comp-03] => (item=k8s-master-01 (10.0.10.1))
+ok: [MonSrv] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-comp-01] => (item=k8s-db-01 (10.0.10.2))
-ok: [MonSrv] => (item=osh-comp-01 (10.0.10.5))
+ok: [osh-comp-02] => (item=k8s-db-01 (10.0.10.2))
 ok: [osh-net-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-comp-03] => (item=k8s-master-02 (10.0.20.1))
+ok: [MonSrv] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-01] => (item=k8s-db-02 (10.0.20.2))
+ok: [osh-comp-02] => (item=osh-ctrl-01 (10.0.10.3))
+ok: [osh-net-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [MonSrv] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-03] => (item=k8s-db-01 (10.0.10.2))
-ok: [osh-net-02] => (item=osh-comp-03 (10.0.30.5))
+ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-02] => (item=osh-net-01 (10.0.10.4))
 ok: [osh-comp-03] => (item=k8s-db-02 (10.0.20.2))
-ok: [osh-comp-01] => (item=k8s-db-03 (10.0.30.2))
+ok: [osh-comp-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-comp-04] => (item=k8s-master-02 (10.0.20.1))
 ok: [osh-comp-02] => (item=osh-comp-01 (10.0.10.5))
-ok: [osh-comp-01] => (item=osh-ctrl-01 (10.0.10.3))
 ok: [osh-comp-03] => (item=osh-ctrl-01 (10.0.10.3))
-ok: [osh-comp-04] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-02] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-03] => (item=osh-net-01 (10.0.10.4))
+ok: [osh-comp-04] => (item=k8s-master-03 (10.0.30.1))
 ok: [osh-comp-01] => (item=osh-ctrl-02 (10.0.20.3))
+ok: [osh-comp-03] => (item=osh-comp-01 (10.0.10.5))
 ok: [osh-comp-04] => (item=k8s-db-03 (10.0.30.2))
 ok: [osh-comp-01] => (item=osh-ctrl-03 (10.0.30.3))
-ok: [osh-comp-03] => (item=osh-comp-01 (10.0.10.5))
+ok: [osh-comp-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-04] => (item=osh-ctrl-02 (10.0.20.3))
 ok: [osh-comp-01] => (item=osh-net-01 (10.0.10.4))
-ok: [osh-comp-03] => (item=osh-comp-02 (10.0.20.5))
 ok: [osh-comp-04] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-comp-01] => (item=osh-net-02 (10.0.20.4))
 ok: [osh-comp-04] => (item=MonSrv (10.0.30.4))
@@ -757,20 +1481,20 @@ ok: [osh-comp-04] => (item=osh-comp-03 (10.0.30.5))
 ok: [osh-comp-01] => (item=osh-comp-04 (10.0.10.6))
 
 TASK [REPORT · k8s-master-01 (10.0.10.1)] ******************************************************************************************************************
-ok: [k8s-master-02] => {
-    "msg": [
-        "host=k8s-master-02  cluster_ip=10.0.20.1",
-        "single_leg_or_noroute=none (full dual-homed ECMP)",
-        "reachable=6/15",
-        "UNREACHABLE=k8s-master-01, k8s-master-03, k8s-db-01, osh-ctrl-01, osh-ctrl-03, osh-net-01, osh-comp-01, osh-comp-03, osh-comp-04"
-    ]
-}
 ok: [k8s-master-01] => {
     "msg": [
         "host=k8s-master-01  cluster_ip=10.0.10.1",
         "single_leg_or_noroute=none (full dual-homed ECMP)",
         "reachable=5/15",
         "UNREACHABLE=k8s-master-02, k8s-master-03, k8s-db-02, k8s-db-03, osh-ctrl-03, osh-net-02, MonSrv, osh-comp-01, osh-comp-02, osh-comp-03"
+    ]
+}
+ok: [k8s-master-02] => {
+    "msg": [
+        "host=k8s-master-02  cluster_ip=10.0.20.1",
+        "single_leg_or_noroute=none (full dual-homed ECMP)",
+        "reachable=6/15",
+        "UNREACHABLE=k8s-master-01, k8s-master-03, k8s-db-01, osh-ctrl-01, osh-ctrl-03, osh-net-01, osh-comp-01, osh-comp-03, osh-comp-04"
     ]
 }
 ok: [k8s-master-03] => {
@@ -813,20 +1537,20 @@ ok: [osh-ctrl-01] => {
         "UNREACHABLE=k8s-master-02, k8s-db-03, osh-ctrl-02, osh-net-02, MonSrv, osh-comp-01, osh-comp-02, osh-comp-03"
     ]
 }
-ok: [osh-ctrl-02] => {
-    "msg": [
-        "host=osh-ctrl-02  cluster_ip=10.0.20.3",
-        "single_leg_or_noroute=none (full dual-homed ECMP)",
-        "reachable=6/15",
-        "UNREACHABLE=k8s-master-01, k8s-master-03, k8s-db-01, k8s-db-03, osh-ctrl-03, osh-net-01, MonSrv, osh-comp-01, osh-comp-04"
-    ]
-}
 ok: [osh-ctrl-03] => {
     "msg": [
         "host=osh-ctrl-03  cluster_ip=10.0.30.3",
         "single_leg_or_noroute=none (full dual-homed ECMP)",
         "reachable=10/15",
         "UNREACHABLE=k8s-master-01, osh-net-01, osh-comp-01, osh-comp-02, osh-comp-04"
+    ]
+}
+ok: [osh-ctrl-02] => {
+    "msg": [
+        "host=osh-ctrl-02  cluster_ip=10.0.20.3",
+        "single_leg_or_noroute=none (full dual-homed ECMP)",
+        "reachable=6/15",
+        "UNREACHABLE=k8s-master-01, k8s-master-03, k8s-db-01, k8s-db-03, osh-ctrl-03, osh-net-01, MonSrv, osh-comp-01, osh-comp-04"
     ]
 }
 ok: [osh-net-01] => {
@@ -837,20 +1561,20 @@ ok: [osh-net-01] => {
         "UNREACHABLE=k8s-master-02, k8s-master-03, k8s-db-02, osh-net-02, MonSrv, osh-comp-01, osh-comp-03"
     ]
 }
-ok: [osh-net-02] => {
-    "msg": [
-        "host=osh-net-02  cluster_ip=10.0.20.4",
-        "single_leg_or_noroute=none (full dual-homed ECMP)",
-        "reachable=7/15",
-        "UNREACHABLE=k8s-master-01, k8s-db-01, k8s-db-03, osh-ctrl-01, osh-ctrl-03, MonSrv, osh-comp-01, osh-comp-03"
-    ]
-}
 ok: [MonSrv] => {
     "msg": [
         "host=MonSrv  cluster_ip=10.0.30.4",
         "single_leg_or_noroute=none (full dual-homed ECMP)",
         "reachable=8/15",
         "UNREACHABLE=k8s-master-01, k8s-master-02, k8s-db-02, osh-net-01, osh-net-02, osh-comp-01, osh-comp-02"
+    ]
+}
+ok: [osh-net-02] => {
+    "msg": [
+        "host=osh-net-02  cluster_ip=10.0.20.4",
+        "single_leg_or_noroute=none (full dual-homed ECMP)",
+        "reachable=7/15",
+        "UNREACHABLE=k8s-master-01, k8s-db-01, k8s-db-03, osh-ctrl-01, osh-ctrl-03, MonSrv, osh-comp-01, osh-comp-03"
     ]
 }
 ok: [osh-comp-01] => {
@@ -887,11 +1611,11 @@ ok: [osh-comp-04] => {
 }
 
 TASK [REPORT · installed routes for unreachable peers on k8s-master-01] ************************************************************************************
-ok: [k8s-master-01] => (item=k8s-master-02) => {
-    "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
 ok: [k8s-master-02] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
+ok: [k8s-master-01] => (item=k8s-master-02) => {
+    "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [k8s-master-03] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
@@ -902,11 +1626,11 @@ ok: [k8s-db-01] => (item=k8s-master-02) => {
 ok: [k8s-db-02] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 87 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [k8s-master-01] => (item=k8s-master-03) => {
-    "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
 ok: [k8s-master-02] => (item=k8s-master-03) => {
     "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
+ok: [k8s-master-01] => (item=k8s-master-03) => {
+    "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [k8s-master-03] => (item=k8s-master-02) => {
     "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
@@ -965,11 +1689,11 @@ ok: [k8s-db-02] => (item=osh-ctrl-03) => {
 ok: [k8s-master-02] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [k8s-master-01] => (item=osh-net-02) => {
-    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
 ok: [k8s-master-03] => (item=osh-ctrl-02) => {
     "msg": "osh-ctrl-02 (10.0.20.3) -> 10.0.20.3 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+}
+ok: [k8s-master-01] => (item=osh-net-02) => {
+    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [k8s-db-01] => (item=osh-net-02) => {
     "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 55 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
@@ -977,11 +1701,11 @@ ok: [k8s-db-01] => (item=osh-net-02) => {
 ok: [k8s-db-02] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 87 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [k8s-master-02] => (item=osh-comp-01) => {
-    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
 ok: [k8s-master-01] => (item=MonSrv) => {
     "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
+ok: [k8s-master-02] => (item=osh-comp-01) => {
+    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [k8s-master-03] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
@@ -992,14 +1716,14 @@ ok: [k8s-db-01] => (item=MonSrv) => {
 ok: [k8s-db-02] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 87 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
+ok: [k8s-master-03] => (item=osh-net-02) => {
+    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+}
 ok: [k8s-master-02] => (item=osh-comp-03) => {
     "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [k8s-master-01] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [k8s-master-03] => (item=osh-net-02) => {
-    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
 ok: [k8s-db-01] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 55 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
@@ -1007,35 +1731,35 @@ ok: [k8s-db-01] => (item=osh-comp-01) => {
 ok: [k8s-db-02] => (item=osh-comp-03) => {
     "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 87 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [k8s-master-02] => (item=osh-comp-04) => {
-    "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
 ok: [k8s-master-01] => (item=osh-comp-02) => {
     "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [k8s-master-03] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
+ok: [k8s-master-02] => (item=osh-comp-04) => {
+    "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 96 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
 ok: [k8s-db-01] => (item=osh-comp-02) => {
     "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 55 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [k8s-master-01] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [k8s-master-03] => (item=osh-comp-02) => {
     "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
+ok: [k8s-master-01] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 62 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
 ok: [k8s-db-01] => (item=osh-comp-03) => {
     "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 55 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
+ok: [k8s-master-03] => (item=osh-comp-04) => {
+    "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
 ok: [k8s-db-03] => (item=k8s-db-01) => {
     "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
 ok: [osh-ctrl-01] => (item=k8s-master-02) => {
     "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [k8s-master-03] => (item=osh-comp-04) => {
-    "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 36 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
 ok: [k8s-db-03] => (item=osh-ctrl-01) => {
     "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
@@ -1046,35 +1770,35 @@ ok: [osh-ctrl-01] => (item=k8s-db-03) => {
 ok: [osh-ctrl-02] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [k8s-db-03] => (item=osh-ctrl-02) => {
-    "msg": "osh-ctrl-02 (10.0.20.3) -> 10.0.20.3 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
-}
 ok: [osh-ctrl-03] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
+ok: [k8s-db-03] => (item=osh-ctrl-02) => {
+    "msg": "osh-ctrl-02 (10.0.20.3) -> 10.0.20.3 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
 ok: [osh-ctrl-01] => (item=osh-ctrl-02) => {
     "msg": "osh-ctrl-02 (10.0.20.3) -> 10.0.20.3 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
-ok: [osh-ctrl-02] => (item=k8s-master-03) => {
-    "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
 ok: [osh-net-01] => (item=k8s-master-02) => {
     "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
-ok: [k8s-db-03] => (item=osh-net-01) => {
-    "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-ctrl-02] => (item=k8s-master-03) => {
+    "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [osh-ctrl-03] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
+ok: [k8s-db-03] => (item=osh-net-01) => {
+    "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
 ok: [osh-ctrl-01] => (item=osh-net-02) => {
     "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
-ok: [osh-ctrl-02] => (item=k8s-db-01) => {
-    "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
 ok: [osh-net-01] => (item=k8s-master-03) => {
     "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
+ok: [osh-ctrl-02] => (item=k8s-db-01) => {
+    "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [osh-ctrl-03] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
@@ -1082,29 +1806,35 @@ ok: [osh-ctrl-03] => (item=osh-comp-01) => {
 ok: [k8s-db-03] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
+ok: [osh-net-01] => (item=k8s-db-02) => {
+    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
 ok: [osh-ctrl-01] => (item=MonSrv) => {
     "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [osh-ctrl-02] => (item=k8s-db-03) => {
     "msg": "k8s-db-03 (10.0.30.2) -> 10.0.30.2 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-01] => (item=k8s-db-02) => {
-    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [osh-ctrl-03] => (item=osh-comp-02) => {
-    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
-}
-ok: [k8s-db-03] => (item=osh-comp-02) => {
-    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-net-01] => (item=osh-net-02) => {
+    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [osh-ctrl-01] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
+ok: [k8s-db-03] => (item=osh-comp-02) => {
+    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 34 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
+ok: [osh-ctrl-03] => (item=osh-comp-02) => {
+    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
 ok: [osh-ctrl-02] => (item=osh-ctrl-03) => {
     "msg": "osh-ctrl-03 (10.0.30.3) -> 10.0.30.3 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-01] => (item=osh-net-02) => {
-    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+ok: [osh-net-01] => (item=MonSrv) => {
+    "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+}
+ok: [osh-ctrl-01] => (item=osh-comp-02) => {
+    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [osh-ctrl-03] => (item=osh-comp-04) => {
     "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
@@ -1112,11 +1842,11 @@ ok: [osh-ctrl-03] => (item=osh-comp-04) => {
 ok: [osh-ctrl-02] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-ctrl-01] => (item=osh-comp-02) => {
-    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+ok: [osh-net-01] => (item=osh-comp-01) => {
+    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
-ok: [osh-net-01] => (item=MonSrv) => {
-    "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+ok: [osh-ctrl-01] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [osh-net-02] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
@@ -1124,11 +1854,8 @@ ok: [osh-net-02] => (item=k8s-master-01) => {
 ok: [osh-ctrl-02] => (item=MonSrv) => {
     "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-ctrl-01] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 57 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [osh-net-01] => (item=osh-comp-01) => {
-    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
+ok: [osh-net-01] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
 }
 ok: [osh-net-02] => (item=k8s-db-01) => {
     "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
@@ -1139,101 +1866,104 @@ ok: [MonSrv] => (item=k8s-master-01) => {
 ok: [osh-ctrl-02] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-01] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 25 proto bgp metric 20 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1"
-}
-ok: [osh-net-02] => (item=k8s-db-03) => {
-    "msg": "k8s-db-03 (10.0.30.2) -> 10.0.30.2 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-master-01) => {
+    "msg": "k8s-master-01 (10.0.10.1) -> NO ROUTE INSTALLED"
 }
 ok: [MonSrv] => (item=k8s-master-02) => {
     "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
+ok: [osh-net-02] => (item=k8s-db-03) => {
+    "msg": "k8s-db-03 (10.0.30.2) -> 10.0.30.2 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
 ok: [osh-ctrl-02] => (item=osh-comp-04) => {
     "msg": "osh-comp-04 (10.0.10.6) -> 10.0.10.6 nhid 52 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
-ok: [osh-comp-01] => (item=k8s-master-01) => {
-    "msg": "k8s-master-01 (10.0.10.1) -> NO ROUTE INSTALLED"
-}
-ok: [osh-net-02] => (item=osh-ctrl-01) => {
-    "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
-}
-ok: [MonSrv] => (item=k8s-db-02) => {
-    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
-}
-ok: [osh-comp-01] => (item=k8s-master-02) => {
-    "msg": "k8s-master-02 (10.0.20.1) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-02] => (item=k8s-master-01) => {
     "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-02] => (item=osh-ctrl-03) => {
-    "msg": "osh-ctrl-03 (10.0.30.3) -> 10.0.30.3 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-master-02) => {
+    "msg": "k8s-master-02 (10.0.20.1) -> NO ROUTE INSTALLED"
 }
-ok: [MonSrv] => (item=osh-net-01) => {
-    "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+ok: [MonSrv] => (item=k8s-db-02) => {
+    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
-ok: [osh-comp-03] => (item=k8s-master-01) => {
-    "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
-}
-ok: [osh-comp-01] => (item=k8s-master-03) => {
-    "msg": "k8s-master-03 (10.0.30.1) -> NO ROUTE INSTALLED"
+ok: [osh-net-02] => (item=osh-ctrl-01) => {
+    "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [osh-comp-02] => (item=k8s-master-03) => {
     "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-02] => (item=MonSrv) => {
-    "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-master-03) => {
+    "msg": "k8s-master-03 (10.0.30.1) -> NO ROUTE INSTALLED"
 }
-ok: [MonSrv] => (item=osh-net-02) => {
-    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+ok: [MonSrv] => (item=osh-net-01) => {
+    "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
-ok: [osh-comp-03] => (item=k8s-master-02) => {
-    "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-net-02] => (item=osh-ctrl-03) => {
+    "msg": "osh-ctrl-03 (10.0.30.3) -> 10.0.30.3 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=k8s-db-01) => {
-    "msg": "k8s-db-01 (10.0.10.2) -> NO ROUTE INSTALLED"
+ok: [osh-comp-03] => (item=k8s-master-01) => {
+    "msg": "k8s-master-01 (10.0.10.1) -> 10.0.10.1 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
 ok: [osh-comp-02] => (item=k8s-db-01) => {
     "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-02] => (item=osh-comp-01) => {
-    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-db-01) => {
+    "msg": "k8s-db-01 (10.0.10.2) -> NO ROUTE INSTALLED"
 }
-ok: [MonSrv] => (item=osh-comp-01) => {
-    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+ok: [MonSrv] => (item=osh-net-02) => {
+    "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
-ok: [osh-comp-03] => (item=k8s-db-01) => {
-    "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-net-02] => (item=MonSrv) => {
+    "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=k8s-db-02) => {
-    "msg": "k8s-db-02 (10.0.20.2) -> NO ROUTE INSTALLED"
+ok: [osh-comp-03] => (item=k8s-master-02) => {
+    "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
 ok: [osh-comp-02] => (item=osh-ctrl-01) => {
     "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-net-02] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-db-02) => {
+    "msg": "k8s-db-02 (10.0.20.2) -> NO ROUTE INSTALLED"
 }
-ok: [MonSrv] => (item=osh-comp-02) => {
-    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+ok: [MonSrv] => (item=osh-comp-01) => {
+    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
 }
-ok: [osh-comp-03] => (item=k8s-db-02) => {
-    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-net-02] => (item=osh-comp-01) => {
+    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=k8s-db-03) => {
-    "msg": "k8s-db-03 (10.0.30.2) -> NO ROUTE INSTALLED"
+ok: [osh-comp-03] => (item=k8s-db-01) => {
+    "msg": "k8s-db-01 (10.0.10.2) -> 10.0.10.2 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
 ok: [osh-comp-02] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
-ok: [osh-comp-03] => (item=osh-ctrl-01) => {
-    "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+ok: [osh-comp-01] => (item=k8s-db-03) => {
+    "msg": "k8s-db-03 (10.0.30.2) -> NO ROUTE INSTALLED"
+}
+ok: [MonSrv] => (item=osh-comp-02) => {
+    "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 37 proto bgp metric 20 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1"
+}
+ok: [osh-net-02] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 93 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
+ok: [osh-comp-03] => (item=k8s-db-02) => {
+    "msg": "k8s-db-02 (10.0.20.2) -> 10.0.20.2 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
+ok: [osh-comp-02] => (item=osh-comp-01) => {
+    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
 }
 ok: [osh-comp-01] => (item=osh-ctrl-01) => {
     "msg": "osh-ctrl-01 (10.0.10.3) -> NO ROUTE INSTALLED"
 }
-ok: [osh-comp-02] => (item=osh-comp-01) => {
-    "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-03] => (item=osh-ctrl-01) => {
+    "msg": "osh-ctrl-01 (10.0.10.3) -> 10.0.10.3 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
+}
+ok: [osh-comp-02] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+}
+ok: [osh-comp-01] => (item=osh-ctrl-02) => {
+    "msg": "osh-ctrl-02 (10.0.20.3) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=k8s-master-02) => {
     "msg": "k8s-master-02 (10.0.20.1) -> 10.0.20.1 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
@@ -1241,11 +1971,8 @@ ok: [osh-comp-04] => (item=k8s-master-02) => {
 ok: [osh-comp-03] => (item=osh-net-01) => {
     "msg": "osh-net-01 (10.0.10.4) -> 10.0.10.4 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-ctrl-02) => {
-    "msg": "osh-ctrl-02 (10.0.20.3) -> NO ROUTE INSTALLED"
-}
-ok: [osh-comp-02] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 29 proto bgp metric 20 \n\tnexthop via inet6 fe80::20ca:b1ff:fe8f:a943 dev ens3 weight 1 \n\tnexthop via inet6 fe80::20fa:d4ff:fe58:a0ee dev ens2 weight 1"
+ok: [osh-comp-01] => (item=osh-ctrl-03) => {
+    "msg": "osh-ctrl-03 (10.0.30.3) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=k8s-master-03) => {
     "msg": "k8s-master-03 (10.0.30.1) -> 10.0.30.1 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
@@ -1253,8 +1980,8 @@ ok: [osh-comp-04] => (item=k8s-master-03) => {
 ok: [osh-comp-03] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-ctrl-03) => {
-    "msg": "osh-ctrl-03 (10.0.30.3) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=osh-net-01) => {
+    "msg": "osh-net-01 (10.0.10.4) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=k8s-db-03) => {
     "msg": "k8s-db-03 (10.0.30.2) -> 10.0.30.2 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
@@ -1262,50 +1989,47 @@ ok: [osh-comp-04] => (item=k8s-db-03) => {
 ok: [osh-comp-03] => (item=osh-comp-02) => {
     "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 33 proto bgp metric 20 \n\tnexthop via inet6 fe80::20b1:f4ff:fe60:861c dev ens3 weight 1 \n\tnexthop via inet6 fe80::2059:13ff:fe58:48a0 dev ens2 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-net-01) => {
-    "msg": "osh-net-01 (10.0.10.4) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=osh-net-02) => {
+    "msg": "osh-net-02 (10.0.20.4) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=osh-ctrl-02) => {
     "msg": "osh-ctrl-02 (10.0.20.3) -> 10.0.20.3 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-net-02) => {
-    "msg": "osh-net-02 (10.0.20.4) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=MonSrv) => {
+    "msg": "MonSrv (10.0.30.4) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=osh-net-02) => {
     "msg": "osh-net-02 (10.0.20.4) -> 10.0.20.4 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
 }
-ok: [osh-comp-01] => (item=MonSrv) => {
-    "msg": "MonSrv (10.0.30.4) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=osh-comp-02) => {
+    "msg": "osh-comp-02 (10.0.20.5) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=MonSrv) => {
     "msg": "MonSrv (10.0.30.4) -> 10.0.30.4 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-comp-02) => {
-    "msg": "osh-comp-02 (10.0.20.5) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=osh-comp-03) => {
+    "msg": "osh-comp-03 (10.0.30.5) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=osh-comp-01) => {
     "msg": "osh-comp-01 (10.0.10.5) -> 10.0.10.5 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
 }
-ok: [osh-comp-01] => (item=osh-comp-03) => {
-    "msg": "osh-comp-03 (10.0.30.5) -> NO ROUTE INSTALLED"
+ok: [osh-comp-01] => (item=osh-comp-04) => {
+    "msg": "osh-comp-04 (10.0.10.6) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=osh-comp-02) => {
     "msg": "osh-comp-02 (10.0.20.5) -> 10.0.20.5 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
-}
-ok: [osh-comp-01] => (item=osh-comp-04) => {
-    "msg": "osh-comp-04 (10.0.10.6) -> NO ROUTE INSTALLED"
 }
 ok: [osh-comp-04] => (item=osh-comp-03) => {
     "msg": "osh-comp-03 (10.0.30.5) -> 10.0.30.5 nhid 61 proto bgp metric 20 \n\tnexthop via inet6 fe80::2030:a9ff:feb7:70b9 dev ens2 weight 1 \n\tnexthop via inet6 fe80::20af:94ff:fe14:64bb dev ens3 weight 1"
 }
 
 PLAY RECAP *************************************************************************************************************************************************
-Border-Leaf1               : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Border-Leaf2               : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf-L1                    : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf-L2                    : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf-L3                    : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-Leaf-L4                    : ok=6    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Border-Leaf1               : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Border-Leaf2               : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L2                    : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L3                    : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L4                    : ok=8    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 MonSrv                     : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 k8s-db-01                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 k8s-db-02                  : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
