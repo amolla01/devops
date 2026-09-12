@@ -54,42 +54,52 @@
       changed_when: false
       failed_when: false
 
-    - name: "Collect BGP ipv4 summary + full route JSON via vtysh"
+    - name: "Collect BGP ipv4 summary JSON via vtysh"
       ansible.builtin.shell: |
         set -o pipefail
         ctr="{{ frr_ctr.stdout | trim }}"
-        if [ -z "$ctr" ]; then echo "__NO_FRR_CONTAINER__"; exit 3; fi
-        echo "===SUMMARY==="
-        docker exec "$ctr" vtysh -c "show ip bgp ipv4 unicast summary"
-        echo "===ROUTEJSON==="
-        docker exec "$ctr" vtysh -c "show ip route json"
+        if [ -z "$ctr" ]; then echo '{}'; exit 3; fi
+        docker exec "$ctr" vtysh -c "show ip bgp ipv4 unicast summary json"
       args:
         executable: /bin/bash
-      register: frr_raw
+      register: bgp_sum_raw
       changed_when: false
       failed_when: false
 
-    - name: "RAW DIAG · what vtysh actually returned (first 500 chars)"
-      ansible.builtin.debug:
-        msg:
-          - "leaf={{ inventory_hostname }} container='{{ frr_ctr.stdout | trim }}' rc={{ frr_raw.rc | default('n/a') }} stdout_len={{ frr_raw.stdout | default('') | length }}"
-          - "STDERR: {{ frr_raw.stderr | default('') | trim }}"
-          - "STDOUT_HEAD: {{ frr_raw.stdout | default('') | truncate(500, true, '…') }}"
-
-    - name: "Split summary and route-JSON sections"
-      ansible.builtin.set_fact:
-        bgp_summary_text: "{{ (frr_raw.stdout | default('')).split('===ROUTEJSON===')[0] | regex_replace('^.*?===SUMMARY===', '', multiline=False) }}"
-        route_json_text: "{{ (frr_raw.stdout | default('') ~ '===ROUTEJSON===').split('===ROUTEJSON===')[1] | default('') }}"
+    - name: "Collect full route table JSON via vtysh"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ctr="{{ frr_ctr.stdout | trim }}"
+        if [ -z "$ctr" ]; then echo '{}'; exit 3; fi
+        docker exec "$ctr" vtysh -c "show ip route json"
+      args:
+        executable: /bin/bash
+      register: bgp_route_raw
+      changed_when: false
       failed_when: false
 
-    - name: "Count Established sessions"
+    - name: "RAW DIAG · what vtysh actually returned"
+      ansible.builtin.debug:
+        msg:
+          - "leaf={{ inventory_hostname }} container='{{ frr_ctr.stdout | trim }}' sum_rc={{ bgp_sum_raw.rc | default('n/a') }} sum_len={{ bgp_sum_raw.stdout | default('') | length }} route_rc={{ bgp_route_raw.rc | default('n/a') }} route_len={{ bgp_route_raw.stdout | default('') | length }}"
+          - "SUM_STDERR: {{ bgp_sum_raw.stderr | default('') | trim }}"
+          - "ROUTE_STDERR: {{ bgp_route_raw.stderr | default('') | trim }}"
+
+    - name: "Count Established sessions (from summary JSON)"
       ansible.builtin.set_fact:
-        established_count: "{{ bgp_summary_text | default('') | regex_findall('Established') | length }}"
+        established_count: >-
+          {{ ((bgp_sum_raw.stdout | default('{}') | from_json).peers | default({}))
+             | dict2items | selectattr('value.state', 'equalto', 'Established') | list | length }}
+      failed_when: false
+
+    - name: "Default established_count if summary JSON was unparseable"
+      ansible.builtin.set_fact:
+        established_count: "{{ established_count | default(0) }}"
 
     - name: "Extract the /32 cluster prefixes actually installed on this leaf"
       ansible.builtin.set_fact:
         present_cluster_ips: >-
-          {{ (route_json_text | trim | from_json)
+          {{ (bgp_route_raw.stdout | default('{}') | from_json)
              | dict2items
              | map(attribute='key')
              | select('match', '^10\\.0\\.(10|20|30)\\.[0-9]+/32$')
@@ -108,12 +118,12 @@
     - name: "REPORT · {{ inventory_hostname }}"
       ansible.builtin.debug:
         msg:
-          - "leaf={{ inventory_hostname }}  frr_container='{{ frr_ctr.stdout | trim }}'  collect_rc={{ frr_raw.rc | default('n/a') }}"
+          - "leaf={{ inventory_hostname }}  frr_container='{{ frr_ctr.stdout | trim }}'  sum_rc={{ bgp_sum_raw.rc | default('n/a') }}  route_rc={{ bgp_route_raw.rc | default('n/a') }}"
           - "established_sessions={{ established_count }}"
           - "installed_cluster_/32={{ present_cluster_ips | length }} / expected={{ cluster_expected_ips | length }}"
           - "MISSING_ON_THIS_LEAF={{ missing_cluster_ips }}"
           - >-
-            {{ 'COLLECTION FAILED (see stderr) - result NOT trustworthy: ' ~ (frr_raw.stderr | default('') | trim)
+            {{ 'COLLECTION FAILED (see ROUTE_STDERR) - result NOT trustworthy: ' ~ (bgp_route_raw.stderr | default('') | trim)
                if (present_cluster_ips | length == 0 and cluster_expected_ips | length > 0)
                else ('>>> This leaf is a blackhole leg for the prefixes above <<<'
                      if (missing_cluster_ips | length > 0)

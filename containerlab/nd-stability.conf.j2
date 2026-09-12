@@ -1,0 +1,16 @@
+# Managed by Ansible (roles/linux_frr_bgp) — DO NOT EDIT BY HAND.
+# Keeps RFC5549 IPv6 link-local unnumbered neighbors on the fabric uplinks from
+# being garbage-collected / declared FAILED. A FAILED neighbor tears down the
+# nexthop object that backs an ECMP leg and blackholes flows hashed onto it
+# (the deterministic cluster-subnet "checkerboard"). Longer reachable/stale
+# timers and more solicit retries let a transient probe loss recover instead of
+# flipping the neighbor to FAILED.
+net.ipv6.neigh.default.gc_thresh1 = 1024
+net.ipv6.neigh.default.gc_thresh2 = 4096
+net.ipv6.neigh.default.gc_thresh3 = 8192
+{% for intf in server_interfaces %}
+net.ipv6.neigh.{{ intf.device }}.base_reachable_time_ms = 600000
+net.ipv6.neigh.{{ intf.device }}.gc_stale_time = 600
+net.ipv6.neigh.{{ intf.device }}.mcast_solicit = 8
+net.ipv6.neigh.{{ intf.device }}.ucast_solicit = 8
+{% endfor %}
