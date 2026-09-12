@@ -69,6 +69,13 @@
       changed_when: false
       failed_when: false
 
+    - name: "RAW DIAG · what vtysh actually returned (first 500 chars)"
+      ansible.builtin.debug:
+        msg:
+          - "leaf={{ inventory_hostname }} container='{{ frr_ctr.stdout | trim }}' rc={{ frr_raw.rc | default('n/a') }} stdout_len={{ frr_raw.stdout | default('') | length }}"
+          - "STDERR: {{ frr_raw.stderr | default('') | trim }}"
+          - "STDOUT_HEAD: {{ frr_raw.stdout | default('') | truncate(500, true, '…') }}"
+
     - name: "Split summary and route-JSON sections"
       ansible.builtin.set_fact:
         bgp_summary_text: "{{ (frr_raw.stdout | default('')).split('===ROUTEJSON===')[0] | regex_replace('^.*?===SUMMARY===', '', multiline=False) }}"
