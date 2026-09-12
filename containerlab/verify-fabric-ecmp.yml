@@ -97,14 +97,15 @@
         established_count: "{{ established_count | default(0) }}"
 
     - name: "Extract the /32 cluster prefixes actually installed on this leaf"
+      # Scrape the raw JSON text for "10.0.<rack>.<host>/32" keys instead of
+      # from_json|dict2items: the big route blob intermittently fails structured
+      # parse and silently falls back to [] (false "0 installed"). regex_findall
+      # on the text is immune to that and returns the IP (group) without /32.
       ansible.builtin.set_fact:
         present_cluster_ips: >-
-          {{ (bgp_route_raw.stdout | default('{}') | from_json)
-             | dict2items
-             | map(attribute='key')
-             | select('match', '^10\\.0\\.(10|20|30)\\.[0-9]+/32$')
-             | map('regex_replace', '/32$', '')
-             | list }}
+          {{ bgp_route_raw.stdout | default('')
+             | regex_findall('"(10\\.0\\.(?:10|20|30)\\.[0-9]+)/32"')
+             | unique | list }}
       failed_when: false
 
     - name: "Fallback: default present list to empty if JSON was unparseable"
@@ -123,8 +124,8 @@
           - "installed_cluster_/32={{ present_cluster_ips | length }} / expected={{ cluster_expected_ips | length }}"
           - "MISSING_ON_THIS_LEAF={{ missing_cluster_ips }}"
           - >-
-            {{ 'COLLECTION FAILED (see ROUTE_STDERR) - result NOT trustworthy: ' ~ (bgp_route_raw.stderr | default('') | trim)
-               if (present_cluster_ips | length == 0 and cluster_expected_ips | length > 0)
+            {{ 'COLLECTION FAILED (route_rc=' ~ (bgp_route_raw.rc | default('n/a')) ~ ' route_len=' ~ (bgp_route_raw.stdout | default('') | length) ~ ') - result NOT trustworthy: ' ~ (bgp_route_raw.stderr | default('') | trim)
+               if (bgp_route_raw.rc | default(1) != 0 or (bgp_route_raw.stdout | default('') | length) < 20)
                else ('>>> This leaf is a blackhole leg for the prefixes above <<<'
                      if (missing_cluster_ips | length > 0)
                      else 'OK: all cluster /32s installed on this leaf') }}
