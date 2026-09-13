@@ -1,0 +1,638 @@
+---
+# =============================================================================
+# tcpdump-hop-trace.yml  ·  Hop-by-hop packet-capture trace of ONE (src,dst) pair
+# -----------------------------------------------------------------------------
+# The reachability verifier (verify-fabric-ecmp.yml) tells us WHICH pairs fail.
+# This tool proves WHERE the packet actually
+# dies by simultaneously capturing ICMP on EVERY hop while a ping runs, then
+# counting echo-request vs echo-reply per interface. Reading the counts in
+# topology order pinpoints the exact node + interface + direction of the drop.
+#
+# HOW IT WORKS
+#   1. Every sonic switch + the two endpoint hosts start a per-interface
+#      `timeout <dur> tcpdump ... -w <pcap>` in the background (self-terminating,
+#      filtered to `icmp and host <src_ip> and host <dst_ip>`).
+#   2. The source host fires tagged ping bursts: three default ECMP flows use
+#      ICMP IDs 41001-41003, and forced uplink flows use IDs 42001 onward.
+#   3. Each node waits for its captures to close, then counts echo-request and
+#      echo-reply frames per interface and annotates each interface with the
+#      neighbor it faces (from host_vars wiring).
+#   4. localhost prints a consolidated, topology-ordered walk of the pair so the
+#      drop location is obvious.
+#
+# READING THE OUTPUT (the whole point)
+#   * Follow the REQUEST forward: src-host uplink -> leaf access port -> leaf
+#     fabric port -> spine -> dst leaf fabric -> dst leaf access -> dst host.
+#     The LAST hop where req>0 is where the forward packet was dropped.
+#   * Follow the REPLY backward the same way. The last hop where reply>0 is the
+#     return drop.
+#   * ASYMMETRIC means requests and replies were observed on different interface
+#     sets. It describes the path; it does not identify the drop mechanism.
+#
+# SAFE: capture + ping only. Nothing is reconfigured; every task is non-fatal.
+#
+# USAGE (pick a failing pair from verify-fabric-ecmp.yml):
+#   ansible-playbook -i inventory.yml playbooks/tcpdump-hop-trace.yml \
+#       -e trace_src=k8s-master-01 -e trace_dst=osh-comp-03
+#
+#   # tune the capture window / ping volume if needed:
+#   ... -e capture_dur=45 -e ping_count=20 -e ping_interval=0.3
+#
+# Do NOT pass --limit (it would exclude the switches or the endpoints the trace
+# needs). Scope is fixed to: all sonic_switches + the two named hosts.
+# =============================================================================
+
+# ── PLAY 0 · Preflight: resolve the pair, print usage if missing ─────────────
+- name: "hop-trace · preflight"
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    trace_src: ""
+    trace_dst: ""
+  tasks:
+    - name: "Create a run-unique capture identifier"
+      ansible.builtin.set_fact:
+        trace_run_id: "{{ lookup('pipe', 'date +%Y%m%dT%H%M%S%N') }}"
+
+    - name: "Resolve src/dst cluster IPs from inventory"
+      ansible.builtin.set_fact:
+        src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+        dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+
+    - name: "USAGE · abort cleanly if the pair was not supplied"
+      ansible.builtin.debug:
+        msg:
+          - "MISSING PARAMETERS. Provide a source and destination host from k8s_cluster:"
+          - "  ansible-playbook -i inventory.yml playbooks/tcpdump-hop-trace.yml -e trace_src=<host> -e trace_dst=<host>"
+          - "trace_src='{{ trace_src }}' -> src_ip='{{ src_ip }}'   trace_dst='{{ trace_dst }}' -> dst_ip='{{ dst_ip }}'"
+      when: (src_ip | length == 0) or (dst_ip | length == 0)
+
+    - name: "Announce the trace"
+      ansible.builtin.debug:
+        msg: "TRACING {{ trace_src }} ({{ src_ip }})  ->  {{ trace_dst }} ({{ dst_ip }})   capture_dur={{ capture_dur | default(40) }}s"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+# ── PLAY 1 · Start captures on every fabric switch ───────────────────────────
+- name: "hop-trace · arm captures on the fabric"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    capture_dur: 40
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+  tasks:
+    - name: "Launch a background per-interface tcpdump on every Ethernet port"
+      ansible.builtin.shell: |
+        set -o pipefail
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        command -v tcpdump >/dev/null 2>&1 || { echo "ARM_FAILED reason=NO_TCPDUMP"; exit 0; }
+        mkdir -p "$run_dir"
+        ifaces=$(ls /sys/class/net 2>/dev/null | grep -E '^Ethernet')
+        test -n "$ifaces" || { echo "ARM_FAILED reason=NO_ETHERNET_INTERFACES"; exit 0; }
+        : > "$run_dir/pids"
+        expected=0
+        for i in $ifaces; do
+          nohup timeout {{ capture_dur }} tcpdump -i "$i" -nn -p -s 128 \
+            "icmp and host {{ src_ip }} and host {{ dst_ip }}" \
+            -w "$run_dir/{{ inventory_hostname }}__${i}.pcap" \
+            >"$run_dir/${i}.stdout" 2>"$run_dir/${i}.stderr" &
+          echo "$! $i" >> "$run_dir/pids"
+          expected=$((expected+1))
+        done
+        sleep 1
+        live=0
+        headers=0
+        while read -r pid iface; do
+          kill -0 "$pid" 2>/dev/null && live=$((live+1))
+          test -s "$run_dir/{{ inventory_hostname }}__${iface}.pcap" && headers=$((headers+1))
+        done < "$run_dir/pids"
+        if test "$live" -eq "$expected" && test "$headers" -eq "$expected"; then
+          echo "ARM_OK expected=${expected} live=${live} pcap_headers=${headers} run_dir=${run_dir}"
+        else
+          echo "ARM_FAILED expected=${expected} live=${live} pcap_headers=${headers} run_dir=${run_dir}"
+          for log in "$run_dir"/*.stderr; do
+            test -s "$log" && { echo "--- ${log##*/}"; cat "$log"; }
+          done
+        fi
+      args:
+        executable: /bin/bash
+      register: sw_arm
+      changed_when: false
+      failed_when: false
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Record switch capture readiness"
+      ansible.builtin.set_fact:
+        capture_arm_ready: "{{ 'ARM_OK' in (sw_arm.stdout | default('')) }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "ARMED · {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ sw_arm.stdout | default('skipped') | trim }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+# ── PLAY 2 · Start captures on the two endpoint hosts ────────────────────────
+- name: "hop-trace · arm captures on the endpoints"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    capture_dur: 40
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+  tasks:
+    - name: "Launch a background per-uplink tcpdump on this endpoint"
+      ansible.builtin.shell: |
+        set -o pipefail
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        command -v tcpdump >/dev/null 2>&1 || { echo "ARM_FAILED reason=NO_TCPDUMP"; exit 0; }
+        mkdir -p "$run_dir"
+        : > "$run_dir/pids"
+        expected=0
+        for i in {{ server_interfaces | map(attribute='device') | join(' ') }}; do
+          test -e "/sys/class/net/$i" || { echo "ARM_FAILED reason=MISSING_INTERFACE iface=${i}"; exit 0; }
+          nohup timeout {{ capture_dur }} tcpdump -i "$i" -nn -p -s 128 \
+            "icmp and host {{ src_ip }} and host {{ dst_ip }}" \
+            -w "$run_dir/{{ inventory_hostname }}__${i}.pcap" \
+            >"$run_dir/${i}.stdout" 2>"$run_dir/${i}.stderr" &
+          echo "$! $i" >> "$run_dir/pids"
+          expected=$((expected+1))
+        done
+        sleep 1
+        live=0
+        headers=0
+        while read -r pid iface; do
+          kill -0 "$pid" 2>/dev/null && live=$((live+1))
+          test -s "$run_dir/{{ inventory_hostname }}__${iface}.pcap" && headers=$((headers+1))
+        done < "$run_dir/pids"
+        if test "$live" -eq "$expected" && test "$headers" -eq "$expected"; then
+          echo "ARM_OK expected=${expected} live=${live} pcap_headers=${headers} run_dir=${run_dir}"
+        else
+          echo "ARM_FAILED expected=${expected} live=${live} pcap_headers=${headers} run_dir=${run_dir}"
+          for log in "$run_dir"/*.stderr; do
+            test -s "$log" && { echo "--- ${log##*/}"; cat "$log"; }
+          done
+        fi
+      args:
+        executable: /bin/bash
+      register: host_arm
+      changed_when: false
+      failed_when: false
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Record endpoint capture readiness"
+      ansible.builtin.set_fact:
+        capture_arm_ready: "{{ 'ARM_OK' in (host_arm.stdout | default('')) }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "ARMED · {{ inventory_hostname }}"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ host_arm.stdout | default('skipped') | trim }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+# ── PLAY 2b · Refuse to generate traffic unless every capture is healthy ────
+- name: "hop-trace · validate distributed capture readiness"
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    trace_src: ""
+    trace_dst: ""
+  tasks:
+    - name: "Initialize failed capture node list"
+      ansible.builtin.set_fact:
+        capture_failed_nodes: []
+
+    - name: "Collect nodes that failed to arm"
+      ansible.builtin.set_fact:
+        capture_failed_nodes: "{{ capture_failed_nodes + [item] }}"
+      loop: "{{ (groups['sonic_switches'] | default([])) + [trace_src, trace_dst] }}"
+      when:
+        - item | length > 0
+        - not (hostvars[item].capture_arm_ready | default(false) | bool)
+
+    - name: "Publish capture gate result"
+      ansible.builtin.set_fact:
+        capture_gate_ready: "{{ capture_failed_nodes | length == 0 }}"
+
+    - name: "CAPTURE PREFLIGHT"
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'READY: every required node is capturing; traffic generation may proceed.'
+             if capture_gate_ready
+             else 'NOT READY: traffic generation suppressed; failed nodes=' ~ (capture_failed_nodes | join(',')) }}
+
+# ── PLAY 3 · Fire the ping bursts from the source host ───────────────────────
+- name: "hop-trace · generate traffic from the source"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    ping_count: 15
+    ping_interval: 0.3
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+  tasks:
+    - name: "Let all captures settle before generating traffic"
+      ansible.builtin.pause:
+        seconds: 4
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname == trace_src
+        - hostvars['localhost'].capture_gate_ready | default(false) | bool
+
+    - name: "Ping: 3 default (ECMP-hashed) flows + one forced flow per uplink"
+      ansible.builtin.shell: |
+        set -o pipefail
+        dst="{{ dst_ip }}"
+        echo "== default ECMP flows (ICMP IDs 41001-41003) =="
+        for flow_id in 41001 41002 41003; do
+          ping -e "$flow_id" -c {{ ping_count }} -i {{ ping_interval }} -W 1 "$dst" \
+            | tail -2 | sed "s/^/icmp_id=${flow_id}: /" || true
+        done
+        echo "== forced per-uplink flows (ICMP IDs start at 42001) =="
+        leg_id=42001
+        for leg in {{ server_interfaces | map(attribute='device') | join(' ') }}; do
+          out=$(ping -e "$leg_id" -I "$leg" -c 5 -i 0.3 -W 1 "$dst" | tail -2 | tr '\n' ' ')
+          echo "leg ${leg} icmp_id=${leg_id}: ${out}"
+          leg_id=$((leg_id+1))
+        done
+      args:
+        executable: /bin/bash
+      register: ping_gen
+      changed_when: false
+      failed_when: false
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname == trace_src
+        - hostvars['localhost'].capture_gate_ready | default(false) | bool
+
+    - name: "PING RESULT · {{ inventory_hostname }} -> {{ trace_dst }}"
+      ansible.builtin.debug:
+        msg: "{{ ping_gen.stdout_lines | default(['skipped']) }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname == trace_src
+
+# ── PLAY 4 · Analyze switch captures (per-interface req/reply counts) ─────────
+- name: "hop-trace · analyze fabric captures"
+  hosts: sonic_switches
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    capture_dur: 40
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+  tasks:
+    - name: "Wait for this node's captures to close"
+      ansible.builtin.shell: |
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for i in $(seq 1 {{ (capture_dur | int) + 15 }}); do
+          live=0
+          while read -r pid iface; do
+            kill -0 "$pid" 2>/dev/null && live=$((live+1))
+          done < "$run_dir/pids"
+          test "$live" -eq 0 && exit 0
+          sleep 1
+        done
+        exit 0
+      args:
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Build interface -> neighbor map (fabric switch_ports)"
+      ansible.builtin.set_fact:
+        iface_neighbor: {}
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "  + add switch_ports (fabric uplinks)"
+      ansible.builtin.set_fact:
+        iface_neighbor: "{{ iface_neighbor | combine({ item.key: (item.value.neighbor | default('?')) }) }}"
+      loop: "{{ (switch_ports | default({})) | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "  + add flat access_ports (regular leaves, key 'peer')"
+      ansible.builtin.set_fact:
+        iface_neighbor: "{{ iface_neighbor | combine({ item.key: item.value.peer }) }}"
+      loop: "{{ (access_ports | default({})) | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - item.value.peer is defined
+      failed_when: false
+
+    - name: "  + add nested access_ports children (border leaves)"
+      ansible.builtin.set_fact:
+        iface_neighbor: "{{ iface_neighbor | combine({ item.name: (item.neighbor | default('?')) }) }}"
+      loop: >-
+        {{ (access_ports | default({})) | dict2items
+           | selectattr('value.children', 'defined')
+           | map(attribute='value.children') | flatten }}
+      loop_control:
+        label: "{{ item.name | default('?') }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+      failed_when: false
+
+    - name: "Count echo-request / echo-reply per captured interface"
+      ansible.builtin.shell: |
+        set -o pipefail
+        shopt -s nullglob
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for f in "$run_dir"/{{ inventory_hostname }}__*.pcap; do
+          ifc=${f##*__}; ifc=${ifc%.pcap}
+          req=$(tcpdump -r "$f" -nn 'icmp[icmptype]==icmp-echo' 2>/dev/null | wc -l)
+          rep=$(tcpdump -r "$f" -nn 'icmp[icmptype]==icmp-echoreply' 2>/dev/null | wc -l)
+          echo "${ifc} req=${req} reply=${rep}"
+        done
+      args:
+        executable: /bin/bash
+      register: sw_counts
+      changed_when: false
+      failed_when: false
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Extract packet timeline with Ethernet and ICMP identity"
+      ansible.builtin.shell: |
+        set -o pipefail
+        shopt -s nullglob
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for f in "$run_dir"/{{ inventory_hostname }}__*.pcap; do
+          ifc=${f##*__}; ifc=${ifc%.pcap}
+          tcpdump -r "$f" -nn -e -tttt -vvv 'icmp' 2>/dev/null \
+            | sed "s/^/${ifc} /"
+        done
+      args:
+        executable: /bin/bash
+      register: sw_packets
+      changed_when: false
+      failed_when: false
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Annotate each interface line with the neighbor it faces"
+      ansible.builtin.set_fact:
+        trace_lines: >-
+          {{ trace_lines | default([])
+             + [ item ~ '  (faces ' ~ (iface_neighbor[item.split(' ')[0]] | default('?')) ~ ')' ] }}
+      loop: "{{ sw_counts.stdout_lines | default([]) }}"
+      loop_control:
+        label: "{{ item.split(' ')[0] }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Derive per-node presence + asymmetry verdict"
+      ansible.builtin.set_fact:
+        ifaces_req: >-
+          {{ sw_counts.stdout_lines | default([]) | select('search', 'req=[1-9]')
+             | map('regex_replace', '^(\\S+).*$', '\\1') | list }}
+        ifaces_reply: >-
+          {{ sw_counts.stdout_lines | default([]) | select('search', 'reply=[1-9]')
+             | map('regex_replace', '^(\\S+).*$', '\\1') | list }}
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Compose this node's hop summary (read by the final consolidated walk)"
+      ansible.builtin.set_fact:
+        hop_summary: >-
+          {{ 'req_on=[' ~ (ifaces_req | default([]) | join(',')) ~ ']'
+             ~ ' reply_on=[' ~ (ifaces_reply | default([]) | join(',')) ~ ']'
+             ~ ( '  << ASYMMETRIC PATH'
+                 if ((ifaces_req | default([]) | length > 0)
+                     and (ifaces_reply | default([]) | length > 0)
+                     and ((ifaces_req | sort) != (ifaces_reply | sort)))
+                 else ( '  (transit both ways)'
+                        if ((ifaces_req | default([]) | length > 0)
+                            and (ifaces_reply | default([]) | length > 0))
+                        else ( '  (no ICMP seen)'
+                               if ((ifaces_req | default([]) | length == 0)
+                                   and (ifaces_reply | default([]) | length == 0))
+                               else '  (one-way only)' ))) }}
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "REPORT · {{ inventory_hostname }} interface-level ICMP counts"
+      ansible.builtin.debug:
+        msg: "{{ ['node=' ~ inventory_hostname ~ '  ' ~ (hop_summary | default('(no capture)'))] + (trace_lines | default(['(no pcaps - tcpdump missing or no traffic)'])) }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "PACKETS · {{ inventory_hostname }} timestamp MAC IP ICMP-id sequence"
+      ansible.builtin.debug:
+        msg: "{{ sw_packets.stdout_lines | default(['(no packets captured)']) }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+# ── PLAY 5 · Analyze endpoint captures ───────────────────────────────────────
+- name: "hop-trace · analyze endpoint captures"
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  any_errors_fatal: false
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    capture_dur: 40
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+  tasks:
+    - name: "Wait for this endpoint's captures to close"
+      ansible.builtin.shell: |
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for i in $(seq 1 {{ (capture_dur | int) + 15 }}); do
+          live=0
+          while read -r pid iface; do
+            kill -0 "$pid" 2>/dev/null && live=$((live+1))
+          done < "$run_dir/pids"
+          test "$live" -eq 0 && exit 0
+          sleep 1
+        done
+        exit 0
+      args:
+        executable: /bin/bash
+      changed_when: false
+      failed_when: false
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Build interface -> peer-switch map (server_interfaces)"
+      ansible.builtin.set_fact:
+        iface_neighbor: >-
+          {{ dict(server_interfaces | map(attribute='device') | list
+                  | zip(server_interfaces | map(attribute='peer_switch') | list)) }}
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Count echo-request / echo-reply per uplink"
+      ansible.builtin.shell: |
+        set -o pipefail
+        shopt -s nullglob
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for f in "$run_dir"/{{ inventory_hostname }}__*.pcap; do
+          ifc=${f##*__}; ifc=${ifc%.pcap}
+          req=$(tcpdump -r "$f" -nn 'icmp[icmptype]==icmp-echo' 2>/dev/null | wc -l)
+          rep=$(tcpdump -r "$f" -nn 'icmp[icmptype]==icmp-echoreply' 2>/dev/null | wc -l)
+          echo "${ifc} req=${req} reply=${rep}"
+        done
+      args:
+        executable: /bin/bash
+      register: host_counts
+      changed_when: false
+      failed_when: false
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Extract endpoint packet timeline with Ethernet and ICMP identity"
+      ansible.builtin.shell: |
+        set -o pipefail
+        shopt -s nullglob
+        run_dir="/tmp/hoptrace/{{ hostvars['localhost'].trace_run_id }}"
+        for f in "$run_dir"/{{ inventory_hostname }}__*.pcap; do
+          ifc=${f##*__}; ifc=${ifc%.pcap}
+          tcpdump -r "$f" -nn -e -tttt -vvv 'icmp' 2>/dev/null \
+            | sed "s/^/${ifc} /"
+        done
+      args:
+        executable: /bin/bash
+      register: host_packets
+      changed_when: false
+      failed_when: false
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Derive request/reply presence per uplink"
+      ansible.builtin.set_fact:
+        ifaces_req: >-
+          {{ host_counts.stdout_lines | default([]) | select('search', 'req=[1-9]')
+             | map('regex_replace', '^(\\S+).*$', '\\1') | list }}
+        ifaces_reply: >-
+          {{ host_counts.stdout_lines | default([]) | select('search', 'reply=[1-9]')
+             | map('regex_replace', '^(\\S+).*$', '\\1') | list }}
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Compose endpoint hop summary"
+      ansible.builtin.set_fact:
+        hop_summary: >-
+          {{ 'role=' ~ ('SOURCE' if inventory_hostname == trace_src else 'DEST')
+             ~ ' req_on=[' ~ (ifaces_req | default([]) | join(',')) ~ ']'
+             ~ ' reply_on=[' ~ (ifaces_reply | default([]) | join(',')) ~ ']' }}
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "Attach the peer switch each uplink faces"
+      ansible.builtin.set_fact:
+        annotated_lines: >-
+          {{ annotated_lines | default([])
+             + [ item ~ '  (peer ' ~ (iface_neighbor[item.split(' ')[0]] | default('?')) ~ ')' ] }}
+      loop: "{{ host_counts.stdout_lines | default([]) }}"
+      loop_control:
+        label: "{{ item.split(' ')[0] }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "REPORT · {{ inventory_hostname }} endpoint ICMP counts"
+      ansible.builtin.debug:
+        msg: "{{ ['node=' ~ inventory_hostname ~ '  ' ~ (hop_summary | default('(no capture)'))] + (annotated_lines | default(['(no pcaps - tcpdump missing or no traffic)'])) }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+    - name: "PACKETS · {{ inventory_hostname }} timestamp MAC IP ICMP-id sequence"
+      ansible.builtin.debug:
+        msg: "{{ host_packets.stdout_lines | default(['(no packets captured)']) }}"
+      when:
+        - (src_ip | length > 0) and (dst_ip | length > 0)
+        - inventory_hostname in [trace_src, trace_dst]
+
+# ── PLAY 6 · Consolidated, topology-ordered walk of the pair ─────────────────
+- name: "hop-trace · consolidated path walk"
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  vars:
+    trace_src: ""
+    trace_dst: ""
+    src_ip: "{{ hostvars[trace_src].ip | default('') if (trace_src | length > 0) else '' }}"
+    dst_ip: "{{ hostvars[trace_dst].ip | default('') if (trace_dst | length > 0) else '' }}"
+    src_leaves: >-
+      {{ (hostvars[trace_src].server_interfaces | default([]))
+         | map(attribute='peer_switch') | list if (trace_src | length > 0) else [] }}
+    dst_leaves: >-
+      {{ (hostvars[trace_dst].server_interfaces | default([]))
+         | map(attribute='peer_switch') | list if (trace_dst | length > 0) else [] }}
+    spines: "{{ groups['spines'] | default([]) }}"
+  tasks:
+    - name: "Assemble the ordered node walk (src -> src leaves -> spines -> dst leaves -> dst)"
+      ansible.builtin.set_fact:
+        walk_nodes: >-
+          {{ ([trace_src] + src_leaves + spines + dst_leaves + [trace_dst]) | unique }}
+        other_switches: >-
+          {{ (groups['sonic_switches'] | default([]))
+             | difference(src_leaves + spines + dst_leaves) }}
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Initialize labeled path walks"
+      ansible.builtin.set_fact:
+        walk_lines: []
+        other_switch_lines: []
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Build labeled expected-path lines"
+      ansible.builtin.set_fact:
+        walk_lines: >-
+          {{ walk_lines + [item ~ ' :: ' ~ (hostvars[item].hop_summary | default('(not captured)'))] }}
+      loop: "{{ walk_nodes }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "Build labeled off-path switch lines"
+      ansible.builtin.set_fact:
+        other_switch_lines: >-
+          {{ other_switch_lines + [item ~ ' :: ' ~ (hostvars[item].hop_summary | default('(not captured)'))] }}
+      loop: "{{ other_switches }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "PATH WALK · forward = follow req_on, return = follow reply_on"
+      ansible.builtin.debug:
+        msg: "{{ walk_lines }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "OTHER SWITCHES (off the expected path - should be all '(no ICMP seen)')"
+      ansible.builtin.debug:
+        msg: "{{ other_switch_lines }}"
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
+
+    - name: "HOW TO READ THIS"
+      ansible.builtin.debug:
+        msg:
+          - "Forward drop  = the LAST node (top->bottom) whose req_on is non-empty; the next hop's empty req_on is where the request died."
+          - "Return  drop  = the LAST node whose reply_on is non-empty going back toward the source."
+          - "Use ICMP IDs to separate flows: default=41001-41003; forced uplinks=42001 onward in server_interfaces order."
+          - "ASYMMETRIC only describes observed paths. RPF was measured loose and changing it did not alter this checkerboard."
+          - "A switch that shows '(no ICMP seen)' simply was not on the hashed path for this flow (expected for off-path nodes)."
+      when: (src_ip | length > 0) and (dst_ip | length > 0)
