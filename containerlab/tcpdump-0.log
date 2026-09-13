@@ -1,0 +1,1680 @@
+Putting side by side two fail + one successfull ping source/dst run. I am to much puzzled that when it is not only deterministing and patterned, it also seems to be idempotent to provide back the same result for every run of 
+ping test, how could we stil not able to say, what really is happening?? See if there is room to enhance he playbook to answer these questions: Microsoft Windows [Version 10.0.26200.9445]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Users\nh1221>wsl -d ubuntu-24.04
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ source data-center/venv/bin/activate
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cd dc_lab/clab/sonic-clab/
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/tcpdump-hop-trace.yml \
+    -e trace_src=k8s-master-01 -e trace_dst=osh-comp-03
+
+PLAY [hop-trace · preflight] *******************************************************************************************************************************
+
+TASK [Resolve src/dst cluster IPs from inventory] **********************************************************************************************************
+ok: [localhost]
+
+TASK [USAGE · abort cleanly if the pair was not supplied] **************************************************************************************************
+skipping: [localhost]
+
+TASK [Announce the trace] **********************************************************************************************************************************
+ok: [localhost] => {
+    "msg": "TRACING k8s-master-01 (10.0.10.1)  ->  osh-comp-03 (10.0.30.5)   capture_dur=40s"
+}
+
+PLAY [hop-trace · arm captures on the fabric] **************************************************************************************************************
+
+TASK [Launch a background per-interface tcpdump on every Ethernet port] ************************************************************************************
+ok: [Spine-S1]
+ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L3]
+ok: [Spine-S2]
+ok: [Border-Leaf1]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+
+TASK [ARMED · Spine-S1] ************************************************************************************************************************************
+ok: [Spine-S2] => {
+    "msg": "Spine-S2: "
+}
+ok: [Spine-S1] => {
+    "msg": "Spine-S1: "
+}
+ok: [Leaf-L1] => {
+    "msg": "Leaf-L1: "
+}
+ok: [Leaf-L2] => {
+    "msg": "Leaf-L2: "
+}
+ok: [Leaf-L3] => {
+    "msg": "Leaf-L3: "
+}
+ok: [Leaf-L4] => {
+    "msg": "Leaf-L4: "
+}
+ok: [Border-Leaf1] => {
+    "msg": "Border-Leaf1: "
+}
+ok: [Border-Leaf2] => {
+    "msg": "Border-Leaf2: "
+}
+
+PLAY [hop-trace · arm captures on the endpoints] ***********************************************************************************************************
+
+TASK [Launch a background per-uplink tcpdump on this endpoint] *********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-03]
+
+TASK [ARMED · k8s-master-01] *******************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01] => {
+    "msg": "k8s-master-01: "
+}
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-net-01]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+ok: [osh-comp-03] => {
+    "msg": "osh-comp-03: "
+}
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · generate traffic from the source] ********************************************************************************************************
+
+TASK [Let all captures settle before generating traffic] ***************************************************************************************************
+Pausing for 4 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [k8s-master-01]
+
+TASK [Ping: 3 default (ECMP-hashed) flows + one forced flow per uplink] ************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+
+TASK [PING RESULT · k8s-master-01 -> osh-comp-03] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+ok: [k8s-master-01] => {
+    "msg": [
+        "== default ECMP flows (3 separate flow-ids) ==",
+        "flow1: 15 packets transmitted, 0 received, 100% packet loss, time 4257ms",
+        "flow1: ",
+        "flow2: 15 packets transmitted, 0 received, 100% packet loss, time 4256ms",
+        "flow2: ",
+        "flow3: 15 packets transmitted, 0 received, 100% packet loss, time 4257ms",
+        "flow3: ",
+        "== forced per-uplink flows ==",
+        "leg ens2: 5 packets transmitted, 5 received, 0% packet loss, time 1203ms rtt min/avg/max/mdev = 6.279/7.301/9.389/1.110 ms ",
+        "leg ens3: 5 packets transmitted, 0 received, 100% packet loss, time 1215ms  "
+    ]
+}
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · analyze fabric captures] *****************************************************************************************************************
+
+TASK [Wait for this node's captures to close] **************************************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L3]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [Build interface -> neighbor map (fabric switch_ports)] ***********************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Border-Leaf1]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+
+TASK [+ add switch_ports (fabric uplinks)] *****************************************************************************************************************
+ok: [Spine-S1] => (item=Ethernet0)
+ok: [Spine-S2] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet68)
+ok: [Leaf-L2] => (item=Ethernet68)
+ok: [Leaf-L3] => (item=Ethernet124)
+ok: [Spine-S1] => (item=Ethernet4)
+ok: [Spine-S2] => (item=Ethernet4)
+ok: [Leaf-L1] => (item=Ethernet64)
+ok: [Leaf-L2] => (item=Ethernet64)
+ok: [Leaf-L3] => (item=Ethernet120)
+ok: [Spine-S1] => (item=Ethernet8)
+ok: [Spine-S2] => (item=Ethernet8)
+ok: [Spine-S1] => (item=Ethernet12)
+ok: [Spine-S2] => (item=Ethernet12)
+ok: [Leaf-L4] => (item=Ethernet124)
+ok: [Border-Leaf1] => (item=Ethernet124)
+ok: [Border-Leaf2] => (item=Ethernet124)
+ok: [Spine-S1] => (item=Ethernet16)
+ok: [Spine-S2] => (item=Ethernet16)
+ok: [Leaf-L4] => (item=Ethernet120)
+ok: [Border-Leaf1] => (item=Ethernet120)
+ok: [Border-Leaf2] => (item=Ethernet120)
+ok: [Spine-S1] => (item=Ethernet20)
+ok: [Spine-S2] => (item=Ethernet20)
+
+TASK [+ add flat access_ports (regular leaves, key 'peer')] ************************************************************************************************
+skipping: [Spine-S2]
+skipping: [Spine-S1]
+ok: [Leaf-L1] => (item=Ethernet0)
+skipping: [Leaf-L3] => (item=Ethernet0)
+ok: [Leaf-L2] => (item=Ethernet0)
+skipping: [Leaf-L4] => (item=Ethernet0)
+skipping: [Border-Leaf1] => (item=Ethernet0)
+skipping: [Leaf-L3] => (item=Ethernet4)
+skipping: [Leaf-L3]
+ok: [Leaf-L1] => (item=Ethernet1)
+ok: [Leaf-L2] => (item=Ethernet1)
+skipping: [Border-Leaf1] => (item=Ethernet4)
+skipping: [Leaf-L4] => (item=Ethernet4)
+skipping: [Border-Leaf1]
+skipping: [Leaf-L4]
+ok: [Leaf-L1] => (item=Ethernet2)
+ok: [Leaf-L2] => (item=Ethernet2)
+ok: [Leaf-L1] => (item=Ethernet3)
+ok: [Leaf-L2] => (item=Ethernet3)
+skipping: [Border-Leaf2] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet4)
+ok: [Leaf-L2] => (item=Ethernet4)
+skipping: [Border-Leaf2] => (item=Ethernet4)
+skipping: [Border-Leaf2]
+ok: [Leaf-L1] => (item=Ethernet5)
+ok: [Leaf-L2] => (item=Ethernet5)
+
+TASK [+ add nested access_ports children (border leaves)] **************************************************************************************************
+skipping: [Spine-S1]
+skipping: [Spine-S2]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+ok: [Leaf-L3] => (item=Ethernet0)
+ok: [Leaf-L4] => (item=Ethernet0)
+ok: [Border-Leaf1] => (item=Ethernet0)
+ok: [Leaf-L3] => (item=Ethernet1)
+ok: [Border-Leaf1] => (item=Ethernet1)
+ok: [Leaf-L4] => (item=Ethernet1)
+ok: [Leaf-L3] => (item=Ethernet2)
+ok: [Border-Leaf1] => (item=Ethernet2)
+ok: [Leaf-L4] => (item=Ethernet2)
+ok: [Border-Leaf2] => (item=Ethernet0)
+ok: [Leaf-L3] => (item=Ethernet3)
+ok: [Border-Leaf1] => (item=Ethernet3)
+ok: [Leaf-L4] => (item=Ethernet3)
+ok: [Border-Leaf2] => (item=Ethernet1)
+ok: [Border-Leaf1] => (item=Ethernet4)
+ok: [Leaf-L4] => (item=Ethernet4)
+ok: [Leaf-L3] => (item=Ethernet4)
+ok: [Border-Leaf2] => (item=Ethernet2)
+ok: [Border-Leaf1] => (item=Ethernet5)
+ok: [Leaf-L3] => (item=Ethernet5)
+ok: [Leaf-L4] => (item=Ethernet5)
+ok: [Border-Leaf2] => (item=Ethernet3)
+ok: [Leaf-L3] => (item=Ethernet6)
+ok: [Border-Leaf1] => (item=Ethernet6)
+ok: [Leaf-L4] => (item=Ethernet6)
+ok: [Leaf-L4] => (item=Ethernet7)
+ok: [Border-Leaf1] => (item=Ethernet7)
+ok: [Leaf-L3] => (item=Ethernet7)
+ok: [Border-Leaf2] => (item=Ethernet4)
+ok: [Border-Leaf2] => (item=Ethernet5)
+ok: [Border-Leaf2] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet7)
+
+TASK [Count echo-request / echo-reply per captured interface] **********************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L3]
+ok: [Border-Leaf1]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+
+TASK [Annotate each interface line with the neighbor it faces] *********************************************************************************************
+skipping: [Spine-S1]
+skipping: [Spine-S2]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+skipping: [Leaf-L3]
+skipping: [Border-Leaf1]
+skipping: [Leaf-L4]
+skipping: [Border-Leaf2]
+
+TASK [Derive per-node presence + asymmetry verdict] ********************************************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Border-Leaf1]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+
+TASK [Compose this node's hop summary (read by the final consolidated walk)] *******************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L3]
+ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [REPORT · Spine-S1 interface-level ICMP counts] *******************************************************************************************************
+ok: [Spine-S1] => {
+    "msg": [
+        "node=Spine-S1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Spine-S2] => {
+    "msg": [
+        "node=Spine-S2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L1] => {
+    "msg": [
+        "node=Leaf-L1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L2] => {
+    "msg": [
+        "node=Leaf-L2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L3] => {
+    "msg": [
+        "node=Leaf-L3  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L4] => {
+    "msg": [
+        "node=Leaf-L4  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf1] => {
+    "msg": [
+        "node=Border-Leaf1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf2] => {
+    "msg": [
+        "node=Border-Leaf2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+
+PLAY [hop-trace · analyze endpoint captures] ***************************************************************************************************************
+
+TASK [Wait for this endpoint's captures to close] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-03]
+
+TASK [Build interface -> peer-switch map (server_interfaces)] **********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [osh-comp-03]
+
+TASK [Count echo-request / echo-reply per uplink] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-03]
+
+TASK [Derive request/reply presence per uplink] ************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [osh-comp-03]
+
+TASK [Compose endpoint hop summary] ************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [osh-comp-03]
+
+TASK [Attach the peer switch each uplink faces] ************************************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [REPORT · k8s-master-01 endpoint ICMP counts] *********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+ok: [k8s-master-01] => {
+    "msg": [
+        "node=k8s-master-01  role=SOURCE req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+ok: [osh-comp-03] => {
+    "msg": [
+        "node=osh-comp-03  role=DEST req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · consolidated path walk] ******************************************************************************************************************
+
+TASK [Assemble the ordered node walk (src -> src leaves -> spines -> dst leaves -> dst)] *******************************************************************
+ok: [localhost]
+
+TASK [PATH WALK · forward = follow req_on, return = follow reply_on] ***************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: role=SOURCE req_on=[] reply_on=[]",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: role=DEST req_on=[] reply_on=[]"
+    ]
+}
+
+TASK [OTHER SWITCHES (off the expected path - should be all '(no ICMP seen)')] *****************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)"
+    ]
+}
+
+TASK [HOW TO READ THIS] ************************************************************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "Forward drop  = the LAST node (top->bottom) whose req_on is non-empty; the next hop's empty req_on is where the request died.",
+        "Return  drop  = the LAST node whose reply_on is non-empty going back toward the source.",
+        "ASYMMETRIC on a switch (req_on set != reply_on set) on kernel-forwarding sonic-vs => strict rp_filter drop. Fix: playbooks/fix-rpf-loose.yml then re-run this trace.",
+        "A switch that shows '(no ICMP seen)' simply was not on the hashed path for this flow (expected for off-path nodes)."
+    ]
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Border-Leaf2               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L1                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L2                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L3                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L4                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+Spine-S1                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+Spine-S2                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-01              : ok=11   changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+localhost                  : ok=6    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-03                : ok=8    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/tcpdump-hop-trace.yml     -e trace_src=k8s-master-01 -e trace_dst=osh-comp-02
+
+PLAY [hop-trace · preflight] *******************************************************************************************************************************
+
+TASK [Resolve src/dst cluster IPs from inventory] **********************************************************************************************************
+ok: [localhost]
+
+TASK [USAGE · abort cleanly if the pair was not supplied] **************************************************************************************************
+skipping: [localhost]
+
+TASK [Announce the trace] **********************************************************************************************************************************
+ok: [localhost] => {
+    "msg": "TRACING k8s-master-01 (10.0.10.1)  ->  osh-comp-02 (10.0.20.5)   capture_dur=40s"
+}
+
+PLAY [hop-trace · arm captures on the fabric] **************************************************************************************************************
+
+TASK [Launch a background per-interface tcpdump on every Ethernet port] ************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L3]
+ok: [Leaf-L2]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+ok: [Border-Leaf1]
+
+TASK [ARMED · Spine-S1] ************************************************************************************************************************************
+ok: [Spine-S1] => {
+    "msg": "Spine-S1: "
+}
+ok: [Spine-S2] => {
+    "msg": "Spine-S2: "
+}
+ok: [Leaf-L1] => {
+    "msg": "Leaf-L1: "
+}
+ok: [Leaf-L2] => {
+    "msg": "Leaf-L2: "
+}
+ok: [Leaf-L3] => {
+    "msg": "Leaf-L3: "
+}
+ok: [Leaf-L4] => {
+    "msg": "Leaf-L4: "
+}
+ok: [Border-Leaf1] => {
+    "msg": "Border-Leaf1: "
+}
+ok: [Border-Leaf2] => {
+    "msg": "Border-Leaf2: "
+}
+
+PLAY [hop-trace · arm captures on the endpoints] ***********************************************************************************************************
+
+TASK [Launch a background per-uplink tcpdump on this endpoint] *********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-02]
+
+TASK [ARMED · k8s-master-01] *******************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01] => {
+    "msg": "k8s-master-01: "
+}
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+ok: [osh-comp-02] => {
+    "msg": "osh-comp-02: "
+}
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · generate traffic from the source] ********************************************************************************************************
+
+TASK [Let all captures settle before generating traffic] ***************************************************************************************************
+Pausing for 4 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [k8s-master-01]
+
+TASK [Ping: 3 default (ECMP-hashed) flows + one forced flow per uplink] ************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+
+TASK [PING RESULT · k8s-master-01 -> osh-comp-02] **********************************************************************************************************
+skipping: [k8s-master-02]
+ok: [k8s-master-01] => {
+    "msg": [
+        "== default ECMP flows (3 separate flow-ids) ==",
+        "flow1: 15 packets transmitted, 0 received, 100% packet loss, time 4253ms",
+        "flow1: ",
+        "flow2: 15 packets transmitted, 0 received, 100% packet loss, time 4258ms",
+        "flow2: ",
+        "flow3: 15 packets transmitted, 0 received, 100% packet loss, time 4254ms",
+        "flow3: ",
+        "== forced per-uplink flows ==",
+        "leg ens2: 5 packets transmitted, 0 received, 100% packet loss, time 1216ms  ",
+        "leg ens3: 5 packets transmitted, 0 received, 100% packet loss, time 1213ms  "
+    ]
+}
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · analyze fabric captures] *****************************************************************************************************************
+
+TASK [Wait for this node's captures to close] **************************************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+ok: [Border-Leaf1]
+
+TASK [Build interface -> neighbor map (fabric switch_ports)] ***********************************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [+ add switch_ports (fabric uplinks)] *****************************************************************************************************************
+ok: [Spine-S1] => (item=Ethernet0)
+ok: [Spine-S2] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet68)
+ok: [Leaf-L2] => (item=Ethernet68)
+ok: [Leaf-L3] => (item=Ethernet124)
+ok: [Spine-S1] => (item=Ethernet4)
+ok: [Spine-S2] => (item=Ethernet4)
+ok: [Leaf-L1] => (item=Ethernet64)
+ok: [Leaf-L2] => (item=Ethernet64)
+ok: [Leaf-L3] => (item=Ethernet120)
+ok: [Spine-S1] => (item=Ethernet8)
+ok: [Spine-S2] => (item=Ethernet8)
+ok: [Spine-S1] => (item=Ethernet12)
+ok: [Spine-S2] => (item=Ethernet12)
+ok: [Spine-S1] => (item=Ethernet16)
+ok: [Spine-S2] => (item=Ethernet16)
+ok: [Leaf-L4] => (item=Ethernet124)
+ok: [Border-Leaf1] => (item=Ethernet124)
+ok: [Border-Leaf2] => (item=Ethernet124)
+ok: [Spine-S1] => (item=Ethernet20)
+ok: [Spine-S2] => (item=Ethernet20)
+ok: [Leaf-L4] => (item=Ethernet120)
+ok: [Border-Leaf1] => (item=Ethernet120)
+ok: [Border-Leaf2] => (item=Ethernet120)
+
+TASK [+ add flat access_ports (regular leaves, key 'peer')] ************************************************************************************************
+skipping: [Spine-S2]
+skipping: [Spine-S1]
+skipping: [Leaf-L3] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet0)
+ok: [Leaf-L2] => (item=Ethernet0)
+skipping: [Leaf-L4] => (item=Ethernet0)
+skipping: [Border-Leaf1] => (item=Ethernet0)
+skipping: [Leaf-L3] => (item=Ethernet4)
+skipping: [Leaf-L3]
+ok: [Leaf-L1] => (item=Ethernet1)
+ok: [Leaf-L2] => (item=Ethernet1)
+skipping: [Border-Leaf1] => (item=Ethernet4)
+skipping: [Leaf-L4] => (item=Ethernet4)
+skipping: [Border-Leaf1]
+skipping: [Leaf-L4]
+ok: [Leaf-L1] => (item=Ethernet2)
+ok: [Leaf-L2] => (item=Ethernet2)
+ok: [Leaf-L1] => (item=Ethernet3)
+skipping: [Border-Leaf2] => (item=Ethernet0)
+ok: [Leaf-L2] => (item=Ethernet3)
+skipping: [Border-Leaf2] => (item=Ethernet4)
+skipping: [Border-Leaf2]
+ok: [Leaf-L1] => (item=Ethernet4)
+ok: [Leaf-L2] => (item=Ethernet4)
+ok: [Leaf-L1] => (item=Ethernet5)
+ok: [Leaf-L2] => (item=Ethernet5)
+
+TASK [+ add nested access_ports children (border leaves)] **************************************************************************************************
+skipping: [Spine-S2]
+skipping: [Spine-S1]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+ok: [Leaf-L3] => (item=Ethernet0)
+ok: [Border-Leaf1] => (item=Ethernet0)
+ok: [Leaf-L4] => (item=Ethernet0)
+ok: [Leaf-L3] => (item=Ethernet1)
+ok: [Border-Leaf1] => (item=Ethernet1)
+ok: [Leaf-L4] => (item=Ethernet1)
+ok: [Leaf-L3] => (item=Ethernet2)
+ok: [Border-Leaf2] => (item=Ethernet0)
+ok: [Border-Leaf1] => (item=Ethernet2)
+ok: [Leaf-L4] => (item=Ethernet2)
+ok: [Border-Leaf2] => (item=Ethernet1)
+ok: [Leaf-L3] => (item=Ethernet3)
+ok: [Border-Leaf1] => (item=Ethernet3)
+ok: [Leaf-L4] => (item=Ethernet3)
+ok: [Border-Leaf2] => (item=Ethernet2)
+ok: [Leaf-L3] => (item=Ethernet4)
+ok: [Leaf-L4] => (item=Ethernet4)
+ok: [Border-Leaf1] => (item=Ethernet4)
+ok: [Leaf-L3] => (item=Ethernet5)
+ok: [Border-Leaf2] => (item=Ethernet3)
+ok: [Leaf-L4] => (item=Ethernet5)
+ok: [Border-Leaf1] => (item=Ethernet5)
+ok: [Leaf-L3] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet4)
+ok: [Leaf-L4] => (item=Ethernet6)
+ok: [Border-Leaf1] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet5)
+ok: [Leaf-L3] => (item=Ethernet7)
+ok: [Leaf-L4] => (item=Ethernet7)
+ok: [Border-Leaf1] => (item=Ethernet7)
+ok: [Border-Leaf2] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet7)
+
+TASK [Count echo-request / echo-reply per captured interface] **********************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [Annotate each interface line with the neighbor it faces] *********************************************************************************************
+skipping: [Spine-S2]
+skipping: [Spine-S1]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+skipping: [Leaf-L3]
+skipping: [Leaf-L4]
+skipping: [Border-Leaf1]
+skipping: [Border-Leaf2]
+
+TASK [Derive per-node presence + asymmetry verdict] ********************************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Border-Leaf1]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+
+TASK [Compose this node's hop summary (read by the final consolidated walk)] *******************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [REPORT · Spine-S1 interface-level ICMP counts] *******************************************************************************************************
+ok: [Spine-S2] => {
+    "msg": [
+        "node=Spine-S2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Spine-S1] => {
+    "msg": [
+        "node=Spine-S1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L1] => {
+    "msg": [
+        "node=Leaf-L1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L2] => {
+    "msg": [
+        "node=Leaf-L2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L3] => {
+    "msg": [
+        "node=Leaf-L3  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf1] => {
+    "msg": [
+        "node=Border-Leaf1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L4] => {
+    "msg": [
+        "node=Leaf-L4  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf2] => {
+    "msg": [
+        "node=Border-Leaf2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+
+PLAY [hop-trace · analyze endpoint captures] ***************************************************************************************************************
+
+TASK [Wait for this endpoint's captures to close] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-02]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-02]
+
+TASK [Build interface -> peer-switch map (server_interfaces)] **********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [osh-comp-02]
+
+TASK [Count echo-request / echo-reply per uplink] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-02]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [osh-comp-02]
+
+TASK [Derive request/reply presence per uplink] ************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-02]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-04]
+skipping: [osh-comp-03]
+ok: [osh-comp-02]
+
+TASK [Compose endpoint hop summary] ************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+ok: [k8s-master-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+ok: [osh-comp-02]
+skipping: [osh-comp-04]
+
+TASK [Attach the peer switch each uplink faces] ************************************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [REPORT · k8s-master-01 endpoint ICMP counts] *********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+ok: [k8s-master-01] => {
+    "msg": [
+        "node=k8s-master-01  role=SOURCE req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+ok: [osh-comp-02] => {
+    "msg": [
+        "node=osh-comp-02  role=DEST req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · consolidated path walk] ******************************************************************************************************************
+
+TASK [Assemble the ordered node walk (src -> src leaves -> spines -> dst leaves -> dst)] *******************************************************************
+ok: [localhost]
+
+TASK [PATH WALK · forward = follow req_on, return = follow reply_on] ***************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: role=SOURCE req_on=[] reply_on=[]",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: role=DEST req_on=[] reply_on=[]"
+    ]
+}
+
+TASK [OTHER SWITCHES (off the expected path - should be all '(no ICMP seen)')] *****************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)"
+    ]
+}
+
+TASK [HOW TO READ THIS] ************************************************************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "Forward drop  = the LAST node (top->bottom) whose req_on is non-empty; the next hop's empty req_on is where the request died.",
+        "Return  drop  = the LAST node whose reply_on is non-empty going back toward the source.",
+        "ASYMMETRIC on a switch (req_on set != reply_on set) on kernel-forwarding sonic-vs => strict rp_filter drop. Fix: playbooks/fix-rpf-loose.yml then re-run this trace.",
+        "A switch that shows '(no ICMP seen)' simply was not on the hashed path for this flow (expected for off-path nodes)."
+    ]
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Border-Leaf2               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L1                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L2                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L3                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L4                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+MonSrv                     : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+Spine-S1                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+Spine-S2                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-01              : ok=11   changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+localhost                  : ok=6    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-02                : ok=8    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/tcpdump-hop-trace.yml     -e trace_src=k8s-master-01 -e trace_dst=MonSrv
+
+PLAY [hop-trace · preflight] *******************************************************************************************************************************
+
+TASK [Resolve src/dst cluster IPs from inventory] **********************************************************************************************************
+ok: [localhost]
+
+TASK [USAGE · abort cleanly if the pair was not supplied] **************************************************************************************************
+skipping: [localhost]
+
+TASK [Announce the trace] **********************************************************************************************************************************
+ok: [localhost] => {
+    "msg": "TRACING k8s-master-01 (10.0.10.1)  ->  MonSrv (10.0.30.4)   capture_dur=40s"
+}
+
+PLAY [hop-trace · arm captures on the fabric] **************************************************************************************************************
+
+TASK [Launch a background per-interface tcpdump on every Ethernet port] ************************************************************************************
+ok: [Leaf-L1]
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L3]
+ok: [Leaf-L2]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+ok: [Leaf-L4]
+
+TASK [ARMED · Spine-S1] ************************************************************************************************************************************
+ok: [Spine-S1] => {
+    "msg": "Spine-S1: "
+}
+ok: [Spine-S2] => {
+    "msg": "Spine-S2: "
+}
+ok: [Leaf-L1] => {
+    "msg": "Leaf-L1: "
+}
+ok: [Leaf-L2] => {
+    "msg": "Leaf-L2: "
+}
+ok: [Leaf-L3] => {
+    "msg": "Leaf-L3: "
+}
+ok: [Leaf-L4] => {
+    "msg": "Leaf-L4: "
+}
+ok: [Border-Leaf1] => {
+    "msg": "Border-Leaf1: "
+}
+ok: [Border-Leaf2] => {
+    "msg": "Border-Leaf2: "
+}
+
+PLAY [hop-trace · arm captures on the endpoints] ***********************************************************************************************************
+
+TASK [Launch a background per-uplink tcpdump on this endpoint] *********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [MonSrv]
+
+TASK [ARMED · k8s-master-01] *******************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01] => {
+    "msg": "k8s-master-01: "
+}
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+ok: [MonSrv] => {
+    "msg": "MonSrv: "
+}
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · generate traffic from the source] ********************************************************************************************************
+
+TASK [Let all captures settle before generating traffic] ***************************************************************************************************
+Pausing for 4 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [k8s-master-01]
+
+TASK [Ping: 3 default (ECMP-hashed) flows + one forced flow per uplink] ************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+
+TASK [PING RESULT · k8s-master-01 -> MonSrv] ***************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+ok: [k8s-master-01] => {
+    "msg": [
+        "== default ECMP flows (3 separate flow-ids) ==",
+        "flow1: 15 packets transmitted, 15 received, 0% packet loss, time 4215ms",
+        "flow1: rtt min/avg/max/mdev = 5.526/6.450/8.232/0.701 ms",
+        "flow2: 15 packets transmitted, 15 received, 0% packet loss, time 4214ms",
+        "flow2: rtt min/avg/max/mdev = 4.979/6.873/9.511/1.219 ms",
+        "flow3: 15 packets transmitted, 15 received, 0% packet loss, time 4215ms",
+        "flow3: rtt min/avg/max/mdev = 5.508/6.447/10.523/1.174 ms",
+        "== forced per-uplink flows ==",
+        "leg ens2: 5 packets transmitted, 5 received, 0% packet loss, time 1204ms rtt min/avg/max/mdev = 5.583/5.922/6.363/0.281 ms ",
+        "leg ens3: 5 packets transmitted, 0 received, 100% packet loss, time 1218ms  "
+    ]
+}
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · analyze fabric captures] *****************************************************************************************************************
+
+TASK [Wait for this node's captures to close] **************************************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf2]
+ok: [Border-Leaf1]
+
+TASK [Build interface -> neighbor map (fabric switch_ports)] ***********************************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [+ add switch_ports (fabric uplinks)] *****************************************************************************************************************
+ok: [Spine-S2] => (item=Ethernet0)
+ok: [Spine-S1] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet68)
+ok: [Leaf-L2] => (item=Ethernet68)
+ok: [Leaf-L3] => (item=Ethernet124)
+ok: [Spine-S2] => (item=Ethernet4)
+ok: [Spine-S1] => (item=Ethernet4)
+ok: [Leaf-L1] => (item=Ethernet64)
+ok: [Leaf-L2] => (item=Ethernet64)
+ok: [Leaf-L3] => (item=Ethernet120)
+ok: [Spine-S2] => (item=Ethernet8)
+ok: [Spine-S1] => (item=Ethernet8)
+ok: [Spine-S2] => (item=Ethernet12)
+ok: [Spine-S1] => (item=Ethernet12)
+ok: [Border-Leaf1] => (item=Ethernet124)
+ok: [Leaf-L4] => (item=Ethernet124)
+ok: [Spine-S2] => (item=Ethernet16)
+ok: [Spine-S1] => (item=Ethernet16)
+ok: [Border-Leaf1] => (item=Ethernet120)
+ok: [Leaf-L4] => (item=Ethernet120)
+ok: [Border-Leaf2] => (item=Ethernet124)
+ok: [Spine-S2] => (item=Ethernet20)
+ok: [Spine-S1] => (item=Ethernet20)
+ok: [Border-Leaf2] => (item=Ethernet120)
+
+TASK [+ add flat access_ports (regular leaves, key 'peer')] ************************************************************************************************
+skipping: [Spine-S2]
+skipping: [Spine-S1]
+ok: [Leaf-L2] => (item=Ethernet0)
+ok: [Leaf-L1] => (item=Ethernet0)
+skipping: [Leaf-L3] => (item=Ethernet0)
+skipping: [Leaf-L4] => (item=Ethernet0)
+skipping: [Border-Leaf1] => (item=Ethernet0)
+ok: [Leaf-L2] => (item=Ethernet1)
+ok: [Leaf-L1] => (item=Ethernet1)
+skipping: [Leaf-L3] => (item=Ethernet4)
+skipping: [Leaf-L3]
+skipping: [Border-Leaf1] => (item=Ethernet4)
+skipping: [Border-Leaf1]
+skipping: [Leaf-L4] => (item=Ethernet4)
+skipping: [Leaf-L4]
+ok: [Leaf-L2] => (item=Ethernet2)
+ok: [Leaf-L1] => (item=Ethernet2)
+ok: [Leaf-L1] => (item=Ethernet3)
+ok: [Leaf-L2] => (item=Ethernet3)
+ok: [Leaf-L1] => (item=Ethernet4)
+ok: [Leaf-L2] => (item=Ethernet4)
+skipping: [Border-Leaf2] => (item=Ethernet0)
+ok: [Leaf-L2] => (item=Ethernet5)
+ok: [Leaf-L1] => (item=Ethernet5)
+skipping: [Border-Leaf2] => (item=Ethernet4)
+skipping: [Border-Leaf2]
+
+TASK [+ add nested access_ports children (border leaves)] **************************************************************************************************
+skipping: [Spine-S1]
+skipping: [Spine-S2]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+ok: [Leaf-L3] => (item=Ethernet0)
+ok: [Leaf-L4] => (item=Ethernet0)
+ok: [Border-Leaf1] => (item=Ethernet0)
+ok: [Leaf-L3] => (item=Ethernet1)
+ok: [Leaf-L4] => (item=Ethernet1)
+ok: [Border-Leaf1] => (item=Ethernet1)
+ok: [Leaf-L3] => (item=Ethernet2)
+ok: [Border-Leaf1] => (item=Ethernet2)
+ok: [Leaf-L4] => (item=Ethernet2)
+ok: [Border-Leaf2] => (item=Ethernet0)
+ok: [Leaf-L3] => (item=Ethernet3)
+ok: [Border-Leaf1] => (item=Ethernet3)
+ok: [Leaf-L4] => (item=Ethernet3)
+ok: [Border-Leaf2] => (item=Ethernet1)
+ok: [Leaf-L3] => (item=Ethernet4)
+ok: [Border-Leaf1] => (item=Ethernet4)
+ok: [Leaf-L4] => (item=Ethernet4)
+ok: [Border-Leaf2] => (item=Ethernet2)
+ok: [Border-Leaf1] => (item=Ethernet5)
+ok: [Leaf-L4] => (item=Ethernet5)
+ok: [Leaf-L3] => (item=Ethernet5)
+ok: [Border-Leaf2] => (item=Ethernet3)
+ok: [Leaf-L4] => (item=Ethernet6)
+ok: [Border-Leaf1] => (item=Ethernet6)
+ok: [Leaf-L3] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet4)
+ok: [Leaf-L4] => (item=Ethernet7)
+ok: [Border-Leaf1] => (item=Ethernet7)
+ok: [Leaf-L3] => (item=Ethernet7)
+ok: [Border-Leaf2] => (item=Ethernet5)
+ok: [Border-Leaf2] => (item=Ethernet6)
+ok: [Border-Leaf2] => (item=Ethernet7)
+
+TASK [Count echo-request / echo-reply per captured interface] **********************************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L2]
+ok: [Leaf-L1]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [Annotate each interface line with the neighbor it faces] *********************************************************************************************
+skipping: [Spine-S1]
+skipping: [Spine-S2]
+skipping: [Leaf-L1]
+skipping: [Leaf-L2]
+skipping: [Leaf-L3]
+skipping: [Border-Leaf1]
+skipping: [Leaf-L4]
+skipping: [Border-Leaf2]
+
+TASK [Derive per-node presence + asymmetry verdict] ********************************************************************************************************
+ok: [Spine-S1]
+ok: [Spine-S2]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [Compose this node's hop summary (read by the final consolidated walk)] *******************************************************************************
+ok: [Spine-S2]
+ok: [Spine-S1]
+ok: [Leaf-L1]
+ok: [Leaf-L2]
+ok: [Leaf-L3]
+ok: [Leaf-L4]
+ok: [Border-Leaf1]
+ok: [Border-Leaf2]
+
+TASK [REPORT · Spine-S1 interface-level ICMP counts] *******************************************************************************************************
+ok: [Spine-S2] => {
+    "msg": [
+        "node=Spine-S2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Spine-S1] => {
+    "msg": [
+        "node=Spine-S1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L1] => {
+    "msg": [
+        "node=Leaf-L1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L2] => {
+    "msg": [
+        "node=Leaf-L2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L3] => {
+    "msg": [
+        "node=Leaf-L3  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Leaf-L4] => {
+    "msg": [
+        "node=Leaf-L4  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf1] => {
+    "msg": [
+        "node=Border-Leaf1  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+ok: [Border-Leaf2] => {
+    "msg": [
+        "node=Border-Leaf2  req_on=[] reply_on=[]  (no ICMP seen)",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+
+PLAY [hop-trace · analyze endpoint captures] ***************************************************************************************************************
+
+TASK [Wait for this endpoint's captures to close] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-03]
+skipping: [osh-comp-02]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [MonSrv]
+
+TASK [Build interface -> peer-switch map (server_interfaces)] **********************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+ok: [MonSrv]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Count echo-request / echo-reply per uplink] **********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+ok: [k8s-master-01]
+ok: [MonSrv]
+
+TASK [Derive request/reply presence per uplink] ************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+ok: [MonSrv]
+skipping: [osh-comp-04]
+
+TASK [Compose endpoint hop summary] ************************************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+ok: [k8s-master-01]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+ok: [MonSrv]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Attach the peer switch each uplink faces] ************************************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [MonSrv]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [REPORT · k8s-master-01 endpoint ICMP counts] *********************************************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+ok: [k8s-master-01] => {
+    "msg": [
+        "node=k8s-master-01  role=SOURCE req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [osh-comp-01]
+ok: [MonSrv] => {
+    "msg": [
+        "node=MonSrv  role=DEST req_on=[] reply_on=[]",
+        "(no pcaps - tcpdump missing or no traffic)"
+    ]
+}
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY [hop-trace · consolidated path walk] ******************************************************************************************************************
+
+TASK [Assemble the ordered node walk (src -> src leaves -> spines -> dst leaves -> dst)] *******************************************************************
+ok: [localhost]
+
+TASK [PATH WALK · forward = follow req_on, return = follow reply_on] ***************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: role=SOURCE req_on=[] reply_on=[]",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: role=DEST req_on=[] reply_on=[]"
+    ]
+}
+
+TASK [OTHER SWITCHES (off the expected path - should be all '(no ICMP seen)')] *****************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)",
+        "\\1 :: req_on=[] reply_on=[]  (no ICMP seen)"
+    ]
+}
+
+TASK [HOW TO READ THIS] ************************************************************************************************************************************
+ok: [localhost] => {
+    "msg": [
+        "Forward drop  = the LAST node (top->bottom) whose req_on is non-empty; the next hop's empty req_on is where the request died.",
+        "Return  drop  = the LAST node whose reply_on is non-empty going back toward the source.",
+        "ASYMMETRIC on a switch (req_on set != reply_on set) on kernel-forwarding sonic-vs => strict rp_filter drop. Fix: playbooks/fix-rpf-loose.yml then re-run this trace.",
+        "A switch that shows '(no ICMP seen)' simply was not on the hashed path for this flow (expected for off-path nodes)."
+    ]
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+Border-Leaf1               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Border-Leaf2               : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L1                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L2                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L3                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+Leaf-L4                    : ok=10   changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+MonSrv                     : ok=8    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+Spine-S1                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+Spine-S2                   : ok=9    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-01              : ok=11   changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+localhost                  : ok=6    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
