@@ -1,0 +1,124 @@
+PLAY [Verify vrf-storage isolation and QoS bandwidth split] ****************************************************************************************************************************************************
+
+TASK [Confirm the storage route lives in vrf-storage (table 300)] **********************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Confirm the storage subnet is ABSENT from the default table] *********************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Report vrf-storage isolation vs the tenant/default table (non-fatal)] ************************************************************************************************************************************
+ok: [osh-comp-01] => {
+    "msg": "osh-comp-01: storage_subnet 20.0.56.0/24 default-table-hits=0 OK — vrf-storage isolated from the tenant/default table"
+}
+
+TASK [Show storage BGP summary (vrf-storage)] ******************************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Report storage BGP summary] ******************************************************************************************************************************************************************************
+ok: [osh-comp-01] => {
+    "host_storage_bgp.stdout_lines": [
+        "BGP router identifier 20.0.56.15, local AS number 65215 VRF vrf-storage vrf-id 5",
+        "BGP table version 1",
+        "RIB entries 1, using 128 bytes of memory",
+        "Peers 2, using 47 KiB of memory",
+        "",
+        "Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc",
+        "ens2.100        4      65011         0         0        0    0    0    never         Idle        0 STORAGE-To-Leaf-L1",
+        "ens3.100        4      65012         0         0        0    0    0    never         Idle        0 STORAGE-To-Leaf-L2",
+        "",
+        "Total number of neighbors 2"
+    ]
+}
+
+TASK [Stop previous storage iperf3 server on osh-comp-02] ******************************************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Start storage iperf3 server (in vrf-storage) on osh-comp-02] *********************************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Stop previous tenant iperf3 server on osh-comp-02] *******************************************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Start tenant iperf3 server (default VRF) on osh-comp-02] *************************************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Confirm storage iperf3 server is listening on osh-comp-02 (best-effort)] *********************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Confirm tenant iperf3 server is listening on osh-comp-02 (best-effort)] **********************************************************************************************************************************
+ok: [osh-comp-01 -> osh-comp-02(172.16.2.65)]
+
+TASK [Note when a storage/tenant iperf3 server did not come up (non-fatal)] ************************************************************************************************************************************
+skipping: [osh-comp-01]
+
+TASK [Give the servers a moment to bind] ***********************************************************************************************************************************************************************
+Pausing for 3 seconds
+(ctrl+C then 'C' = continue early, ctrl+C then 'A' = abort)
+ok: [osh-comp-01]
+
+TASK [Ping the peer OSD storage IP inside vrf-storage] *********************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Report storage reachability] *****************************************************************************************************************************************************************************
+ok: [osh-comp-01] => {
+    "storage_ping.stdout_lines": [
+        "PING 20.0.56.25 (20.0.56.25) from 20.0.56.15 : 56(84) bytes of data.",
+        "",
+        "--- 20.0.56.25 ping statistics ---",
+        "3 packets transmitted, 0 received, 100% packet loss, time 2058ms"
+    ]
+}
+
+TASK [Run storage + tenant iperf3 flows concurrently] **********************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Check for storage iperf result file] *********************************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Check for tenant iperf result file] **********************************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Slurp storage iperf result] ******************************************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Slurp tenant iperf result] *******************************************************************************************************************************************************************************
+ok: [osh-comp-01]
+
+TASK [Parse throughput (bits/sec)] *****************************************************************************************************************************************************************************
+fatal: [osh-comp-01]: FAILED! => {"msg": "the field 'args' has an invalid value ({'storage_bps': \"{{ ((storage_json.content | default('') | b64decode | from_json).end.sum_received.bits_per_second)\\n   | default(0) | float if (storage_json_stat.stat.exists | default(false)) else 0 }}\", 'tenant_bps': \"{{ ((tenant_json.content | default('') | b64decode | from_json).end.sum_received.bits_per_second)\\n   | default(0) | float if (tenant_json_stat.stat.exists | default(false)) else 0 }}\"}), and could not be converted to dict.. Expecting value: line 1 column 1 (char 0)\n\nThe error appears to be in '/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/playbooks/verify-storage-qos.yml': line 279, column 7, but may\nbe elsewhere in the file depending on the exact syntax problem.\n\nThe offending line appears to be:\n\n\n    - name: Parse throughput (bits/sec)\n      ^ here\n"}
+
+PLAY RECAP *****************************************************************************************************************************************************************************************************
+Border-Leaf1               : ok=121  changed=14   unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+Border-Leaf2               : ok=121  changed=14   unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+Exit-Router1               : ok=45   changed=16   unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
+Exit-Router2               : ok=44   changed=16   unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
+External-Router            : ok=15   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-1                      : ok=17   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+ISP-2                      : ok=16   changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Leaf-L1                    : ok=122  changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Leaf-L2                    : ok=122  changed=14   unreachable=0    failed=0    skipped=10   rescued=0    ignored=0
+Leaf-L3                    : ok=121  changed=14   unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+Leaf-L4                    : ok=121  changed=14   unreachable=0    failed=0    skipped=11   rescued=0    ignored=0
+MonSrv                     : ok=46   changed=15   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+Spine-S1                   : ok=108  changed=14   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+Spine-S2                   : ok=108  changed=14   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+k8s-db-01                  : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-db-02                  : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-db-03                  : ok=46   changed=15   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-master-01              : ok=39   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-master-02              : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+k8s-master-03              : ok=46   changed=15   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+localhost                  : ok=5    changed=2    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+oob-mgmt-node              : ok=7    changed=2    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+osh-comp-01                : ok=76   changed=17   unreachable=0    failed=1    skipped=17   rescued=0    ignored=0
+osh-comp-02                : ok=56   changed=18   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+osh-comp-03                : ok=56   changed=18   unreachable=0    failed=0    skipped=17   rescued=0    ignored=0
+osh-comp-04                : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+osh-ctrl-01                : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+osh-ctrl-02                : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+osh-ctrl-03                : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+osh-net-01                 : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+osh-net-02                 : ok=38   changed=12   unreachable=0    failed=0    skipped=16   rescued=0    ignored=0
+poweredge_r810             : ok=26   changed=9    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
