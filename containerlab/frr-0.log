@@ -1,4 +1,44 @@
-Few will always fail during 'frr' installation, is there a way we can successfully install since most of them is working, means network is good:
+
+Please review the implementation of 'customize_config_db.py'. Looks like Leaf-L1/L2 is not establishing all ports UP successfully for 'access_ports':
+admin@Leaf-L1:~$ show interfaces status
+  Interface            Lanes    Speed    MTU    FEC      Alias    Vlan    Oper    Admin    Type    Asym PFC
+-----------  ---------------  -------  -----  -----  ---------  ------  ------  -------  ------  ----------
+  Ethernet0               13      10G   9100    N/A   tenGigE0  routed      up       up     N/A         N/A
+  Ethernet1               14      10G   9100    N/A   tenGigE1  routed      up       up     N/A         N/A
+  Ethernet2               15      10G   9100    N/A   tenGigE2  routed      up       up     N/A         N/A
+  Ethernet3               16      10G   9100    N/A   tenGigE3  routed      up       up     N/A         N/A
+  Ethernet4               17      10G   9100    N/A   tenGigE4  routed    down       up     N/A         N/A
+  Ethernet5               18      10G   9100    N/A   tenGigE5  routed    down       up     N/A         N/A
+:
+:
+
+admin@Leaf-L1:~$ show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.2.1, local AS number 65011 vrf-id 0
+BGP table version 202
+RIB entries 75, using 9600 bytes of memory
+Peers 8, using 192576 KiB of memory
+Peer groups 0, using 0 bytes of memory
+
+
+Neighbhor      V     AS    MsgRcvd    MsgSent    TblVer    InQ    OutQ  Up/Down    State/PfxRcd    NeighborName
+-----------  ---  -----  ---------  ---------  --------  -----  ------  ---------  --------------  --------------
+Ethernet0      4  65211       1308       1324       202      0       0  00:18:17   3               k8s-master-01
+Ethernet1      4  65212       1257       1245       202      0       0  00:18:16   3               k8s-db-01
+Ethernet2      4  65213       1323       1328       202      0       0  00:18:16   3               osh-ctrl-01
+Ethernet3      4  65214       1318       1309       202      0       0  00:33:42   3               osh-net-01
+Ethernet4      4      0          0          0         0      0       0  never      Idle            osh-comp-01
+Ethernet5      4      0          0          0         0      0       0  never      Idle            osh-comp-04
+Ethernet64     4  65000        190        220       202      0       0  00:57:22   28              Spine-S2
+Ethernet68     4  65000        204        220       202      0       0  00:57:23   28              Spine-S1
+
+Total number of neighbors 8
+admin@Leaf-L1:~$
+
+
+Few will always fail during 'frr' installation, is there a way we can successfully install/configure since most of them is working, means network is good. please see below log:
+
 TASK [linux_frr_bgp : Install FRR] *****************************************************************************************************************************************************************************
 changed: [k8s-master-01]
 changed: [k8s-db-02]
@@ -91,3 +131,41 @@ changed: [MonSrv]
 changed: [osh-comp-01]
 changed: [osh-comp-03]
 changed: [osh-comp-02]
+
+
+AND:
+ubuntu@osh-comp-04:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.56
+ubuntu@osh-comp-04:~$ sudo systemctl restart frr
+ubuntu@osh-comp-04:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.56
+ubuntu@osh-comp-04:~$
+
+ubuntu@osh-comp-01:~$
+ubuntu@osh-comp-01:~$
+ubuntu@osh-comp-01:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.55
+ubuntu@osh-comp-01:~$
+ubuntu@osh-comp-01:~$
+ubuntu@osh-comp-01:~$ sudo systemctl restart frr
+ubuntu@osh-comp-01:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static
+default via 10.0.0.2 dev enp1s0 proto static metric 100
+default via 172.16.2.254 dev enp1s0 proto static metric 200
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.55
+ubuntu@osh-comp-01:~$
+
+
