@@ -351,3 +351,72 @@ I can't run this myself (the lab lives on the R810, which my tools can't reach) 
 
 Made changes.
 
+Good — I'll read the raw scripts directly. Let me clean up the temp files and locate the scripts.  
+
+Ran terminal command: Remove-Item 'C:\dc-lab\clab\_tmp_pdfcheck.py','C:\dc-lab\clab\_tmp_pdfextract.py' -ErrorAction SilentlyContinue; Remove-Item 'C:\dc-lab\_v3\deploy_lab_v14.sh.pdf.txt' -ErrorAction SilentlyContinue; Get-ChildItem 'C:\dc-lab\_v3\deploy_lab_v14.sh','C:\dc-lab\_v3\deploy_lab_v13.sh' | Select-Object FullName,Length
+
+Killed terminal
+
+Both scripts exist. Let me find the virtio/checksum/offload logic in v14. 
+
+Ran terminal command: Select-String -Path 'C:\dc-lab\_v3\deploy_lab_v14.sh' -Pattern 'virtio|checksum|ethtool|offload|tx off|InCsum|domiflist|vnet|Phase 5|configure_server_virtio' | Select-Object LineNumber,Line | Format-Table -Auto -Wrap
+
+This is the full remediation. Let me read the two key sections in detail.    
+
+Read [](file:///c%3A/dc-lab/_v3/deploy_lab_v14.sh)
+
+Read [](file:///c%3A/dc-lab/_v3/deploy_lab_v14.sh)
+
+I've now read both the v1 troubleshooting wiki (§23, §25) and the v14/v13 deploy scripts. Here's the consolidated review connecting that prior TCP-checksum experience to the current clab lab. (Temp extractor files cleaned up.)
+
+## What the two docs actually establish
+
+**The bug (identical mechanism in both docs):** QEMU virtio NICs advertise `VIRTIO_NET_F_CSUM` and ship TCP segments with a *placeholder* checksum, expecting a real NIC to finalize it. When traffic is VM→VM across a host bridge (OVS/Linux) it **never touches a physical NIC**, so the checksum is never computed. The receiver's kernel validates in software, sees garbage, and **silently drops the TCP segment**. `/proc/net/snmp` `InCsumErrors` climbs. **ICMP is unaffected** — the kernel marks locally-bridged ICMP `CHECKSUM_UNNECESSARY`.
+
+- `WIKI…§23`: SONiC↔MikroTik BGP stuck in `Connect`, ping fine, `tcpdump` shows `cksum 0x0e31 (incorrect)`.
+- `WIKI…§25`: Ubuntu server BGP/179 fails, ping fine, `InCsumErrors` grows.
+
+**The fix, and its evolution across the scripts:**
+
+1. `deploy_lab_v14.sh:1521-1528` documents the root cause verbatim and the *guest-side* cure — inject into the domain XML:
+   `<driver name='vhost'><host csum='off' gso='off' tso4='off' tso6='off'/></driver>` (disables the CSUM advertisement so the guest computes full checksums). That block is **present but commented out** (lines 1600-1651) — they abandoned XML patching.
+2. The **active** fix is host-side: `configure_server_virtio_fix()` (`v14:1761`) runs `ethtool -K <tap> tx off` on each fabric tap.
+3. **Persistence** (the missing piece from §25's "not persistent across restart" note) is solved in `v14:1988-2010` with a libvirt `qemu` hook (`dc-lab-tx-offload`) that re-runs `ethtool -K <tap> tx off` on every VM `started` event.
+
+**The single most important line for us** — `v14:1980-1982`:
+> *"The symptom is asymmetric: switch-to-server TCP can fail even when only the switch-side tap keeps TX checksum offload enabled."*
+
+That means the fix must be applied on **both ends / every tap**, not just the receiver.
+
+## How this maps onto the current containerlab/vrnetlab lab
+
+| Aspect | v1/v13/v14 lab (these docs) | Current clab lab |
+|---|---|---|
+| Virtualization | `virt-install` + libvirt + OVS bridges | containerlab + vrnetlab (QEMU VM inside a Docker launcher) |
+| VM→VM path | virtio → tap (`vnetX`) → OVS bridge | virtio → `tap0` in launcher → veth pair → peer launcher |
+| Physical NIC in path | none → bug present | none → **same bug almost certainly present** |
+| Fix location | `ethtool -K <vnetX> tx off` on host | `ethtool -K <ethN/tap*> tx off` inside each launcher netns |
+| Persistence | libvirt `qemu` hook | topology `exec:` per node / post-deploy hook |
+
+The mechanism (bridged VM-to-VM, no NIC) is **structurally identical**, so the checksum bug is highly likely to be live here too. Your existing `scripts/disable-clab-offloads.sh` is already the correct clab translation: it `nsenter`s each container and clears `tx/rx/tso/gso/gro/lro` on **every** data interface (`ethN` + `tap*`), which satisfies the v14 "both ends are asymmetric — do all taps" lesson.
+
+## The critical caveat for your checkerboard hunt
+
+This bug is **TCP-only** — both §23 and §25 explicitly say *ping works*. So it splits your symptoms into **two separate problems**:
+
+1. **ICMP "checkerboard" (partial ping loss)** — the verifier uses ping, and ping is immune to this bug. That stays attributable to the sonic-vs virtual-ASIC dataplane sim limit (`wiki/ecmp-checkerboard-diagnosis.md`). **Offload-disable will NOT fix ping loss.**
+2. **TCP silent drops (BGP idle, and your kubeadm `etcd … context deadline exceeded` at :2379)** — this is *exactly* the failure signature the checksum bug produces: TCP times out while the path looks "up." **This is the one the offload fix directly targets.**
+
+So the etcd timeout you hit may be two stacked causes: cross-rack reachability (fixed by `inventory-prospective.yml`) **and/or** virtio checksum drop (fixed by disabling tx offload) — even intra-rack.
+
+## Recommended next steps
+
+1. When you run the A/B test, **measure TCP, not just ping** — e.g. from a host `nc -zv <etcd-peer> 2379` or `curl -k https://<peer>:2379/version`, and check `grep InCsumErrors /proc/net/snmp` on the receiver before/after. That's what distinguishes the two problems.
+2. Widen the offload script to include the **host VMs** (generic_vm launchers: `k8s-*`, `osh-*`, `MonSrv`), not just switches — v14's "asymmetric" lesson means both ends need it:
+   ```
+   sudo bash scripts/disable-clab-offloads.sh "" 'Spine-|Leaf-|Border-Leaf|k8s-|osh-|MonSrv'
+   ```
+3. If TCP recovers, **persist it** the clab way — mirror v14's qemu-hook with a per-node `exec:` in `topology.clab.yml` (or a post-deploy step) that runs the `ethtool -K … tx off` loop inside each launcher after boot, since tap/veth offload state resets on redeploy.
+
+Want me to add that persistence hook (topology `exec:` or a small post-deploy role) mirroring v14's `dc-lab-tx-offload`, and extend `disable-clab-offloads.sh` to include the host VMs by default?
+
