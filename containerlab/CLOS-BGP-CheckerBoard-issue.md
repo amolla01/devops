@@ -218,3 +218,86 @@ Are you deploying this lab using vNetLab qemu-based virtual machines (kind: soni
 [8] [https://scottstuff.net](https://scottstuff.net/posts/2025/01/11/linux-ecmp-not-balanced/)
 [9] [https://github.com](https://github.com/sonic-net/SONiC/wiki/ECMP-and-LAG-Hash-Seed/539aa1f44e886fe12bfb5eb084662e7873263184)
 [10] [https://containerlab.dev](https://containerlab.dev/manual/kinds/sonic-vs/)
+
+
+
+# My kind is sonic-vm, not sonic-vs. I downloaded sonic-vs and went through vrnetlab dockerization and using that in my topology as sonc-vm to get complete functionality.
+
+
+Since you are running kind: sonic-vm via vrnetlab, the architecture under the hood shifts completely. Your architecture is not a lightweight container sharing the host kernel; instead, vrnetlab boots a full SONiC KVM virtual machine inside a Docker container, using a qemu process that maps virtual Ethernet interfaces to the container's network namespace via a series of internal Linux bridges and tap interfaces.
+This changes our root cause analysis dramatically. Because the control plane is perfect, but the dataplane shows a fixed, unyielding checkerboard pattern on transit hops, the failure is occurring because QEMU is silently dropping packets at the VirtIO / Kernel interface boundary inside the vrnetlab wrapper.
+Here is exactly why this happens in a pure L3 sonic-vm topology and how to completely eliminate it.
+------------------------------
+## The Root Cause: VirtIO Multiqueue & RSS Flow Steering Collisions
+By default, vrnetlab boots KVM with standard virtio-net-pci network devices. Modern virtual SONiC images inside that VM enable Receive Side Scaling (RSS) and expect to distribute multi-path traffic across multiple CPU queues.
+However, vrnetlab's default QEMU launch script boots the VM with only 1 vCPU and a single queue (queues=1) per network interface.
+When a pure L3 ECMP network hashes multiple distinct flows across a CLOS fabric, the transit spine VM tries to steer packets to different internal CPU cores based on L3/L4 hash offsets. Because QEMU only has 1 queue and 1 vCPU allocated by vrnetlab:
+
+   1. The guest kernel's network driver attempts to write to non-existent ring buffer queues or triggers a race condition during heavy interrupt periods.
+   2. The internal tap interface on the vrnetlab Docker container drops the packet before it ever exits to the Containerlab veth pair.
+   3. This creates a fixed checkerboard because the KVM instance processes the exact same deterministic flows into the exact same broken virtual queue mappings every single time.
+
+------------------------------
+## Step 1: Patch vrnetlab's QEMU Arguments (The Definitive Fix)
+To fix this, you must allow the SONiC VM to properly multi-queue network traffic and give it enough compute headroom to process the software forwarding plane without dropping packets at the interface ring buffer.
+You need to modify the vrnetlab launch script (usually named vrpdp.py, launch.py, or similar inside your custom vrnetlab image directory) and rebuild, or inject runtime configurations.
+Change the QEMU launch arguments to ensure at least 2 vCPUs are present and enable multi-queue on the network interfaces:
+
+# Inside your vrnetlab python launch script where qemu arguments are constructed:# Ensure the VM has at least 2 cores
+cmd.extend(["-smp", "2,sockets=1,cores=2,threads=1"])
+# Modify the network interface string to map multiple queues to the virtio driver:# For each front-panel interface loop:"-device", "virtio-net-pci,netdev=p01,mac=52:54:00:12:34:56,mq=on,vectors=6""-netdev", "tap,id=p01,ifname=tap01,script=no,downscript=no,queues=2"
+
+Rebuild your Docker image via make inside the vrnetlab directory after modifying this.
+------------------------------
+## Step 2: Override the Runtime Config in Containerlab (topology.yml)
+If you don't want to rebuild the entire vrnetlab image right now, you can force Containerlab to allocate more host resources to the QEMU container and strip down the advanced segmentation settings that choke single-queue VirtIO drivers.
+Update your topology.yml file to include explicit environment tweaks and resource allocations for your spine switches:
+
+topology:
+  nodes:
+    spine1:
+      kind: sonic-vm
+      image: vrnetlab/sonic:latest
+      # Give the container access to more host cores so QEMU doesn't bottleneck
+      cpu-shares: 2048
+      memory: 4096
+      binds:
+        # Prevent the SONiC VM kernel from attempting to use advanced hardware offloads
+        - /dev/net/tun:/dev/net/tun
+      exec:
+        # Enforce strict MTU alignment and disable all segmentation offloads 
+        # on the outer Docker container namespaces to keep VirtIO clean
+        - ip link set eth1 mtu 1500
+        - ethtool -K eth1 tso off gso off gro off lro off rx off tx off
+        - ip link set eth2 mtu 1500
+        - ethtool -K eth2 tso off gso off gro off lro off rx off tx off
+
+------------------------------
+## Step 3: Disable Receive Side Scaling (RSS) inside the SONiC VM
+If multi-queuing cannot be enabled via your current vrnetlab image scripts, you must explicitly tell the internal SONiC VM to stop trying to distribute ECMP flows across multi-queue ring buffers.
+Log directly into the console of the SONiC VM (docker exec -it clab-xxxx bash and then attach to the serial console via screen /vms/sonic/serial or your vrnetlab console wrapper):
+
+   1. Edit /etc/sonic/config_db.json inside the VM.
+   2. Disable RSS steering globally by stripping the hashing keys down to the absolute bare minimum IP tracking:
+
+{
+    "SWITCH_HASH": {
+        "GLOBAL": {
+            "ecmp_hash_algorithm": "crc",
+            "ecmp_hash_fields": [
+                "src-ip",
+                "dst-ip"
+            ]
+        }
+    }
+}
+
+
+   1. Explicitly disable any hardware interface offloads inside the guest SONiC VM itself via its startup rc files or dynamically to verify:
+
+sudo ethtool -K eth1 tso off gso off gro off lro off
+
+## Summary of Execution
+The reason this issue was impervious to rp_filter and ND troubleshooting is because the packet was dying inside the hypervisor layer managed by Docker/QEMU, completely bypassing the standard Linux tracking tools on the host. Forcing ethtool offloads to off across the entire chain (Host -> Container Namespace -> Guest VM) and scaling the VM to 2 vCPUs with a matching hash restriction will cleanly unblock the transit pipeline.
+Are you currently running this fabric on an AMD EPYC or an Intel Xeon host machine? There are rare nested virtualization flags (kvm-intel vs kvm-amd) related to page-table shadowing that can sometimes exacerbate single-queue VirtIO drops when processing dense eBGP meshes.
+
