@@ -301,3 +301,53 @@ sudo ethtool -K eth1 tso off gso off gro off lro off
 The reason this issue was impervious to rp_filter and ND troubleshooting is because the packet was dying inside the hypervisor layer managed by Docker/QEMU, completely bypassing the standard Linux tracking tools on the host. Forcing ethtool offloads to off across the entire chain (Host -> Container Namespace -> Guest VM) and scaling the VM to 2 vCPUs with a matching hash restriction will cleanly unblock the transit pipeline.
 Are you currently running this fabric on an AMD EPYC or an Intel Xeon host machine? There are rare nested virtualization flags (kvm-intel vs kvm-amd) related to page-table shadowing that can sometimes exacerbate single-queue VirtIO drops when processing dense eBGP meshes.
 
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+Let me read the live topology to see node/link structure and pick the right place to inject the offload-disable exec. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/topology.clab.yml#1-1), lines 1 to 140
+
+Good — let's run the offload experiment. Since a full redeploy costs ~2h, the practical A/B lever is a **host-side sweep** that disables offloads on every switch container's data interfaces (the veth *and* tap ends that bracket the QEMU path) with no redeploy. It's idempotent and reversible.
+
+I'll create the script; you run it on the R810 host, then re-run the verifier. 
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/scripts/disable-clab-offloads.sh)
+
+Created scripts/disable-clab-offloads.sh. It enters each switch container's netns (via `nsenter`, using the **host's** `ethtool` so it doesn't matter whether ethtool exists inside the launcher) and turns off TSO/GSO/GRO/LRO + TX/RX checksum on every data interface — both the `ethN` veth ends and the QEMU `tap*` ends that bracket the sonic-vs dataplane. No redeploy required, fully reversible.
+
+## A/B procedure
+
+**1. Baseline (control node / WSL) — capture the current checkerboard:**
+```bash
+cd /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab && source data-center/venv/bin/activate
+ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml | tee /tmp/ecmp-before.txt
+```
+
+**2. Apply the offload sweep — on the R810 host (where containerlab runs), as root:**
+```bash
+cd ~/dc_lab/clab/sonic-clab   # wherever the repo lives on R810
+sudo bash scripts/disable-clab-offloads.sh
+```
+Spot-check one interface got flipped:
+```bash
+sudo nsenter -t $(docker inspect -f '{{.State.Pid}}' Spine-S1) -n ethtool -k eth1 | grep -E 'tcp-seg|generic|checksum'
+```
+(expect `tcp-segmentation-offload: off`, `generic-*-offload: off`, `tx/rx-checksumming: off`)
+
+**3. Re-run the verifier and diff:**
+```bash
+ansible-playbook -i inventory.yml playbooks/verify-fabric-ecmp.yml | tee /tmp/ecmp-after.txt
+diff <(grep -oE '[a-z0-9-]+=[0-9]+/15' /tmp/ecmp-before.txt) \
+     <(grep -oE '[a-z0-9-]+=[0-9]+/15' /tmp/ecmp-after.txt)
+```
+
+## How to read the result
+- **Reach counts jump toward 15/15** → offload corruption was the cause; I'll then wire an `exec:` block into the switch nodes in topology.clab.yml so it survives redeploys.
+- **No change** (same deterministic pairs, still 4–11/15) → confirms your earlier verdict: the drop is inside the QEMU'd sonic-vs software dataplane, past the tap — not reachable by host-side offload tuning. We stop chasing it and proceed with the single-column inventory-prospective.yml.
+
+To revert at any time: `sudo bash scripts/disable-clab-offloads.sh --revert`.
+
+I can't run this myself (the lab lives on the R810, which my tools can't reach) — run the three steps above and paste `/tmp/ecmp-after.txt` (or the diff) back here, and I'll tell you which branch we're in and do the follow-up.
+
+Made changes.
+
