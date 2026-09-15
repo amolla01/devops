@@ -394,3 +394,78 @@ Note the manual `sed` is temporary — Kubespray regenerates `config.toml` from 
 One aside: kubeadm also warned `clusterDNS ... 169.254.25.10` vs recommended `10.233.0.10` — that's just the nodelocaldns cache IP (`enable_nodelocaldns: true`), a warning only, unrelated to this failure.
 
 Made changes.
+Compacted conversationLet me check what reset-related playbooks already exist.  
+
+Searched for files matching `**/sonic-clab/playbooks/**/*.yml`, 20 matches
+
+Searched for regex `kubeadm reset|reset\.yml|kubespray.*reset|containerd_snapshotter|overlay-k8s`, 22 results
+
+No reset playbook exists. Let me look at how the overlay/kubespray playbooks are structured so the reset playbook fits the existing conventions.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/lab/overlay-k8s.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-prep.yml#1-1), lines 1 to 80
+
+Let me look at how `kubespray.yml` invokes Kubespray so the reset playbook mirrors the same mechanism. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml)
+
+Searched for regex `kubespray_dest|kubespray_repo|kubespray_version|kubespray_inventory_dir|kubespray_repo_mirror|local_fabric_cache_root`, 67 results
+
+Now I have the full picture. Kubespray is cloned to `/opt/kubespray` and its `playbooks/reset.yml` is the canonical reset. There is **no reset playbook** in this repo today. Let me view the tail of kubespray-prep.yml to mirror its var/render conventions, then create the reset playbook. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-prep.yml#80-80), lines 80 to 115
+
+No reset playbook exists. I'll create `playbooks/kubespray-reset.yml` that runs Kubespray's canonical `reset.yml` non-interactively, then does an overlay-specific cleanup so the next deploy starts pristine on the native snapshotter. It includes a safety gate so it can't nuke a cluster by accident.   
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-reset.yml)
+
+Now syntax-check it via WSL, matching the repo's convention. 
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray-reset.yml --syntax-check'
+
+Syntax-check passed. Now update the runbook. Let me look at the runbook structure around the K8s section to add a reset entry that matches the existing card format.   
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/runbook-chronological.html#240-240), lines 240 to 278
+
+Replacing 10 lines with 33 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/runbook-chronological.html)
+
+
+```
+
+```
+Verify the runbook HTML div balance stays intact (the repo convention).  
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -c "cd /mnt/c/dc-lab/clab/sonic-clab/wiki; printf 'div-open: '; grep -o '<div' runbook-chronological.html | wc -l; printf 'div-close: '; grep -o '</div>' runbook-chronological.html | wc -l; printf 'k8s-reset anchor: '; grep -c 'id=.k8s-reset.' runbook-chronological.html"
+
+Balanced 9/9, anchor present. Let me record this in repo memory. 
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+No — there was no reset target before. I created one and documented it in the runbook.
+
+## New playbook: `playbooks/kubespray-reset.yml`
+Purpose-built for a partial/failed K8s deployment (failed `kubeadm init`, `CreatePodSandboxError`, half-built control plane). It:
+
+1. **Guards against accidents** — refuses to run unless you pass `-e k8s_reset_confirm=true`.
+2. **Re-renders the Kubespray inventory + overrides** (so reset targets the right hosts, and the subsequent deploy inherits the `native` snapshotter).
+3. **Runs Kubespray's own `reset.yml`** non-interactively (`-e reset_confirmation=yes`) — the canonical teardown of kubeadm/etcd/CNI/containerd.
+4. **Overlay-specific cleanup** on every node — `kubeadm reset -f`, stop kubelet/containerd, purge `/etc/kubernetes`, `/var/lib/kubelet`, stale `overlayfs` snapshots, `/etc/cni/net.d`, restart containerd — so the next run rebuilds cleanly.
+
+Usage:
+```bash
+# Destructive — reset the partial cluster
+ansible-playbook -i inventory.yml playbooks/kubespray-reset.yml -e k8s_reset_confirm=true
+
+# Then redeploy from the top
+ansible-playbook -i inventory.yml playbooks/lab/overlay-k8s.yml
+```
+
+Syntax-check passed.
+
+## Runbook updated
+Added a **"Reset a Partial / Failed K8s Deployment"** card (anchor `id="k8s-reset"`) to runbook-chronological.html with the commands and the explanation of why `--start-at-task` is not a valid shortcut. HTML div balance verified 9/9.
+
+This is the reset flow I referenced in my earlier answer — now it's a real, guarded, reproducible target instead of manual per-node steps.
+
+Made changes.
