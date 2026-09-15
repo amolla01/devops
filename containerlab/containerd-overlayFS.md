@@ -469,3 +469,91 @@ Added a **"Reset a Partial / Failed K8s Deployment"** card (anchor `id="k8s-rese
 This is the reset flow I referenced in my earlier answer — now it's a real, guarded, reproducible target instead of manual per-node steps.
 
 Made changes.
+Good news first: the native-snapshotter fix worked. This run got **all the way past** containerd/sandbox creation to the very last control‑plane step — no more `CreatePodSandboxError`. So you do **not** need another full reset.
+
+## What actually failed now
+```
+TASK [kubernetes/kubeadm : Create kubeadm token ...]
+fatal: [... -> k8s-master-01(172.16.2.51)]: kubeadm token create →
+  error: failed to load admin kubeconfig: open /root/.kube/config: no such file or directory
+```
+And on master‑01:
+```
+/etc/kubernetes/  →  kubeadm-images.yaml, manifests/, pki->ssl, ssl/
+                     (NO admin.conf, NO kubelet.conf, NO /root/.kube/config)
+```
+So the **first control‑plane node never finished `kubeadm init`** — the static‑pod manifests + PKI were written, but the admin kubeconfig was never generated. Because `/etc/kubernetes/manifests` and `ssl/` are already present, a plain re‑run of Kubespray will detect "already initialized," **skip init again**, and fail at the same token step — a loop.
+
+Two contributing signals in the log confirm the state is dirty/transient, not a config bug:
+- Transient SSH drops mid‑run: `Data could not be sent to remote host "172.16.2.51"/"172.16.2.52"` (master‑01 and db‑01 flapped; recap shows `k8s-db-02`, `osh-comp-03/04` `unreachable=1`). That flap is almost certainly what interrupted init before admin.conf was written.
+
+## Minimum to run now (from the WSL control node, in the sonic‑clab repo)
+You're already there: `(venv) nh1221@Lab-ControlNode:.../sonic-clab$`. Do **not** re‑run `kubespray-reset.yml` or overlay-k8s.yml. Just clean the 3 masters' half‑init state, then re‑run only the Kubespray cluster play:
+
+```bash
+# 1. Clear the stale (skipped-init) control-plane state on the masters only.
+#    etcd lives on the db nodes and is left intact, so init just re-attaches to it.
+ansible -i inventory.yml kube_control_plane -b -m shell \
+  -a "kubeadm reset -f; rm -rf /etc/kubernetes/* /var/lib/kubelet/* /root/.kube"
+
+# 2. Re-run just the Kubespray cluster (idempotent). This will now really run
+#    kubeadm init on master-01, create admin.conf + /root/.kube/config,
+#    re-issue the join token, and install the CNI.
+ansible-playbook -i inventory.yml playbooks/kubespray.yml
+```
+
+Why this is the minimum:
+- kubespray-prep.yml already rendered the inventory + overrides (with `containerd_snapshotter: native`), so no need to re‑run prep.
+- Wiping only `kube_control_plane` (the masters) forces a clean `kubeadm init` without touching etcd data on the db nodes.
+- `playbooks/kubespray.yml` re‑enters `cluster.yml`, which is idempotent for the already‑done node/containerd/etcd phases and will just complete the control plane + CNI.
+
+## Then verify before going further
+```bash
+kubectl --kubeconfig ~/.kube/sheba-config get nodes -o wide
+```
+Only once all nodes are `Ready` should you run the rest of the overlay (`calico-post`, `metallb`, `rook-ceph`, `openstack-helm`, …) — i.e. `playbooks/lab/overlay-k8s.yml` (or post-deploy-fast.yml). Running the full overlay now would just fail downstream.
+
+If step 2 still drops master‑01/db‑01 with `Data could not be sent to remote host`, that's the SSH/fabric flap — rerun with lower parallelism (`-f 1`) by temporarily editing the `-f 5` in the run task, or just re‑run; it's idempotent and will resume.
+
+Want me to add this "skipped‑init / token‑create loop" case (clean masters → re‑run kubespray) to the `k8s-reset` card in the runbook, and optionally harden `kubespray-reset.yml` to also purge `/etc/kubernetes/manifests` explicitly so this can't recur?
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-reset.yml#140-140), lines 140 to 144
+
+Searched for regex `id=.k8s-reset.` (`**/sonic-clab/wiki/runbook-chronological.html`), 1 result
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-reset.yml#120-120), lines 120 to 144
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/runbook-chronological.html#276-276), lines 276 to 300
+
+Now let me harden the reset playbook's cleanup (explicit manifests + `/root/.kube` purge) and add the skipped-init loop remediation to the runbook card. 
+
+Replacing 26 lines with 50 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray-reset.yml), [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/runbook-chronological.html)
+
+
+```
+
+```
+
+```
+
+```
+Now validate both: syntax-check the playbook and confirm the runbook HTML div balance (the `note` div adds one open+close).  
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray-reset.yml --syntax-check; cd wiki; printf "div-open: "; grep -o "<div" runbook-chronological.html | wc -l; printf "div-close: "; grep -o "</div>" runbook-chronological.html | wc -l; printf "note-in-card: "; grep -c "class=.note." runbook-chronological.html'
+Completed with input: wsl.exe -d ubuntu-24.04 bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray-reset.yml --syntax-check; cd wiki; printf "div-open: "; grep -o "<div" runbook-chronological.html | wc -l; printf "div-close: "; grep -o "</div>" runbook-chronological.html | wc -l; printf "note-in-card: "; grep -c "class=.note." runbook-chronological.html'
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && ANSIBLE_CONFIG=\$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray-reset.yml --syntax-check"
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -c "cd /mnt/c/dc-lab/clab/sonic-clab/wiki; printf 'div-open: '; grep -o '<div' runbook-chronological.html | wc -l; printf 'div-close: '; grep -o '</div>' runbook-chronological.html | wc -l"
+
+Both validated. Syntax-check passed and the runbook HTML is balanced 10/10.
+
+Done:
+
+1. **Hardened `playbooks/kubespray-reset.yml`** — the belt cleanup now explicitly purges `/etc/kubernetes/manifests/*` and `/root/.kube` (on top of `/etc/kubernetes/*` and `/var/lib/kubelet/*`), with a one‑line comment explaining that surviving manifests/kube config are what make Kubespray skip `kubeadm init` and loop at `token create`.
+
+2. **Updated the `k8s-reset` runbook card** in runbook-chronological.html — added a **"Skipped‑init / token‑create loop"** note documenting the exact symptom (`failed to load admin kubeconfig: open /root/.kube/config`), the cause (transient SSH drop leaving `manifests/` + `ssl/` but no `admin.conf`), and the minimal fix (clean only `kube_control_plane`, re‑run `playbooks/kubespray.yml`, verify nodes, lower `-f` if flapping).
+
+Note: the world‑writable‑dir warning just means the repo's `ansible.cfg` was ignored for that syntax‑check (WSL sees the Windows mount as world‑writable) — harmless here, and I passed `ANSIBLE_CONFIG` explicitly. Your real runs from the WSL‑native repo path are unaffected.
+
+Made changes.
