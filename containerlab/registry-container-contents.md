@@ -464,3 +464,32 @@ containerd_cri_extra_args: |
 
 Run the confirm command + the manual test and paste the results. If the plugin header name in your config differs (some renders use `io.containerd.grpc.v1.cri`), send me the output of the confirm grep and I'll adjust the `sed` target before you apply it.
 
+XXXXXXXXXXXXXXXXXXXXXX
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -E "^version|platform ="
+version = 3
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -iE "use_local_image_pull|unpack_config|transfer.v1.local|snapshotter ="
+    snapshotter = 'native'
+    use_local_image_pull = false
+          snapshotter = ''
+  [plugins.'io.containerd.transfer.v1.local']
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ # temporary manual test — Kubespray will overwrite this later
+sudo sed -i "/\[plugins.'io.containerd.cri.v1.images'\]/a\\    use_local_image_pull = true" /etc/containerd/config.toml
+sudo grep -n "use_local_image_pull" /etc/containerd/config.toml     # verify it landed once, correctly indented
+sudo systemctl restart containerd
+sudo crictl pull 172.16.2.1:5000/pause:3.10
+E0916 00:14:11.351739  199425 log.go:32] "PullImage from image service failed" err="rpc error: code = InvalidArgument desc = failed to pull and unpack image \"172.16.2.1:5000/pause:3.10\": unable to initialize unpacker: no unpack platforms defined: invalid argument" image="172.16.2.1:5000/pause:3.10"
+FATA[0000] pulling image: rpc error: code = InvalidArgument desc = failed to pull and unpack image "172.16.2.1:5000/pause:3.10": unable to initialize unpacker: no unpack platforms defined: invalid argument 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -iE "use_local_image_pull|unpack_config|transfer.v1.local|snapshotter ="
+    snapshotter = 'native'
+    use_local_image_pull = false
+          snapshotter = ''
+  [plugins.'io.containerd.transfer.v1.local']
+ubuntu@k8s-master-01:~$ 
