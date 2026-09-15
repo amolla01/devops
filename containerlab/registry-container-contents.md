@@ -526,3 +526,25 @@ If that pull succeeds, we've confirmed it. Then let me bake it into your Kubespr
 Paste the `crictl pull` result and the `grep` line. If the pull still fails after `use_local_image_pull = true` truly shows in the file, I'll add the transfer `unpack_config` block as a belt-and-suspenders — but I expect the local-pull switch alone to fix it.
 
 ```
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo python3 - <<'PY'
+import re
+p="/etc/containerd/config.toml"
+s=open(p).read()
+if "use_local_image_pull" in s:
+    s=re.sub(r"use_local_image_pull\s*=\s*false","use_local_image_pull = true",s)
+else:
+    s=re.sub(r"(\[plugins\.[\"']io\.containerd\.cri\.v1\.images[\"']\])",
+             r"\1\n    use_local_image_pull = true", s, count=1)
+open(p,"w").write(s)
+print("patched")
+PY
+sudo systemctl restart containerd
+sudo grep -n use_local_image_pull /etc/containerd/config.toml    # must now show: true
+sudo crictl pull 172.16.2.1:5000/pause:3.10
+patched
+47:    use_local_image_pull = true
+Image is up to date for sha256:2d37ce84532f2a973089dc42f1972e06b055cd4313c62a362149b208ed615ab2
+ubuntu@k8s-master-01:~$
+```
