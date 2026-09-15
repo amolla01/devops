@@ -309,3 +309,103 @@ My bet is **#1 (stale rendered overrides)** or **#2 (version drift to 1.36.4)**.
 
 Want me to add a `mirror-preflight` play (extend playbooks/verify.yml) that automatically runs these three checks — rendered‑file grep, `/v2/_catalog` diff against the required image list, and a `crictl pull` smoke test from one node — and prints a red/green report before every deploy?
 
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ grep -rnE "k8s_version|kube_version" group_vars/ playbooks/ | grep -v '#'
+group_vars/k8s_cluster.yml:118:k8s_version: "1.35.4"
+group_vars/k8s_cluster.yml:138:kube_version: "1.35.4"
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo crictl pull 172.16.2.1:5000/pause:3.10
+sudo crictl pull 172.16.2.1:5000/kube-apiserver:v1.35.4
+E0915 23:50:41.396489  187561 log.go:32] "PullImage from image service failed" err="rpc error: code = InvalidArgument desc = failed to pull and unpack image \"172.16.2.1:5000/pause:3.10\": unable to initialize unpacker: no unpack platforms defined: invalid argument" image="172.16.2.1:5000/pause:3.10"
+FATA[0000] pulling image: rpc error: code = InvalidArgument desc = failed to pull and unpack image "172.16.2.1:5000/pause:3.10": unable to initialize unpacker: no unpack platforms defined: invalid argument 
+E0915 23:50:41.491261  187576 log.go:32] "PullImage from image service failed" err="rpc error: code = InvalidArgument desc = failed to pull and unpack image \"172.16.2.1:5000/kube-apiserver:v1.35.4\": unable to initialize unpacker: no unpack platforms defined: invalid argument" image="172.16.2.1:5000/kube-apiserver:v1.35.4"
+FATA[0000] pulling image: rpc error: code = InvalidArgument desc = failed to pull and unpack image "172.16.2.1:5000/kube-apiserver:v1.35.4": unable to initialize unpacker: no unpack platforms defined: invalid argument 
+ubuntu@k8s-master-01:~$ ping -c 3 -W 3 172.16.2.1
+PING 172.16.2.1 (172.16.2.1) 56(84) bytes of data.
+64 bytes from 172.16.2.1: icmp_seq=1 ttl=64 time=0.395 ms
+64 bytes from 172.16.2.1: icmp_seq=2 ttl=64 time=0.463 ms
+64 bytes from 172.16.2.1: icmp_seq=3 ttl=64 time=0.691 ms
+
+--- 172.16.2.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2071ms
+rtt min/avg/max/mdev = 0.395/0.516/0.691/0.126 ms
+ubuntu@k8s-master-01:~$ 
+
+nh1221@PowerEdge-R810:~$ curl -fsSI http://172.16.2.1:8080/
+HTTP/1.1 200 OK
+Server: nginx/1.31.4
+Date: Tue, 15 Sep 2026 21:32:32 GMT
+Content-Type: text/html
+Connection: keep-alive
+
+nh1221@PowerEdge-R810:~$ sudo docker inspect -f '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{"\n"}}{{end}}' sheba-file-server
+/opt/fabric-cache/downloads -> /usr/share/nginx/html
+
+nh1221@PowerEdge-R810:~$ ls -al /opt/fabric-cache/downloads
+total 611684
+drwxr-xr-x  3 root   root       4096 Sep 13 19:31 .
+drwxr-xr-x  3 root   root       4096 Aug 29 08:04 ..
+-rw-r--r--  1 root   root     300047 Sep 13 16:39 calico-crds-3.29.2.yaml
+-rwxr-xr-x  1 root   root   70297012 Feb  5  2025 calicoctl-3.29.2-linux-amd64
+-rwxr-xr-x  1 nh1221 nh1221 70297012 Aug 29 10:05 calicoctl-linux-amd64-v3.29.2
+-rwxr-xr-x  1 nh1221 nh1221 52713273 Aug 29 10:07 cni-plugins-linux-amd64-v1.6.0.tgz
+-rwxr-xr-x  1 root   root   55418181 Mar 16  2026 cni-plugins-linux-amd64-v1.9.1.tgz
+-rwxr-xr-x  1 root   root   35352990 Apr 14 12:38 containerd-2.2.3-linux-amd64.tar.gz
+-rwxr-xr-x  1 nh1221 nh1221 34497346 Aug 29 11:30 containerd-2.3.0-linux-amd64.tar.gz
+-rwxr-xr-x  1 root   root   19185064 Dec 10  2025 crictl-v1.35.0-linux-amd64.tar.gz
+-rwxr-xr-x  1 nh1221 nh1221 19263420 Aug 29 10:06 crictl-v1.36.0-linux-amd64.tar.gz
+-rwxr-xr-x  1 root   root   20488380 Nov 12  2024 etcd-v3.5.17-linux-amd64.tar.gz
+-rw-r--r--  1 root   root   22338398 Sep 13 19:31 etcd-v3.5.24-linux-amd64.tar.gz
+-rwxr-xr-x  1 nh1221 nh1221 72413368 Aug 29 10:06 kubeadm-v1.35.4-amd64
+-rwxr-xr-x  1 nh1221 nh1221 58613944 Aug 29 10:06 kubectl-v1.35.4-amd64
+-rwxr-xr-x  1 nh1221 nh1221 58138916 Aug 29 10:07 kubelet-v1.35.4-amd64
+-rwxr-xr-x  1 root   root   11373900 Mar 31 04:35 nerdctl-2.2.2-linux-amd64.tar.gz
+-rwxr-xr-x  1 root   root   11744522 Jul 20 03:13 nerdctl-2.3.5-linux-amd64.tar.gz
+drwxr-xr-x 12 root   root       4096 Jul 13 19:24 runc-1.5.1
+-rwxr-xr-x  1 nh1221 nh1221  1634504 Aug 29 11:30 runc-1.5.1.tar.xz
+-rwxr-xr-x  1 root   root   12233104 Apr  2 19:16 runc.amd64
+nh1221@PowerEdge-R810:~$ curl -s http://172.16.2.1:8080 | awk -F'href="' '/href=/ {split($2,a,"\""); print a[1]}'
+../
+runc-1.5.1/
+calico-crds-3.29.2.yaml
+calicoctl-3.29.2-linux-amd64
+calicoctl-linux-amd64-v3.29.2
+cni-plugins-linux-amd64-v1.6.0.tgz
+cni-plugins-linux-amd64-v1.9.1.tgz
+containerd-2.2.3-linux-amd64.tar.gz
+containerd-2.3.0-linux-amd64.tar.gz
+crictl-v1.35.0-linux-amd64.tar.gz
+crictl-v1.36.0-linux-amd64.tar.gz
+etcd-v3.5.17-linux-amd64.tar.gz
+etcd-v3.5.24-linux-amd64.tar.gz
+kubeadm-v1.35.4-amd64
+kubectl-v1.35.4-amd64
+kubelet-v1.35.4-amd64
+nerdctl-2.2.2-linux-amd64.tar.gz
+nerdctl-2.3.5-linux-amd64.tar.gz
+runc-1.5.1.tar.xz
+runc.amd64
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ grep -rnE "k8s_version|kube_version" group_vars/ playbooks/ | grep -v '#'
+grep: group_vars/: No such file or directory
+grep: playbooks/: No such file or directory
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ curl -s http://172.16.2.1:5000/v2/_catalog | tr ',' '\n' | grep -E "kube-apiserver|pause|calico|coredns"
+"calico/cni"
+"calico/kube-controllers"
+"calico/node"
+"calico/pod2daemon-flexvol"
+"calico/typha"
+"coredns"
+"coredns/coredns"
+"kube-apiserver"
+"pause"
+nh1221@PowerEdge-R810:~$ curl -s http://172.16.2.1:5000/v2/kube-apiserver/tags/list
+{"name":"kube-apiserver","tags":["v1.36.4","v1.33.3","v1.31.4","v1.35.4"]}
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ 
+
