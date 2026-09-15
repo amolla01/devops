@@ -333,7 +333,7 @@ PING 172.16.2.1 (172.16.2.1) 56(84) bytes of data.
 3 packets transmitted, 3 received, 0% packet loss, time 2071ms
 rtt min/avg/max/mdev = 0.395/0.516/0.691/0.126 ms
 ubuntu@k8s-master-01:~$ 
-
+```
 nh1221@PowerEdge-R810:~$ curl -fsSI http://172.16.2.1:8080/
 HTTP/1.1 200 OK
 Server: nginx/1.31.4
@@ -409,3 +409,15 @@ nh1221@PowerEdge-R810:~$ curl -s http://172.16.2.1:5000/v2/kube-apiserver/tags/l
 nh1221@PowerEdge-R810:~$ 
 nh1221@PowerEdge-R810:~$ 
 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ containerd --version
+containerd github.com/containerd/containerd/v2 v2.2.3 77c84241c7cbdd9b4eca2591793e3d4f4317c590
+ubuntu@k8s-master-01:~$ sudo head -3 /etc/containerd/config.toml
+version = 3
+
+root = "/var/lib/containerd"
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -E "^version|platform ="
+version = 3
+ubuntu@k8s-master-01:~$ 
+```
