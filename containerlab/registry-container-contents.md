@@ -421,3 +421,46 @@ ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -E "^version|platform
 version = 3
 ubuntu@k8s-master-01:~$ 
 ```
+SSSSSSSSSSSSSSSSSSSSSSSSSS
+Compacted conversationGood — that output is actually the smoking gun, but it rules out my schema theory:
+
+- containerd **v2.2.3** ✅ (Kubespray v2.31.0 default — correct)
+- config header **`version = 3`** ✅ (correct schema — so it's *not* a v2/v3 mismatch)
+- `containerd config dump` shows **no platform line at all** → the unpack platform list is genuinely **empty**
+
+(Note: your grep was `platform =` singular; the real key is `platforms =` / `unpack_config` — but the point stands, nothing is defining an unpack platform.)
+
+## What's really happening
+containerd **2.x** changed CRI image pulls to delegate to the **transfer service** (`use_local_image_pull = false` is the 2.x default). The transfer service decides *which platform to unpack for* from its `[[plugins."io.containerd.transfer.v1.local".unpack_config]]` list. Kubespray's rendered config (especially with a non-default `native` snapshotter) isn't populating that list, so the transfer service comes up with **zero unpack platforms** → every `crictl pull` fails with *"no unpack platforms defined"*. Nothing to do with the mirror or the version.
+
+## Confirm the two suspects (on k8s-master-01)
+```bash
+sudo containerd config dump | grep -iE "use_local_image_pull|unpack_config|transfer.v1.local|snapshotter ="
+```
+Expect: `use_local_image_pull` absent/false **and** no `unpack_config` block.
+
+## Fastest fix to verify right now
+Tell the CRI image plugin to use its **own** local unpacker (which derives the platform from the node) instead of the transfer service:
+
+```bash
+# temporary manual test — Kubespray will overwrite this later
+sudo sed -i "/\[plugins.'io.containerd.cri.v1.images'\]/a\\    use_local_image_pull = true" /etc/containerd/config.toml
+sudo grep -n "use_local_image_pull" /etc/containerd/config.toml     # verify it landed once, correctly indented
+sudo systemctl restart containerd
+sudo crictl pull 172.16.2.1:5000/pause:3.10
+```
+
+If that pull succeeds, we've nailed it and I'll bake it into your Kubespray override template as:
+
+```yaml
+# containerd 2.x CRI delegates pulls to the transfer service, which has no
+# unpack platform configured under our native-snapshotter setup -> pull fails.
+# Force CRI to use its own local unpacker instead.
+containerd_cri_extra_args: |
+  use_local_image_pull = true
+```
+
+(exact Kubespray variable/placement depends on the rendered block — I'll confirm the right key once the manual test passes).
+
+Run the confirm command + the manual test and paste the results. If the plugin header name in your config differs (some renders use `io.containerd.grpc.v1.cri`), send me the output of the confirm grep and I'll adjust the `sed` target before you apply it.
+
