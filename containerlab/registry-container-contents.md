@@ -465,6 +465,7 @@ containerd_cri_extra_args: |
 Run the confirm command + the manual test and paste the results. If the plugin header name in your config differs (some renders use `io.containerd.grpc.v1.cri`), send me the output of the confirm grep and I'll adjust the `sed` target before you apply it.
 
 XXXXXXXXXXXXXXXXXXXXXX
+```
 ubuntu@k8s-master-01:~$ 
 ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -E "^version|platform ="
 version = 3
@@ -493,3 +494,4 @@ ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -iE "use_local_image_
           snapshotter = ''
   [plugins.'io.containerd.transfer.v1.local']
 ubuntu@k8s-master-01:~$ 
+```
