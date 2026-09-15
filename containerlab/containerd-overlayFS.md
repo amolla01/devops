@@ -316,3 +316,81 @@ The control plane failure in the nested QEMU/KVM virtual machine environment is 
 
 
 Once you incorporate the fix , Can I start by running "ansible-playbook -i inventory.yml playbooks/lab/overlay-k8s.yml --start-at-task="Kubeadm | Create kubeadm config"???
+
+CLAUDIO:
+
+This is a misdiagnosis in those pasted notes — the kernel version is a red herring. Let me confirm the real cause and find where to fix it in the codebase. 
+
+Searched for regex `containerd_snapshotter|snapshotter|containerd_storage_dir|overlayfs|LiveOS|containerd_root`, 97 results
+
+Confirmed the real root cause: the VM root is a **dracut LiveOS overlay** (`LiveOS_rootfs on / type overlay`), and `/var/lib/containerd` sits on it. containerd's **overlayfs snapshotter cannot mount overlay-on-overlay** → `invalid argument`. The kernel-7.0/`index=off` theory is wrong. The correct, reproducible fix is the **native snapshotter**. Let me wire it into the codebase.    
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/group_vars/k8s_cluster.yml#90-90), lines 90 to 105
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/kubespray_prep/templates/kubespray-group-vars.yaml.j2#1-1), lines 1 to 45
+
+Replacing 6 lines with 22 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/group_vars/k8s_cluster.yml), [](file:///c%3A/dc-lab/clab/sonic-clab/roles/kubespray_prep/templates/kubespray-group-vars.yaml.j2)
+
+
+```
+
+```
+
+```
+
+```
+Let me record this in repo memory since it's a common, easily-misdiagnosed failure.   
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Fix incorporated. Here's the correct diagnosis and the answer to your resume question.
+
+## Real root cause (the pasted notes misdiagnose it)
+Your `mount` output shows the VM root is a **dracut LiveOS overlay**:
+```
+LiveOS_rootfs on / type overlay (rw,...,lowerdir=/run/rootfsbase,upperdir=/run/overlayfs,...)
+/dev/vda on /run/overlayfs-backing type ext4
+```
+`/var/lib/containerd` lives on that overlay root. containerd's default **overlayfs snapshotter cannot stack an overlay mount on top of an overlay filesystem** — the kernel returns `invalid argument`, so every control-plane Pod sandbox fails (`CreatePodSandboxError`), the apiserver never binds `6443`, and `kubeadm init` times out on `wait-control-plane`.
+
+- It is **not** the kernel 7.0 / `index=off` issue, and **not** etcd — you proved etcd is fine (`nc 10.0.10.2/20.2/30.2 2379` all succeeded, external-etcd mode working).
+- The `mount_options = []` edit will **not** help; overlay-on-overlay stays rejected. Relocating containerd root to `/opt` also won't help (it's on the same overlay).
+
+## Fix shipped (reproducible)
+Set the **native snapshotter** (bind/copy layers — works on any filesystem):
+- group_vars/k8s_cluster.yml — `containerd_snapshotter: "native"`
+- kubespray-group-vars.yaml.j2 — `containerd_snapshotter: "{{ containerd_snapshotter | default('native') }}"`
+
+Tradeoff: native has no layer dedup (more disk), which is fine on your 147 GB overlay canvas.
+
+## Can you resume with `--start-at-task="Kubeadm | Create kubeadm config"`?
+**No.** Two reasons:
+1. That task is in the control-plane role — it **skips the `container-engine` role**, so the new `native` snapshotter never gets written to `/etc/containerd/config.toml` (which still says `snapshotter = "overlayfs"`). The runtime would fail exactly the same way.
+2. The failed `kubeadm init` left partial state (certs, manifests, kubelet config, stale snapshots) that a re-init will trip over.
+
+### Correct sequence
+```bash
+# 1. Re-render overrides with the new snapshotter
+ansible-playbook -i inventory.yml playbooks/kubespray-prep.yml
+
+# 2. Reconfigure + restart containerd across the cluster (rewrites config.toml to native)
+ansible-playbook -i inventory.yml playbooks/kubespray.yml --tags container-engine
+
+# 3. Reset the half-initialized control plane, then re-run the K8s deploy
+ansible -i inventory.yml kube_control_plane -b -m shell -a "kubeadm reset -f"
+ansible-playbook -i inventory.yml playbooks/lab/overlay-k8s.yml
+```
+
+If you want to unblock **one node right now** to confirm before a full re-run, on each master:
+```bash
+sudo sed -i 's/snapshotter = "overlayfs"/snapshotter = "native"/' /etc/containerd/config.toml
+sudo kubeadm reset -f
+sudo rm -rf /var/lib/containerd/io.containerd.runtime.v2.task/k8s.io/* /etc/kubernetes/* /var/lib/kubelet/*
+sudo systemctl restart containerd kubelet
+sudo crictl ps -a   # sandboxes should now start (no overlay mount error)
+```
+Note the manual `sed` is temporary — Kubespray regenerates `config.toml` from its template, so the durable fix is the group-vars change above followed by the `container-engine` tag.
+
+One aside: kubeadm also warned `clusterDNS ... 169.254.25.10` vs recommended `10.233.0.10` — that's just the nodelocaldns cache IP (`enable_nodelocaldns: true`), a warning only, unrelated to this failure.
+
+Made changes.
