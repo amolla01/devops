@@ -262,3 +262,50 @@ nerdctl-2.3.5-linux-amd64.tar.gz
 runc-1.5.1.tar.xz
 runc.amd64
 nh1221@PowerEdge-R810:~$ 
+This is actually great news — both backends are fully populated and healthy. Let me verify the one thing that would still cause internet pulls: whether the **live rendered** overrides file actually carries the mirror config (the template being correct doesn't matter until it's re-rendered). 
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc "F=/opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml; echo '=== exists? ==='; ls -l \$F 2>&1; echo '=== mirror/download lines ==='; grep -nE 'image_repo|registries_mirrors|_download_url|download_run_once|airgap|172.16.2.1|8080|5000' \$F 2>&1 | head -60"
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc 'ls -l /opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml; echo "=== matches ==="; grep -nE "image_repo|registries_mirrors|_download_url|download_run_once|172.16.2.1" /opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml | head -60'
+Completed with input: wsl.exe -d ubuntu-24.04 bash -lc 'ls -l /opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml; echo "=== matches ==="; grep -nE "image_repo|registries_mirrors|_download_url|download_run_once|172.16.2.1" /opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml | head -60'
+
+Both backends are healthy and fully stocked — the mirror is **not** the problem. Your `sudo docker images` proves the registry has everything tagged `172.16.2.1:5000/…` (kube-apiserver/controller-manager/scheduler/proxy **v1.35.4**, `pause:3.10`, `calico/* v3.29.2`, `coredns/coredns:v1.12.0`, multus v4.1.0, metallb, sig-storage, etc.), and the nginx file server on `:8080` (serving `/opt/fabric-cache/downloads`) has all the **v1.35.4** binaries (kubeadm/kubectl/kubelet, etcd‑v3.5.24, cni v1.9.1, containerd 2.2.3, crictl v1.35.0, calicoctl, runc).
+
+I couldn't find `/opt/kubespray` in my shell — that's a **different WSL instance than your `Lab‑ControlNode`**, so I can't inspect your live files. But your data points to two concrete leak paths. Run these three checks on the control node:
+
+## 1. Is the *rendered* overrides file actually carrying the mirror? (most likely culprit)
+The template is correct, but the on‑disk file Kubespray reads only gets it if `kubespray-prep` re‑rendered **after** the mirror block was added — and after my `download_run_once: true` edit. If it's stale, nodes never receive the mirror and containerd falls back to the internet:
+
+```bash
+grep -nE "image_repo|registries_mirrors|_download_url|download_run_once|172.16.2.1" \
+  /opt/kubespray/inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml
+```
+If those lines are missing/stale → re‑render: `ansible-playbook -i inventory.yml playbooks/kubespray-prep.yml`
+
+## 2. Does the cluster's `kube_version` match the *staged binaries*? (the sneaky one)
+Your registry has **both** v1.35.4 and **v1.36.4** images, but the `:8080` file server only has **v1.35.4** binaries (kubeadm/kubelet/kubectl). If your cluster is set to **1.36.4**, the image pulls hit the mirror but the **binary** downloads miss it → kubeadm/kubelet fetched from the internet. Confirm they agree:
+
+```bash
+grep -rnE "k8s_version|kube_version" group_vars/ playbooks/ | grep -v '#'
+```
+It must resolve to **1.35.4** (what's staged). If you intend 1.36.4, stage those binaries on `:8080` first.
+
+## 3. Confirm the registry serves over the v2 API (not just the daemon cache)
+`docker images` is the daemon; containerd pulls the v2 API. Verify the catalog is really populated:
+
+```bash
+curl -s http://172.16.2.1:5000/v2/_catalog | tr ',' '\n' | grep -E "kube-apiserver|pause|calico|coredns"
+curl -s http://172.16.2.1:5000/v2/kube-apiserver/tags/list
+# then prove end-to-end from a K8s VM (should NOT touch the internet):
+sudo crictl pull 172.16.2.1:5000/pause:3.10
+sudo crictl pull 172.16.2.1:5000/kube-apiserver:v1.35.4
+```
+
+---
+
+**Not a problem:** the registry lacks `etcd:v3.5.24` (only 3.5.16/3.5.17), but `etcd_deployment_type: host` uses the **binary** tarball — and `etcd-v3.5.24-linux-amd64.tar.gz` **is** on `:8080` — so no etcd image is needed.
+
+My bet is **#1 (stale rendered overrides)** or **#2 (version drift to 1.36.4)**. Start with #1 — re‑render, grep to confirm the mirror lines are present, then re‑run kubespray.yml.
+
+Want me to add a `mirror-preflight` play (extend playbooks/verify.yml) that automatically runs these three checks — rendered‑file grep, `/v2/_catalog` diff against the required image list, and a `crictl pull` smoke test from one node — and prints a red/green report before every deploy?
+
