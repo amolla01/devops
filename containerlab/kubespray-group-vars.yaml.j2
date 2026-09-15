@@ -38,6 +38,11 @@ kubernetes_audit: true
 etcd_deployment_type: host
 etcd_compaction_retention: "8"
 
+# containerd snapshotter — the Host VM root is a dracut LiveOS overlay, so the
+# default overlayfs snapshotter can't mount overlay-on-overlay (invalid
+# argument) and every Pod sandbox fails. native uses bind/copy layers instead.
+containerd_snapshotter: "{{ containerd_snapshotter | default('native') }}"
+
 # -- Unblock containerd registry mirrors --------------------------------------
 download_run_once: false
 download_localhost: false
@@ -48,7 +53,7 @@ skip_downloads: false
 # Crucial system components version tags aligned with active cache
 calico_version: "{{ calico_version | default('3.29.2') }}"
 coredns_version: "{{ coredns_version | default('1.12.0') }}"
-etcd_version: "{{ etcd_version | default('3.5.17') }}"
+etcd_version: "{{ etcd_version | default('3.5.24') }}"
 
 # Component image tag overrides (match registry catalog format)
 calico_cni_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
@@ -57,7 +62,7 @@ calico_policy_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v',
 calico_typha_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
 calico_kube_controllers_tag: "v{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}"
 coredns_image_tag: "v{{ coredns_version | default('1.12.0') | regex_replace('^v', '') }}"
-etcd_image_tag: "v{{ etcd_version | default('3.5.17') | regex_replace('^v', '') }}"
+etcd_image_tag: "v{{ etcd_version | default('3.5.24') | regex_replace('^v', '') }}"
 
 # -- Multus meta-CNI -----------------------------------------------------------
 kube_network_plugin_multus: true
@@ -143,7 +148,7 @@ quay_image_repo: "{{ r810_management_ip }}:5000"
 kubeadm_download_url: "{{ r810_binary_server }}/kubeadm-v{{ k8s_version | default('1.35.4') }}-amd64"
 kubectl_download_url: "{{ r810_binary_server }}/kubectl-v{{ k8s_version | default('1.35.4') }}-amd64"
 kubelet_download_url: "{{ r810_binary_server }}/kubelet-v{{ k8s_version | default('1.35.4') }}-amd64"
-etcd_download_url: "{{ r810_binary_server }}/etcd-v{{ etcd_version | default('3.5.17') | regex_replace('^v', '') }}-linux-amd64.tar.gz"
+etcd_download_url: "{{ r810_binary_server }}/etcd-v{{ etcd_version | default('3.5.24') | regex_replace('^v', '') }}-linux-amd64.tar.gz"
 cni_download_url: "{{ r810_binary_server }}/cni-plugins-linux-amd64-v1.9.1.tgz"
 calicoctl_download_url: "{{ r810_binary_server }}/calicoctl-{{ calico_version | default('3.29.2') | regex_replace('^v', '') }}-linux-amd64"
 
