@@ -495,3 +495,34 @@ ubuntu@k8s-master-01:~$ sudo containerd config dump | grep -iE "use_local_image_
   [plugins.'io.containerd.transfer.v1.local']
 ubuntu@k8s-master-01:~$ 
 ```
+Two things happened there:
+
+1. **My test `sed` silently failed** — the pattern contained `[`, `]`, and `.` (regex metacharacters), so it matched nothing. `use_local_image_pull` is still `false`, which is why the pull error is identical.
+2. Your dump confirms the real state: `use_local_image_pull = false`, the transfer plugin `[plugins.'io.containerd.transfer.v1.local']` has **no `unpack_config`**, and its `snapshotter = ''` is empty. So the transfer service that 2.x hands CRI pulls to has zero unpack platforms → the error.
+
+Setting **`use_local_image_pull = true`** is the correct fix here, and it kills two birds: CRI stops delegating to the transfer service (so it uses the node's own platform to unpack → error gone) **and** it makes CRI honor the `registry.mirrors` block Kubespray already points at `172.16.2.1:5000` — which is also why images were leaking to the internet under the transfer path.
+
+## Apply reliably (handles both replace + insert)
+```bash
+sudo python3 - <<'PY'
+import re
+p="/etc/containerd/config.toml"
+s=open(p).read()
+if "use_local_image_pull" in s:
+    s=re.sub(r"use_local_image_pull\s*=\s*false","use_local_image_pull = true",s)
+else:
+    s=re.sub(r"(\[plugins\.[\"']io\.containerd\.cri\.v1\.images[\"']\])",
+             r"\1\n    use_local_image_pull = true", s, count=1)
+open(p,"w").write(s)
+print("patched")
+PY
+sudo systemctl restart containerd
+sudo grep -n use_local_image_pull /etc/containerd/config.toml    # must now show: true
+sudo crictl pull 172.16.2.1:5000/pause:3.10
+```
+
+If that pull succeeds, we've confirmed it. Then let me bake it into your Kubespray override so every node gets it on the real run — I'll fetch the exact Kubespray v2.31.0 containerd variable/template hook (it renders the `io.containerd.cri.v1.images` block) and wire `use_local_image_pull = true` in, rather than guessing the var name.
+
+Paste the `crictl pull` result and the `grep` line. If the pull still fails after `use_local_image_pull = true` truly shows in the file, I'll add the transfer `unpack_config` block as a belt-and-suspenders — but I expect the local-pull switch alone to fix it.
+
+```
