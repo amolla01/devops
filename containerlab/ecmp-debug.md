@@ -1,35 +1,4 @@
 
-    - name: Capture active kernel storage mount configurations
-      ansible.builtin.command:
-        cmd: mount
-      # Query the first actual Kubernetes node instead of localhost
-      delegate_to: "{{ groups['k8s_cluster'] | first }}"
-      vars:
-        # Injects the necessary SSH credentials and proxy routing into the delegation engine
-        ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: ~/.ssh/id_dc_lab
-        ansible_ssh_common_args: >-
-          -o StrictHostKeyChecking=no
-          -o UserKnownHostsFile=/dev/null
-          -o ProxyCommand="sshpass -p 'amolla01' ssh -W %h:%p -o StrictHostKeyChecking=no nh1221@192.168.9.198"
-      register: active_mounts
-      changed_when: false
-
-
-    - name: Enforce Control Plane System Storage Integrity
-      ansible.builtin.assert:
-        that:
-          # Asserts that 'LiveOS_rootfs on / type overlay' is explicitly active
-          - "'LiveOS_rootfs on / type overlay' in active_mounts.stdout"
-        fail_msg: "[CRITICAL FAILURE] The root partition (/) failed to establish an active LiveOS overlayfs wrapper!"
-        success_msg: "SUCCESS: Dynamic Dracut Overlay verified! Your filesystem is running securely on top of an active OverlayFS canvas."
-
-
-
-    # 3. Proceed seamlessly into your Kubespray or OpenStack playbooks
-    - name: Continue to Cluster Installation
-      ansible.builtin.debug:
-        msg: "Storage environment verified. Initiating Kubespray / OpenStack installation steps..."
 
 # I have the following, how can I debug it to pinpoint the issue in my CLOS sonic-vm cla/vrnetlab topology?? ubuntu@k8s-master-01:~$ ping -c 2 -W 2 10.0.20.2PING 10.0.20.2 (10.0.20.2) 56(84) bytes of data.--- 10.0.20.2 ping statistics ---2 packets transmitted, 0 received, 100% packet loss, time 1018msubuntu@k8s-master-01:~$ sudo ip r get 10.0.20.210.0.20.2 via inet6 fe80::20f2:7dff:fef5:95e1 dev ens3 src 10.0.10.1 uid 0 cacheubuntu@k8s-master-01:~$
 
