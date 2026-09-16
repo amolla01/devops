@@ -141,3 +141,64 @@ So the practical sequence should be:
 
 So yes: use the second one next, but not because it is broader. Use it because it is **narrower and better aligned to the actual failure slice**.
 
+You should **keep** `ANSIBLE_CONFIG=$PWD/ansible.cfg` on the **outer** command.
+
+There are two separate Ansible layers now:
+
+1. Outer run:
+- runs your wrapper playbook in this repo
+- needs this repo’s config from ansible.cfg
+- without it, Ansible may ignore the repo-local config because the repo is under `/mnt/c/...` and treated as world-writable
+
+2. Inner run:
+- runs Kubespray inside `{{ kubespray_dest }}`
+- should **not** inherit the outer repo config
+- I already fixed that in kubespray.yml by unsetting inherited `ANSIBLE_CONFIG` and explicitly setting the inner one to Kubespray’s own ansible.cfg
+
+So the correct model is:
+
+- outer command: keep `ANSIBLE_CONFIG=$PWD/ansible.cfg`
+- inner Kubespray invocation: already isolated to Kubespray’s own config
+
+If you drop it from the outer command, you risk going back to the earlier class of problems where Ansible ignores repo-local settings like `roles_path`, SSH defaults, and inventory behavior. The inner fix does not replace that; it only prevents the outer config from leaking into Kubespray.
+
+So yes, it is “already there” in the sense that you keep passing it on the outer command, and that is still the right thing to do. The part we changed was making sure it does **not** bleed into the nested Kubespray run.
+
+I’m fixing the resume-argument quoting at the shell boundary so task names with spaces and `|` survive intact instead of being truncated to `Kubeadm`.
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml#155-155), lines 155 to 190
+
+I’ve got the exact weak point: the wrapper is building a shell command inline, and `|` inside task names is being interpreted by the shell. I’m switching that one block to a bash array so optional arguments survive exactly as data, not shell syntax.
+
+Generating patch (58 lines) in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml)
+
+
+```
+
+```
+I replaced the inline shell concatenation with a bash argument array, which is the right fix for values like `Kubeadm | Create ...` that contain both spaces and pipe characters. I’m validating it now; if syntax holds, the resume path is usable again.
+
+Ran terminal command: wsl.exe -d ubuntu-24.04 bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook --syntax-check playbooks/kubespray.yml'
+
+The resume path is fixed now. I changed kubespray.yml so the inner Kubespray command is built as a Bash array instead of inline shell text. That matters because task names like `Kubeadm | Create kubeadm token for joining nodes with 24h expiration (default)` contain spaces and `|`, and the shell was previously mangling them down to `Kubeadm`. The wrapper still syntax-checks cleanly.
+
+You can retry the narrow resume command again:
+
+```bash
+ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray.yml \
+  -e kubespray_forks=2 \
+  -e "kubespray_limit=kube_node" \
+  -e "kubespray_start_at_task=Kubeadm | Create kubeadm token for joining nodes with 24h expiration (default)"
+```
+
+At this point the wrapper has the main hardening it was missing:
+- correct containerd fix
+- persistent inner log path
+- no SSH multiplexing for the inner run
+- default forks at `2`
+- inner run forced to use Kubespray’s own ansible.cfg
+- safe quoting for `--limit` and `--start-at-task`
+
+If this still fails, the next signal should be directly from `/opt/fabric-cache/logs/kubespray-inner.log`, not from the wrapper itself.
+
+Made changes.
