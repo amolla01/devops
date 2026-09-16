@@ -155,6 +155,8 @@
     - name: Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)
       ansible.builtin.shell: |
         # Explicitly clear out any inherited environment clutter before running
+        set -euo pipefail
+        unset ANSIBLE_CONFIG
         unset download_container
         unset download_container_engine
 
@@ -162,26 +164,35 @@
         mkdir -p {{ local_fabric_cache_root }}/ansible/kubespray-factcache
 
         # Fire the execution pass using only clean explicit target parameters
-        ansible-playbook \
-          -i inventory/sheba-cluster/hosts.yaml \
-          playbooks/cluster.yml \
-          -b \
-          -f {{ kubespray_forks | default(2) }} \
-          -e "ansible_user=ubuntu" \
-          -e "ansible_password=ubuntu" \
-          -e "ansible_sudo_pass=ubuntu" \
-          -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
-          --extra-vars "@inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml" \
-          {% if (kubespray_limit | default('') | trim | length) > 0 %}--limit {{ kubespray_limit | quote }} \
-          {% endif %}
-          {% if (kubespray_start_at_task | default('') | trim | length) > 0 %}--start-at-task {{ kubespray_start_at_task | quote }} \
-          {% endif %}
-          > {{ local_fabric_cache_root }}/logs/kubespray-inner.log 2>&1
+        cmd=(
+          ansible-playbook
+          -i inventory/sheba-cluster/hosts.yaml
+          playbooks/cluster.yml
+          -b
+          -f {{ kubespray_forks | default(2) }}
+          -e ansible_user=ubuntu
+          -e ansible_password=ubuntu
+          -e ansible_sudo_pass=ubuntu
+          -e ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab
+          --extra-vars @inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml
+        )
+
+        if [ -n "{{ kubespray_limit | default('') | trim }}" ]; then
+          cmd+=(--limit "{{ kubespray_limit | default('') | trim }}")
+        fi
+
+        if [ -n "{{ kubespray_start_at_task | default('') | trim }}" ]; then
+          cmd+=(--start-at-task "{{ kubespray_start_at_task | default('') | trim }}")
+        fi
+
+        "${cmd[@]}" > {{ local_fabric_cache_root }}/logs/kubespray-inner.log 2>&1
       args:
         chdir: /opt/kubespray
+        executable: /bin/bash
       delegate_to: localhost
       become: false
       environment:
+        ANSIBLE_CONFIG: "{{ kubespray_dest }}/ansible.cfg"
         ANSIBLE_HOST_KEY_CHECKING: "False"
         ANSIBLE_PIPELINING: "True"
         ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no -o ControlPersist=0"
