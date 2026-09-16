@@ -1,0 +1,519 @@
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ tail -f /opt/fabric-cache/logs/kubespray-inner.log
+skipping: no hosts matched
+
+PLAY [Apply resolv.conf changes now that cluster DNS is up] ********************
+
+PLAY RECAP *********************************************************************
+
+Wednesday 16 September 2026  08:28:45 -0500 (0:00:00.648)       0:00:00.648 ***
+===============================================================================
+ [ERROR]: No matching task "Kubeadm" found. Note: --start-at-task can only
+follow static includes.
+
+zzzzzzzzzzzzz
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ tail -f /opt/fabric-cache/logs/kubespray-inner.log
+[WARNING]: Could not match supplied host pattern, ignoring: bastion
+[WARNING]: Could not match supplied host pattern, ignoring:
+_kubespray_needs_etcd
+
+PLAY [Check Ansible version] ***************************************************
+
+PLAY [Inventory setup and validation] ******************************************
+
+PLAY [Install bastion ssh config] **********************************************
+skipping: no hosts matched
+
+PLAY [Bootstrap hosts for Ansible] *********************************************
+
+PLAY [Gather facts] ************************************************************
+
+PLAY [Prepare for etcd install] ************************************************
+
+PLAY [Add worker nodes to the etcd play if needed] *****************************
+
+PLAY [Install etcd] ************************************************************
+
+PLAY [Install Kubernetes nodes] ************************************************
+
+PLAY [Install the control plane] ***********************************************
+skipping: no hosts matched
+
+PLAY [Invoke kubeadm and install a CNI] ****************************************
+
+PLAY [Install Calico Route Reflector] ******************************************
+skipping: no hosts matched
+
+PLAY [Patch Kubernetes for Windows] ********************************************
+skipping: no hosts matched
+
+PLAY [Install Kubernetes apps] *************************************************
+skipping: no hosts matched
+
+PLAY [Apply resolv.conf changes now that cluster DNS is up] ********************
+
+PLAY RECAP *********************************************************************
+
+Wednesday 16 September 2026  08:36:20 -0500 (0:00:00.524)       0:00:00.524 ***
+===============================================================================
+ [ERROR]: No matching task "Set" found. Note: --start-at-task can only follow
+static includes.
+
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray.yml \
+  -e kubespray_forks=2 \
+  -e "kubespray_limit=kube_node" \
+  -e "kubespray_start_at_task=Kubeadm | Create kubeadm token for joining nodes with 24h expiration (default)"
+
+PLAY [Deploy Kubernetes cluster via Kubespray] *************************************************************************************************************
+
+TASK [Clone Kubespray repository] **************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install Kubespray Python requirements] ***************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch Kubespray containerd template for local image pull] ********************************************************************************************
+changed: [localhost]
+
+TASK [Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)] *********************************************************************************************
+ASYNC OK on localhost: jid=j858109432781.4279
+changed: [localhost]
+
+TASK [Fetch kubeconfig from primary master] ****************************************************************************************************************
+fatal: [localhost -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.51 port 22: Connection timed out", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=4    changed=3    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray.yml   -e kubespray_forks=2   -e "kubespray_limit=kube_node"   -e "kubespray_start_at_task=Set kubeadm certificate key"
+
+PLAY [Deploy Kubernetes cluster via Kubespray] *************************************************************************************************************
+
+TASK [Clone Kubespray repository] **************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install Kubespray Python requirements] ***************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch Kubespray containerd template for local image pull] ********************************************************************************************
+changed: [localhost]
+
+TASK [Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)] *********************************************************************************************
+ASYNC OK on localhost: jid=j321802759418.5662
+changed: [localhost]
+
+TASK [Fetch kubeconfig from primary master] ****************************************************************************************************************
+fatal: [localhost -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.51 port 22: Connection timed out", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=4    changed=3    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh 172.16.2.51
+Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
+no such identity: C:\\Users\\nh1221\\.ssh\\id_dc_lab: No such file or directory
+ubuntu@172.16.2.51's password:
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh k8s-master-01
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Wed Sep 16 15:38:21 CEST 2026
+
+  System load:    0.42      Processes:               144
+  Usage of /home: unknown   Users logged in:         0
+  Memory usage:   27%       IPv4 address for enp1s0: 10.0.0.15
+  Swap usage:     0%        IPv4 address for enp1s0: 172.16.2.51
+
+
+Expanded Security Maintenance for Applications is not enabled.
+
+142 updates can be applied immediately.
+109 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+1 additional security update can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings
+
+
+Last login: Wed Sep 16 13:55:40 2026 from 172.16.2.1
+ubuntu@k8s-master-01:~$
+
+######################################
+Some tasks hints from previous logs:
+
+
+PLAY [Install the control plane] ***********************************************
+Tuesday 15 September 2026  20:37:54 -0500 (0:00:06.674)       2:09:22.898 ***** 
+Tuesday 15 September 2026  20:37:54 -0500 (0:00:00.358)       2:09:23.256 ***** 
+[WARNING]: Skipped '/etc/kubernetes/patches' path due to this access issue:
+'/etc/kubernetes/patches' is not a directory
+
+TASK [kubernetes/kubeadm_common : Kubeadm | List existing kubeadm patches] *****
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:37:57 -0500 (0:00:02.562)       2:09:25.819 ***** 
+Tuesday 15 September 2026  20:37:57 -0500 (0:00:00.143)       2:09:25.963 ***** 
+Tuesday 15 September 2026  20:37:58 -0500 (0:00:00.506)       2:09:26.470 ***** 
+Tuesday 15 September 2026  20:37:58 -0500 (0:00:00.237)       2:09:26.707 ***** 
+Tuesday 15 September 2026  20:37:58 -0500 (0:00:00.507)       2:09:27.215 ***** 
+Tuesday 15 September 2026  20:37:59 -0500 (0:00:01.048)       2:09:28.263 ***** 
+Tuesday 15 September 2026  20:38:00 -0500 (0:00:00.222)       2:09:28.486 ***** 
+Tuesday 15 September 2026  20:38:00 -0500 (0:00:00.471)       2:09:28.958 ***** 
+Tuesday 15 September 2026  20:38:00 -0500 (0:00:00.412)       2:09:29.370 ***** 
+Tuesday 15 September 2026  20:38:01 -0500 (0:00:00.356)       2:09:29.727 ***** 
+Tuesday 15 September 2026  20:38:01 -0500 (0:00:00.211)       2:09:29.939 ***** 
+
+TASK [kubernetes/control-plane : Create kube-scheduler config] *****************
+changed: [k8s-master-01]
+changed: [k8s-master-03]
+changed: [k8s-master-02]
+Tuesday 15 September 2026  20:38:13 -0500 (0:00:12.113)       2:09:42.052 ***** 
+Tuesday 15 September 2026  20:38:13 -0500 (0:00:00.177)       2:09:42.230 ***** 
+Tuesday 15 September 2026  20:38:13 -0500 (0:00:00.201)       2:09:42.431 ***** 
+Tuesday 15 September 2026  20:38:14 -0500 (0:00:00.194)       2:09:42.625 ***** 
+Tuesday 15 September 2026  20:38:14 -0500 (0:00:00.216)       2:09:42.842 ***** 
+Tuesday 15 September 2026  20:38:14 -0500 (0:00:00.347)       2:09:43.189 ***** 
+Tuesday 15 September 2026  20:38:14 -0500 (0:00:00.176)       2:09:43.365 ***** 
+
+TASK [kubernetes/control-plane : Install | Copy kubectl binary from download dir] ***
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:38:35 -0500 (0:00:21.048)       2:10:04.414 ***** 
+
+TASK [kubernetes/control-plane : Install kubectl bash completion] **************
+changed: [k8s-master-02]
+changed: [k8s-master-01]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:38:38 -0500 (0:00:02.407)       2:10:06.822 ***** 
+
+TASK [kubernetes/control-plane : Set kubectl bash completion file permissions] ***
+changed: [k8s-master-02]
+changed: [k8s-master-01]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:38:40 -0500 (0:00:02.534)       2:10:09.357 ***** 
+Tuesday 15 September 2026  20:38:41 -0500 (0:00:00.494)       2:10:09.851 ***** 
+Tuesday 15 September 2026  20:38:41 -0500 (0:00:00.203)       2:10:10.055 ***** 
+
+TASK [kubernetes/control-plane : Kubeadm | Check if kubeadm has already run] ***
+ok: [k8s-master-02]
+ok: [k8s-master-01]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:38:44 -0500 (0:00:02.577)       2:10:12.632 ***** 
+Tuesday 15 September 2026  20:38:44 -0500 (0:00:00.289)       2:10:12.922 ***** 
+Tuesday 15 September 2026  20:38:44 -0500 (0:00:00.241)       2:10:13.164 ***** 
+
+TASK [kubernetes/control-plane : Kubeadm | aggregate all SANs] *****************
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:38:50 -0500 (0:00:05.479)       2:10:18.644 ***** 
+
+TASK [kubernetes/control-plane : Create audit-policy directory] ****************
+changed: [k8s-master-01]
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:38:52 -0500 (0:00:02.579)       2:10:21.224 ***** 
+
+TASK [kubernetes/control-plane : Write api audit policy yaml] ******************
+changed: [k8s-master-03]
+changed: [k8s-master-02]
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:39:04 -0500 (0:00:12.082)       2:10:33.306 ***** 
+Tuesday 15 September 2026  20:39:05 -0500 (0:00:00.163)       2:10:33.470 ***** 
+Tuesday 15 September 2026  20:39:05 -0500 (0:00:00.161)       2:10:33.631 ***** 
+Tuesday 15 September 2026  20:39:05 -0500 (0:00:00.178)       2:10:33.810 ***** 
+Tuesday 15 September 2026  20:39:05 -0500 (0:00:00.460)       2:10:34.270 ***** 
+
+TASK [kubernetes/control-plane : Kubeadm | Create kubeadm config] **************
+changed: [k8s-master-02]
+changed: [k8s-master-01]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:39:25 -0500 (0:00:19.253)       2:10:53.523 ***** 
+Tuesday 15 September 2026  20:39:25 -0500 (0:00:00.117)       2:10:53.641 ***** 
+Tuesday 15 September 2026  20:39:25 -0500 (0:00:00.132)       2:10:53.773 ***** 
+Tuesday 15 September 2026  20:39:25 -0500 (0:00:00.144)       2:10:53.918 ***** 
+Tuesday 15 September 2026  20:39:28 -0500 (0:00:03.448)       2:10:57.366 ***** 
+Tuesday 15 September 2026  20:39:32 -0500 (0:00:03.949)       2:11:01.316 ***** 
+Tuesday 15 September 2026  20:39:33 -0500 (0:00:00.257)       2:11:01.573 ***** 
+Tuesday 15 September 2026  20:39:33 -0500 (0:00:00.184)       2:11:01.757 ***** 
+
+TASK [kubernetes/control-plane : Kubeadm | Initialize first control plane node (1st try)] ***
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:40:47 -0500 (0:01:14.587)       2:12:16.345 ***** 
+
+TASK [kubernetes/control-plane : Set kubeadm certificate key] ******************
+ok: [k8s-master-01] => (item=	--control-plane --certificate-key 7035664e34f68b72441a49bc617c27edbf7ec12b7fb6cb5b36ea229129f66744)
+ok: [k8s-master-02] => (item=	--control-plane --certificate-key 7035664e34f68b72441a49bc617c27edbf7ec12b7fb6cb5b36ea229129f66744)
+ok: [k8s-master-03] => (item=	--control-plane --certificate-key 7035664e34f68b72441a49bc617c27edbf7ec12b7fb6cb5b36ea229129f66744)
+Tuesday 15 September 2026  20:41:16 -0500 (0:00:28.695)       2:12:45.041 ***** 
+Tuesday 15 September 2026  20:41:17 -0500 (0:00:00.723)       2:12:45.765 ***** 
+Tuesday 15 September 2026  20:41:17 -0500 (0:00:00.448)       2:12:46.213 ***** 
+
+TASK [kubernetes/control-plane : Create kubeadm token for joining nodes with 24h expiration (default)] ***
+ok: [k8s-master-02 -> k8s-master-01(172.16.2.51)]
+ok: [k8s-master-01]
+ok: [k8s-master-03 -> k8s-master-01(172.16.2.51)]
+Tuesday 15 September 2026  20:41:23 -0500 (0:00:05.311)       2:12:51.524 ***** 
+
+TASK [kubernetes/control-plane : Set kubeadm_token] ****************************
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:41:23 -0500 (0:00:00.833)       2:12:52.358 ***** 
+
+TASK [kubernetes/control-plane : Kubeadm | Join other control plane nodes] *****
+included: /opt/fabric-cache/repos/kubespray/roles/kubernetes/control-plane/tasks/kubeadm-secondary.yml for k8s-master-01, k8s-master-02, k8s-master-03
+Tuesday 15 September 2026  20:41:24 -0500 (0:00:00.332)       2:12:52.691 ***** 
+
+TASK [kubernetes/control-plane : Set kubeadm_discovery_address] ****************
+ok: [k8s-master-02]
+ok: [k8s-master-01]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:41:28 -0500 (0:00:04.226)       2:12:56.917 ***** 
+
+TASK [kubernetes/control-plane : Upload certificates so they are fresh and not expired] ***
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:41:40 -0500 (0:00:12.521)       2:13:09.439 ***** 
+
+TASK [kubernetes/control-plane : Parse certificate key if not set] *************
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:41:41 -0500 (0:00:00.768)       2:13:10.208 ***** 
+
+TASK [kubernetes/control-plane : Wait for k8s apiserver] ***********************
+ok: [k8s-master-01]
+ok: [k8s-master-03]
+ok: [k8s-master-02]
+Tuesday 15 September 2026  20:41:51 -0500 (0:00:09.455)       2:13:19.663 ***** 
+
+TASK [kubernetes/control-plane : Check already run] ****************************
+ok: [k8s-master-01] => {
+    "msg": false
+}
+ok: [k8s-master-02] => {
+    "msg": false
+}
+ok: [k8s-master-03] => {
+    "msg": false
+}
+Tuesday 15 September 2026  20:41:52 -0500 (0:00:00.842)       2:13:20.506 ***** 
+
+TASK [kubernetes/control-plane : Reset cert directory] *************************
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:41:54 -0500 (0:00:02.822)       2:13:23.328 ***** 
+Tuesday 15 September 2026  20:41:55 -0500 (0:00:00.340)       2:13:23.669 ***** 
+Tuesday 15 September 2026  20:41:55 -0500 (0:00:00.353)       2:13:24.023 ***** 
+
+TASK [kubernetes/control-plane : Create kubeadm ControlPlane config] ***********
+changed: [k8s-master-03]
+changed: [k8s-master-02]
+Tuesday 15 September 2026  20:42:07 -0500 (0:00:12.143)       2:13:36.166 ***** 
+
+TASK [kubernetes/control-plane : Joining control plane node to the cluster.] ***
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:44:42 -0500 (0:02:34.939)       2:16:11.106 ***** 
+Tuesday 15 September 2026  20:44:42 -0500 (0:00:00.075)       2:16:11.182 ***** 
+Tuesday 15 September 2026  20:44:42 -0500 (0:00:00.116)       2:16:11.299 ***** 
+Tuesday 15 September 2026  20:44:43 -0500 (0:00:00.381)       2:16:11.680 ***** 
+Tuesday 15 September 2026  20:44:43 -0500 (0:00:00.183)       2:16:11.864 ***** 
+Tuesday 15 September 2026  20:44:44 -0500 (0:00:00.900)       2:16:12.764 ***** 
+Tuesday 15 September 2026  20:44:45 -0500 (0:00:01.166)       2:16:13.930 ***** 
+
+TASK [kubernetes/control-plane : Install script to renew K8S control plane certificates] ***
+changed: [k8s-master-01]
+changed: [k8s-master-03]
+changed: [k8s-master-02]
+Tuesday 15 September 2026  20:44:59 -0500 (0:00:14.377)       2:16:28.308 ***** 
+Tuesday 15 September 2026  20:45:00 -0500 (0:00:00.172)       2:16:28.481 ***** 
+Tuesday 15 September 2026  20:45:00 -0500 (0:00:00.253)       2:16:28.734 ***** 
+
+TASK [kubernetes/client : Set external kube-apiserver endpoint] ****************
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:45:01 -0500 (0:00:00.821)       2:16:29.556 ***** 
+
+TASK [kubernetes/client : Create kube config dir for current/ansible become user] ***
+changed: [k8s-master-01]
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:45:03 -0500 (0:00:02.756)       2:16:32.313 ***** 
+
+TASK [kubernetes/client : Write admin kubeconfig to current/ansible become user home] ***
+changed: [k8s-master-01]
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:45:11 -0500 (0:00:07.958)       2:16:40.271 ***** 
+Tuesday 15 September 2026  20:45:11 -0500 (0:00:00.078)       2:16:40.349 ***** 
+
+TASK [kubernetes/client : Wait for k8s apiserver] ******************************
+ok: [k8s-master-02]
+ok: [k8s-master-01]
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:45:14 -0500 (0:00:02.753)       2:16:43.103 ***** 
+Tuesday 15 September 2026  20:45:14 -0500 (0:00:00.088)       2:16:43.192 ***** 
+Tuesday 15 September 2026  20:45:14 -0500 (0:00:00.089)       2:16:43.281 ***** 
+Tuesday 15 September 2026  20:45:14 -0500 (0:00:00.049)       2:16:43.331 ***** 
+Tuesday 15 September 2026  20:45:15 -0500 (0:00:00.140)       2:16:43.472 ***** 
+
+TASK [kubernetes-apps/cluster_roles : Kubernetes Apps | Wait for kube-apiserver] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:45:24 -0500 (0:00:09.750)       2:16:53.223 ***** 
+
+TASK [kubernetes-apps/cluster_roles : Kubernetes Apps | Add ClusterRoleBinding to admit nodes] ***
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:45:39 -0500 (0:00:15.185)       2:17:08.409 ***** 
+
+TASK [kubernetes-apps/cluster_roles : Apply workaround to allow all nodes with cert O=system:nodes to register] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:45:49 -0500 (0:00:09.454)       2:17:17.863 ***** 
+
+TASK [kubernetes-apps/cluster_roles : Kubernetes Apps | Remove old webhook ClusterRole] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:45:54 -0500 (0:00:04.620)       2:17:22.483 ***** 
+
+TASK [kubernetes-apps/cluster_roles : Kubernetes Apps | Remove old webhook ClusterRoleBinding] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:45:57 -0500 (0:00:03.479)       2:17:25.963 ***** 
+
+TASK [kubernetes-apps/cluster_roles : PriorityClass | Copy k8s-cluster-critical-pc.yml file] ***
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:46:09 -0500 (0:00:11.784)       2:17:37.747 ***** 
+
+TASK [kubernetes-apps/cluster_roles : PriorityClass | Create k8s-cluster-critical] ***
+ok: [k8s-master-03]
+Tuesday 15 September 2026  20:46:14 -0500 (0:00:05.451)       2:17:43.198 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | reload systemd] ****
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:46:18 -0500 (0:00:03.989)       2:17:47.188 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | reload kubelet] ****
+changed: [k8s-master-01]
+Tuesday 15 September 2026  20:46:21 -0500 (0:00:03.013)       2:17:50.201 ***** 
+Tuesday 15 September 2026  20:46:22 -0500 (0:00:00.269)       2:17:50.471 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | Remove apiserver container containerd/crio] ***
+changed: [k8s-master-01]
+changed: [k8s-master-02]
+changed: [k8s-master-03]
+Tuesday 15 September 2026  20:46:27 -0500 (0:00:05.522)       2:17:55.993 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | wait for kube-scheduler] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:46:33 -0500 (0:00:06.423)       2:18:02.416 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | wait for kube-controller-manager] ***
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:46:41 -0500 (0:00:07.767)       2:18:10.184 ***** 
+
+RUNNING HANDLER [kubernetes/control-plane : Control plane | wait for the apiserver to be running] ***
+ok: [k8s-master-02]
+ok: [k8s-master-01]
+ok: [k8s-master-03]
+
+PLAY [Invoke kubeadm and install a CNI] ****************************************
+Tuesday 15 September 2026  20:46:51 -0500 (0:00:10.131)       2:18:20.315 ***** 
+Tuesday 15 September 2026  20:46:53 -0500 (0:00:01.779)       2:18:22.095 ***** 
+
+TASK [kubernetes/kubeadm_common : Kubeadm | List existing kubeadm patches] *****
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+ok: [k8s-master-01]
+ok: [k8s-db-03]
+ok: [k8s-db-01]
+ok: [osh-ctrl-01]
+ok: [k8s-db-02]
+ok: [osh-ctrl-02]
+ok: [osh-net-01]
+ok: [osh-net-02]
+ok: [MonSrv]
+ok: [osh-ctrl-03]
+ok: [osh-comp-01]
+ok: [osh-comp-02]
+ok: [osh-comp-04]
+ok: [osh-comp-03]
+Tuesday 15 September 2026  20:47:08 -0500 (0:00:14.658)       2:18:36.753 ***** 
+Tuesday 15 September 2026  20:47:09 -0500 (0:00:00.808)       2:18:37.562 ***** 
+Tuesday 15 September 2026  20:47:11 -0500 (0:00:02.497)       2:18:40.059 ***** 
+
+TASK [kubernetes/kubeadm : Set kubeadm_discovery_address] **********************
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+ok: [k8s-db-01]
+ok: [k8s-db-02]
+ok: [k8s-db-03]
+ok: [osh-ctrl-01]
+ok: [osh-ctrl-02]
+ok: [osh-net-01]
+ok: [osh-ctrl-03]
+ok: [osh-net-02]
+ok: [MonSrv]
+ok: [osh-comp-01]
+ok: [osh-comp-02]
+ok: [osh-comp-03]
+ok: [osh-comp-04]
+Tuesday 15 September 2026  20:47:25 -0500 (0:00:14.299)       2:18:54.359 ***** 
+
+TASK [kubernetes/kubeadm : Check if kubelet.conf exists] ***********************
+ok: [k8s-master-01]
+ok: [k8s-db-01]
+ok: [k8s-db-02]
+ok: [k8s-db-03]
+ok: [k8s-master-02]
+ok: [osh-ctrl-01]
+ok: [osh-ctrl-02]
+ok: [k8s-master-03]
+ok: [osh-ctrl-03]
+ok: [osh-net-01]
+ok: [osh-net-02]
+ok: [MonSrv]
+ok: [osh-comp-02]
+ok: [osh-comp-01]
+ok: [osh-comp-04]
+ok: [osh-comp-03]
+Tuesday 15 September 2026  20:47:42 -0500 (0:00:16.156)       2:19:10.516 ***** 
+
+TASK [kubernetes/kubeadm : Check if kubeadm CA cert is accessible] *************
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:47:49 -0500 (0:00:07.693)       2:19:18.209 ***** 
+
+TASK [kubernetes/kubeadm : Fetch CA certificate from control plane node] *******
+ok: [k8s-master-01]
+Tuesday 15 September 2026  20:47:52 -0500 (0:00:02.258)       2:19:20.467 ***** 
+
+TASK [kubernetes/kubeadm : Create kubeadm token for joining nodes with 24h expiration (default)] ***
+ok: [osh-ctrl-02 -> k8s-master-01(172.16.2.51)]
+ok: [osh-ctrl-03 -> k8s-master-01(172.16.2.51)]
+ok: [osh-ctrl-01 -> k8s-master-01(172.16.2.51)]
+ok: [k8s-db-02 -> k8s-master-01(172.16.2.51)]
+fatal: [osh-comp-02 -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.51\". Make sure this host can be reached over ssh: ", "unreachable": true}
+ok: [k8s-db-01 -> k8s-master-01(172.16.2.51)]
+fatal: [MonSrv -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.51\". Make sure this host can be reached over ssh: ", "unreachable": true}
+fatal: [osh-comp-01 -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.51\". Make sure this host can be reached over ssh: ", "unreachable": true}
+fatal: [osh-net-02 -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.51\". Make sure this host can be reached over ssh: ", "unreachable": true}
+ok: [k8s-db-03 -> k8s-master-01(172.16.2.51)]
+ok: [osh-net-01 -> k8s-master-01(172.16.2.51)]
+fatal: [osh-comp-04 -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Data could not be sent to remote host \"172.16.2.51\". Make sure this host can be reached over ssh: ", "unreachable": true}
+ok: [osh-comp-03 -> k8s-master-01(172.16.2.51)]
+
+PLAY [Install Calico Route Reflector] ******************************************
+skipping: no hosts matched
+
+PLAY [Patch Kubernetes for Windows] ********************************************
+
+PLAY [Install Kubernetes apps] *************************************************
+
+PLAY [Apply resolv.conf changes now that cluster DNS is up] ********************
+
+PLAY RECAP *********************************************************************
+
