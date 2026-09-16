@@ -1,0 +1,42 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/kubespray.yml \
+  -e kubespray_forks=2 \
+  -e "kubespray_limit=kube_node" \
+  -e "kubespray_start_at_task=Kubeadm | Create kubeadm token for joining nodes with 24h expiration (default)"
+
+PLAY [Deploy Kubernetes cluster via Kubespray] *************************************************************************************************************
+
+TASK [Clone Kubespray repository] **************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install Kubespray Python requirements] ***************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch Kubespray containerd template for local image pull] ********************************************************************************************
+changed: [localhost]
+
+TASK [Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)] *********************************************************************************************
+ASYNC FAILED on localhost: jid=j288092709192.1514
+fatal: [localhost]: FAILED! => {"ansible_job_id": "j288092709192.1514", "changed": true, "cmd": "# Explicitly clear out any inherited environment clutter before running\nunset download_container\nunset download_container_engine\n\nmkdir -p /opt/fabric-cache/logs\nmkdir -p /opt/fabric-cache/ansible/kubespray-factcache\n\n# Fire the execution pass using only clean explicit target parameters\nansible-playbook  -i inventory/sheba-cluster/hosts.yaml  playbooks/cluster.yml  -b  -f 2  -e \"ansible_user=ubuntu\"  -e \"ansible_password=ubuntu\"  -e \"ansible_sudo_pass=ubuntu\"  -e \"ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab\"  --extra-vars \"@inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml\"  --limit kube_node    --start-at-task Kubeadm    > /opt/fabric-cache/logs/kubespray-inner.log 2>&1\n", "delta": "0:00:14.495919", "end": "2026-09-16 08:13:16.174248", "finished": 1, "msg": "non-zero return code", "rc": 1, "results_file": "/home/nh1221/.ansible_async/j288092709192.1514", "start": "2026-09-16 08:13:01.678329", "started": 1, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=3    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ ls -al /opt/fabric-cache/logs/
+total 12
+drwxr-xr-x  2 nh1221 nh1221 4096 Sep 16 08:13 .
+drwxr-xr-x 16 nh1221 nh1221 4096 Sep 16 08:13 ..
+-rw-r--r--  1 nh1221 nh1221  454 Sep 16 08:13 kubespray-inner.log
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$ cat /opt/fabric-cache/logs/kubespray-inner.log
+ERROR! the role 'dynamic_groups' was not found in /opt/fabric-cache/repos/kubespray/playbooks/roles:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab/roles:/opt/fabric-cache/repos/kubespray/playbooks
+
+The error appears to be in '/opt/fabric-cache/repos/kubespray/playbooks/boilerplate.yml': line 14, column 7, but may
+be elsewhere in the file depending on the exact syntax problem.
+
+The offending line appears to be:
+
+  roles:
+    - dynamic_groups
+      ^ here
+nh1221@Lab-ControlNode:/mnt/c/Users/nh1221$
