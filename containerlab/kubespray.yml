@@ -1,0 +1,215 @@
+---
+- name: Deploy Kubernetes cluster via Kubespray
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Clone Kubespray repository
+      ansible.builtin.git:
+        repo: "{{ ((kubespray_repo_mirror | default('') | trim | length) > 0) | ternary(kubespray_repo_mirror, kubespray_repo) }}"
+        dest: "{{ kubespray_dest }}"
+        version: "{{ kubespray_version }}"
+        force: true
+
+    - name: Install Kubespray Python requirements
+      ansible.builtin.pip:
+        name:
+          - "ansible-core>=2.18.0,<2.19.0"  # <--- Change this line to pin the safe version
+          - "cryptography>=46.0.0"
+          - "jmespath"
+          - "netaddr"
+        state: present
+      environment:
+        PIP_CACHE_DIR: "{{ local_fabric_cache_root }}/pip"
+
+    # containerd 2.x delegates CRI pulls to the transfer service, which has no
+    # unpack platform under our native snapshotter -> "no unpack platforms defined".
+    # Force CRI to use its own local unpacker (also makes it honor the airgap mirror).
+    - name: Patch Kubespray containerd template for local image pull
+      ansible.builtin.lineinfile:
+        path: "{{ kubespray_dest }}/roles/container-engine/containerd/templates/config.toml.j2"
+        insertafter: '^\s*\[plugins\."io\.containerd\.cri\.v1\.images"\]\s*$'
+        regexp: '^\s*use_local_image_pull\s*='
+        line: '    use_local_image_pull = true'
+        state: present
+
+    # - name: Run Kubespray cluster.yml
+    #   ansible.builtin.shell: |
+    #     ansible-playbook \
+    #       -i inventory/sheba-cluster/hosts.yaml \
+    #       playbooks/cluster.yml \
+    #       -b \
+    #       -f 1 \
+    #       -e "ansible_user=ubuntu" \
+    #       -e "ansible_password=ubuntu" \
+    #       -e "ansible_sudo_pass=ubuntu" \
+    #       -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+    #       -e "ansible_pipelining=True" \
+    #       -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no -o ControlPersist=0 -o ServerAliveInterval=15 -o ServerAliveCountMax=10 -o ConnectionAttempts=30'" \
+    #       > /tmp/kubespray-inner.log 2>&1
+    #   args:
+    #     chdir: /opt/kubespray
+    #   environment:
+    #     ANSIBLE_HOST_KEY_CHECKING: "False"
+    #   register: kubespray_result
+    #   changed_when: true
+    # - name: Run Kubespray cluster.yml
+    #   ansible.builtin.shell: |
+    #     ansible-playbook \
+    #       -i inventory/sheba-cluster/hosts.yaml \
+    #       playbooks/cluster.yml \
+    #       -b \
+    #       -f 2 \
+    #       -e "ansible_user=ubuntu" \
+    #       -e "ansible_password=ubuntu" \
+    #       -e "ansible_sudo_pass=ubuntu" \
+    #       -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+    #       -e "ansible_pipelining=True" \
+    #       -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=auto -o ControlPersist=1h -o TCPKeepAlive=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=40 -o ConnectionAttempts=100'" \
+    #       > /tmp/kubespray-inner.log 2>&1
+    #   args:
+    #     chdir: /opt/kubespray
+    #   environment:
+    #     ANSIBLE_HOST_KEY_CHECKING: "False"
+    #   # ─── THE WIRELESS MITIGATION OVERRIDE ──────────────────────────────────
+    #   async: 9000  # Allows the job to run in background workspace memory for up to 2 hours
+    #   poll: 10     # Checks in on the task status every 10 seconds securely
+    #   register: kubespray_result
+    # - name: Run Kubespray cluster.yml
+    #   ansible.builtin.shell: |
+    #     ansible-playbook \
+    #       -i inventory/sheba-cluster/hosts.yaml \
+    #       playbooks/cluster.yml \
+    #       -b \
+    #       -f 2 \
+    #       -e "ansible_user=ubuntu" \
+    #       -e "ansible_password=ubuntu" \
+    #       -e "ansible_sudo_pass=ubuntu" \
+    #       -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+    #       > /tmp/kubespray-inner.log 2>&1
+    #   args:
+    #     chdir: /opt/kubespray
+    #   environment:
+    #     ANSIBLE_HOST_KEY_CHECKING: "False"
+    #     # Force high-performance task execution over a single socket
+    #     ANSIBLE_PIPELINING: "True"
+    #     # Safely pass your SSH optimization parameters without quotation crashes
+    #     ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=auto -o ControlPersist=1h -o TCPKeepAlive=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=40 -o ConnectionAttempts=100"
+    #   async: 9000
+    #   poll: 10
+    #   register: kubespray_result
+    # - name: Run Kubespray cluster.yml
+    #   ansible.builtin.shell: |
+    #     ansible-playbook \
+    #       -i inventory/sheba-cluster/hosts.yaml \
+    #       playbooks/cluster.yml \
+    #       -b \
+    #       -f 2 \
+    #       -e "ansible_user=ubuntu" \
+    #       -e "ansible_password=ubuntu" \
+    #       -e "ansible_sudo_pass=ubuntu" \
+    #       -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+    #       -e "local_release_dir=/opt/fabric-cache" \
+    #       > /tmp/kubespray-inner.log 2>&1
+    #   args:
+    #     chdir: /opt/kubespray
+    #   delegate_to: poweredge_r810
+    #   become: true
+    #   environment:
+    #     ANSIBLE_HOST_KEY_CHECKING: "False"
+    #     ANSIBLE_PIPELINING: "True"
+    #     ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=auto -o ControlPersist=1h -o TCPKeepAlive=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=40 -o ConnectionAttempts=100"
+    #     download_container: "true"
+    #     download_container_engine: "docker"
+    #   async: 9000
+    #   poll: 10
+    #   register: kubespray_result
+
+    # - name: Run Kubespray cluster.yml
+    #   ansible.builtin.shell: |
+    #     ansible-playbook \
+    #       -i inventory/sheba-cluster/hosts.yaml \
+    #       playbooks/cluster.yml \
+    #       -b \
+    #       -f 5 \
+    #       -e "ansible_user=ubuntu" \
+    #       -e "ansible_password=ubuntu" \
+    #       -e "ansible_sudo_pass=ubuntu" \
+    #       -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+    #       -e "local_release_dir=/opt/fabric-cache" \
+    #       > /tmp/kubespray-inner.log 2>&1
+    #   args:
+    #     chdir: /opt/kubespray
+    #   # FIX 1: Run the script inside your working WSL virtual environment
+    #   delegate_to: localhost
+    #   become: false
+    #   environment:
+    #     ANSIBLE_HOST_KEY_CHECKING: "False"
+    #     ANSIBLE_PIPELINING: "True"
+    #     ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=auto -o ControlPersist=1h -o TCPKeepAlive=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=40 -o ConnectionAttempts=100"
+    #     # FIX 2: Tell Kubespray to use your local WSL docker engine to coordinate cache indexing
+    #     download_container: "true"
+    #     download_container_engine: "docker"
+    #   async: 9000
+    #   poll: 10
+    #   register: kubespray_result
+    - name: Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)
+      ansible.builtin.shell: |
+        # Explicitly clear out any inherited environment clutter before running
+        unset download_container
+        unset download_container_engine
+
+        mkdir -p {{ local_fabric_cache_root }}/logs
+        mkdir -p {{ local_fabric_cache_root }}/ansible/kubespray-factcache
+
+        # Fire the execution pass using only clean explicit target parameters
+        ansible-playbook \
+          -i inventory/sheba-cluster/hosts.yaml \
+          playbooks/cluster.yml \
+          -b \
+          -f {{ kubespray_forks | default(2) }} \
+          -e "ansible_user=ubuntu" \
+          -e "ansible_password=ubuntu" \
+          -e "ansible_sudo_pass=ubuntu" \
+          -e "ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab" \
+          --extra-vars "@inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml" \
+          {% if (kubespray_limit | default('') | trim | length) > 0 %}--limit {{ kubespray_limit | quote }} \
+          {% endif %}
+          {% if (kubespray_start_at_task | default('') | trim | length) > 0 %}--start-at-task {{ kubespray_start_at_task | quote }} \
+          {% endif %}
+          > {{ local_fabric_cache_root }}/logs/kubespray-inner.log 2>&1
+      args:
+        chdir: /opt/kubespray
+      delegate_to: localhost
+      become: false
+      environment:
+        ANSIBLE_HOST_KEY_CHECKING: "False"
+        ANSIBLE_PIPELINING: "True"
+        ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ControlMaster=no -o ControlPersist=0"
+        # Cache gathered facts so a rerun after a failure skips re-gathering on
+        # every node (facts are the same within the timeout window).
+        ANSIBLE_GATHERING: "smart"
+        ANSIBLE_CACHE_PLUGIN: "jsonfile"
+        ANSIBLE_CACHE_PLUGIN_CONNECTION: "{{ local_fabric_cache_root }}/ansible/kubespray-factcache"
+        ANSIBLE_CACHE_PLUGIN_TIMEOUT: "7200"
+      async: 14400  # Expand window threshold to 4 hours for full air-gapped node provisions
+      poll: 15       # Poll every 15 seconds to minimize background context CPU locks
+      register: kubespray_result
+
+
+
+    - name: Fetch kubeconfig from primary master
+      ansible.builtin.fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: "~/.kube/sheba-config"
+        flat: true
+      delegate_to: "{{ groups['kube_control_plane'][0] }}"
+      become: true
+
+    - name: Confirm cluster is reachable
+      ansible.builtin.command: kubectl --kubeconfig ~/.kube/sheba-config get nodes
+      changed_when: false
+      register: nodes_out
+
+    - name: Display cluster nodes
+      ansible.builtin.debug:
+        msg: "{{ nodes_out.stdout_lines }}"
