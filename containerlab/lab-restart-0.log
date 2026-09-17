@@ -1,0 +1,1352 @@
+So, I have been through re-arrangin and moving out some data from R810 '/' t lvm vol '/data', however the restart did not provison all the necessary port connectivity/ bgp distribution the way when I run
+'fabric-full.yml' playbook, this indicates, our provisioning is not getting persisted the way it supposed to happen, so any re-start takes it back to the original state.
+Due to this reason, we need some hardening and persisting the configuration to the extent it does not load spurious data such as seeing below: We have to persist real configured values to the location 
+appropriate for reloading the same data, not the default data such as seeing lots of ip's bgp neighborship in sonic swiches in the log:
+
+1221@PowerEdge-R810:~$ sudo ls -al /opt/containerlab/
+total 16
+drwxr-xr-x  4 nh1221 root   4096 Sep  6 22:07 .
+drwxr-xr-x  8 root   root   4096 Aug 29 08:04 ..
+drwxr-xr-x 11 nh1221 nh1221 4096 Sep 16 10:05 sheba
+drwxr-xr-x  8 nh1221 nh1221 4096 Jul 30 23:10 sheba_v2
+nh1221@PowerEdge-R810:~$ sudo ls -al /opt/containerlab/sheba
+total 364
+-rwx------  1 nh1221 nh1221     0 Aug  5 18:22 '-'$'\r'
+drwxr-xr-x 11 nh1221 nh1221  4096 Sep 16 10:05  .
+drwxr-xr-x  4 nh1221 root    4096 Sep  6 22:07  ..
+-rw-r--r--  1 root   root   23011 Sep 16 10:05  .topology.clab.yml.bak
+-rwx------  1 nh1221 nh1221     0 Aug 14 19:30  Building
+-rwx------  1 nh1221 nh1221     0 Aug 14 19:30  Installing
+-rwx------  1 nh1221 nh1221  3113 Sep  4 13:48  README-lab-controlnode.md
+-rwx------  1 nh1221 nh1221 12437 Sep  4 13:48  README.md
+-rw-r--r--  1 nh1221 nh1221  5639 Sep 15 21:24  admin.conf
+-rwx------  1 nh1221 nh1221   752 Sep  5 15:20  ansible.cfg
+-rwx------  1 nh1221 nh1221   134 Jul 31 09:17  bootstrap_nodes.yml
+drwxr-xr-x 10 nh1221 nh1221  4096 Aug 15 10:28  configs
+-rwx------  1 nh1221 nh1221  2376 Aug 15 17:29  fix_images.sh
+-rwx------  1 nh1221 nh1221  2151 Aug 15 17:31  fix_remaining.py
+-rwx------  1 nh1221 nh1221  2516 Aug 15 17:33  force_pull_layers.py
+drwxr-xr-x  2 nh1221 nh1221  4096 Sep  1 18:56  group_vars
+drwxr-xr-x  2 nh1221 nh1221  4096 Sep  7 17:48  host_vars
+drwxr-xr-x  6 nh1221 nh1221  4096 Sep  1 18:56  hwsku_port_configs
+-rwx------  1 nh1221 nh1221  8650 Sep  5 14:46  inv-osh.yml
+-rwx------  1 nh1221 nh1221  5736 Aug 20 18:35 'inventory copy.yml.o1'
+-rwx------  1 nh1221 nh1221 13322 Sep 13 18:50  inventory-prospective.yml
+-rwx------  1 nh1221 nh1221  8860 Sep 11 18:36  inventory.yml
+-rwx------  1 nh1221 nh1221  3613 Aug  6 17:06  inventory.yml.old
+-rwx------  1 nh1221 nh1221     0 Aug 14 19:30  kolla
+drwxr-xr-x  5 nh1221 nh1221  4096 Sep 16 09:57  playbooks
+drwxr-xr-x  6 nh1221 nh1221  4096 Jul 31 07:02  profiles
+-rwx------  1 nh1221 nh1221 22419 Aug 29 18:31  reg-images.txt
+drwxr-xr-x 26 nh1221 nh1221  4096 Sep  5 21:29  roles
+drwxr-xr-x  2 nh1221 nh1221  4096 Sep 13 22:54  scripts
+-rwx------  1 nh1221 nh1221 16416 Aug  6 14:21 'topology.clab copy 2.yml'
+-rwx------  1 nh1221 nh1221 10905 Aug  8 00:05 'topology.clab copy 3.yml'
+-rwx------  1 nh1221 nh1221 19288 Aug 17 09:41 'topology.clab copy 4.yml'
+-rwx------  1 nh1221 nh1221 22992 Aug 26 18:20 'topology.clab copy 5.yml'
+-rwx------  1 nh1221 nh1221 19599 Sep  2 19:57 'topology.clab copy 6.yml'
+-rwx------  1 nh1221 nh1221 25505 Sep  1 18:29  topology.clab-osh.yml
+-rw-r--r--  1 nh1221 nh1221 23010 Sep 11 14:17  topology.clab.yml
+-rwx------  1 nh1221 nh1221 20606 Aug 19 21:23  topology.clab.yml.works
+drwxr-xr-x  2 nh1221 nh1221  4096 Sep 13 18:35  wiki
+nh1221@PowerEdge-R810:~$ sudo ls -al /opt/containerlab/sheba_v2/
+total 392
+drwxr-xr-x 8 nh1221 nh1221  4096 Jul 30 23:10  .
+drwxr-xr-x 4 nh1221 root    4096 Sep  6 22:07  ..
+-rw-r--r-- 1 root   root   21014 Jul 31 18:43  .topology.clab.yml.bak
+-rwx------ 1 nh1221 nh1221   403 Jul 29 00:50  ansible.cfg
+-rwx------ 1 nh1221 nh1221  6767 Jul 13 11:35  bootstrap_nodes.yml
+drwxr-xr-x 2 nh1221 nh1221  4096 Jul 13 11:35  group_vars
+drwxr-xr-x 2 nh1221 nh1221  4096 Jul 13 11:35  host_vars
+-rwx------ 1 nh1221 nh1221  2189 Jul 25 17:55 'hosts copy.yml'
+-rwx------ 1 nh1221 nh1221  6027 Jul 29 01:25  hosts.yml
+drwxr-xr-x 6 nh1221 nh1221  4096 Jul 13 14:20  hwsku_port_configs
+drwxr-xr-x 3 nh1221 nh1221  4096 Jul 30 22:49  playbooks
+drwxr-xr-x 6 nh1221 nh1221  4096 Jul 25 20:07  profiles
+drwxr-xr-x 7 nh1221 nh1221  4096 Jul 13 11:35  roles
+-rwx------ 1 nh1221 nh1221  2798 Jul 25 19:06  site.yml
+-rwx------ 1 nh1221 nh1221  1252 Jul 13 11:35  site_exit-bgp.yml
+-rwx------ 1 nh1221 nh1221  2736 Jul 13 11:35 'topology.clab copy 10.yml'
+-rwx------ 1 nh1221 nh1221  2585 Jul 13 11:35 'topology.clab copy 11.yml'
+-rwx------ 1 nh1221 nh1221  3018 Jul 13 11:35 'topology.clab copy 12.yml'
+-rwx------ 1 nh1221 nh1221  1292 Jul 13 11:35 'topology.clab copy 13.yml'
+-rwx------ 1 nh1221 nh1221  8784 Jul 14 11:12 'topology.clab copy 14.yml'
+-rwx------ 1 nh1221 nh1221  9502 Jul 14 11:33 'topology.clab copy 15.yml'
+-rwx------ 1 nh1221 nh1221  8625 Jul 14 14:56 'topology.clab copy 16.yml'
+-rwx------ 1 nh1221 nh1221 10369 Jul 14 17:00 'topology.clab copy 17.yml'
+-rwx------ 1 nh1221 nh1221  8777 Jul 25 15:23 'topology.clab copy 18.yml'
+-rwx------ 1 nh1221 nh1221 10069 Jul 25 19:36 'topology.clab copy 19.yml'
+-rwx------ 1 nh1221 nh1221  6970 Jul 13 11:35 'topology.clab copy 2.yml'
+-rwx------ 1 nh1221 nh1221  9975 Jul 25 20:14 'topology.clab copy 20.yml'
+-rwx------ 1 nh1221 nh1221  8797 Jul 25 20:39 'topology.clab copy 21.yml'
+-rwx------ 1 nh1221 nh1221 12400 Jul 25 23:50 'topology.clab copy 22.yml'
+-rwx------ 1 nh1221 nh1221 18933 Jul 26 21:29 'topology.clab copy 23.yml'
+-rwx------ 1 nh1221 nh1221  8896 Jul 26 22:05 'topology.clab copy 24.yml'
+-rwx------ 1 nh1221 nh1221  9288 Jul 28 09:47 'topology.clab copy 25.yml'
+-rwx------ 1 nh1221 nh1221  9231 Jul 28 10:30 'topology.clab copy 26.yml'
+-rwx------ 1 nh1221 nh1221 17870 Jul 29 14:13 'topology.clab copy 27.yml'
+-rwx------ 1 nh1221 nh1221  6876 Jul 13 11:35 'topology.clab copy 3.yml'
+-rwx------ 1 nh1221 nh1221  7806 Jul 13 11:35 'topology.clab copy 4.yml'
+-rwx------ 1 nh1221 nh1221  7398 Jul 13 11:35 'topology.clab copy 5.yml'
+-rwx------ 1 nh1221 nh1221  6542 Jul 13 11:35 'topology.clab copy 6 built lab.yml'
+-rwx------ 1 nh1221 nh1221  7143 Jul 13 11:35 'topology.clab copy 6.yml'
+-rwx------ 1 nh1221 nh1221  7370 Jul 13 11:35 'topology.clab copy 7.yml'
+-rwx------ 1 nh1221 nh1221  6160 Jul 13 11:55 'topology.clab copy 8.yml'
+-rwx------ 1 nh1221 nh1221  2548 Jul 13 11:35 'topology.clab copy 9.yml'
+-rwx------ 1 nh1221 nh1221  7279 Jul 26 22:18 'topology.clab copy.yml'
+-rwx------ 1 nh1221 nh1221 21014 Jul 30 23:07  topology.clab.yml
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ df -h
+Filesystem                        Size  Used Avail Use% Mounted on
+tmpfs                              50G  2.9G   47G   6% /run
+/dev/sda2                         456G  454G     0 100% /
+tmpfs                             124G  8.0K  124G   1% /dev/shm
+efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs                             124G  104M  124G   1% /tmp
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
+tmpfs                              25G   88K   25G   1% /run/user/1000
+/dev/mapper/vg--data-lv--storage  2.0T   25M  1.9T   1% /data
+nh1221@PowerEdge-R810:~$ lsblk
+NAME                   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop1                    7:1    0     4K  1 loop /snap/bare/5
+loop2                    7:2    0  66.8M  1 loop /snap/core24/1643
+loop3                    7:3    0  19.6M  1 loop /snap/desktop-security-center/150
+loop4                    7:4    0    20M  1 loop /snap/desktop-security-center/151
+loop5                    7:5    0 221.5M  1 loop /snap/thunderbird/1240
+loop6                    7:6    0  50.3M  1 loop /snap/snapd/27738
+loop7                    7:7    0  16.5M  1 loop /snap/firmware-updater/226
+loop8                    7:8    0 606.1M  1 loop /snap/gnome-46-2404/153
+loop9                    7:9    0 614.5M  1 loop /snap/gnome-46-2404/164
+loop10                   7:10   0  91.7M  1 loop /snap/gtk-common-themes/1535
+loop11                   7:11   0   395M  1 loop /snap/mesa-2404/1165
+loop12                   7:12   0   402M  1 loop /snap/mesa-2404/1839
+loop13                   7:13   0  18.8M  1 loop /snap/prompting-client/204
+loop14                   7:14   0  18.8M  1 loop /snap/prompting-client/222
+loop15                   7:15   0  15.7M  1 loop /snap/snap-store/1367
+loop16                   7:16   0  11.8M  1 loop /snap/snap-store/1390
+loop17                   7:17   0 221.4M  1 loop /snap/thunderbird/1255
+loop18                   7:18   0  50.1M  1 loop /snap/snapd/27710
+loop19                   7:19   0   828K  1 loop /snap/snapd-desktop-integration/387
+loop20                   7:20   0   828K  1 loop /snap/snapd-desktop-integration/391
+loop21                   7:21   0 260.8M  1 loop /snap/firefox/8863
+loop22                   7:22   0  66.8M  1 loop /snap/core24/2124
+loop23                   7:23   0 261.1M  1 loop /snap/firefox/8803
+sda                      8:0    0 465.3G  0 disk
+├─sda1                   8:1    0     1G  0 part /boot/efi
+└─sda2                   8:2    0 464.2G  0 part /
+sdb                      8:16   0 837.8G  0 disk
+sdc                      8:32   0   931G  0 disk
+sdd                      8:48   0   931G  0 disk
+sde                      8:64   0   931G  0 disk
+└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
+sdf                      8:80   0   1.1T  0 disk
+└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
+sr0                     11:0    1  1024M  1 rom
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ df -h /
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda2       456G  454G     0 100% /
+nh1221@PowerEdge-R810:~$ df -h /opt /var /data
+Filesystem                        Size  Used Avail Use% Mounted on
+/dev/sda2                         456G  454G     0 100% /
+/dev/sda2                         456G  454G     0 100% /
+/dev/mapper/vg--data-lv--storage  2.0T   25M  1.9T   1% /data
+nh1221@PowerEdge-R810:~$ sudo docker system df
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          92        5         120.6GB   105.8GB (87%)
+Containers      32        6         8.658GB   7.842GB (90%)
+Local Volumes   1         0         0B        0B
+Build Cache     13        0         12.28GB   0B
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo journalctl --vacuum-time=2d
+Vacuuming done, freed 0B of archived journals from /var/log/journal.
+Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c7fe71-00065b88203446aa.journal (43M).
+Vacuuming done, freed 43M of archived journals from /var/log/journal/92321a2ff98644ba81e5ed64201c3056.
+Vacuuming done, freed 0B of archived journals from /run/log/journal.
+Vacuuming done, freed 0B of archived journals from /run/log/journal/92321a2ff98644ba81e5ed64201c3056.
+nh1221@PowerEdge-R810:~$ sudo docker container prune -f
+Deleted Containers:
+f3c27616da432425b89685fdb1def84d8f9daeebb5ea138eed31186d1aae4fa3
+9d5f01aca4ca82a0c184bce7b9c3236a04e0b5707750ba7bd942bb833c11825f
+14ac2c85e773362852ea72c4916b07198ea143dd71fcf1038ae8d43142558ce4
+8216e68436b932148d740588ce5e78c069351cdf6e1386a4cbddac2f2ab12ee0
+73e9649887a1a1a1b014ce7fb2ba40ee4ce4075a4059d5a7088aade113f9b381
+69ff22a9ae58312c854e8c4dee0905a36c8471f21e9836dcb42747ab5c26aae6
+412bb0067164d32367ab6c8166ddb72904e4bfee6c7c7f17b4d09b75f481ec7d
+5223c9a335bcaff71edb317baadb37b26c268c4a60246df9cb8b8f199b6e31f5
+cbb9cd784f44f3d09e9764aa67e1cceb4e131bb031f7d695c262e92a7b2f2e5e
+164f065c6e3cf58b8e3ff0509450a903c7d298ce2a064b20ed85fc7ef9327dee
+528b0740a67ce5ff192f194671043815aa1b0267e6ada5864e95b6224021739a
+6ad347340cd546710c660c1991b18f865ee77dec5ade67128e48876c8968a791
+442d025c749bd09a33d7cba4d848c0c86e07e0390a9ac0624d8660f7377e651f
+3f5594b915bbb51d97b0b2386e1befd324f860ff6e5df5f39ef0aec0d25aecf0
+5d960f55ec624395811bd880543976704b2f85d9df944a45d0761c88fffd6036
+9feb5de9684b1390405701ca290487477540127cdb6357f2a604140c1ac783f5
+c2a9704cefbe0337a026fdb28e38a9a75b1d47196f20aa535cc1d294eeaf3386
+9ffbbb21b56d939e96225e7db8c04e126b6c9c193aeb698d114eaa68a92ee825
+5308b69af1cc94357f790cfa34428277379ba7c8ecb100e90343e44bd695180c
+182c02e0df9716df1abb8b93755a1e6e9721c74dbba706a6ec5b7429382d094b
+fc2d83efa3678fb31db7261cea649e72e90f0a3fa192b4449088892aece57d2f
+61ab65415e2a1b9ece1e3620b69cf4a00dd502f0f0f2530e8b79506e6a513b33
+e4605dadb9328f37328b8a84598f42816e6aa85214214a7ef03d812a14358d01
+5010741cc24dc0606580166db50b53decc326834a8fc7cf9b3d85c87fc006fd1
+4479ac5a0f66e8f3a0862a27047c4a38cdb5bfeec077c622c98e1cf7e54fe04f
+adc6b5db260abc2c6b98bf03ecafcc2184f75168e99faba7969631667ae1adf2
+
+Total reclaimed space: 7.842GB
+nh1221@PowerEdge-R810:~$ sudo docker image prune -f
+Total reclaimed space: 0B
+nh1221@PowerEdge-R810:~$ sudo docker builder prune -a -f
+ID                                              RECLAIMABLE     SIZE            LAST ACCESSED
+ftge52yrpn7zr56vnomy99x2g                       true            91.26kB         3 weeks ago
+ntkj7scj2egtn5b2egk5pnvze                       true    9.427kB         3 weeks ago
+udfx7vriq9cfbzxmrzeiwzxxt                       true    90.94kB         3 weeks ago
+2rg2pk9ds81eb2ibc0xm5xwom                       true    2.521GB         3 weeks ago
+52fnwbrg9ouguzhxzt0n3tfax                       true    9.599GB         3 weeks ago
+lh11y6ozvuzr8atlixqkrk4cm                       true    77.86kB         3 weeks ago
+c2x7m7ehtpz5awff87qlqw692                       true    14.89kB         3 weeks ago
+pc6hd3t9az7zf2k68l8xi6hbx                       true    3.419MB         3 weeks ago
+z089prmu0m3bqfjad5ou9vyjd                       true    2.411kB         3 weeks ago
+4m4qiazjs32rexz734h6ie831                       true    377B            3 weeks ago
+ny2gy1x52z6n4ndwz0t5b179p                       true    105.6MB         3 weeks ago
+d477n7djor82o0ucnqhzpl1yq                       true    24.91MB         3 weeks ago
+1j8jtstbfxk0vdfhkdtg0brhc                       true    30.79MB         3 weeks ago
+Total:  12.28GB
+nh1221@PowerEdge-R810:~$ sudo docker volume prune -f
+Deleted Volumes:
+3fbb9c26df79747f6eef269a692bed92240a984835871413f0c5e81beba0d3f0
+
+Total reclaimed space: 0B
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ df -h
+Filesystem                        Size  Used Avail Use% Mounted on
+tmpfs                              50G  3.7G   46G   8% /run
+/dev/sda2                         456G  438G     0 100% /
+tmpfs                             124G  8.0K  124G   1% /dev/shm
+efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs                             124G  104M  124G   1% /tmp
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
+tmpfs                              25G   88K   25G   1% /run/user/1000
+/dev/mapper/vg--data-lv--storage  2.0T   17M  1.9T   1% /data
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ ls -al /data
+total 28
+drwxr-xr-x  4 root root  4096 Aug 21 08:15 .
+drwxr-xr-x 21 root root  4096 Aug 17 09:24 ..
+drwx--x--- 11 root root  4096 Aug 21 08:23 docker
+drwx------  2 root root 16384 Aug 20 22:17 lost+found
+nh1221@PowerEdge-R810:~$ ls -al /data/
+total 28
+drwxr-xr-x  4 root root  4096 Aug 21 08:15 .
+drwxr-xr-x 21 root root  4096 Aug 17 09:24 ..
+drwx--x--- 11 root root  4096 Aug 21 08:23 docker
+drwx------  2 root root 16384 Aug 20 22:17 lost+found
+nh1221@PowerEdge-R810:~$ ls -al /data/docker/
+ls: cannot open directory '/data/docker/': Permission denied
+nh1221@PowerEdge-R810:~$ sudo ls -al /data/docker/
+total 48
+drwx--x--- 11 root root 4096 Aug 21 08:23 .
+drwxr-xr-x  4 root root 4096 Aug 21 08:15 ..
+drwx--x--x  5 root root 4096 Aug 21 11:03 buildkit
+drwx--x---  8 root root 4096 Sep 17 13:08 containers
+-rw-------  1 root root   36 Aug 21 08:15 engine-id
+drwxr-x---  3 root root 4096 Aug 21 08:15 network
+drwx------  3 root root 4096 Aug 21 08:15 plugins
+drwx--x---  3 root root 4096 Aug 21 08:23 rootfs
+drwx------  2 root root 4096 Aug 21 08:15 runtimes
+drwx------  2 root root 4096 Aug 21 08:15 swarm
+drwx------  3 root root 4096 Aug 23 18:52 tmp
+drwx-----x  2 root root 4096 Sep 17 13:09 volumes
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ mkdir /data/containerlab
+mkdir: Permission denied
+nh1221@PowerEdge-R810:~$ sudo mkdir /data/containerlab
+nh1221@PowerEdge-R810:~$ sudo systemctl stop docker
+Stopping 'docker.service', but its triggering units are still active:
+docker.socket
+nh1221@PowerEdge-R810:~$ sudo cp -a /var/lib/docker/* /data/docker/ 2>/dev/null || true
+nh1221@PowerEdge-R810:~$ sudo cp -a /opt/containerlab/* /data/containerlab/ 2>/dev/null || true
+client_loop: send disconnect: Connection reset
+
+C:\Users\nh1221>ssh R810
+
+
+Last login: Thu Sep 17 13:23:56 2026 from 192.168.9.200
+nh1221@PowerEdge-R810:~$ sudo rsync -aHAX /var/lib/docker /data/docker
+nh1221@PowerEdge-R810:~$ sudo rsync -aHAX /opt/containerlab/ /data/containerlab/
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+> {
+>   "data-root": "/data/docker"
+> }
+> EOF
+nh1221@PowerEdge-R810:~$ sudo systemctl dameon-reload
+Unknown command verb 'dameon-reload', did you mean 'daemon-reload'?
+nh1221@PowerEdge-R810:~$ sudo systemctl daemon-reload
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo systemctl start docker
+nh1221@PowerEdge-R810:~$ sudo systemctl start clab-sheba
+Job for clab-sheba.service failed because the control process exited with error code.
+See "systemctl status clab-sheba.service" and "journalctl -xeu clab-sheba.service" for details.
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo clab deploy -t /opt/containerlab/sheba/topology.clab.yml
+INFO[0000] Containerlab v0.56.0 started
+INFO[0000] Parsing & checking topology file: topology.clab.yml
+Error: containers ["ISP-2" "ISP-1" "External-Router" "Leaf-L4"] already exist. Add '--reconfigure' flag to the deploy command to first remove the containers and then deploy the lab
+nh1221@PowerEdge-R810:~$ sudo clab ins -a
++---+------------------------------------------------+----------+-----------------+--------------+--------------------------------+----------+---------+-----------------+--------------+
+| # |                   Topo Path                    | Lab Name |      Name       | Container ID |             Image              |   Kind   |  State  |  IPv4 Address   | IPv6 Address |
++---+------------------------------------------------+----------+-----------------+--------------+--------------------------------+----------+---------+-----------------+--------------+
+| 1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | External-Router | 797698e15bb1 | quay.io/frrouting/frr:10.0.1   | linux    | running | 172.16.2.254/24 | N/A          |
+| 2 |                                                |          | ISP-1           | 1010e3252704 | quay.io/frrouting/frr:10.0.1   | linux    | running | 172.16.2.98/24  | N/A          |
+| 3 |                                                |          | ISP-2           | fb1b636dbe8d | quay.io/frrouting/frr:10.0.1   | linux    | running | 172.16.2.99/24  | N/A          |
+| 4 |                                                |          | Leaf-L4         | 53ff904255ed | vrnetlab/sonic_sonic-vs:202605 | sonic-vm | exited  | 172.16.2.24/24  | N/A          |
++---+------------------------------------------------+----------+-----------------+--------------+--------------------------------+----------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$ sudo clab destroy -t /opt/containerlab/sheba/topology.clab.yml
+INFO[0000] Parsing & checking topology file: topology.clab.yml
+INFO[0000] Destroying lab: sheba
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-01: Error response from daemon: No such container: k8s-db-01
+ERRO[0000] could not remove container "oob-mgmt-node": Error response from daemon: No such container: oob-mgmt-node
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Spine-S1: Error response from daemon: No such container: Spine-S1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-03: Error response from daemon: No such container: osh-ctrl-03
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-03: Error response from daemon: No such container: k8s-master-03
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] Unable to determine NetNS Path for node osh-net-01: Error response from daemon: No such container: osh-net-01
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-03: Error response from daemon: No such container: k8s-db-03
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L1: Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-04: Error response from daemon: No such container: osh-comp-04
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-02: Error response from daemon: No such container: osh-comp-02
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-03: Error response from daemon: No such container: osh-comp-03
+ERRO[0000] Unable to determine NetNS Path for node MonSrv: Error response from daemon: No such container: MonSrv
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-02: Error response from daemon: No such container: k8s-db-02
+ERRO[0000] Unable to determine NetNS Path for node osh-net-02: Error response from daemon: No such container: osh-net-02
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-01: Error response from daemon: No such container: osh-ctrl-01
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-02: Error response from daemon: No such container: k8s-master-02
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router1: Error response from daemon: No such container: Exit-Router1
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router1: Error response from daemon: No such container: Exit-Router1
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router1: Error response from daemon: No such container: Exit-Router1
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-04: Error response from daemon: No such container: osh-comp-04
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-03: Error response from daemon: No such container: k8s-db-03
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-02: Error response from daemon: No such container: osh-ctrl-02
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-03: Error response from daemon: No such container: k8s-master-03
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] Unable to determine NetNS Path for node osh-net-01: Error response from daemon: No such container: osh-net-01
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-01: Error response from daemon: No such container: k8s-master-01
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router2: Error response from daemon: No such container: Exit-Router2
+ERRO[0000] could not remove container "osh-comp-04": Error response from daemon: No such container: osh-comp-04
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-01: Error response from daemon: No such container: osh-comp-01
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] could not remove container "Spine-S1": Error response from daemon: No such container: Spine-S1
+ERRO[0000] could not remove container "k8s-master-03": Error response from daemon: No such container: k8s-master-03
+ERRO[0000] Unable to determine NetNS Path for node MonSrv: Error response from daemon: No such container: MonSrv
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-02: Error response from daemon: No such container: osh-comp-02
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-01: Error response from daemon: No such container: k8s-db-01
+ERRO[0000] could not remove container "k8s-db-03": Error response from daemon: No such container: k8s-db-03
+ERRO[0000] Unable to determine NetNS Path for node Spine-S2: Error response from daemon: No such container: Spine-S2
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-03: Error response from daemon: No such container: osh-ctrl-03
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-01: Error response from daemon: No such container: osh-ctrl-01
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf1: Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] could not remove container "osh-net-01": Error response from daemon: No such container: osh-net-01
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node k8s-db-02: Error response from daemon: No such container: k8s-db-02
+ERRO[0000] could not remove container "Leaf-L1": Error response from daemon: No such container: Leaf-L1
+ERRO[0000] Unable to determine NetNS Path for node osh-net-02: Error response from daemon: No such container: osh-net-02
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L3: Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] Unable to determine NetNS Path for node Border-Leaf2: Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] could not remove container "k8s-db-01": Error response from daemon: No such container: k8s-db-01
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-01: Error response from daemon: No such container: k8s-master-01
+ERRO[0000] could not remove container "MonSrv": Error response from daemon: No such container: MonSrv
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router1: Error response from daemon: No such container: Exit-Router1
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-03: Error response from daemon: No such container: osh-comp-03
+ERRO[0000] Unable to determine NetNS Path for node osh-ctrl-02: Error response from daemon: No such container: osh-ctrl-02
+ERRO[0000] could not remove container "osh-ctrl-03": Error response from daemon: No such container: osh-ctrl-03
+ERRO[0000] Unable to determine NetNS Path for node Leaf-L2: Error response from daemon: No such container: Leaf-L2
+ERRO[0000] could not remove container "osh-comp-02": Error response from daemon: No such container: osh-comp-02
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router2: Error response from daemon: No such container: Exit-Router2
+ERRO[0000] Unable to determine NetNS Path for node k8s-master-02: Error response from daemon: No such container: k8s-master-02
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router2: Error response from daemon: No such container: Exit-Router2
+ERRO[0000] could not remove container "osh-ctrl-01": Error response from daemon: No such container: osh-ctrl-01
+ERRO[0000] could not remove container "Leaf-L3": Error response from daemon: No such container: Leaf-L3
+ERRO[0000] Unable to determine NetNS Path for node Exit-Router2: Error response from daemon: No such container: Exit-Router2
+ERRO[0000] could not remove container "osh-net-02": Error response from daemon: No such container: osh-net-02
+ERRO[0000] could not remove container "Border-Leaf1": Error response from daemon: No such container: Border-Leaf1
+ERRO[0000] could not remove container "k8s-db-02": Error response from daemon: No such container: k8s-db-02
+ERRO[0000] could not remove container "k8s-master-01": Error response from daemon: No such container: k8s-master-01
+ERRO[0000] could not remove container "Spine-S2": Error response from daemon: No such container: Spine-S2
+ERRO[0000] could not remove container "Exit-Router1": Error response from daemon: No such container: Exit-Router1
+ERRO[0000] could not remove container "osh-ctrl-02": Error response from daemon: No such container: osh-ctrl-02
+ERRO[0000] could not remove container "osh-comp-03": Error response from daemon: No such container: osh-comp-03
+ERRO[0000] Unable to determine NetNS Path for node osh-comp-01: Error response from daemon: No such container: osh-comp-01
+ERRO[0000] could not remove container "k8s-master-02": Error response from daemon: No such container: k8s-master-02
+ERRO[0000] could not remove container "Border-Leaf2": Error response from daemon: No such container: Border-Leaf2
+ERRO[0000] could not remove container "Exit-Router2": Error response from daemon: No such container: Exit-Router2
+ERRO[0000] could not remove container "osh-comp-01": Error response from daemon: No such container: osh-comp-01
+ERRO[0000] could not remove container "Leaf-L2": Error response from daemon: No such container: Leaf-L2
+INFO[0000] Removed container: Leaf-L4
+INFO[0001] Removed container: ISP-2
+INFO[0001] Removed container: ISP-1
+INFO[0001] Removed container: External-Router
+INFO[0001] Removing containerlab host entries from /etc/hosts file
+INFO[0001] Removing ssh config for containerlab nodes
+nh1221@PowerEdge-R810:~$ sudo clab ins -a
+INFO[0000] no containers found
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ sudo systemctl start clab-sheba
+Job for clab-sheba.service failed because the control process exited with error code.
+See "systemctl status clab-sheba.service" and "journalctl -xeu clab-sheba.service" for details.
+nh1221@PowerEdge-R810:~$ sudo clab deploy -t /opt/containerlab/sheba/topology.clab.yml
+INFO[0000] Containerlab v0.56.0 started
+INFO[0000] Parsing & checking topology file: topology.clab.yml
+INFO[0000] Creating docker network: Name="sonic_oob_mgmt", IPv4Subnet="172.16.2.0/24", IPv6Subnet="", MTU=0
+WARN[0001] Unable to load kernel module "ip_tables" automatically "load ip_tables failed: exec format error"
+INFO[0001] Creating lab directory: /home/nh1221/clab-sheba
+INFO[0001] Creating container: "osh-net-01"
+INFO[0001] Creating container: "k8s-db-03"
+INFO[0001] Creating container: "Exit-Router1"
+INFO[0001] Creating container: "osh-net-02"
+INFO[0001] Creating container: "ISP-2"
+INFO[0001] Creating container: "External-Router"
+INFO[0001] Creating container: "k8s-db-01"
+INFO[0001] Creating container: "Spine-S2"
+INFO[0001] Creating container: "Leaf-L1"
+INFO[0001] Creating container: "k8s-master-03"
+INFO[0001] Creating container: "k8s-master-01"
+INFO[0001] Creating container: "Leaf-L3"
+INFO[0001] Creating container: "Leaf-L4"
+INFO[0001] Creating container: "Exit-Router2"
+INFO[0001] Creating container: "k8s-db-02"
+INFO[0001] Creating container: "k8s-master-02"
+INFO[0001] Creating container: "osh-comp-02"
+INFO[0001] Creating container: "oob-mgmt-node"
+INFO[0001] Creating container: "ISP-1"
+INFO[0001] Creating container: "MonSrv"
+INFO[0001] Creating container: "Border-Leaf1"
+INFO[0001] Creating container: "osh-ctrl-02"
+INFO[0001] Creating container: "Spine-S1"
+INFO[0001] Creating container: "osh-comp-03"
+INFO[0001] Creating container: "osh-comp-04"
+INFO[0001] Creating container: "Leaf-L2"
+INFO[0001] Creating container: "osh-ctrl-03"
+INFO[0001] Creating container: "Border-Leaf2"
+INFO[0001] Creating container: "osh-comp-01"
+INFO[0001] Creating container: "osh-ctrl-01"
+INFO[0008] Created link: ISP-2:eth1 <--> Exit-Router1:eth4
+INFO[0008] Created link: ISP-1:eth1 <--> Exit-Router1:eth3
+INFO[0008] Created link: ISP-1:eth5 <--> ISP-2:eth5
+INFO[0008] Created link: ISP-1:eth2 <--> Exit-Router2:eth3
+INFO[0009] Created link: ISP-2:eth2 <--> Exit-Router2:eth4
+INFO[0009] Created link: Spine-S2:eth4 <--> Leaf-L4:eth31
+INFO[0009] Created link: Spine-S2:eth3 <--> Leaf-L3:eth31
+INFO[0009] Created link: Leaf-L4:eth1 <--> k8s-master-02:eth2
+INFO[0009] Created link: Leaf-L3:eth1 <--> k8s-master-02:eth1
+INFO[0009] Created link: Leaf-L4:eth4 <--> osh-net-02:eth2
+INFO[0009] Created link: Leaf-L4:eth5 <--> osh-comp-02:eth2
+INFO[0009] Created link: Leaf-L3:eth4 <--> osh-net-02:eth1
+INFO[0009] Created link: Spine-S2:eth5 <--> Border-Leaf1:eth34
+INFO[0009] Created link: Border-Leaf1:eth1 <--> Exit-Router1:eth1
+INFO[0009] Created link: Leaf-L3:eth5 <--> osh-comp-02:eth1
+INFO[0009] Created link: Border-Leaf1:eth2 <--> Exit-Router2:eth1
+INFO[0009] Created link: Border-Leaf1:eth3 <--> k8s-master-03:eth1
+INFO[0010] Created link: Spine-S1:eth3 <--> Leaf-L3:eth32
+INFO[0010] Created link: Border-Leaf1:eth6 <--> MonSrv:eth1
+INFO[0010] Created link: Spine-S1:eth4 <--> Leaf-L4:eth32
+INFO[0010] Created link: Spine-S1:eth5 <--> Border-Leaf1:eth35
+INFO[0010] Created link: Border-Leaf1:eth7 <--> osh-comp-03:eth1
+INFO[0010] Created link: Spine-S1:eth2 <--> Leaf-L2:eth69
+INFO[0010] Created link: Spine-S2:eth2 <--> Leaf-L2:eth65
+INFO[0010] Created link: Leaf-L2:eth1 <--> k8s-master-01:eth2
+INFO[0010] Created link: Leaf-L2:eth3 <--> osh-ctrl-01:eth2
+INFO[0010] Created link: Leaf-L3:eth2 <--> k8s-db-02:eth1
+INFO[0010] Created link: Leaf-L2:eth4 <--> osh-net-01:eth2
+INFO[0010] Created link: Leaf-L2:eth5 <--> osh-comp-01:eth2
+INFO[0010] Created link: Leaf-L4:eth2 <--> k8s-db-02:eth2
+INFO[0010] Created link: Leaf-L2:eth6 <--> osh-comp-04:eth2
+INFO[0010] Created link: Leaf-L2:eth2 <--> k8s-db-01:eth2
+INFO[0010] Created link: Border-Leaf1:eth5 <--> osh-ctrl-03:eth1
+INFO[0010] Created link: Spine-S1:eth6 <--> Border-Leaf2:eth35
+INFO[0010] Created link: Spine-S2:eth6 <--> Border-Leaf2:eth34
+INFO[0010] Created link: Border-Leaf2:eth1 <--> Exit-Router2:eth2
+INFO[0011] Created link: Border-Leaf2:eth2 <--> Exit-Router1:eth2
+INFO[0011] Created link: Border-Leaf2:eth3 <--> k8s-master-03:eth2
+INFO[0011] Created link: Leaf-L3:eth3 <--> osh-ctrl-02:eth1
+INFO[0011] Created link: Border-Leaf1:eth4 <--> k8s-db-03:eth1
+INFO[0011] Created link: Border-Leaf2:eth4 <--> k8s-db-03:eth2
+INFO[0011] Created link: Leaf-L4:eth3 <--> osh-ctrl-02:eth2
+INFO[0011] Created link: Border-Leaf2:eth5 <--> osh-ctrl-03:eth2
+INFO[0011] Created link: Border-Leaf2:eth6 <--> MonSrv:eth2
+INFO[0011] Created link: Border-Leaf2:eth7 <--> osh-comp-03:eth2
+INFO[0011] Created link: ISP-1:eth6 <--> br-internet:isp1-port
+INFO[0011] Created link: Spine-S1:eth1 <--> Leaf-L1:eth69
+INFO[0011] Created link: ISP-2:eth6 <--> br-internet:isp2-port
+INFO[0011] Created link: Spine-S2:eth1 <--> Leaf-L1:eth65
+INFO[0011] Created link: External-Router:eth1 <--> br-internet:ext-port
+INFO[0011] Created link: Leaf-L1:eth1 <--> k8s-master-01:eth1
+INFO[0011] Created link: Leaf-L1:eth2 <--> k8s-db-01:eth1
+INFO[0011] Created link: Leaf-L1:eth3 <--> osh-ctrl-01:eth1
+INFO[0011] Created link: Leaf-L1:eth4 <--> osh-net-01:eth1
+INFO[0011] Created link: Leaf-L1:eth5 <--> osh-comp-01:eth1
+INFO[0011] Created link: Leaf-L1:eth6 <--> osh-comp-04:eth1
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Spine-S1". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Leaf-L2". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Border-Leaf2". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Leaf-L1". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Spine-S2". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Leaf-L4". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Leaf-L3". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+ERRO[0041] Failed to execute command "bash /etc/rc.local.d/init-platform.sh &" on the node "Border-Leaf1". rc=127,
+stdout:
+
+stderr:
+/etc/rc.local.d/init-platform.sh: line 7: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 9: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 12: sudo: command not found
+/etc/rc.local.d/init-platform.sh: line 30: sudo: command not found
+INFO[0042] Adding containerlab host entries to /etc/hosts file
+INFO[0043] Adding ssh config for containerlab nodes
+INFO[0043] 🎉 New containerlab version 0.79.0 is available! Release notes: https://containerlab.dev/rn/0.79/
+Run 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/
++----+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+| #  |      Name       | Container ID |               Image                |    Kind    |  State  |  IPv4 Address   | IPv6 Address |
++----+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+|  1 | Border-Leaf1    | 28784d8a8f93 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.31/24  | N/A          |
+|  2 | Border-Leaf2    | bf344fdf2702 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.32/24  | N/A          |
+|  3 | Exit-Router1    | 6dcbe3d21d6a | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.41/24  | N/A          |
+|  4 | Exit-Router2    | 5e30738c0152 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.42/24  | N/A          |
+|  5 | External-Router | 556a3c4812e6 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.254/24 | N/A          |
+|  6 | ISP-1           | 917544688f83 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.98/24  | N/A          |
+|  7 | ISP-2           | 4f8f78796490 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.99/24  | N/A          |
+|  8 | Leaf-L1         | 20cfb4689555 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.21/24  | N/A          |
+|  9 | Leaf-L2         | ab40eb8c83a5 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.22/24  | N/A          |
+| 10 | Leaf-L3         | ed84186d31ad | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.23/24  | N/A          |
+| 11 | Leaf-L4         | 7e0062ed0c80 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.24/24  | N/A          |
+| 12 | MonSrv          | 9fabc5297467 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.74/24  | N/A          |
+| 13 | Spine-S1        | d9eb049636db | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.11/24  | N/A          |
+| 14 | Spine-S2        | 84e36086f335 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.12/24  | N/A          |
+| 15 | k8s-db-01       | e3a36184755a | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.52/24  | N/A          |
+| 16 | k8s-db-02       | 1aa82f47af8d | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.62/24  | N/A          |
+| 17 | k8s-db-03       | af98c5b42092 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.72/24  | N/A          |
+| 18 | k8s-master-01   | ce3fa5f1a29b | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.51/24  | N/A          |
+| 19 | k8s-master-02   | c867deb16070 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.61/24  | N/A          |
+| 20 | k8s-master-03   | 5a33fddc194b | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.71/24  | N/A          |
+| 21 | oob-mgmt-node   | cce934e89e34 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.253/24 | N/A          |
+| 22 | osh-comp-01     | 748d2caab202 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.55/24  | N/A          |
+| 23 | osh-comp-02     | 59d67baf3527 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.65/24  | N/A          |
+| 24 | osh-comp-03     | cf0a7e67f359 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.75/24  | N/A          |
+| 25 | osh-comp-04     | 1fd17efcbf47 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.56/24  | N/A          |
+| 26 | osh-ctrl-01     | 52e866dcb827 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.53/24  | N/A          |
+| 27 | osh-ctrl-02     | b7903af261bb | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.63/24  | N/A          |
+| 28 | osh-ctrl-03     | caf21d49cfef | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.73/24  | N/A          |
+| 29 | osh-net-01      | d1820ecee8de | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.54/24  | N/A          |
+| 30 | osh-net-02      | 51aa01785b62 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.64/24  | N/A          |
++----+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ df -h
+Filesystem                        Size  Used Avail Use% Mounted on
+tmpfs                              50G  4.0G   46G   8% /run
+/dev/sda2                         456G  441G     0 100% /
+tmpfs                             124G  8.0K  124G   1% /dev/shm
+efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs                             124G  104M  124G   1% /tmp
+none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
+/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
+tmpfs                              25G   88K   25G   1% /run/user/1000
+/dev/mapper/vg--data-lv--storage  2.0T  213G  1.7T  12% /data
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$
+nh1221@PowerEdge-R810:~$ lsblk
+NAME                   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+loop1                    7:1    0     4K  1 loop /snap/bare/5
+loop2                    7:2    0  66.8M  1 loop /snap/core24/1643
+loop3                    7:3    0  19.6M  1 loop /snap/desktop-security-center/150
+loop4                    7:4    0    20M  1 loop /snap/desktop-security-center/151
+loop5                    7:5    0 221.5M  1 loop /snap/thunderbird/1240
+loop6                    7:6    0  50.3M  1 loop /snap/snapd/27738
+loop7                    7:7    0  16.5M  1 loop /snap/firmware-updater/226
+loop8                    7:8    0 606.1M  1 loop /snap/gnome-46-2404/153
+loop9                    7:9    0 614.5M  1 loop /snap/gnome-46-2404/164
+loop10                   7:10   0  91.7M  1 loop /snap/gtk-common-themes/1535
+loop11                   7:11   0   395M  1 loop /snap/mesa-2404/1165
+loop12                   7:12   0   402M  1 loop /snap/mesa-2404/1839
+loop13                   7:13   0  18.8M  1 loop /snap/prompting-client/204
+loop14                   7:14   0  18.8M  1 loop /snap/prompting-client/222
+loop15                   7:15   0  15.7M  1 loop /snap/snap-store/1367
+loop16                   7:16   0  11.8M  1 loop /snap/snap-store/1390
+loop17                   7:17   0 221.4M  1 loop /snap/thunderbird/1255
+loop18                   7:18   0  50.1M  1 loop /snap/snapd/27710
+loop19                   7:19   0   828K  1 loop /snap/snapd-desktop-integration/387
+loop20                   7:20   0   828K  1 loop /snap/snapd-desktop-integration/391
+loop21                   7:21   0 260.8M  1 loop /snap/firefox/8863
+loop22                   7:22   0  66.8M  1 loop /snap/core24/2124
+loop23                   7:23   0 261.1M  1 loop /snap/firefox/8803
+sda                      8:0    0 465.3G  0 disk
+├─sda1                   8:1    0     1G  0 part /boot/efi
+└─sda2                   8:2    0 464.2G  0 part /
+sdb                      8:16   0 837.8G  0 disk
+sdc                      8:32   0   931G  0 disk
+sdd                      8:48   0   931G  0 disk
+sde                      8:64   0   931G  0 disk
+└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
+sdf                      8:80   0   1.1T  0 disk
+└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
+sr0                     11:0    1  1024M  1 rom
+nh1221@PowerEdge-R810:~$
+
+
+The 'prune' did not create much room yet from 'sda2', still 100% use:
+
+And following is switch state, it did not load celestica for spine platform, it did go for default Dell Force 10 it seems:
+
+nh1221@PowerEdge-R810:~$ ssh admin@Spine-S1
+Warning: Permanently added 'spine-s1' (RSA) to the list of known hosts.
+Debian GNU/Linux 13 \n \l
+
+admin@spine-s1's password: 
+Linux Spine-S1 6.12.41+deb13-sonic-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.12.41-1 (2026-07-08) x86_64
+You are on
+  ____   ___  _   _ _  ____
+ / ___| / _ \| \ | (_)/ ___|
+ \___ \| | | |  \| | | |
+  ___) | |_| | |\  | | |___
+ |____/ \___/|_| \_|_|\____|
+
+-- Software for Open Networking in the Cloud --
+
+Unauthorized access and/or use are prohibited.
+All access and/or use are subject to monitoring.
+
+Help:    https://sonic-net.github.io/SONiC/
+
+admin@Spine-S1:~$ show interfaces status
+  Interface            Lanes    Speed    MTU    FEC           Alias    Vlan    Oper    Admin    Type    Asym PFC
+-----------  ---------------  -------  -----  -----  --------------  ------  ------  -------  ------  ----------
+  Ethernet0      25,26,27,28      40G   9100    N/A    fortyGigE0/0  routed      up       up     N/A         N/A
+  Ethernet4      29,30,31,32      40G   9100    N/A    fortyGigE0/4  routed      up       up     N/A         N/A
+  Ethernet8      33,34,35,36      40G   9100    N/A    fortyGigE0/8  routed      up       up     N/A         N/A
+ Ethernet12      37,38,39,40      40G   9100    N/A   fortyGigE0/12  routed      up       up     N/A         N/A
+ Ethernet16      45,46,47,48      40G   9100    N/A   fortyGigE0/16  routed      up       up     N/A         N/A
+ Ethernet20      41,42,43,44      40G   9100    N/A   fortyGigE0/20  routed      up       up     N/A         N/A
+ Ethernet24          1,2,3,4      40G   9100    N/A   fortyGigE0/24  routed    down       up     N/A         N/A
+ Ethernet28          5,6,7,8      40G   9100    N/A   fortyGigE0/28  routed    down       up     N/A         N/A
+ Ethernet32      13,14,15,16      40G   9100    N/A   fortyGigE0/32  routed    down       up     N/A         N/A
+ Ethernet36       9,10,11,12      40G   9100    N/A   fortyGigE0/36  routed    down       up     N/A         N/A
+ Ethernet40      17,18,19,20      40G   9100    N/A   fortyGigE0/40  routed    down       up     N/A         N/A
+ Ethernet44      21,22,23,24      40G   9100    N/A   fortyGigE0/44  routed    down       up     N/A         N/A
+ Ethernet48      53,54,55,56      40G   9100    N/A   fortyGigE0/48  routed    down       up     N/A         N/A
+ Ethernet52      49,50,51,52      40G   9100    N/A   fortyGigE0/52  routed    down       up     N/A         N/A
+ Ethernet56      57,58,59,60      40G   9100    N/A   fortyGigE0/56  routed    down       up     N/A         N/A
+ Ethernet60      61,62,63,64      40G   9100    N/A   fortyGigE0/60  routed    down       up     N/A         N/A
+ Ethernet64      69,70,71,72      40G   9100    N/A   fortyGigE0/64  routed    down       up     N/A         N/A
+ Ethernet68      65,66,67,68      40G   9100    N/A   fortyGigE0/68  routed    down       up     N/A         N/A
+ Ethernet72      73,74,75,76      40G   9100    N/A   fortyGigE0/72  routed    down       up     N/A         N/A
+ Ethernet76      77,78,79,80      40G   9100    N/A   fortyGigE0/76  routed    down       up     N/A         N/A
+ Ethernet80  109,110,111,112      40G   9100    N/A   fortyGigE0/80  routed    down       up     N/A         N/A
+ Ethernet84  105,106,107,108      40G   9100    N/A   fortyGigE0/84  routed    down       up     N/A         N/A
+ Ethernet88  113,114,115,116      40G   9100    N/A   fortyGigE0/88  routed    down       up     N/A         N/A
+ Ethernet92  117,118,119,120      40G   9100    N/A   fortyGigE0/92  routed    down       up     N/A         N/A
+ Ethernet96  125,126,127,128      40G   9100    N/A   fortyGigE0/96  routed    down       up     N/A         N/A
+Ethernet100  121,122,123,124      40G   9100    N/A  fortyGigE0/100  routed    down       up     N/A         N/A
+Ethernet104      81,82,83,84      40G   9100    N/A  fortyGigE0/104  routed    down       up     N/A         N/A
+Ethernet108      85,86,87,88      40G   9100    N/A  fortyGigE0/108  routed    down       up     N/A         N/A
+Ethernet112      93,94,95,96      40G   9100    N/A  fortyGigE0/112  routed    down       up     N/A         N/A
+Ethernet116      89,90,91,92      40G   9100    N/A  fortyGigE0/116  routed    down       up     N/A         N/A
+Ethernet120  101,102,103,104      40G   9100    N/A  fortyGigE0/120  routed    down       up     N/A         N/A
+Ethernet124     97,98,99,100      40G   9100    N/A  fortyGigE0/124  routed    down       up     N/A         N/A
+admin@Spine-S1:~$ 
+admin@Spine-S1:~$ 
+admin@Spine-S1:~$ show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.1.0.1, local AS number 65100 vrf-id 0
+BGP table version 3
+RIB entries 1, using 128 bytes of memory
+Peers 32, using 770304 KiB of memory
+Peer groups 2, using 128 bytes of memory
+
+
+Neighbhor      V     AS    MsgRcvd    MsgSent    TblVer    InQ    OutQ  Up/Down    State/PfxRcd    NeighborName
+-----------  ---  -----  ---------  ---------  --------  -----  ------  ---------  --------------  --------------
+10.0.0.1       4  65200          0          0         0      0       0  never      Connect         ARISTA01T2
+10.0.0.3       4  65200          0          0         0      0       0  never      Connect         ARISTA02T2
+10.0.0.5       4  65200          0          0         0      0       0  never      Connect         ARISTA03T2
+10.0.0.7       4  65200          0          0         0      0       0  never      Connect         ARISTA04T2
+10.0.0.9       4  65200          0          0         0      0       0  never      Connect         ARISTA05T2
+10.0.0.11      4  65200          0          0         0      0       0  never      Connect         ARISTA06T2
+10.0.0.13      4  65200          0          0         0      0       0  never      Connect         ARISTA07T2
+10.0.0.15      4  65200          0          0         0      0       0  never      Connect         ARISTA08T2
+10.0.0.17      4  65200          0          0         0      0       0  never      Connect         ARISTA09T2
+10.0.0.19      4  65200          0          0         0      0       0  never      Connect         ARISTA10T2
+10.0.0.21      4  65200          0          0         0      0       0  never      Connect         ARISTA11T2
+10.0.0.23      4  65200          0          0         0      0       0  never      Connect         ARISTA12T2
+10.0.0.25      4  65200          0          0         0      0       0  never      Connect         ARISTA13T2
+10.0.0.27      4  65200          0          0         0      0       0  never      Connect         ARISTA14T2
+10.0.0.29      4  65200          0          0         0      0       0  never      Connect         ARISTA15T2
+10.0.0.31      4  65200          0          0         0      0       0  never      Connect         ARISTA16T2
+10.0.0.33      4  64001          0          0         0      0       0  never      Connect         ARISTA01T0
+10.0.0.35      4  64002          0          0         0      0       0  never      Connect         ARISTA02T0
+10.0.0.37      4  64003          0          0         0      0       0  never      Connect         ARISTA03T0
+10.0.0.39      4  64004          0          0         0      0       0  never      Connect         ARISTA04T0
+10.0.0.41      4  64005          0          0         0      0       0  never      Connect         ARISTA05T0
+10.0.0.43      4  64006          0          0         0      0       0  never      Connect         ARISTA06T0
+10.0.0.45      4  64007          0          0         0      0       0  never      Connect         ARISTA07T0
+10.0.0.47      4  64008          0          0         0      0       0  never      Connect         ARISTA08T0
+10.0.0.49      4  64009          0          0         0      0       0  never      Connect         ARISTA09T0
+10.0.0.51      4  64010          0          0         0      0       0  never      Connect         ARISTA10T0
+10.0.0.53      4  64011          0          0         0      0       0  never      Connect         ARISTA11T0
+10.0.0.55      4  64012          0          0         0      0       0  never      Connect         ARISTA12T0
+10.0.0.57      4  64013          0          0         0      0       0  never      Connect         ARISTA13T0
+10.0.0.59      4  64014          0          0         0      0       0  never      Connect         ARISTA14T0
+10.0.0.61      4  64015          0          0         0      0       0  never      Connect         ARISTA15T0
+10.0.0.63      4  64016          0          0         0      0       0  never      Connect         ARISTA16T0
+
+Total number of neighbors 32
+admin@Spine-S1:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.4).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+Spine-S1# show running-config 
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.4
+frr defaults traditional
+hostname sonic
+log syslog informational
+log facility local4
+zebra nexthop-group keep 1
+fpm address 127.0.0.1
+no fpm use-next-hop-groups
+agentx
+hostname Spine-S1
+no service integrated-vtysh-config
+!
+ip prefix-list DEFAULT_IPV4 seq 5 permit 0.0.0.0/0
+ip prefix-list PL_LoopbackV4 seq 5 permit 10.1.0.1/32
+!
+ipv6 prefix-list DEFAULT_IPV6 seq 5 permit ::/0
+!
+route-map ALLOW_LIST_DEPLOYMENT_ID_0_V4 permit 65535
+ set community 5060:12345 additive
+exit
+!
+route-map ALLOW_LIST_DEPLOYMENT_ID_0_V6 permit 65535
+ set community 5060:12345 additive
+exit
+!
+route-map CHECK_IDF_ISOLATION permit 10
+exit
+!
+route-map FROM_BGP_PEER_V4 permit 10
+ call ALLOW_LIST_DEPLOYMENT_ID_0_V4
+ on-match next
+exit
+!
+route-map FROM_BGP_PEER_V4 permit 11
+ match community allow_list_default_community
+exit
+!
+route-map FROM_BGP_PEER_V4 permit 100
+exit
+!
+route-map FROM_BGP_PEER_V6 permit 1
+ on-match next
+ set ipv6 next-hop prefer-global
+exit
+!
+route-map FROM_BGP_PEER_V6 permit 10
+ call ALLOW_LIST_DEPLOYMENT_ID_0_V6
+ on-match next
+exit
+!
+route-map FROM_BGP_PEER_V6 permit 11
+ match community allow_list_default_community
+exit
+!
+route-map FROM_BGP_PEER_V6 permit 100
+exit
+!
+route-map RM_SET_SRC permit 10
+ set src 10.1.0.1
+exit
+!
+route-map TO_BGP_PEER_V4 permit 100
+ call CHECK_IDF_ISOLATION
+exit
+!
+route-map TO_BGP_PEER_V6 permit 100
+ call CHECK_IDF_ISOLATION
+exit
+!
+password zebra
+enable password zebra
+!
+router bgp 65100
+ bgp router-id 10.1.0.1
+ bgp suppress-fib-pending
+ bgp log-neighbor-changes
+ no bgp ebgp-requires-policy
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor PEER_V4 peer-group
+ neighbor PEER_V6 peer-group
+ neighbor 10.0.0.1 remote-as 65200
+ neighbor 10.0.0.1 peer-group PEER_V4
+ neighbor 10.0.0.1 description ARISTA01T2
+ neighbor 10.0.0.1 timers connect 10
+ neighbor 10.0.0.3 remote-as 65200
+ neighbor 10.0.0.3 peer-group PEER_V4
+ neighbor 10.0.0.3 description ARISTA02T2
+ neighbor 10.0.0.3 timers connect 10
+ neighbor 10.0.0.5 remote-as 65200
+ neighbor 10.0.0.5 peer-group PEER_V4
+ neighbor 10.0.0.5 description ARISTA03T2
+ neighbor 10.0.0.5 timers connect 10
+ neighbor 10.0.0.7 remote-as 65200
+ neighbor 10.0.0.7 peer-group PEER_V4
+ neighbor 10.0.0.7 description ARISTA04T2
+ neighbor 10.0.0.7 timers connect 10
+ neighbor 10.0.0.9 remote-as 65200
+ neighbor 10.0.0.9 peer-group PEER_V4
+ neighbor 10.0.0.9 description ARISTA05T2
+ neighbor 10.0.0.9 timers connect 10
+ neighbor 10.0.0.11 remote-as 65200
+ neighbor 10.0.0.11 peer-group PEER_V4
+ neighbor 10.0.0.11 description ARISTA06T2
+ neighbor 10.0.0.11 timers connect 10
+ neighbor 10.0.0.13 remote-as 65200
+ neighbor 10.0.0.13 peer-group PEER_V4
+ neighbor 10.0.0.13 description ARISTA07T2
+ neighbor 10.0.0.13 timers connect 10
+ neighbor 10.0.0.15 remote-as 65200
+ neighbor 10.0.0.15 peer-group PEER_V4
+ neighbor 10.0.0.15 description ARISTA08T2
+ neighbor 10.0.0.15 timers connect 10
+ neighbor 10.0.0.17 remote-as 65200
+ neighbor 10.0.0.17 peer-group PEER_V4
+ neighbor 10.0.0.17 description ARISTA09T2
+ neighbor 10.0.0.17 timers connect 10
+ neighbor 10.0.0.19 remote-as 65200
+ neighbor 10.0.0.19 peer-group PEER_V4
+ neighbor 10.0.0.19 description ARISTA10T2
+ neighbor 10.0.0.19 timers connect 10
+ neighbor 10.0.0.21 remote-as 65200
+ neighbor 10.0.0.21 peer-group PEER_V4
+ neighbor 10.0.0.21 description ARISTA11T2
+ neighbor 10.0.0.21 timers connect 10
+ neighbor 10.0.0.23 remote-as 65200
+ neighbor 10.0.0.23 peer-group PEER_V4
+ neighbor 10.0.0.23 description ARISTA12T2
+ neighbor 10.0.0.23 timers connect 10
+ neighbor 10.0.0.25 remote-as 65200
+ neighbor 10.0.0.25 peer-group PEER_V4
+ neighbor 10.0.0.25 description ARISTA13T2
+ neighbor 10.0.0.25 timers connect 10
+ neighbor 10.0.0.27 remote-as 65200
+ neighbor 10.0.0.27 peer-group PEER_V4
+ neighbor 10.0.0.27 description ARISTA14T2
+ neighbor 10.0.0.27 timers connect 10
+ neighbor 10.0.0.29 remote-as 65200
+ neighbor 10.0.0.29 peer-group PEER_V4
+ neighbor 10.0.0.29 description ARISTA15T2
+ neighbor 10.0.0.29 timers connect 10
+ neighbor 10.0.0.31 remote-as 65200
+ neighbor 10.0.0.31 peer-group PEER_V4
+ neighbor 10.0.0.31 description ARISTA16T2
+ neighbor 10.0.0.31 timers connect 10
+ neighbor 10.0.0.33 remote-as 64001
+ neighbor 10.0.0.33 peer-group PEER_V4
+ neighbor 10.0.0.33 description ARISTA01T0
+ neighbor 10.0.0.33 timers connect 10
+ neighbor 10.0.0.35 remote-as 64002
+ neighbor 10.0.0.35 peer-group PEER_V4
+ neighbor 10.0.0.35 description ARISTA02T0
+ neighbor 10.0.0.35 timers connect 10
+ neighbor 10.0.0.37 remote-as 64003
+ neighbor 10.0.0.37 peer-group PEER_V4
+ neighbor 10.0.0.37 description ARISTA03T0
+ neighbor 10.0.0.37 timers connect 10
+ neighbor 10.0.0.39 remote-as 64004
+ neighbor 10.0.0.39 peer-group PEER_V4
+ neighbor 10.0.0.39 description ARISTA04T0
+ neighbor 10.0.0.39 timers connect 10
+ neighbor 10.0.0.41 remote-as 64005
+ neighbor 10.0.0.41 peer-group PEER_V4
+ neighbor 10.0.0.41 description ARISTA05T0
+ neighbor 10.0.0.41 timers connect 10
+ neighbor 10.0.0.43 remote-as 64006
+ neighbor 10.0.0.43 peer-group PEER_V4
+ neighbor 10.0.0.43 description ARISTA06T0
+ neighbor 10.0.0.43 timers connect 10
+ neighbor 10.0.0.45 remote-as 64007
+ neighbor 10.0.0.45 peer-group PEER_V4
+ neighbor 10.0.0.45 description ARISTA07T0
+ neighbor 10.0.0.45 timers connect 10
+ neighbor 10.0.0.47 remote-as 64008
+ neighbor 10.0.0.47 peer-group PEER_V4
+ neighbor 10.0.0.47 description ARISTA08T0
+ neighbor 10.0.0.47 timers connect 10
+ neighbor 10.0.0.49 remote-as 64009
+ neighbor 10.0.0.49 peer-group PEER_V4
+ neighbor 10.0.0.49 description ARISTA09T0
+ neighbor 10.0.0.49 timers connect 10
+ neighbor 10.0.0.51 remote-as 64010
+ neighbor 10.0.0.51 peer-group PEER_V4
+ neighbor 10.0.0.51 description ARISTA10T0
+ neighbor 10.0.0.51 timers connect 10
+ neighbor 10.0.0.53 remote-as 64011
+ neighbor 10.0.0.53 peer-group PEER_V4
+ neighbor 10.0.0.53 description ARISTA11T0
+ neighbor 10.0.0.53 timers connect 10
+ neighbor 10.0.0.55 remote-as 64012
+ neighbor 10.0.0.55 peer-group PEER_V4
+ neighbor 10.0.0.55 description ARISTA12T0
+ neighbor 10.0.0.55 timers connect 10
+ neighbor 10.0.0.57 remote-as 64013
+ neighbor 10.0.0.57 peer-group PEER_V4
+ neighbor 10.0.0.57 description ARISTA13T0
+ neighbor 10.0.0.57 timers connect 10
+ neighbor 10.0.0.59 remote-as 64014
+ neighbor 10.0.0.59 peer-group PEER_V4
+ neighbor 10.0.0.59 description ARISTA14T0
+ neighbor 10.0.0.59 timers connect 10
+ neighbor 10.0.0.61 remote-as 64015
+ neighbor 10.0.0.61 peer-group PEER_V4
+ neighbor 10.0.0.61 description ARISTA15T0
+ neighbor 10.0.0.61 timers connect 10
+ neighbor 10.0.0.63 remote-as 64016
+ neighbor 10.0.0.63 peer-group PEER_V4
+ neighbor 10.0.0.63 description ARISTA16T0
+ neighbor 10.0.0.63 timers connect 10
+ !
+ address-family ipv4 unicast
+  network 10.1.0.1/32
+  neighbor PEER_V4 soft-reconfiguration inbound
+  neighbor PEER_V4 route-map FROM_BGP_PEER_V4 in
+  neighbor PEER_V4 route-map TO_BGP_PEER_V4 out
+  neighbor 10.0.0.1 activate
+  neighbor 10.0.0.3 activate
+  neighbor 10.0.0.5 activate
+  neighbor 10.0.0.7 activate
+  neighbor 10.0.0.9 activate
+  neighbor 10.0.0.11 activate
+  neighbor 10.0.0.13 activate
+  neighbor 10.0.0.15 activate
+  neighbor 10.0.0.17 activate
+  neighbor 10.0.0.19 activate
+  neighbor 10.0.0.21 activate
+  neighbor 10.0.0.23 activate
+  neighbor 10.0.0.25 activate
+  neighbor 10.0.0.27 activate
+  neighbor 10.0.0.29 activate
+  neighbor 10.0.0.31 activate
+  neighbor 10.0.0.33 activate
+  neighbor 10.0.0.35 activate
+  neighbor 10.0.0.37 activate
+  neighbor 10.0.0.39 activate
+  neighbor 10.0.0.41 activate
+  neighbor 10.0.0.43 activate
+  neighbor 10.0.0.45 activate
+  neighbor 10.0.0.47 activate
+  neighbor 10.0.0.49 activate
+  neighbor 10.0.0.51 activate
+  neighbor 10.0.0.53 activate
+  neighbor 10.0.0.55 activate
+  neighbor 10.0.0.57 activate
+  neighbor 10.0.0.59 activate
+  neighbor 10.0.0.61 activate
+  neighbor 10.0.0.63 activate
+ exit-address-family
+ !
+ address-family ipv6 unicast
+  neighbor PEER_V6 soft-reconfiguration inbound
+  neighbor PEER_V6 route-map FROM_BGP_PEER_V6 in
+  neighbor PEER_V6 route-map TO_BGP_PEER_V6 out
+ exit-address-family
+exit
+!
+bgp community-list standard allow_list_default_community seq 5 permit no-export
+bgp community-list standard allow_list_default_community seq 10 permit 5060:12345
+!
+ip protocol bgp route-map RM_SET_SRC
+!
+ip nht resolve-via-default
+!
+ipv6 nht resolve-via-default
+!
+end
+Spine-S1# Connection to spine-s1 closed by remote host.
+Connection to spine-s1 closed.
+nh1221@PowerEdge-R810:~$ 
+
+
+And from generic_vm side:
+
+ubuntu@k8s-master-01:~$ ss -tlnp | grep 6443
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ ls -al /etc/kubernetes/manifests/
+total 24
+drwxr-xr-x 2 kube root 4096 Sep 17 12:24 .
+drwxr-xr-x 5 kube root 4096 Sep 17 12:54 ..
+-rw------- 1 root root 5187 Sep 17 12:24 kube-apiserver.yaml
+-rw------- 1 root root 3663 Sep 17 12:24 kube-controller-manager.yaml
+-rw------- 1 root root 1957 Sep 17 12:24 kube-scheduler.yaml
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo journalctl -u kubelet -n 50 --no-pager
+Sep 17 21:30:46 k8s-master-01 kubelet[1412]: I0917 21:30:46.602011    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:46 k8s-master-01 kubelet[1412]: I0917 21:30:46.808749    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:47 k8s-master-01 kubelet[1412]: I0917 21:30:47.601882    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:47 k8s-master-01 kubelet[1412]: E0917 21:30:47.606460    1412 eviction_manager.go:297] "Eviction manager: failed to get summary stats" err="failed to get node info: node \"k8s-master-01\" not found"
+Sep 17 21:30:47 k8s-master-01 kubelet[1412]: I0917 21:30:47.810595    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:48 k8s-master-01 kubelet[1412]: I0917 21:30:48.601865    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:48 k8s-master-01 kubelet[1412]: I0917 21:30:48.810141    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:49 k8s-master-01 kubelet[1412]: I0917 21:30:49.605299    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:49 k8s-master-01 kubelet[1412]: I0917 21:30:49.809721    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:49 k8s-master-01 kubelet[1412]: E0917 21:30:49.817309    1412 controller.go:201] "Failed to ensure lease exists, will retry" err="Get \"https://10.0.10.1:6443/apis/coordination.k8s.io/v1/namespaces/kube-node-lease/leases/k8s-master-01?timeout=10s\": dial tcp 10.0.10.1:6443: connect: connection refused" interval="7s"
+Sep 17 21:30:50 k8s-master-01 kubelet[1412]: I0917 21:30:50.601893    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:50 k8s-master-01 kubelet[1412]: I0917 21:30:50.812242    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.602113    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.809446    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.873967    1412 kubelet_node_status.go:343] "Setting node annotation to enable volume controller attach/detach"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.876374    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasSufficientMemory"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.876465    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasNoDiskPressure"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.876498    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasSufficientPID"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: I0917 21:30:51.876555    1412 kubelet_node_status.go:74] "Attempting to register node" node="k8s-master-01"
+Sep 17 21:30:51 k8s-master-01 kubelet[1412]: E0917 21:30:51.877485    1412 kubelet_node_status.go:106] "Unable to register node with API server" err="Post \"https://10.0.10.1:6443/api/v1/nodes\": dial tcp 10.0.10.1:6443: connect: connection refused" node="k8s-master-01"
+Sep 17 21:30:52 k8s-master-01 kubelet[1412]: I0917 21:30:52.601605    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:52 k8s-master-01 kubelet[1412]: I0917 21:30:52.812004    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:53 k8s-master-01 kubelet[1412]: I0917 21:30:53.601824    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:53 k8s-master-01 kubelet[1412]: I0917 21:30:53.810999    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:54 k8s-master-01 kubelet[1412]: I0917 21:30:54.602150    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:54 k8s-master-01 kubelet[1412]: I0917 21:30:54.809354    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:55 k8s-master-01 kubelet[1412]: I0917 21:30:55.601594    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:55 k8s-master-01 kubelet[1412]: I0917 21:30:55.809926    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: E0917 21:30:56.387084    1412 event.go:368] "Unable to write event (may retry after sleeping)" err="Patch \"https://10.0.10.1:6443/api/v1/namespaces/default/events/k8s-master-01.18d631e3e1080fbd\": dial tcp 10.0.10.1:6443: connect: connection refused" event="&Event{ObjectMeta:{k8s-master-01.18d631e3e1080fbd  default    0 0001-01-01 00:00:00 +0000 UTC <nil> <nil> map[] map[] [] [] []},InvolvedObject:ObjectReference{Kind:Node,Namespace:,Name:k8s-master-01,UID:,APIVersion:v1,ResourceVersion:,FieldPath:,},Reason:NodeHasNoDiskPressure,Message:Node k8s-master-01 status is now: NodeHasNoDiskPressure,Source:EventSource{Component:kubelet,Host:k8s-master-01,},FirstTimestamp:2026-09-17 21:19:16.729089981 +0200 CEST m=+0.334248200,LastTimestamp:2026-09-17 21:19:17.469571768 +0200 CEST m=+1.074730013,Count:2,Type:Normal,EventTime:0001-01-01 00:00:00 +0000 UTC,Series:nil,Action:,Related:nil,ReportingController:kubelet,ReportingInstance:k8s-master-01,}"
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: E0917 21:30:56.387427    1412 event.go:307] "Unable to write event (retry limit exceeded!)" event="&Event{ObjectMeta:{k8s-master-01.18d631e40d2aeab8  default    0 0001-01-01 00:00:00 +0000 UTC <nil> <nil> map[] map[] [] [] []},InvolvedObject:ObjectReference{Kind:Node,Namespace:,Name:k8s-master-01,UID:,APIVersion:v1,ResourceVersion:,FieldPath:,},Reason:NodeHasNoDiskPressure,Message:Node k8s-master-01 status is now: NodeHasNoDiskPressure,Source:EventSource{Component:kubelet,Host:k8s-master-01,},FirstTimestamp:2026-09-17 21:19:17.469571768 +0200 CEST m=+1.074730013,LastTimestamp:2026-09-17 21:19:17.469571768 +0200 CEST m=+1.074730013,Count:1,Type:Normal,EventTime:0001-01-01 00:00:00 +0000 UTC,Series:nil,Action:,Related:nil,ReportingController:kubelet,ReportingInstance:k8s-master-01,}"
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: E0917 21:30:56.388161    1412 event.go:368] "Unable to write event (may retry after sleeping)" err="Patch \"https://10.0.10.1:6443/api/v1/namespaces/default/events/k8s-master-01.18d631e3e108c0e7\": dial tcp 10.0.10.1:6443: connect: connection refused" event="&Event{ObjectMeta:{k8s-master-01.18d631e3e108c0e7  default    0 0001-01-01 00:00:00 +0000 UTC <nil> <nil> map[] map[] [] [] []},InvolvedObject:ObjectReference{Kind:Node,Namespace:,Name:k8s-master-01,UID:,APIVersion:v1,ResourceVersion:,FieldPath:,},Reason:NodeHasSufficientPID,Message:Node k8s-master-01 status is now: NodeHasSufficientPID,Source:EventSource{Component:kubelet,Host:k8s-master-01,},FirstTimestamp:2026-09-17 21:19:16.729135335 +0200 CEST m=+0.334293577,LastTimestamp:2026-09-17 21:19:17.469606995 +0200 CEST m=+1.074765225,Count:2,Type:Normal,EventTime:0001-01-01 00:00:00 +0000 UTC,Series:nil,Action:,Related:nil,ReportingController:kubelet,ReportingInstance:k8s-master-01,}"
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: I0917 21:30:56.601362    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: I0917 21:30:56.809544    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:56 k8s-master-01 kubelet[1412]: E0917 21:30:56.818507    1412 controller.go:201] "Failed to ensure lease exists, will retry" err="Get \"https://10.0.10.1:6443/apis/coordination.k8s.io/v1/namespaces/kube-node-lease/leases/k8s-master-01?timeout=10s\": dial tcp 10.0.10.1:6443: connect: connection refused" interval="7s"
+Sep 17 21:30:57 k8s-master-01 kubelet[1412]: I0917 21:30:57.601185    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:57 k8s-master-01 kubelet[1412]: E0917 21:30:57.607985    1412 eviction_manager.go:297] "Eviction manager: failed to get summary stats" err="failed to get node info: node \"k8s-master-01\" not found"
+Sep 17 21:30:57 k8s-master-01 kubelet[1412]: I0917 21:30:57.811636    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:57 k8s-master-01 kubelet[1412]: E0917 21:30:57.849739    1412 event.go:368] "Unable to write event (may retry after sleeping)" err="Patch \"https://10.0.10.1:6443/api/v1/namespaces/default/events/k8s-master-01.18d631e3e108c0e7\": dial tcp 10.0.10.1:6443: connect: connection refused" event="&Event{ObjectMeta:{k8s-master-01.18d631e3e108c0e7  default    0 0001-01-01 00:00:00 +0000 UTC <nil> <nil> map[] map[] [] [] []},InvolvedObject:ObjectReference{Kind:Node,Namespace:,Name:k8s-master-01,UID:,APIVersion:v1,ResourceVersion:,FieldPath:,},Reason:NodeHasSufficientPID,Message:Node k8s-master-01 status is now: NodeHasSufficientPID,Source:EventSource{Component:kubelet,Host:k8s-master-01,},FirstTimestamp:2026-09-17 21:19:16.729135335 +0200 CEST m=+0.334293577,LastTimestamp:2026-09-17 21:19:17.469606995 +0200 CEST m=+1.074765225,Count:2,Type:Normal,EventTime:0001-01-01 00:00:00 +0000 UTC,Series:nil,Action:,Related:nil,ReportingController:kubelet,ReportingInstance:k8s-master-01,}"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.601863    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.809079    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.878735    1412 kubelet_node_status.go:343] "Setting node annotation to enable volume controller attach/detach"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.881390    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasSufficientMemory"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.881481    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasNoDiskPressure"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.881516    1412 kubelet_node_status.go:633] "Recording event message for node" node="k8s-master-01" event="NodeHasSufficientPID"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: I0917 21:30:58.881574    1412 kubelet_node_status.go:74] "Attempting to register node" node="k8s-master-01"
+Sep 17 21:30:58 k8s-master-01 kubelet[1412]: E0917 21:30:58.882322    1412 kubelet_node_status.go:106] "Unable to register node with API server" err="Post \"https://10.0.10.1:6443/api/v1/nodes\": dial tcp 10.0.10.1:6443: connect: connection refused" node="k8s-master-01"
+Sep 17 21:30:59 k8s-master-01 kubelet[1412]: I0917 21:30:59.602009    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:30:59 k8s-master-01 kubelet[1412]: I0917 21:30:59.810450    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+Sep 17 21:31:00 k8s-master-01 kubelet[1412]: I0917 21:31:00.601764    1412 csi_plugin.go:990] Failed to contact API server when waiting for CSINode publishing: Get "https://10.0.10.1:6443/apis/storage.k8s.io/v1/csinodes/k8s-master-01?resourceVersion=0": dial tcp 10.0.10.1:6443: connect: connection refused
+Sep 17 21:31:00 k8s-master-01 kubelet[1412]: I0917 21:31:00.808659    1412 prober.go:122] "Probe failed" probeType="Readiness" pod="kube-system/kube-scheduler-k8s-master-01" podUID="812591c0e1f630ca4c772c61428230e0" containerName="kube-scheduler" probeResult="failure" output="HTTP probe failed with statuscode: 500"
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ # 1. Temporarily move the files out to stop the broken engine loop
+sudo mv /etc/kubernetes/manifests/*.yaml /tmp/
+
+# 2. Completely restart the host runtime layers
+sudo systemctl restart containerd
+sudo systemctl restart kubelet
+
+# 3. Give it 10 seconds, then put the manifests back to force a cold start
+sleep 10
+sudo mv /tmp/*.yaml /etc/kubernetes/manifests/
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo docker ps -a | grep apiserver
+sudo: 'docker': command not found
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo crictl ps -a --name=kube-apiserver
+CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                            NAMESPACE
+35a662223fe5b       840f22aa169cc       About a minute ago   Exited              kube-apiserver      30                  245c278478e72       kube-apiserver-k8s-master-01   kube-system
+ubuntu@k8s-master-01:~$ sudo crictl logs ^C
+ubuntu@k8s-master-01:~$ ^C
+ubuntu@k8s-master-01:~$ ^C
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo crictl logs 35a662223fe5b
+E0917 21:40:15.472645    8169 log.go:32] "ContainerStatus from runtime service failed" err="rpc error: code = NotFound desc = an error occurred when try to find container \"35a662223fe5b\": not found" containerID="35a662223fe5b"
+FATA[0000] rpc error: code = NotFound desc = an error occurred when try to find container "35a662223fe5b": not found 
+ubuntu@k8s-master-01:~$ sudo crictl ps -a --name=kube-apiserver
+CONTAINER           IMAGE               CREATED              STATE               NAME                ATTEMPT             POD ID              POD                            NAMESPACE
+d4126854ade6e       840f22aa169cc       About a minute ago   Exited              kube-apiserver      32                  245c278478e72       kube-apiserver-k8s-master-01   kube-system
+ubuntu@k8s-master-01:~$ sudo crictl logs d4126854ade6e
+Flag --apiserver-count has been deprecated, apiserver-count is deprecated and will be removed in a future version.
+I0917 19:38:55.973838       1 options.go:263] external host was not specified, using 10.0.10.1
+I0917 19:38:55.979761       1 server.go:150] Version: v1.35.4
+I0917 19:38:55.979810       1 server.go:152] "Golang settings" GOGC="" GOMAXPROCS="" GOTRACEBACK=""
+W0917 19:38:56.671812       1 logging.go:55] [core] [Channel #1 SubChannel #2]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: operation was canceled"
+W0917 19:38:56.675723       1 logging.go:55] [core] [Channel #6 SubChannel #7]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: operation was canceled"
+I0917 19:38:56.678696       1 shared_informer.go:349] "Waiting for caches to sync" controller="node_authorizer"
+I0917 19:38:56.712856       1 shared_informer.go:370] "Waiting for caches to sync"
+I0917 19:38:56.728232       1 plugins.go:157] Loaded 14 mutating admission controller(s) successfully in the following order: NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,TaintNodesByCondition,Priority,DefaultTolerationSeconds,DefaultStorageClass,StorageObjectInUseProtection,RuntimeClass,DefaultIngressClass,PodTopologyLabels,MutatingAdmissionPolicy,MutatingAdmissionWebhook.
+I0917 19:38:56.728406       1 plugins.go:160] Loaded 14 validating admission controller(s) successfully in the following order: LimitRanger,ServiceAccount,PodSecurity,Priority,PersistentVolumeClaimResize,RuntimeClass,CertificateApproval,CertificateSigning,ClusterTrustBundleAttest,CertificateSubjectRestriction,NodeDeclaredFeatureValidator,ValidatingAdmissionPolicy,ValidatingAdmissionWebhook,ResourceQuota.
+I0917 19:38:56.728985       1 instance.go:240] Using reconciler: lease
+W0917 19:38:56.738476       1 logging.go:55] [core] [Channel #11 SubChannel #12]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: operation was canceled"
+W0917 19:38:59.031744       1 logging.go:55] [core] [Channel #11 SubChannel #13]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:38:59.032066       1 logging.go:55] [core] [Channel #11 SubChannel #14]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:38:59.032223       1 logging.go:55] [core] [Channel #6 SubChannel #10]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:38:59.032647       1 logging.go:55] [core] [Channel #1 SubChannel #3]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:38:59.032930       1 logging.go:55] [core] [Channel #6 SubChannel #8]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:38:59.033193       1 logging.go:55] [core] [Channel #1 SubChannel #5]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:38:59.033676       1 logging.go:55] [core] [Channel #11 SubChannel #15]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:38:59.033987       1 logging.go:55] [core] [Channel #1 SubChannel #4]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:38:59.034586       1 logging.go:55] [core] [Channel #6 SubChannel #9]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:02.103198       1 logging.go:55] [core] [Channel #6 SubChannel #9]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:02.103326       1 logging.go:55] [core] [Channel #1 SubChannel #4]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:02.103495       1 logging.go:55] [core] [Channel #6 SubChannel #8]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:02.103565       1 logging.go:55] [core] [Channel #6 SubChannel #10]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:02.103626       1 logging.go:55] [core] [Channel #11 SubChannel #14]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:02.103740       1 logging.go:55] [core] [Channel #1 SubChannel #5]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:02.103773       1 logging.go:55] [core] [Channel #11 SubChannel #13]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:02.103892       1 logging.go:55] [core] [Channel #11 SubChannel #15]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:02.103935       1 logging.go:55] [core] [Channel #1 SubChannel #3]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:05.175519       1 logging.go:55] [core] [Channel #1 SubChannel #4]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:05.175785       1 logging.go:55] [core] [Channel #11 SubChannel #14]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:05.175954       1 logging.go:55] [core] [Channel #11 SubChannel #13]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:05.176065       1 logging.go:55] [core] [Channel #6 SubChannel #9]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:05.176201       1 logging.go:55] [core] [Channel #1 SubChannel #5]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:05.175519       1 logging.go:55] [core] [Channel #6 SubChannel #8]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:05.176400       1 logging.go:55] [core] [Channel #1 SubChannel #3]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:05.176525       1 logging.go:55] [core] [Channel #11 SubChannel #15]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:05.176645       1 logging.go:55] [core] [Channel #6 SubChannel #10]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:08.247053       1 logging.go:55] [core] [Channel #1 SubChannel #5]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:08.248120       1 logging.go:55] [core] [Channel #11 SubChannel #13]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:08.248635       1 logging.go:55] [core] [Channel #6 SubChannel #10]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:08.249071       1 logging.go:55] [core] [Channel #1 SubChannel #4]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:08.249218       1 logging.go:55] [core] [Channel #6 SubChannel #8]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:08.249444       1 logging.go:55] [core] [Channel #1 SubChannel #3]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:08.249555       1 logging.go:55] [core] [Channel #6 SubChannel #9]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:08.249677       1 logging.go:55] [core] [Channel #11 SubChannel #14]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:08.250835       1 logging.go:55] [core] [Channel #11 SubChannel #15]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:14.391660       1 logging.go:55] [core] [Channel #1 SubChannel #4]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:14.391925       1 logging.go:55] [core] [Channel #6 SubChannel #8]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:14.392216       1 logging.go:55] [core] [Channel #11 SubChannel #13]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:14.393734       1 logging.go:55] [core] [Channel #11 SubChannel #15]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:14.394054       1 logging.go:55] [core] [Channel #11 SubChannel #14]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:14.394370       1 logging.go:55] [core] [Channel #1 SubChannel #5]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+W0917 19:39:14.394536       1 logging.go:55] [core] [Channel #6 SubChannel #9]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.20.2:2379", ServerName: "10.0.20.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.20.2:2379: connect: no route to host"
+W0917 19:39:14.394667       1 logging.go:55] [core] [Channel #1 SubChannel #3]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.10.2:2379", ServerName: "10.0.10.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.10.2:2379: connect: no route to host"
+W0917 19:39:14.394780       1 logging.go:55] [core] [Channel #6 SubChannel #10]grpc: addrConn.createTransport failed to connect to {Addr: "10.0.30.2:2379", ServerName: "10.0.30.2:2379", BalancerAttributes: {"<%!p(pickfirstleaf.managedByPickfirstKeyType={})>": "<%!p(bool=true)>" }}. Err: connection error: desc = "transport: Error while dialing: dial tcp 10.0.30.2:2379: connect: no route to host"
+F0917 19:39:16.733107       1 instance.go:233] Error creating leases: error creating storage factory: context deadline exceeded
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ ip r sh
+default via 10.0.0.2 dev enp1s0 proto static 
+default via 10.0.0.2 dev enp1s0 proto static metric 100 
+default via 172.16.2.254 dev enp1s0 proto static metric 200 
+10.0.0.0/24 dev enp1s0 proto kernel scope link src 10.0.0.15 
+172.16.2.0/24 dev enp1s0 proto kernel scope link src 172.16.2.51 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+k8s-master-01# show running-config 
+Building configuration...
+
+Current configuration:
+!
+frr version 10.5.1
+frr defaults datacenter
+hostname k8s-master-01
+log syslog informational
+service integrated-vtysh-config
+!
+ip prefix-list METALLB-POOL seq 10 permit 10.10.200.0/24 le 32
+ip prefix-list METALLB-POOL seq 20 permit 172.16.2.200/29 le 32
+!
+route-map ACCEPT-METALLB permit 10
+ match ip address prefix-list METALLB-POOL
+exit
+!
+route-map DENY-ALL deny 10
+exit
+!
+interface lo
+ ip address 10.0.10.1/32
+exit
+!
+router bgp 65211
+ bgp router-id 10.0.10.1
+ no bgp default ipv4-unicast
+ bgp bestpath as-path multipath-relax
+ neighbor ens2 interface remote-as 65011
+ neighbor ens2 description To-Leaf-L1-Ethernet0
+ neighbor ens2 bfd
+ neighbor ens2 bfd profile FABRIC-BFD
+ no neighbor ens2 capability link-local
+ neighbor ens3 interface remote-as 65012
+ neighbor ens3 description To-Leaf-L2-Ethernet0
+ neighbor ens3 bfd
+ neighbor ens3 bfd profile FABRIC-BFD
+ no neighbor ens3 capability link-local
+ neighbor 127.0.0.1 remote-as 64512
+ neighbor 127.0.0.1 description MetalLB-speaker
+ neighbor 127.0.0.1 update-source 127.0.0.1
+ bgp allow-martian-nexthop
+ !
+ address-family ipv4 unicast
+  network 10.0.10.1/32
+  network 192.168.20.11/32
+  neighbor ens2 activate
+  neighbor ens3 activate
+  neighbor 127.0.0.1 activate
+  neighbor 127.0.0.1 route-map ACCEPT-METALLB in
+  neighbor 127.0.0.1 route-map DENY-ALL out
+  maximum-paths 2
+  maximum-paths ibgp 2
+ exit-address-family
+exit
+!
+bfd
+ profile FABRIC-BFD
+ exit
+ !
+exit
+!
+end
+k8s-master-01# show ip bgp summary 
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0
+BGP table version 2
+RIB entries 3, using 384 bytes of memory
+Peers 3, using 71 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+ens2            4      65011         0         0        0    0    0    never         Idle        0 To-Leaf-L1-Ethernet0
+ens3            4      65012         0         0        0    0    0    never         Idle        0 To-Leaf-L2-Ethernet0
+127.0.0.1       4      64512         0         0        0    0    0    never       Active        0 MetalLB-speaker
+
+Total number of neighbors 3
+k8s-master-01# 
+k8s-master-01# 
+
