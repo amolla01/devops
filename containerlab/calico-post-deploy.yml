@@ -28,6 +28,18 @@
       -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
       {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
   tasks:
+    - name: Wait for Calico CRDs to be registered
+      ansible.builtin.command: >
+        kubectl wait --for=condition=Established crd/ippools.crd.projectcalico.org
+        --timeout=180s
+      changed_when: false
+
+    - name: Wait for Calico Felix CRD to be registered
+      ansible.builtin.command: >
+        kubectl wait --for=condition=Established crd/felixconfigurations.crd.projectcalico.org
+        --timeout=180s
+      changed_when: false
+
     - name: Ensure Calico CNI token RBAC exists
       ansible.builtin.shell: |
         kubectl apply -f - <<'EOF'
@@ -59,6 +71,25 @@
             namespace: kube-system
         EOF
       changed_when: true
+
+    - name: Repair the global Calico DaemonSet env for this lab
+      ansible.builtin.shell: |
+        kubectl set env daemonset/calico-node -n kube-system \
+          IP_AUTODETECTION_METHOD=interface=^ens2$ \
+          CALICO_IPV4POOL_IPIP=Off \
+          CALICO_IPV4POOL_VXLAN=Never \
+          FELIX_IPV6SUPPORT=False
+      changed_when: true
+      failed_when: false
+
+    - name: Restart Calico node daemonset after env correction
+      ansible.builtin.command: kubectl rollout restart daemonset/calico-node -n kube-system
+      changed_when: true
+
+    - name: Wait for Calico DaemonSet to become ready
+      ansible.builtin.command: >
+        kubectl rollout status daemonset/calico-node -n kube-system --timeout=300s
+      changed_when: false
 
     - name: Apply Calico IPPool — no encapsulation
       ansible.builtin.shell: |
