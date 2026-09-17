@@ -1,0 +1,222 @@
+Do we not have the image in our mirror registry?? In our previous run, we did not come across with this error. I provided you the lists of images available R810. Let me know if I need to download it, then provide me the command.
+From Kubespray wrapper:
+
+ASYNC POLL on localhost: jid=j748689902454.154492 started=1 finished=0
+ASYNC POLL on localhost: jid=j748689902454.154492 started=1 finished=0
+ASYNC FAILED on localhost: jid=j748689902454.154492
+fatal: [localhost]: FAILED! => {"ansible_job_id": "j748689902454.154492", "changed": true, "cmd": "# Explicitly clear out any inherited environment clutter before running\nset -euo pipefail\nunset ANSIBLE_CONFIG\nunset download_container\nunset download_container_engine\n\nmkdir -p /opt/fabric-cache/logs\nmkdir -p /opt/fabric-cache/ansible/kubespray-factcache\n\n# Fire the execution pass using only clean explicit target parameters\ncmd=(\n  ansible-playbook\n  -i inventory/sheba-cluster/hosts.yaml\n  playbooks/cluster.yml\n  -b\n  -f 2\n  -e ansible_user=ubuntu\n  -e ansible_password=ubuntu\n  -e ansible_sudo_pass=ubuntu\n  -e ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab\n  --extra-vars @inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml\n)\n\nif [ -n \"\" ]; then\n  limit_value=\"\"\n  if [ \"$limit_value\" = \"kube_node\" ]; then\n    limit_value=\"kube_node:k8s-master-01\"\n  fi\n  cmd+=(--limit \"$limit_value\")\nfi\n\nif [ -n \"\" ]; then\n  cmd+=(--start-at-task \"\")\nfi\n\n\"${cmd[@]}\" > /opt/fabric-cache/logs/kubespray-inner.log 2>&1\n", "delta": "2:09:15.160265", "end": "2026-09-16 20:01:08.327562", "finished": 1, "msg": "non-zero return code", "rc": 2, "results_file": "/home/nh1221/.ansible_async/j748689902454.154492", "start": "2026-09-16 17:51:53.167297", "started": 1, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+
+From Kubespray:
+
+TASK [download : debug] ********************************************************
+ok: [k8s-master-01] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [k8s-master-02] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [k8s-master-03] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [k8s-db-01] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [k8s-db-02] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [k8s-db-03] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-ctrl-01] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-ctrl-02] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-ctrl-03] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-net-01] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-net-02] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [MonSrv] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-comp-01] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-comp-02] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-comp-03] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+ok: [osh-comp-04] => {
+    "msg": "Pull 172.16.2.1:5000/kube-controller-manager:v1.35.4 required is: True"
+}
+Wednesday 16 September 2026  19:57:43 -0500 (0:00:04.783)       2:05:39.601 ***
+
+TASK [download : Download_container | Determine if image is in cache] **********
+ok: [k8s-master-01 -> localhost]
+ok: [k8s-master-02 -> localhost]
+ok: [k8s-master-03 -> localhost]
+ok: [k8s-db-01 -> localhost]
+ok: [k8s-db-02 -> localhost]
+ok: [k8s-db-03 -> localhost]
+ok: [osh-ctrl-01 -> localhost]
+ok: [osh-ctrl-02 -> localhost]
+ok: [osh-ctrl-03 -> localhost]
+ok: [osh-net-01 -> localhost]
+ok: [osh-net-02 -> localhost]
+ok: [MonSrv -> localhost]
+ok: [osh-comp-01 -> localhost]
+ok: [osh-comp-02 -> localhost]
+ok: [osh-comp-03 -> localhost]
+ok: [osh-comp-04 -> localhost]
+Wednesday 16 September 2026  19:57:49 -0500 (0:00:06.082)       2:05:45.683 ***
+
+TASK [download : Download_container | Set fact indicating if image is in cache] ***
+ok: [k8s-master-01]
+ok: [k8s-master-02]
+ok: [k8s-master-03]
+ok: [k8s-db-01]
+ok: [k8s-db-02]
+ok: [k8s-db-03]
+ok: [osh-ctrl-01]
+ok: [osh-ctrl-02]
+ok: [osh-ctrl-03]
+ok: [osh-net-01]
+ok: [osh-net-02]
+ok: [MonSrv]
+ok: [osh-comp-01]
+ok: [osh-comp-02]
+ok: [osh-comp-03]
+ok: [osh-comp-04]
+Wednesday 16 September 2026  19:57:54 -0500 (0:00:04.696)       2:05:50.380 ***
+Wednesday 16 September 2026  19:57:55 -0500 (0:00:00.745)       2:05:51.126 ***
+FAILED - RETRYING: [k8s-master-01 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [k8s-master-02 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [k8s-master-02 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-master-01 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-master-02 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-master-01 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-master-02 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [k8s-master-01 -> localhost]: Download_container | Download image if required (1 retries left).
+
+TASK [download : Download_container | Download image if required] **************
+fatal: [k8s-master-02 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [k8s-master-03 -> localhost]: Download_container | Download image if required (4 retries left).
+fatal: [k8s-master-01 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [k8s-db-01 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [k8s-master-03 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-db-01 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-db-01 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-master-03 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-db-01 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [k8s-master-03 -> localhost]: Download_container | Download image if required (1 retries left).
+fatal: [k8s-db-01 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [k8s-db-02 -> localhost]: Download_container | Download image if required (4 retries left).
+fatal: [k8s-master-03 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [k8s-db-03 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [k8s-db-02 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-db-03 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [k8s-db-02 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-db-03 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [k8s-db-02 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [k8s-db-03 -> localhost]: Download_container | Download image if required (1 retries left).
+fatal: [k8s-db-02 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-ctrl-01 -> localhost]: Download_container | Download image if required (4 retries left).
+fatal: [k8s-db-03 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-ctrl-02 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-ctrl-01 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-ctrl-01 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [osh-ctrl-02 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-ctrl-01 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-ctrl-02 -> localhost]: Download_container | Download image if required (2 retries left).
+fatal: [osh-ctrl-01 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-ctrl-03 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-ctrl-03 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-ctrl-02 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-ctrl-03 -> localhost]: Download_container | Download image if required (2 retries left).
+fatal: [osh-ctrl-02 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-ctrl-03 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-net-01 -> localhost]: Download_container | Download image if required (4 retries left).
+fatal: [osh-ctrl-03 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-net-02 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-net-01 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-net-02 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-net-01 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [osh-net-02 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [osh-net-02 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-net-01 -> localhost]: Download_container | Download image if required (1 retries left).
+fatal: [osh-net-02 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [MonSrv -> localhost]: Download_container | Download image if required (4 retries left).
+fatal: [osh-net-01 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-comp-01 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [MonSrv -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [MonSrv -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [osh-comp-01 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [MonSrv -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-comp-01 -> localhost]: Download_container | Download image if required (2 retries left).
+fatal: [MonSrv -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-comp-02 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-comp-01 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-comp-02 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-comp-02 -> localhost]: Download_container | Download image if required (2 retries left).
+fatal: [osh-comp-01 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-comp-03 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-comp-02 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-comp-03 -> localhost]: Download_container | Download image if required (3 retries left).
+fatal: [osh-comp-02 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-comp-04 -> localhost]: Download_container | Download image if required (4 retries left).
+FAILED - RETRYING: [osh-comp-03 -> localhost]: Download_container | Download image if required (2 retries left).
+FAILED - RETRYING: [osh-comp-04 -> localhost]: Download_container | Download image if required (3 retries left).
+FAILED - RETRYING: [osh-comp-03 -> localhost]: Download_container | Download image if required (1 retries left).
+FAILED - RETRYING: [osh-comp-04 -> localhost]: Download_container | Download image if required (2 retries left).
+fatal: [osh-comp-03 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+FAILED - RETRYING: [osh-comp-04 -> localhost]: Download_container | Download image if required (1 retries left).
+fatal: [osh-comp-04 -> localhost]: FAILED! => {"attempts": 4, "changed": false, "cmd": "/usr/local/bin/nerdctl -n k8s.io pull --quiet 172.16.2.1:5000/kube-controller-manager:v1.35.4", "msg": "[Errno 2] No such file or directory: b'/usr/local/bin/nerdctl'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *********************************************************************
+MonSrv                     : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+k8s-db-01                  : ok=335  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+k8s-db-02                  : ok=335  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+k8s-db-03                  : ok=335  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+k8s-master-01              : ok=448  changed=34   unreachable=0    failed=1    skipped=330  rescued=0    ignored=1
+k8s-master-02              : ok=405  changed=36   unreachable=0    failed=1    skipped=291  rescued=0    ignored=0
+k8s-master-03              : ok=405  changed=36   unreachable=0    failed=1    skipped=291  rescued=0    ignored=0
+osh-comp-01                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-comp-02                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-comp-03                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-comp-04                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-ctrl-01                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-ctrl-02                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-ctrl-03                : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-net-01                 : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+osh-net-02                 : ok=334  changed=30   unreachable=0    failed=1    skipped=253  rescued=0    ignored=0
+
+Wednesday 16 September 2026  20:01:07 -0500 (0:03:12.439)       2:09:03.565 ***
+===============================================================================
+container-engine/containerd : Containerd | Write hosts.toml file ------ 479.84s
+download : Download_container | Upload image to node if it is cached -- 207.63s
+download : Download_container | Download image if required ------------ 192.44s
+download : Download | Download files / images ------------------------- 138.47s
+container-engine/containerd : Containerd | Create registry directories - 136.17s
+container-engine/nerdctl : Extract_file | Unpacking archive ----------- 125.53s
+container-engine/crictl : Extract_file | Unpacking archive ------------ 122.11s
+kubernetes/preinstall : Ensure kubelet expected parameters are set ---- 119.52s
+download : Download_container | Load image into the local container registry - 104.73s
+container-engine/containerd : Containerd | Unpack containerd archive -- 102.50s
+kubernetes/preinstall : Write Kubespray DNS settings to systemd-resolved -- 86.75s
+container-engine/validate-container-engine : Populate service facts ---- 85.20s
+kubernetes/preinstall : Create kubernetes directories ------------------ 83.23s
+download : Extract_file | Unpacking archive ---------------------------- 82.36s
+container-engine/containerd : Containerd | Copy containerd config file -- 81.92s
+download : Extract_file | Unpacking archive ---------------------------- 74.99s
+container-engine/runc : Copy runc binary from download dir ------------- 73.78s
+container-engine/containerd : Containerd | Write base_runtime_specs ---- 72.29s
+container-engine/nerdctl : Nerdctl | Install nerdctl configuration ----- 71.31s
+container-engine/containerd : Containerd | Generate systemd service for containerd -- 69.48s
