@@ -1,0 +1,142 @@
+---
+# =============================================================================
+# calico-post-deploy.yml
+#
+# Must run AFTER kubespray.yml (Calico is installed) and BEFORE metallb.yml
+# (MetalLB BGP peers depend on FRR having the 127.0.0.1 neighbor already).
+#
+# Play 1 — Apply Calico CRs that Kubespray does not set:
+#   - IPPool: ipipMode/vxlanMode=Never, blockSize=26 (no encap, full MTU)
+#   - FelixConfiguration: disable tunnel interfaces, auto MTU
+#   - BGPConfiguration: nodeToNodeMeshEnabled=false (belt-and-braces)
+#
+# Play 2 — Install pod-block blackhole routes on every K8s node.
+#   FRR will not advertise `network <cidr>` unless a matching kernel route
+#   exists. A blackhole /26 on lo satisfies this without routing real traffic.
+# =============================================================================
+
+- name: Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)
+  hosts: kube_control_plane
+  gather_facts: false
+  run_once: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+  tasks:
+    - name: Ensure Calico CNI token RBAC exists
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: calico-cni-plugin
+        rules:
+          - apiGroups: [""]
+            resources:
+              - serviceaccounts/token
+            resourceNames:
+              - calico-cni-plugin
+            verbs:
+              - create
+        EOF
+        kubectl apply -f - <<'EOF'
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: calico-cni-plugin
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: calico-cni-plugin
+        subjects:
+          - kind: ServiceAccount
+            name: calico-node
+            namespace: kube-system
+        EOF
+      changed_when: true
+
+    - name: Apply Calico IPPool — no encapsulation
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: IPPool
+        metadata:
+          name: {{ calico_pool_name | default('default-ipv4-ippool') }}
+        spec:
+          cidr: {{ k8s_pod_cidr }}
+          ipipMode: Never
+          vxlanMode: Never
+          natOutgoing: true
+          blockSize: {{ calico_pool_blocksize | default(26) }}
+          nodeSelector: "all()"
+        EOF
+      changed_when: true
+
+    - name: Apply Calico FelixConfiguration — no tunnel, explicit MTU
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: FelixConfiguration
+        metadata:
+          name: default
+        spec:
+          ipInIpEnabled: false
+          vxlanEnabled: false
+          mtu: {{ host_data_mtu | default(9000) }}
+          logSeverityScreen: Warning
+          routeSource: WorkloadIPs
+        EOF
+      changed_when: true
+
+    - name: Apply Calico BGPConfiguration — disable node-to-node mesh
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: BGPConfiguration
+        metadata:
+          name: default
+        spec:
+          nodeToNodeMeshEnabled: false
+          logSeverityScreen: Warning
+        EOF
+      changed_when: true
+
+- name: Install pod-block blackhole routes on all K8s nodes
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no
+      -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval={{ ssh_server_alive_interval }}
+      -o ServerAliveCountMax={{ ssh_server_alive_count_max }}
+      {% if lab_network_mode == 'socks' %}-o ProxyCommand="nc -x {{ socks_bind_addr }}:{{ socks_port }} -X 5 %h %p"{% endif %}
+  tasks:
+    - name: Add pod-block blackhole route (FRR network stmt requires a kernel match)
+      ansible.builtin.command: >
+        ip route replace blackhole {{ k8s_pod_block_cidr }}
+      when: k8s_pod_block_cidr is defined
+      changed_when: true
+
+    - name: Persist pod-block blackhole route via /etc/network/if-up.d hook
+      ansible.builtin.copy:
+        dest: /etc/network/if-up.d/k8s-pod-block-route
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          # Added by calico-post-deploy.yml — FRR network statement requires kernel route
+          ip route replace blackhole {{ k8s_pod_block_cidr }} 2>/dev/null || true
+      when: k8s_pod_block_cidr is defined
+
+    - name: Reload FRR so pod-block network statement activates
+      ansible.builtin.command: vtysh -c "clear ip bgp * soft out"
+      when: k8s_pod_block_cidr is defined
+      changed_when: true
+      failed_when: false
