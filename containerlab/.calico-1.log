@@ -404,3 +404,52 @@ osh-net-01      Ready    <none>          177m    v1.35.4   10.0.10.4     <none> 
 osh-net-02      Ready    <none>          177m    v1.35.4   10.0.20.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
 
 C:\Users\nh1221>
+Suggestions received:
+This information is incredibly helpful. Your core control plane—including all three kube-apiserver instances, controllers, and schedulers—is successfully Running and stable. Your local kubectl context can also query all Calico CRDs and api-resources seamlessly.
+However, as we can see from your pod status, every single calico-node pod across your entire cluster is now trapped in a CrashLoopBackOff:
+
+calico-node-4w7dj                       0/1     CrashLoopBackOff   15 (4m10s ago)   178m
+calico-node-58rt6                       0/1     CrashLoopBackOff   11 (2m13s ago)   178m
+...
+
+Because this failure is happening uniformly cluster-wide, it directly validates our target: the global Calico DaemonSet manifest template contains a configuration flaw affecting all nodes.
+## The Next Steps to Restore Your Cluster
+Since you haven't made any manual structural modifications yet, you can solve this global crash loop cleanly right from k8s-master-01 in two actions.
+## Action 1: Fix the Global DaemonSet Configuration
+We need to remove the duplicate IP_AUTODETECTION_METHOD entry and introduce strict interface matching anchors so Calico ignores the tagged VLAN interfaces (like ens2.100).
+
+   1. Open the global template editor:
+   
+   kubectl edit daemonset -n kube-system calico-node
+   
+   2. Find the environment variables (env:) block inside the calico-node container specification.
+   3. Locate the first instance of IP_AUTODETECTION_METHOD that says can-reach=$(NODEIP) and delete its entire name and value block.
+   4. Locate the second remaining IP_AUTODETECTION_METHOD block and change its value string to use explicit regex start/end string anchors:
+   
+   - name: IP_AUTODETECTION_METHOD
+     value: interface=^ens2$
+   
+   5. Save and exit the editor (:wq in vim).
+
+------------------------------
+## Action 2: Patch Missing Token Permissions (If Pods Fail with RBAC error)
+If the pods cycle after Action 1 but drop right back into a crash loop stating Unable to create token for CNI kubeconfig is forbidden, the ClusterRole needs its token generation update:
+
+   1. Open the cluster role rule sheet:
+   
+   kubectl edit clusterrole calico-node
+   
+   2. Append these lines to the rules: block:
+   
+   - apiGroups: [""]
+     resources:
+       - serviceaccounts/token
+     resourceNames:
+       - calico-cni-plugin
+     verbs:
+       - create
+   
+   3. Save and close the editor.
+
+Once you apply Action 1 and Action 2, check your pods again via kubectl get pods -n kube-system. Do they successfully transition into a 1/1 READY and Running status?
+
