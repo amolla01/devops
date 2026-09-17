@@ -300,3 +300,84 @@ nsfs on /run/docker/netns/edf1714ce86a type nsfs (rw)
 nsfs on /run/docker/netns/1c1fd6c99ef9 type nsfs (rw)
 nsfs on /run/docker/netns/db1039fe006c type nsfs (rw)
 nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ sudo docker system df
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          92        5         120.6GB   105.8GB (87%)
+Containers      32        6         8.658GB   7.842GB (90%)
+Local Volumes   1         0         0B        0B
+Build Cache     13        0         12.28GB   0B
+nh1221@PowerEdge-R810:~$ du -sh /var/lib/docker /var/lib/containerd /opt/containerlab /tmp 2>/dev/null
+4.0K/var/lib/docker
+4.0K/var/lib/containerd
+213G/opt/containerlab
+12K/tmp
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ sudo pvdisplay
+  --- Physical volume ---
+  PV Name               /dev/sde
+  VG Name               vg-data
+  PV Size               931.00 GiB / not usable 4.00 MiB
+  Allocatable           yes (but full)
+  PE Size               4.00 MiB
+  Total PE              238335
+  Free PE               0
+  Allocated PE          238335
+  PV UUID               5DMs7i-OqWt-pndT-zZ75-G7GQ-zR4u-rAgCsu
+   
+  --- Physical volume ---
+  PV Name               /dev/sdf
+  VG Name               vg-data
+  PV Size               1.09 TiB / not usable 4.00 MiB
+  Allocatable           yes (but full)
+  PE Size               4.00 MiB
+  Total PE              286015
+  Free PE               0
+  Allocated PE          286015
+  PV UUID               LPjBH5-N23w-VBax-KlWV-5535-fMEU-oikD0u
+   
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ sudo vg display
+sudo: 'vg': command not found
+nh1221@PowerEdge-R810:~$ sudo vgdisplay
+  --- Volume group ---
+  VG Name               vg-data
+  System ID             
+  Format                lvm2
+  Metadata Areas        2
+  Metadata Sequence No  2
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                1
+  Open LV               1
+  Max PV                0
+  Cur PV                2
+  Act PV                2
+  VG Size               2.00 TiB
+  PE Size               4.00 MiB
+  Total PE              524350
+  Alloc PE / Size       524350 / 2.00 TiB
+  Free  PE / Size       0 / 0   
+  VG UUID               W8lTrN-if0I-v1cf-y00G-kcLQ-HYGJ-UChAG5
+   
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ 
+nh1221@PowerEdge-R810:~$ sudo lvdisplay
+  --- Logical volume ---
+  LV Path                /dev/vg-data/lv-storage
+  LV Name                lv-storage
+  VG Name                vg-data
+  LV UUID                3YUA1r-E4GT-MmZG-WCVx-byHv-5MH1-U5kFkY
+  LV Write Access        read/write
+  LV Creation host, time PowerEdge-R810, 2026-08-20 22:16:03 -0500
+  LV Status              available
+  # open                 1
+  LV Size                2.00 TiB
+  Current LE             524350
+  Segments               2
+  Allocation             inherit
+  Read ahead sectors     auto
+  - currently set to     512
+  Block device           252:0
+   
+nh1221@PowerEdge-R810:~$ 
