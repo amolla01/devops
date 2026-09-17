@@ -1,0 +1,14 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+
+PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+
+TASK [Ensure Calico CNI token RBAC exists] *****************************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Apply Calico IPPool — no encapsulation] **************************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": true, "cmd": "kubectl apply -f - <<'EOF'\napiVersion: projectcalico.org/v3\nkind: IPPool\nmetadata:\n  name: default-ipv4-ippool\nspec:\n  cidr: 10.233.64.0/18\n  ipipMode: Never\n  vxlanMode: Never\n  natOutgoing: true\n  blockSize: 26\n  nodeSelector: \"all()\"\nEOF\n", "delta": "0:00:02.701142", "end": "2026-09-17 14:42:08.388993", "msg": "non-zero return code", "rc": 1, "start": "2026-09-17 14:42:05.687851", "stderr": "error: resource mapping not found for name: \"default-ipv4-ippool\" namespace: \"\" from \"STDIN\": no matches for kind \"IPPool\" in version \"projectcalico.org/v3\"\nensure CRDs are installed first", "stderr_lines": ["error: resource mapping not found for name: \"default-ipv4-ippool\" namespace: \"\" from \"STDIN\": no matches for kind \"IPPool\" in version \"projectcalico.org/v3\"", "ensure CRDs are installed first"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=1    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
