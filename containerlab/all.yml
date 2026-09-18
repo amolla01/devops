@@ -7,7 +7,13 @@ sonic_pass: Welcome1!
 # Lab control and deployment variables
 lab_server_ip: "192.168.9.198"
 lab_jump_user: "nh1221"
-remote_lab_dir: "/opt/containerlab/sheba"
+# Lab tree + VM qcow2 disks live on the LVM /data volume, not root /dev/sda2.
+remote_lab_dir: "/data/containerlab/sheba"
+# Air-gap registry store on /data too (container bind in roles/registry_deploy).
+airgap_registry_data_dir: "/data/registry/data"
+# Seed staging holds ~20 GB of uploaded image tarballs on the R810 — keep it on
+# the big /data volume, not root /dev/sda2, to match the registry data move.
+airgap_registry_staging_dir: "/data/registry/staging"
 local_fabric_cache_root: "/opt/fabric-cache"
 local_fabric_helm_binary: "{{ local_fabric_cache_root }}/bin/helm"
 kubespray_repo_mirror: ""
@@ -18,6 +24,12 @@ kubespray_repo: "https://github.com/kubernetes-sigs/kubespray.git"
 kubespray_version: "v2.31.0"  # <--- Mirror this exact declaration here
 my_file_server_port: "8080"
 r810_management_ip: "{{ r810_clab_bridge_ip | default('172.16.2.1') }}"
+# Raw binary artifact server (kubeadm/kubelet/etcd/cni/... downloads) served by
+# the R810 file server on my_file_server_port. Defined here as a real Ansible
+# variable so roles/kubespray_prep templates can resolve {{ r810_binary_server }}
+# at render time — the kubespray group_vars template only emits it as output text,
+# so without this definition Jinja fails with 'r810_binary_server' is undefined.
+r810_binary_server: "http://{{ r810_management_ip }}:{{ my_file_server_port }}"
 # rook-ceph namespace + cluster name — used by both rook-ceph and monitoring roles
 rook_ceph_namespace: "rook-ceph"
 rook_ceph_chart_version: "v1.15.5"
@@ -69,7 +81,17 @@ lab_network_mode: native
 ansible_pipelining: true
 forks: 5
 
-# ── Multi-Threaded OpenSSH Jump Host Pipelining for Virtual Nodes ─────────────
+# ── SSH reachability — ONE pattern for every playbook ─────────────────────────
+# RULE: every managed host lives in the air-gapped mgmt subnet (172.16.2.0/24)
+# and is reached THROUGH the R810 jump host. Only two hosts are exceptions:
+#   - localhost      → ansible_connection: local (set in inventory, no SSH)
+#   - poweredge_r810 → the jump host itself, reached directly (host_vars override)
+# This value is STATIC (no inventory_hostname conditional) so it stays correct
+# under delegate_to — e.g. `hosts: localhost` + delegate_to: k8s-master-01 pulls
+# the delegated host's args and still jumps via the R810. A conditional keyed on
+# inventory_hostname would collapse to the no-proxy branch during delegation and
+# make Ansible dial 172.16.2.x directly (times out), while a manual ssh (which
+# uses ~/.ssh/config's ProxyJump) still works.
 ansible_ssh_private_key_file: ~/.ssh/id_dc_lab
 
 ansible_ssh_common_args: >-
@@ -78,11 +100,7 @@ ansible_ssh_common_args: >-
   -o UserKnownHostsFile=/dev/null
   -o ServerAliveInterval=30
   -o ServerAliveCountMax=3
-  {% if inventory_hostname == 'poweredge_r810' or inventory_hostname == 'localhost' %}
-  -o ProxyCommand=none
-  {% else %}
-  -o ProxyCommand="ssh -W [%h]:%p -i /home/nh1221/.ssh/id_dc_lab -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null nh1221@192.168.9.198"
-  {% endif %}
+  -o ProxyCommand="ssh -W [%h]:%p -i /home/{{ lab_jump_user }}/.ssh/id_dc_lab -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null {{ lab_jump_user }}@{{ lab_server_ip }}"
 
 
 # ansible_ssh_common_args: >-
@@ -122,16 +140,29 @@ storage_vrf_table: 300
 sonic_storage_vrf_name: "Vrf-storage"    # SONiC VRF name on the switches
 storage_subnet: "20.0.56.0/24"
 
+# Nodes that actually carry the isolated replication path: OSD nodes that opt in
+# with vrf_storage=true AND own a ceph_data_replication_ip (20.0.56.x/32).
+# Validation playbooks pick their endpoints from this list instead of hard-coding
+# hostnames/IPs, so adding/removing a storage node needs no playbook edits.
+storage_replication_nodes: >-
+  {{ groups['ceph_osd_nodes'] | default([])
+     | map('extract', hostvars)
+     | selectattr('vrf_storage', 'defined') | selectattr('vrf_storage')
+     | selectattr('ceph_data_replication_ip', 'defined')
+     | map(attribute='inventory_hostname') | list }}
+
 # ── QoS: tc HTB 80/20 split on OSD 10G data links (storage vs tenant) ─────────
 qos_total_bandwidth: "10000mbit"
 qos_storage_bandwidth: "8000mbit"        # 80% guaranteed Ceph replication
 qos_workload_bandwidth: "2000mbit"       # 20% guaranteed tenant/workload
 
-# ── MetalLB (BGP mode, native speaker) ───────────────────────────────────────
-# The speaker peers each node's LOCAL FRR over the node loopback; FRR then
-# re-advertises the LoadBalancer /32s into the fabric via eBGP (RFC5549). Native
-# BGP mode is used (speaker.frr disabled) so it never collides with the host FRR
-# on tcp/179. The pool must NOT overlap the fabric loopbacks (10.10.255.0/24).
+# ── MetalLB (controller-only IPAM; node FRR advertises) ──────────────────────
+# NO MetalLB speaker is installed. MetalLB is used purely as an IPAM allocator:
+# the controller assigns VIPs from the pools, kube-proxy (IPVS) binds each VIP as
+# a /32 on kube-ipvs0, and each node's OWN FRR redistributes the bgp-pool /32s
+# into the fabric (see roles/linux_frr_bgp). This means no second BGP instance on
+# the nodes and nothing ever binds/collides on tcp/179. The bgp-pool must NOT
+# overlap the fabric loopbacks (10.10.255.0/24).
 metallb_enabled: true
 metallb_namespace: "metallb-system"
 metallb_chart_version: "0.14.9"
@@ -230,6 +261,22 @@ metallb_vip_prometheus:  "172.16.2.204"   # Prometheus (ops queries, alert rule 
 metallb_vip_skyline:     "172.16.2.205"   # Skyline modern dashboard (admin/user)
 # .206 reserved; .207 broadcast
 
+# ── mgmt-pool advertisement (speaker-free): node FRR peers the Exit-Routers ───
+# The bgp-pool reaches the fabric via redistribute (roles/linux_frr_bgp). The
+# mgmt-pool must stay OFF the tenant fabric, so each node runs a SEPARATE numbered
+# eBGP session over its mgmt NIC (enp1s0) to the Exit-Routers and advertises ONLY
+# the mgmt VIP /32s; in return it learns ONLY the ops WireGuard subnet so
+# dashboard replies are symmetric. The Exit-Routers accept these via a dynamic
+# BGP listen-range and forward WireGuard→dashboard traffic. No MetalLB speaker,
+# no second BGP instance, nothing binds tcp/179 on the nodes.
+# Disabled: in this topology the Exit-Routers peer ONLY Border-Leaf1/2 and ISP-1/2,
+# never the K8s nodes, so these numbered node→Exit-Router sessions stay Active/never.
+metallb_mgmt_bgp_enabled: false
+# Exit-Router mgmt-plane BGP peers (numbered, on the OOB 172.16.2.0/24 L2).
+metallb_mgmt_bgp_peers:
+  - { ip: "172.16.2.41", asn: 65251 }   # Exit-Router1
+  - { ip: "172.16.2.42", asn: 65252 }   # Exit-Router2
+
 # ── MetalLB BGP VIP assignment map ────────────────────────────────────────────
 # BGP-announced via FRR → Leaf → fabric. Internet-reachable via Exit-Router NAT.
 metallb_vip_ingress:     "10.10.200.1"    # ingress-nginx (tenant HTTP/HTTPS entry)
@@ -238,6 +285,61 @@ metallb_vip_ingress:     "10.10.200.1"    # ingress-nginx (tenant HTTP/HTTPS ent
 # SONiC host-facing route-policy defaults
 bgp_route_policy_enabled: true
 bgp_policy_node_loopback_prefix: "10.10.255.0/24"
+
+# ── Platform profile: virtual (sonic-vs) vs real hardware ─────────────────────
+# Governs the cross-rack HA / "checkerboard" remediations on the SONiC switches.
+# See wiki/ecmp-checkerboard-diagnosis.md for the full analysis.
+#
+#   virtual        sonic-vs under vrnetlab/containerlab (this lab, default).
+#                  The switch forwards TRANSIT traffic in the Linux kernel of the
+#                  VM — there is no ASIC — so RFC5549 IPv6 link-local ECMP
+#                  next-hops depend on kernel IPv6 ND staying resolved, and the
+#                  kernel never gets a FIB-offload ack. The virtual-only
+#                  remediations below are enabled.
+#   real_hardware  physical Broadcom/Mellanox SONiC. The ASIC performs FIB
+#                  offload, neighbour resolution and ECMP hashing in silicon, so
+#                  the virtual-only remediations are skipped and BGP keeps its
+#                  production-safe defaults (suppress-fib-pending stays ON).
+sonic_platform_profile: "virtual"
+
+# eBGP CLOS ECMP. The two leaves of a rack use DISTINCT ASNs (65011/65012), so a
+# spine sees two paths with a different first-AS for every host /32. Without
+# multipath-relax a spine installs only ONE of them, and if that single leg
+# degrades the /32 blackholes from that spine (the cross-rack checkerboard).
+# multipath-relax makes the spine install BOTH as ECMP next-hops. This is
+# standard, production-correct CLOS behaviour and is REQUIRED for cross-rack HA;
+# it applies on BOTH platforms.
+fabric_ecmp_multipath_relax: true
+
+# Kernel IPv6 ND stabilisation on the sonic-vs switch fabric uplinks. A transient
+# NUD probe loss under virtual-CPU contention must not flip an fe80 next-hop to
+# FAILED — that tears down the ECMP nexthop object and deterministically
+# blackholes every flow hashed onto that leg. Virtual-only: real ASICs resolve
+# neighbours in hardware and are unaffected.
+fabric_nd_stability_enabled: "{{ sonic_platform_profile == 'virtual' }}"
+
+# suppress-fib-pending must be OFF on sonic-vs (no ASIC to ack FIB offload, else
+# transit routes never advertise) but should stay ON (SONiC default) on real
+# hardware where the offload ack is real.
+sonic_suppress_fib_pending_disabled: "{{ sonic_platform_profile == 'virtual' }}"
+
+# Per-switch ECMP hash seed (SWITCH_HASH|GLOBAL ecmp_hash_seed). Every switch is
+# given a DISTINCT seed (see host_vars ecmp_hash_seed) so the syncd behavioural
+# hash on each tier de-correlates instead of every virtual ASIC computing the
+# same index and polarising all cross-rack flows onto the same (sometimes broken)
+# ECMP member — a primary driver of the checkerboard. Real ASICs hash in silicon
+# with a hardware-random seed, so this is virtual-only.
+fabric_switch_hash_seed_enabled: "{{ sonic_platform_profile == 'virtual' }}"
+
+# Data-plane source anchor. The fabric ports are BGP-unnumbered (no IPv4), so
+# when the switch CPU originates/forwards over an RFC5549 fe80 next-hop the
+# kernel can fall back to the management IP (eth0, 172.16.2.x) as the packet
+# source — which is unreachable across the fabric and drops. Binding a unique
+# link-local /32 (169.254.1.x, see host_vars dataplane_anchor_ip) to every fabric
+# port gives the kernel a data-plane-scope local IPv4 to anchor the next-hop
+# source to, instead of leaking the mgmt address. Virtual-only: real ASICs stamp
+# the prefsrc in hardware.
+fabric_dataplane_anchor_enabled: "{{ sonic_platform_profile == 'virtual' }}"
 
 # ── Neutron / OVN underlay ────────────────────────────────────────────────────
 # OVN Geneve tunnels use the fabric loopback IP as the encapsulation endpoint so
