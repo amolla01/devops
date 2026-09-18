@@ -1,75 +1,22 @@
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/registry.yml
-
-PLAY [Deploy air-gapped registry mirror on R810 host] ******************************************************************************************************
-
-TASK [registry_deploy : Ensure Docker is installed] ********************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Enable and start Docker] ***********************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Create registry data directory] ****************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Check for registry image] **********************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Pull registry image if missing] ****************************************************************************************************
-skipping: [poweredge_r810]
-
-TASK [registry_deploy : Check for registry container] ******************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Create or restart registry container] **********************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Wait for registry port] ************************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Confirm registry endpoint responds] ************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_deploy : Deploy air-gapped flat binary HTTP file server] ************************************************************************************
-ok: [poweredge_r810]
-
-PLAY [Seed registry from /opt/fabric-cache/images] *********************************************************************************************************
-
-TASK [registry_seed : Check for cached image tarballs on the control node] *********************************************************************************
-ok: [poweredge_r810 -> localhost]
-
-TASK [registry_seed : Display cached image count] **********************************************************************************************************
-ok: [poweredge_r810] => {
-    "msg": "Found 68 image tarballs in /opt/fabric-cache/images/"
-}
-
-TASK [registry_seed : Guardrail - detect unreadable image tarballs on control node] ************************************************************************
-ok: [poweredge_r810 -> localhost]
-
-TASK [registry_seed : Guardrail - fix cache permissions when unreadable tarballs are detected] *************************************************************
-skipping: [poweredge_r810]
-
-TASK [registry_seed : Guardrail - fail if tarballs are still unreadable after auto-fix] ********************************************************************
-ok: [poweredge_r810] => {
-    "changed": false,
-    "msg": "All assertions passed"
-}
-
-TASK [registry_seed : Ensure skopeo is available on the registry host] *************************************************************************************
-ok: [poweredge_r810]
-
-TASK [registry_seed : Create staging directory on registry host] *******************************************************************************************
-changed: [poweredge_r810]
-
-TASK [registry_seed : Guardrail - verify Docker can push to registry seed endpoint on R810] ****************************************************************
-fatal: [poweredge_r810]: FAILED! => {"changed": false, "cmd": "set -e\nSEED_REGISTRY=\"172.16.2.1:5000\"\nif ! docker info 2>/dev/null | grep -A20 'Insecure Registries' | grep -q \"$SEED_REGISTRY\"; then\n  echo \"Docker on registry host is missing insecure-registry entry for $SEED_REGISTRY\"\n  echo \"Add it to /etc/docker/daemon.json and restart docker, e.g.:\"\n  echo '{\"insecure-registries\": [\"'$SEED_REGISTRY'\", \"192.168.9.198:5000\", \"172.16.2.1\"]}'\n  exit 1\nfi\n", "delta": "0:00:11.243866", "end": "2026-09-18 04:37:21.847988", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 04:37:10.604122", "stderr": "", "stderr_lines": [], "stdout": "Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000\nAdd it to /etc/docker/daemon.json and restart docker, e.g.:\n{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}", "stdout_lines": ["Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000", "Add it to /etc/docker/daemon.json and restart docker, e.g.:", "{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}"]}
-
-PLAY RECAP *************************************************************************************************************************************************
-poweredge_r810             : ok=15   changed=1    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
-
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
 
 PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+
+TASK [Preflight - wait for kube-apiserver /readyz to report ok] ********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - confirm admin RBAC can manage the calico DaemonSet] **************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - collect control-plane node readiness] ****************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - assert the control plane is healthy before mutating Calico] ******************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "Control plane healthy (readyz=ok, can-i watch ds=yes, all control-plane nodes Ready)."
+}
 
 TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
 ok: [k8s-master-01]
@@ -77,7 +24,10 @@ ok: [k8s-master-01]
 TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
 ok: [k8s-master-01]
 
-TASK [Ensure Calico CNI token RBAC exists] *****************************************************************************************************************
+TASK [Grant CNI token-request permission to the calico-node ServiceAccount] ********************************************************************************
+changed: [k8s-master-01]
+
+TASK [Ensure the Calico CNI-plugin ClusterRole/Binding match upstream (repair prior clobbering)] ***********************************************************
 changed: [k8s-master-01]
 
 TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
@@ -86,10 +36,455 @@ changed: [k8s-master-01]
 TASK [Restart Calico node daemonset after env correction] **************************************************************************************************
 changed: [k8s-master-01]
 
-TASK [Wait for Calico DaemonSet to become ready] ***********************************************************************************************************
-fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["kubectl", "rollout", "status", "daemonset/calico-node", "-n", "kube-system", "--timeout=300s"], "delta": "0:05:00.292543", "end": "2026-09-18 11:51:17.610489", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 11:46:17.317946", "stderr": "E0918 11:48:54.231155  473183 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nE0918 11:50:15.072647  473183 reflector.go:204] \"Failed to watch\" err=\"failed to list *unstructured.Unstructured: daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot list resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nerror: timed out waiting for the condition", "stderr_lines": ["E0918 11:48:54.231155  473183 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "E0918 11:50:15.072647  473183 reflector.go:204] \"Failed to watch\" err=\"failed to list *unstructured.Unstructured: daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot list resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "error: timed out waiting for the condition"], "stdout": "Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "stdout_lines": ["Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available..."]}
+TASK [Force-recycle calico-node pods stuck on the install-cni init container] ******************************************************************************
+changed: [k8s-master-01]
+
+TASK [Wait for Calico DaemonSet to converge (desired == updated == available)] *****************************************************************************
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (30 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (29 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (28 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (27 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (26 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (25 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (24 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (23 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (22 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (21 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (20 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (19 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (18 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (17 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (16 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (15 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (14 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (13 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (12 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (11 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (10 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (9 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (8 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (7 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (6 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (5 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (4 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (3 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (2 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (1 retries left).
+ok: [k8s-master-01]
+
+TASK [Collect calico-node diagnostics when it has not converged] *******************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Assert Calico DaemonSet fully converged] *************************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {
+    "assertion": "(calico_ds_conv.stdout.split() | length) == 3",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "calico-node did not converge (desired/updated/available = '16 16', rc=0, stderr=''). An EMPTY string means the DaemonSet is scheduling onto zero nodes (or the read is erroring) - inspect the nodes/events block below, not just install-cni. If install-cni is backing off, it is the CNI token RBAC (fixed by the tasks above - re-run once); if felix-ready never passes with a healthy control plane, fix fabric routing (playbooks/linux-bgp.yml). Diagnostics: ### nodes:\nNAME            STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION     CONTAINER-RUNTIME\nk8s-db-01       Ready    <none>          29h   v1.35.4   10.0.10.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nk8s-db-02       Ready    <none>          29h   v1.35.4   10.0.20.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nk8s-db-03       Ready    <none>          29h   v1.35.4   10.0.30.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nk8s-master-01   Ready    control-plane   29h   v1.35.4   10.0.10.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nk8s-master-02   Ready    control-plane   29h   v1.35.4   10.0.20.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nk8s-master-03   Ready    control-plane   29h   v1.35.4   10.0.30.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nmonsrv          Ready    <none>          29h   v1.35.4   10.0.30.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-comp-01     Ready    <none>          29h   v1.35.4   10.0.10.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-comp-02     Ready    <none>          29h   v1.35.4   10.0.20.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-comp-03     Ready    <none>          28h   v1.35.4   10.0.30.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-comp-04     Ready    <none>          28h   v1.35.4   10.0.10.6     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-ctrl-01     Ready    <none>          29h   v1.35.4   10.0.10.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-ctrl-02     Ready    <none>          29h   v1.35.4   10.0.20.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-ctrl-03     Ready    <none>          29h   v1.35.4   10.0.30.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-net-01      Ready    <none>          29h   v1.35.4   10.0.10.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\nosh-net-02      Ready    <none>          29h   v1.35.4   10.0.20.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3\n### calico-node DaemonSet:\nNAME          DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE   CONTAINERS    IMAGES                                SELECTOR\ncalico-node   16        16        0       16           0           kubernetes.io/os=linux   28h   calico-node   172.16.2.1:5000/calico/node:v3.29.2   k8s-app=calico-node\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-942tz\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-hrsqv\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-qcgbz\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-hh94m\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-bv58v\n  Normal  SuccessfulCreate  53m                daemonset-controller  Created pod: calico-node-hqvq9\n  Normal  SuccessfulDelete  53m (x7 over 53m)  daemonset-controller  (combined from similar events): Deleted pod: calico-node-qng9m\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-hrsqv\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-zjgwm\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-jjx74\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-qcgbz\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-hqvq9\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-2kzxs\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-hmz89\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-d5jnq\n  Normal  SuccessfulDelete  11m                daemonset-controller  Deleted pod: calico-node-bv58v\n  Normal  SuccessfulDelete  11m (x7 over 11m)  daemonset-controller  (combined from similar events): Deleted pod: calico-node-zmfjl\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-prghj\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-k6rfb\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-fxkz2\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-j85d9\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-vhxf9\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-6bgzb\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-wjgkk\n  Normal  SuccessfulCreate  11m                daemonset-controller  Created pod: calico-node-spmdq\n### kube-system calico/coredns pods:\nNAME                                    READY   STATUS             RESTARTS          AGE   IP          NODE            NOMINATED NODE   READINESS GATES\ncalico-node-4skhr                       0/1     CrashLoopBackOff   5 (19s ago)       11m   10.0.10.4   osh-net-01      <none>           <none>\ncalico-node-5nc79                       0/1     CrashLoopBackOff   5 (2m37s ago)     11m   10.0.30.5   osh-comp-03     <none>           <none>\ncalico-node-69m5w                       0/1     CrashLoopBackOff   5 (47s ago)       11m   10.0.30.3   osh-ctrl-03     <none>           <none>\ncalico-node-6bgzb                       0/1     CrashLoopBackOff   6 (85s ago)       11m   10.0.20.2   k8s-db-02       <none>           <none>\ncalico-node-7jjws                       0/1     CrashLoopBackOff   5 (107s ago)      11m   10.0.10.2   k8s-db-01       <none>           <none>\ncalico-node-chpfk                       0/1     CrashLoopBackOff   6 (19s ago)       11m   10.0.20.4   osh-net-02      <none>           <none>\ncalico-node-ck95p                       0/1     CrashLoopBackOff   5 (103s ago)      11m   10.0.10.5   osh-comp-01     <none>           <none>\ncalico-node-fxkz2                       0/1     CrashLoopBackOff   4 (89s ago)       11m   10.0.10.6   osh-comp-04     <none>           <none>\ncalico-node-j85d9                       0/1     CrashLoopBackOff   3 (65s ago)       11m   10.0.20.3   osh-ctrl-02     <none>           <none>\ncalico-node-k6rfb                       0/1     CrashLoopBackOff   5 (18s ago)       11m   10.0.30.2   k8s-db-03       <none>           <none>\ncalico-node-prghj                       0/1     Error              1 (6s ago)        11m   10.0.30.1   k8s-master-03   <none>           <none>\ncalico-node-spmdq                       0/1     CrashLoopBackOff   6 (82s ago)       11m   10.0.20.5   osh-comp-02     <none>           <none>\ncalico-node-txvhn                       0/1     CrashLoopBackOff   5 (2m45s ago)     11m   10.0.30.4   monsrv          <none>           <none>\ncalico-node-vhxf9                       0/1     CrashLoopBackOff   4 (64s ago)       11m   10.0.20.1   k8s-master-02   <none>           <none>\ncalico-node-wjgkk                       0/1     CrashLoopBackOff   4 (54s ago)       11m   10.0.10.3   osh-ctrl-01     <none>           <none>\ncalico-node-zh9c4                       0/1     CrashLoopBackOff   4 (62s ago)       11m   10.0.10.1   k8s-master-01   <none>           <none>\n### recent kube-system events:\n32s         Normal    Pulled             pod/calico-node-prghj                       Container image \"172.16.2.1:5000/calico/node:v3.29.2\" already present on machine and can be accessed by the pod\n24s         Normal    LeaderElection     lease/kube-controller-manager               k8s-master-03_7e8a80a3-d6fe-428e-9427-e232b26c9aef stopped leading\n23s         Normal    Pulled             pod/calico-node-k6rfb                       Container image \"172.16.2.1:5000/calico/node:v3.29.2\" already present on machine and can be accessed by the pod\n21s         Warning   Unhealthy          pod/kube-controller-manager-k8s-master-03   Liveness probe failed: Get \"https://10.0.30.1:10257/healthz\": dial tcp 10.0.30.1:10257: connect: connection refused\n21s         Normal    LeaderElection     lease/kube-scheduler                        k8s-master-03_8cbea764-51d4-4044-bf37-5b63409474bc stopped leading\n21s         Warning   BackOff            pod/calico-node-ck95p                       Back-off restarting failed container calico-node in pod calico-node-ck95p_kube-system(d32c6d70-9e32-419b-9177-21d58ddb3c9a)\n20s         Normal    Created            pod/calico-node-prghj                       Container created\n20s         Warning   BackOff            pod/kube-controller-manager-k8s-master-03   Back-off restarting failed container kube-controller-manager in pod kube-controller-manager-k8s-master-03_kube-system(d6417f93ad6d98c8f49a3c903d86f3fb)\n19s         Warning   Unhealthy          pod/calico-node-k6rfb                       Readiness probe failed:\n19s         Normal    Started            pod/calico-node-prghj                       Container started\n14s         Warning   BackOff            pod/calico-node-chpfk                       Back-off restarting failed container calico-node in pod calico-node-chpfk_kube-system(ace2808b-a887-4e85-972f-f6694a5e09fe)\n12s         Warning   BackOff            pod/calico-node-7jjws                       Back-off restarting failed container calico-node in pod calico-node-7jjws_kube-system(24db2626-b8db-405e-b151-b9319ea6f39c)\n12s         Normal    Pulled             pod/kube-controller-manager-k8s-master-03   Container image \"172.16.2.1:5000/kube-controller-manager:v1.35.4\" already present on machine and can be accessed by the pod\n12s         Warning   BackOff            pod/calico-node-k6rfb                       Back-off restarting failed container calico-node in pod calico-node-k6rfb_kube-system(32c9e83d-3c11-4e9f-9490-4e909a7cf2ed)\n11s         Warning   BackOff            pod/calico-node-4skhr                       Back-off restarting failed container calico-node in pod calico-node-4skhr_kube-system(83d1faa0-7489-4267-9d20-97bb918bc588)\n10s         Normal    Pulled             pod/kube-scheduler-k8s-master-03            Container image \"172.16.2.1:5000/kube-scheduler:v1.35.4\" already present on machine and can be accessed by the pod\n7s          Normal    Created            pod/kube-controller-manager-k8s-master-03   Container created\n7s          Normal    Started            pod/kube-controller-manager-k8s-master-03   Container started\n3s          Normal    Pulled             pod/calico-node-txvhn                       Container image \"172.16.2.1:5000/calico/node:v3.29.2\" already present on machine and can be accessed by the pod\n3s          Normal    Created            pod/kube-scheduler-k8s-master-03            Container created\n2s          Warning   BackOff            pod/calico-node-j85d9                       Back-off restarting failed container calico-node in pod calico-node-j85d9_kube-system(d89621fe-773c-4f61-acf0-ac94f114b604)\n2s          Warning   BackOff            pod/calico-node-prghj                       Back-off restarting failed container calico-node in pod calico-node-prghj_kube-system(b08250c8-64c9-4edd-ab01-8990649cb874)\n2s          Normal    Started            pod/kube-scheduler-k8s-master-03            Container started\n2s          Normal    LeaderElection     lease/kube-scheduler                        k8s-master-02_f4d68dd2-af64-47bb-80cc-47594cadd927 became leader\n1s          Normal    LeaderElection     lease/kube-controller-manager               k8s-master-02_38f606e6-5897-4012-9930-d6cea747cd0e became leader\n### describe calico-node-4skhr (tail):\n    Path:          /var/log/calico/cni\n    HostPathType:  \n  policysync:\n    Type:          HostPath (bare host directory volume)\n    Path:          /var/run/nodeagent\n    HostPathType:  DirectoryOrCreate\n  kube-api-access-wkrfl:\n    Type:                    Projected (a volume that contains injected data from multiple sources)\n    TokenExpirationSeconds:  3607\n    ConfigMapName:           kube-root-ca.crt\n    Optional:                false\n    DownwardAPI:             true\nQoS Class:                   Burstable\nNode-Selectors:              kubernetes.io/os=linux\nTolerations:                 :NoSchedule op=Exists\n                             :NoExecute op=Exists\n                             CriticalAddonsOnly op=Exists\n                             node.kubernetes.io/disk-pressure:NoSchedule op=Exists\n                             node.kubernetes.io/memory-pressure:NoSchedule op=Exists\n                             node.kubernetes.io/network-unavailable:NoSchedule op=Exists\n                             node.kubernetes.io/not-ready:NoExecute op=Exists\n                             node.kubernetes.io/pid-pressure:NoSchedule op=Exists\n                             node.kubernetes.io/unreachable:NoExecute op=Exists\n                             node.kubernetes.io/unschedulable:NoSchedule op=Exists\nEvents:\n  Type     Reason     Age                   From               Message\n  ----     ------     ----                  ----               -------\n  Normal   Scheduled  11m                   default-scheduler  Successfully assigned kube-system/calico-node-4skhr to osh-net-01\n  Normal   Pulled     11m                   kubelet            spec.initContainers{upgrade-ipam}: Container image \"172.16.2.1:5000/calico/cni:v3.29.2\" already present on machine and can be accessed by the pod\n  Warning  BackOff    9m17s                 kubelet            spec.initContainers{install-cni}: Back-off restarting failed container install-cni in pod calico-node-4skhr_kube-system(83d1faa0-7489-4267-9d20-97bb918bc588)\n  Normal   Pulled     9m7s (x3 over 11m)    kubelet            spec.initContainers{install-cni}: Container image \"172.16.2.1:5000/calico/cni:v3.29.2\" already present on machine and can be accessed by the pod\n  Normal   Created    8m6s (x4 over 10m)    kubelet            spec.initContainers{install-cni}: Container created\n  Normal   Started    8m6s (x4 over 10m)    kubelet            spec.initContainers{install-cni}: Container started\n  Normal   Pulled     7m37s                 kubelet            spec.initContainers{mount-bpffs}: Container image \"172.16.2.1:5000/calico/node:v3.29.2\" already present on machine and can be accessed by the pod\n  Normal   Started    6m30s                 kubelet            spec.initContainers{mount-bpffs}: Container started\n  Normal   Started    5m34s (x2 over 6m3s)  kubelet            spec.containers{calico-node}: Container started\n  Normal   Created    3m36s (x3 over 6m5s)  kubelet            spec.containers{calico-node}: Container created\n  Warning  Unhealthy  3m34s                 kubelet            spec.containers{calico-node}: Readiness probe failed: calico/node is not ready: felix is not ready: Get \"http://localhost:9099/readiness\": dial tcp 127.0.0.1:9099: connect: connection refused\n  Normal   Pulled     38s (x6 over 6m29s)   kubelet            spec.containers{calico-node}: Container image \"172.16.2.1:5000/calico/node:v3.29.2\" already present on machine and can be accessed by the pod\n  Warning  BackOff    12s (x18 over 5m33s)  kubelet            spec.containers{calico-node}: Back-off restarting failed container calico-node in pod calico-node-4skhr_kube-system(83d1faa0-7489-4267-9d20-97bb918bc588)\n### install-cni init logs (calico-node-4skhr):\n2026-09-18 15:33:28.280 [INFO][1] cni-installer/install.go 185: /host/secondary-bin-dir is not writeable, skipping\n2026-09-18 15:33:28.280 [WARNING][1] cni-installer/winutils.go 150: Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.\n2026-09-18 15:33:49.774 [INFO][1] cni-installer/install.go 312: Using CNI config template from CNI_NETWORK_CONFIG environment variable.\n{\n  \"name\": \"k8s-pod-network\",\n  \"cniVersion\":\"0.3.1\",\n  \"plugins\":[\n    {\n                  \"datastore_type\": \"kubernetes\",\n        \"nodename\": \"osh-net-01\",\n                  \"type\": \"calico\",\n        \"log_level\": \"info\",\n                  \"log_file_path\": \"/var/log/calico/cni/cni.log\",\n                                      \"ipam\": {\n          \"type\": \"calico-ipam\",\n                      \"assign_ipv4\": \"true\"\n                                },\n                                                \"policy\": {\n          \"type\": \"k8s\"\n        },\n                            \"kubernetes\": {\n          \"kubeconfig\": \"/etc/cni/net.d/calico-kubeconfig\"\n        }\n    },\n    {\n      \"type\":\"portmap\",\n      \"capabilities\": {\n        \"portMappings\": true\n      }\n    },\n    {\n      \"type\":\"bandwidth\",\n      \"capabilities\": {\n        \"bandwidth\": true\n      }\n    }\n  ]\n}\n2026-09-18 15:33:49.776 [INFO][1] cni-installer/install.go 393: Created /host/etc/cni/net.d/10-calico.conflist\n2026-09-18 15:33:49.776 [INFO][1] cni-installer/install.go 253: Done configuring CNI.  Sleep= false"
+}
 
 PLAY RECAP *************************************************************************************************************************************************
-k8s-master-01              : ok=5    changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=13   changed=5    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ export ANSIBLE_CONFIG=$PWD/ansible.cfg
+ansible k8s-master-01 -i inventory.yml -m shell -a '
+  echo "== NODES ==";        kubectl get nodes -o wide
+  echo "== NODE READY/TAINTS =="; kubectl get nodes -o jsonpath="{range .items[*]}{.metadata.name}{\" ready=\"}{.status.conditions[?(@.type==\"Ready\")].status}{\" taints=\"}{.spec.taints}{\"\n\"}{end}"
+  echo "== DS STATUS ==";     kubectl -n kube-system get ds calico-node -o wide; kubectl -n kube-system get ds calico-node -o jsonpath="{.status}{\"\n\"}"
+  echo "== DS DESCRIBE ==";   kubectl -n kube-system describe ds calico-node | tail -30
+  echo "== PODS ==";          kubectl -n kube-system get pods -o wide | grep -Ei "NAME|calico|coredns"
+  echo "== EVENTS ==";        kubectl -n kube-system get events --sort-by=.lastTimestamp | tail -30
+  echo "== ETCD HEALTH ==";   kubectl get --raw="/healthz/etcd"; echo; kubectl get --raw="/readyz?verbose" | tail -20
+> ^C
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ cd /mnt/c/Users/nh1221/dc_lab/clab/sonic-clab
+export ANSIBLE_CONFIG=$PWD/ansible.cfg
+ansible k8s-master-01 -i inventory.yml -m shell -a '
+  echo "== NODES ==";        kubectl get nodes -o wide
+  echo "== NODE READY/TAINTS =="; kubectl get nodes -o jsonpath="{range .items[*]}{.metadata.name}{\" ready=\"}{.status.conditions[?(@.type==\"Ready\")].status}{\" taints=\"}{.spec.taints}{\"\n\"}{end}"
+  echo "== DS STATUS ==";     kubectl -n kube-system get ds calico-node -o wide; kubectl -n kube-system get ds calico-node -o jsonpath="{.status}{\"\n\"}"
+  echo "== DS DESCRIBE ==";   kubectl -n kube-system describe ds calico-node | tail -30
+  echo "== PODS ==";          kubectl -n kube-system get pods -o wide | grep -Ei "NAME|calico|coredns"
+  echo "== EVENTS ==";        kubectl -n kube-system get events --sort-by=.lastTimestamp | tail -30
+  echo "== ETCD HEALTH ==";   kubectl get --raw="/healthz/etcd"; echo; kubectl get --raw="/readyz?verbose" | tail -20
+'
+k8s-master-01 | CHANGED | rc=0 >>
+== NODES ==
+NAME            STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE           KERNEL-VERSION     CONTAINER-RUNTIME
+k8s-db-01       Ready    <none>          29h   v1.35.4   10.0.10.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+k8s-db-02       Ready    <none>          29h   v1.35.4   10.0.20.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+k8s-db-03       Ready    <none>          29h   v1.35.4   10.0.30.2     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+k8s-master-01   Ready    control-plane   29h   v1.35.4   10.0.10.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+k8s-master-02   Ready    control-plane   29h   v1.35.4   10.0.20.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+k8s-master-03   Ready    control-plane   29h   v1.35.4   10.0.30.1     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+monsrv          Ready    <none>          29h   v1.35.4   10.0.30.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-comp-01     Ready    <none>          29h   v1.35.4   10.0.10.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-comp-02     Ready    <none>          29h   v1.35.4   10.0.20.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-comp-03     Ready    <none>          29h   v1.35.4   10.0.30.5     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-comp-04     Ready    <none>          29h   v1.35.4   10.0.10.6     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-ctrl-01     Ready    <none>          29h   v1.35.4   10.0.10.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-ctrl-02     Ready    <none>          29h   v1.35.4   10.0.20.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-ctrl-03     Ready    <none>          29h   v1.35.4   10.0.30.3     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-net-01      Ready    <none>          29h   v1.35.4   10.0.10.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+osh-net-02      Ready    <none>          29h   v1.35.4   10.0.20.4     <none>        Ubuntu 26.04 LTS   7.0.0-28-generic   containerd://2.2.3
+== NODE READY/TAINTS ==
+k8s-db-01 ready=True taints=
+k8s-db-02 ready=True taints=
+k8s-db-03 ready=True taints=
+k8s-master-01 ready=True taints=[{"effect":"NoSchedule","key":"node-role.kubernetes.io/control-plane"}]
+k8s-master-02 ready=True taints=[{"effect":"NoSchedule","key":"node-role.kubernetes.io/control-plane"}]
+k8s-master-03 ready=True taints=[{"effect":"NoSchedule","key":"node-role.kubernetes.io/control-plane"}]
+monsrv ready=True taints=
+osh-comp-01 ready=True taints=
+osh-comp-02 ready=True taints=
+osh-comp-03 ready=True taints=
+osh-comp-04 ready=True taints=
+osh-ctrl-01 ready=True taints=
+osh-ctrl-02 ready=True taints=
+osh-ctrl-03 ready=True taints=
+osh-net-01 ready=True taints=
+osh-net-02 ready=True taints=
+== DS STATUS ==
+NAME          DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE   CONTAINERS    IMAGES                                SELECTOR
+calico-node   16        16        0       16           0           kubernetes.io/os=linux   28h   calico-node   172.16.2.1:5000/calico/node:v3.29.2   k8s-app=calico-node
+{"currentNumberScheduled":16,"desiredNumberScheduled":16,"numberMisscheduled":0,"numberReady":0,"numberUnavailable":16,"observedGeneration":9,"updatedNumberScheduled":16}
+== DS DESCRIBE ==
+  Normal  SuccessfulDelete  58m                daemonset-controller  Deleted pod: calico-node-vc2f4
+  Normal  SuccessfulDelete  58m                daemonset-controller  Deleted pod: calico-node-mkhr2
+  Normal  SuccessfulDelete  58m                daemonset-controller  Deleted pod: calico-node-n22tp
+  Normal  SuccessfulDelete  58m                daemonset-controller  Deleted pod: calico-node-q9jmt
+  Normal  SuccessfulDelete  58m                daemonset-controller  Deleted pod: calico-node-2d4dh
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-942tz
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-hrsqv
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-qcgbz
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-hh94m
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-bv58v
+  Normal  SuccessfulCreate  58m                daemonset-controller  Created pod: calico-node-hqvq9
+  Normal  SuccessfulDelete  58m (x7 over 58m)  daemonset-controller  (combined from similar events): Deleted pod: calico-node-qng9m
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-hrsqv
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-zjgwm
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-jjx74
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-qcgbz
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-hqvq9
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-2kzxs
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-hmz89
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-d5jnq
+  Normal  SuccessfulDelete  16m                daemonset-controller  Deleted pod: calico-node-bv58v
+  Normal  SuccessfulDelete  16m (x7 over 16m)  daemonset-controller  (combined from similar events): Deleted pod: calico-node-zmfjl
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-prghj
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-k6rfb
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-fxkz2
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-j85d9
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-vhxf9
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-6bgzb
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-wjgkk
+  Normal  SuccessfulCreate  16m                daemonset-controller  Created pod: calico-node-spmdq
+== PODS ==
+NAME                                    READY   STATUS             RESTARTS          AGE   IP          NODE            NOMINATED NODE   READINESS GATES
+calico-node-4skhr                       0/1     CrashLoopBackOff   6 (2m39s ago)     16m   10.0.10.4   osh-net-01      <none>           <none>
+calico-node-5nc79                       0/1     CrashLoopBackOff   6 (4m40s ago)     16m   10.0.30.5   osh-comp-03     <none>           <none>
+calico-node-69m5w                       0/1     CrashLoopBackOff   6 (3m3s ago)      16m   10.0.30.3   osh-ctrl-03     <none>           <none>
+calico-node-6bgzb                       0/1     CrashLoopBackOff   7 (74s ago)       16m   10.0.20.2   k8s-db-02       <none>           <none>
+calico-node-7jjws                       0/1     CrashLoopBackOff   6 (3m47s ago)     16m   10.0.10.2   k8s-db-01       <none>           <none>
+calico-node-chpfk                       0/1     CrashLoopBackOff   6 (5m23s ago)     16m   10.0.20.4   osh-net-02      <none>           <none>
+calico-node-ck95p                       0/1     CrashLoopBackOff   6 (4m3s ago)      16m   10.0.10.5   osh-comp-01     <none>           <none>
+calico-node-fxkz2                       0/1     CrashLoopBackOff   6 (2m16s ago)     16m   10.0.10.6   osh-comp-04     <none>           <none>
+calico-node-j85d9                       0/1     CrashLoopBackOff   4 (3m21s ago)     16m   10.0.20.3   osh-ctrl-02     <none>           <none>
+calico-node-k6rfb                       0/1     CrashLoopBackOff   6 (2m31s ago)     16m   10.0.30.2   k8s-db-03       <none>           <none>
+calico-node-prghj                       0/1     CrashLoopBackOff   5 (116s ago)      16m   10.0.30.1   k8s-master-03   <none>           <none>
+calico-node-spmdq                       0/1     CrashLoopBackOff   7 (73s ago)       16m   10.0.20.5   osh-comp-02     <none>           <none>
+calico-node-txvhn                       0/1     CrashLoopBackOff   6 (5m4s ago)      16m   10.0.30.4   monsrv          <none>           <none>
+calico-node-vhxf9                       0/1     CrashLoopBackOff   6 (82s ago)       16m   10.0.20.1   k8s-master-02   <none>           <none>
+calico-node-wjgkk                       0/1     CrashLoopBackOff   6 (90s ago)       16m   10.0.10.3   osh-ctrl-01     <none>           <none>
+calico-node-zh9c4                       0/1     CrashLoopBackOff   6 (90s ago)       16m   10.0.10.1   k8s-master-01   <none>           <none>
+== EVENTS ==
+4m23s       Normal    LeaderElection     lease/kube-controller-manager               k8s-master-03_230c27cc-074e-4c71-b5ab-b87eff16a74e became leader
+4m10s       Warning   Unhealthy          pod/kube-apiserver-k8s-master-01            Readiness probe failed: HTTP probe failed with statuscode: 500
+4m6s        Normal    Pulled             pod/calico-node-ck95p                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+3m50s       Normal    Pulled             pod/calico-node-7jjws                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+3m4s        Warning   Unhealthy          pod/calico-node-69m5w                       Readiness probe failed:
+3m3s        Normal    Pulled             pod/kube-controller-manager-k8s-master-02   Container image "172.16.2.1:5000/kube-controller-manager:v1.35.4" already present on machine and can be accessed by the pod
+3m2s        Warning   BackOff            pod/calico-node-wjgkk                       Back-off restarting failed container calico-node in pod calico-node-wjgkk_kube-system(7b63fd40-f48a-4551-b457-0588a5ca5cb1)
+3m2s        Normal    Started            pod/kube-controller-manager-k8s-master-02   Container started
+3m2s        Normal    Created            pod/kube-controller-manager-k8s-master-02   Container created
+2m45s       Warning   Unhealthy          pod/kube-apiserver-k8s-master-03            Readiness probe failed: HTTP probe failed with statuscode: 500
+2m39s       Warning   BackOff            pod/calico-node-chpfk                       Back-off restarting failed container calico-node in pod calico-node-chpfk_kube-system(ace2808b-a887-4e85-972f-f6694a5e09fe)
+2m24s       Warning   BackOff            pod/calico-node-txvhn                       Back-off restarting failed container calico-node in pod calico-node-txvhn_kube-system(a556612d-322a-477a-93d4-b912d9952e8e)
+2m24s       Warning   BackOff            pod/calico-node-7jjws                       Back-off restarting failed container calico-node in pod calico-node-7jjws_kube-system(24db2626-b8db-405e-b151-b9319ea6f39c)
+93s         Normal    Pulled             pod/calico-node-vhxf9                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+82s         Warning   BackOff            pod/calico-node-ck95p                       Back-off restarting failed container calico-node in pod calico-node-ck95p_kube-system(d32c6d70-9e32-419b-9177-21d58ddb3c9a)
+81s         Warning   BackOff            pod/calico-node-vhxf9                       Back-off restarting failed container calico-node in pod calico-node-vhxf9_kube-system(10e28918-a485-49b6-b4e9-1acd12967759)
+79s         Normal    Pulled             pod/calico-node-6bgzb                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+77s         Normal    Pulled             pod/calico-node-spmdq                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+75s         Warning   BackOff            pod/calico-node-6bgzb                       Back-off restarting failed container calico-node in pod calico-node-6bgzb_kube-system(ca4cf6a7-a46a-4279-866b-62d3324fb518)
+75s         Normal    Created            pod/calico-node-6bgzb                       Container created
+74s         Warning   BackOff            pod/calico-node-spmdq                       Back-off restarting failed container calico-node in pod calico-node-spmdq_kube-system(aba07055-20e7-4417-a4b1-7fc156789ec0)
+74s         Normal    Created            pod/calico-node-spmdq                       Container created
+74s         Warning   BackOff            pod/calico-node-4skhr                       Back-off restarting failed container calico-node in pod calico-node-4skhr_kube-system(83d1faa0-7489-4267-9d20-97bb918bc588)
+63s         Warning   BackOff            pod/calico-node-fxkz2                       Back-off restarting failed container calico-node in pod calico-node-fxkz2_kube-system(3b0503d1-1ba3-40bb-a43a-6fca925fe4b2)
+63s         Warning   BackOff            pod/calico-node-5nc79                       Back-off restarting failed container calico-node in pod calico-node-5nc79_kube-system(7be548a0-c83d-4fb4-b561-6c64bc220be7)
+60s         Warning   BackOff            pod/calico-node-k6rfb                       Back-off restarting failed container calico-node in pod calico-node-k6rfb_kube-system(32c9e83d-3c11-4e9f-9490-4e909a7cf2ed)
+36s         Warning   BackOff            pod/calico-node-prghj                       Back-off restarting failed container calico-node in pod calico-node-prghj_kube-system(b08250c8-64c9-4edd-ab01-8990649cb874)
+30s         Warning   BackOff            pod/calico-node-69m5w                       Back-off restarting failed container calico-node in pod calico-node-69m5w_kube-system(1e6b24a7-ea92-4904-9536-b79530dfb18b)
+27s         Warning   BackOff            pod/calico-node-j85d9                       Back-off restarting failed container calico-node in pod calico-node-j85d9_kube-system(d89621fe-773c-4f61-acf0-ac94f114b604)
+5s          Normal    Pulled             pod/calico-node-chpfk                       Container image "172.16.2.1:5000/calico/node:v3.29.2" already present on machine and can be accessed by the pod
+== ETCD HEALTH ==
+ok
+[+]poststarthook/start-kube-apiserver-identity-lease-garbage-collector ok
+[+]poststarthook/start-legacy-token-tracking-controller ok
+[+]poststarthook/start-service-ip-repair-controllers ok
+[+]poststarthook/rbac/bootstrap-roles ok
+[+]poststarthook/scheduling/bootstrap-system-priority-classes ok
+[+]poststarthook/priority-and-fairness-config-producer ok
+[+]poststarthook/bootstrap-controller ok
+[+]poststarthook/start-kubernetes-service-cidr-controller ok
+[+]poststarthook/aggregator-reload-proxy-client-cert ok
+[+]poststarthook/start-kube-aggregator-informers ok
+[+]poststarthook/apiservice-status-local-available-controller ok
+[+]poststarthook/apiservice-status-remote-available-controller ok
+[+]poststarthook/apiservice-registration-controller ok
+[+]poststarthook/apiservice-discovery-controller ok
+[+]poststarthook/kube-apiserver-autoregistration ok
+[+]autoregister-completion ok
+[+]poststarthook/apiservice-openapi-controller ok
+[+]poststarthook/apiservice-openapiv3-controller ok
+[+]shutdown ok
+readyz check passed
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ # On the k8s master VM:
+sudo journalctl -u kubelet -n 120 --no-pager | grep -Ei 'cni|calico|NotReady|network'
+ls -l /etc/cni/net.d/            # empty => no CNI conf written => node stays NotReady
+ls -l /opt/cni/bin/ | grep -i calico
+sudo crictl pods 2>/dev/null | grep -i calico
+sudo crictl ps -a 2>/dev/null | grep -i calico
+sudo journalctl -u containerd -n 80 --no-pager | tail -40
+Sep 18 17:39:43 k8s-master-01 kubelet[235297]: I0918 17:39:43.577606  235297 kubelet.go:2619] "SyncLoop (PLEG): event for pod" pod="kube-system/calico-node-zh9c4" event={"ID":"01bd5bcd-9b9e-4827-8977-a285da6afd47","Type":"ContainerDied","Data":"543f1dcbc30cf878e9ea1b982b939e20be80b8983a9b1caae4ca08a492b881b0"}
+Sep 18 17:39:43 k8s-master-01 kubelet[235297]: E0918 17:39:43.581063  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:39:44 k8s-master-01 kubelet[235297]: E0918 17:39:44.621883  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:39:49 k8s-master-01 kubelet[235297]: I0918 17:39:49.659637  235297 kubelet.go:2707] "SyncLoop (probe)" probe="liveness" status="unhealthy" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:39:49 k8s-master-01 kubelet[235297]: E0918 17:39:49.661152  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:39:50 k8s-master-01 kubelet[235297]: I0918 17:39:50.741087  235297 kubelet.go:2707] "SyncLoop (probe)" probe="readiness" status="not ready" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:39:50 k8s-master-01 kubelet[235297]: E0918 17:39:50.742951  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:40:29 k8s-master-01 kubelet[235297]: I0918 17:40:29.887444  235297 kubelet.go:2619] "SyncLoop (PLEG): event for pod" pod="kube-system/calico-node-zh9c4" event={"ID":"01bd5bcd-9b9e-4827-8977-a285da6afd47","Type":"ContainerDied","Data":"5e6bd52c814ec5793fd2810d1fa7bbe28b3c9ca86f569b6320b049a4e7ff9a84"}
+Sep 18 17:40:29 k8s-master-01 kubelet[235297]: E0918 17:40:29.890719  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 1m20s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:40:30 k8s-master-01 kubelet[235297]: I0918 17:40:30.740999  235297 kubelet.go:2707] "SyncLoop (probe)" probe="readiness" status="not ready" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:40:30 k8s-master-01 kubelet[235297]: E0918 17:40:30.911313  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 1m20s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:40:39 k8s-master-01 kubelet[235297]: I0918 17:40:39.658665  235297 kubelet.go:2707] "SyncLoop (probe)" probe="liveness" status="unhealthy" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:40:39 k8s-master-01 kubelet[235297]: E0918 17:40:39.660558  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 1m20s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:42:00 k8s-master-01 kubelet[235297]: I0918 17:42:00.754814  235297 kubelet.go:2619] "SyncLoop (PLEG): event for pod" pod="kube-system/calico-node-zh9c4" event={"ID":"01bd5bcd-9b9e-4827-8977-a285da6afd47","Type":"ContainerStarted","Data":"e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6"}
+Sep 18 17:42:01 k8s-master-01 kubelet[235297]: I0918 17:42:01.774570  235297 kubelet.go:2619] "SyncLoop (PLEG): event for pod" pod="kube-system/calico-node-zh9c4" event={"ID":"01bd5bcd-9b9e-4827-8977-a285da6afd47","Type":"ContainerDied","Data":"e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6"}
+Sep 18 17:42:01 k8s-master-01 kubelet[235297]: E0918 17:42:01.776035  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 2m40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:42:02 k8s-master-01 kubelet[235297]: E0918 17:42:02.782872  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 2m40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:42:09 k8s-master-01 kubelet[235297]: I0918 17:42:09.659305  235297 kubelet.go:2707] "SyncLoop (probe)" probe="liveness" status="unhealthy" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:42:09 k8s-master-01 kubelet[235297]: E0918 17:42:09.661125  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 2m40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:42:10 k8s-master-01 kubelet[235297]: I0918 17:42:10.740673  235297 kubelet.go:2707] "SyncLoop (probe)" probe="readiness" status="not ready" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:42:10 k8s-master-01 kubelet[235297]: E0918 17:42:10.742744  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 2m40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:43:40 k8s-master-01 kubelet[235297]: E0918 17:43:40.455237  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 2m40s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:45:05 k8s-master-01 kubelet[235297]: I0918 17:45:05.963746  235297 kubelet.go:2619] "SyncLoop (PLEG): event for pod" pod="kube-system/calico-node-zh9c4" event={"ID":"01bd5bcd-9b9e-4827-8977-a285da6afd47","Type":"ContainerDied","Data":"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a"}
+Sep 18 17:45:05 k8s-master-01 kubelet[235297]: E0918 17:45:05.966924  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 5m0s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:45:09 k8s-master-01 kubelet[235297]: I0918 17:45:09.659814  235297 kubelet.go:2707] "SyncLoop (probe)" probe="liveness" status="unhealthy" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:45:09 k8s-master-01 kubelet[235297]: E0918 17:45:09.662460  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 5m0s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:45:10 k8s-master-01 kubelet[235297]: I0918 17:45:10.741470  235297 kubelet.go:2707] "SyncLoop (probe)" probe="readiness" status="not ready" pod="kube-system/calico-node-zh9c4"
+Sep 18 17:45:10 k8s-master-01 kubelet[235297]: E0918 17:45:10.743788  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 5m0s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:46:36 k8s-master-01 kubelet[235297]: E0918 17:46:36.458083  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 5m0s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+Sep 18 17:47:53 k8s-master-01 kubelet[235297]: E0918 17:47:53.454133  235297 pod_workers.go:1324] "Error syncing pod, skipping" err="failed to \"StartContainer\" for \"calico-node\" with CrashLoopBackOff: \"
+back-off 5m0s restarting failed container=calico-node pod=calico-node-zh9c4_kube-system(01bd5bcd-9b9e-4827-8977-a285da6afd47)\"" pod="kube-system/calico-node-zh9c4" podUID="01bd5bcd-9b9e-4827-8977-a285da6afd47"
+total 8
+-rw-r--r-- 1 root root  867 Sep 18 17:35 10-calico.conflist
+-rw------- 1 root root 2771 Sep 18 17:35 calico-kubeconfig
+-rwxr-xr-x 1 root root 68833735 Sep 17 13:12 calico
+-rwxr-xr-x 1 root root 68833735 Sep 17 13:12 calico-ipam
+411ac07d16c63       16 minutes ago      Ready               calico-node-zh9c4                       kube-system         0                   (default)
+daf6a27da96ff       048bf7af1f8c6       3 minutes ago       Exited              calico-node               6                   411ac07d16c63       calico-node-zh9c4                       kube-system
+df04fcf65a50c       048bf7af1f8c6       11 minutes ago      Exited              mount-bpffs               0                   411ac07d16c63       calico-node-zh9c4                       kube-system
+f926320714439       cda13293c895a       13 minutes ago      Exited              install-cni               0                   411ac07d16c63       calico-node-zh9c4                       kube-system
+d4a23c7b34bc1       cda13293c895a       13 minutes ago      Exited              upgrade-ipam              0                   411ac07d16c63       calico-node-zh9c4                       kube-system
+Sep 18 17:42:16 k8s-master-01 containerd[222730]: time="2026-09-18T17:42:16.891963932+02:00" level=info msg="container event discarded" container=b02c29c111bc897537578093aebdc7d8fc58b74db31a205a66a8d017367d7ec5 type=CONTAINER_DELETED_EVENT
+Sep 18 17:42:16 k8s-master-01 containerd[222730]: time="2026-09-18T17:42:16.892077175+02:00" level=info msg="container event discarded" container=df04fcf65a50ce8b621aacffb9954ecae76476921ba40a6e6a4f090ef5e8416a type=CONTAINER_STARTED_EVENT
+Sep 18 17:42:19 k8s-master-01 containerd[222730]: time="2026-09-18T17:42:19.524127022+02:00" level=info msg="container event discarded" container=df04fcf65a50ce8b621aacffb9954ecae76476921ba40a6e6a4f090ef5e8416a type=CONTAINER_STOPPED_EVENT
+Sep 18 17:43:14 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:14.840859695+02:00" level=info msg="container event discarded" container=5ad7eb5ab5e0fe6f2a43391b4cb11118ec74d1746e07f21ec412db8b9b4128bf type=CONTAINER_CREATED_EVENT
+Sep 18 17:43:15 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:15.822538525+02:00" level=info msg="container event discarded" container=5ad7eb5ab5e0fe6f2a43391b4cb11118ec74d1746e07f21ec412db8b9b4128bf type=CONTAINER_STARTED_EVENT
+Sep 18 17:43:15 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:15.874042912+02:00" level=info msg="container event discarded" container=13f75daec609502303e987e435f64ca4ffa61ff9221391961972aa7fd3c3b4ce type=CONTAINER_CREATED_EVENT
+Sep 18 17:43:17 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:17.703293188+02:00" level=info msg="container event discarded" container=13f75daec609502303e987e435f64ca4ffa61ff9221391961972aa7fd3c3b4ce type=CONTAINER_STARTED_EVENT
+Sep 18 17:43:23 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:23.066308858+02:00" level=info msg="container event discarded" container=13f75daec609502303e987e435f64ca4ffa61ff9221391961972aa7fd3c3b4ce type=CONTAINER_STOPPED_EVENT
+Sep 18 17:43:27 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:27.216280198+02:00" level=info msg="container event discarded" container=1a59b2271ab60845b1fdddadc176d55e90d14c79a52283899edd20029d55ce5f type=CONTAINER_CREATED_EVENT
+Sep 18 17:43:27 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:27.662392927+02:00" level=info msg="container event discarded" container=1a59b2271ab60845b1fdddadc176d55e90d14c79a52283899edd20029d55ce5f type=CONTAINER_STARTED_EVENT
+Sep 18 17:43:27 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:27.774781888+02:00" level=info msg="container event discarded" container=1a59b2271ab60845b1fdddadc176d55e90d14c79a52283899edd20029d55ce5f type=CONTAINER_STOPPED_EVENT
+Sep 18 17:43:28 k8s-master-01 containerd[222730]: time="2026-09-18T17:43:28.343974781+02:00" level=info msg="container event discarded" container=13f75daec609502303e987e435f64ca4ffa61ff9221391961972aa7fd3c3b4ce type=CONTAINER_DELETED_EVENT
+Sep 18 17:44:03 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:03.030907413+02:00" level=info msg="container event discarded" container=01e761c2dd6f00f95a934c17d10338551e699061180f43741db29cdb75ad03e0 type=CONTAINER_CREATED_EVENT
+Sep 18 17:44:03 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:03.723833414+02:00" level=info msg="container event discarded" container=01e761c2dd6f00f95a934c17d10338551e699061180f43741db29cdb75ad03e0 type=CONTAINER_STARTED_EVENT
+Sep 18 17:44:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:05.309004656+02:00" level=info msg="container event discarded" container=01e761c2dd6f00f95a934c17d10338551e699061180f43741db29cdb75ad03e0 type=CONTAINER_STOPPED_EVENT
+Sep 18 17:44:07 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:07.380099476+02:00" level=info msg="container event discarded" container=1a59b2271ab60845b1fdddadc176d55e90d14c79a52283899edd20029d55ce5f type=CONTAINER_DELETED_EVENT
+Sep 18 17:44:42 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:42.239472593+02:00" level=info msg="container event discarded" container=543f1dcbc30cf878e9ea1b982b939e20be80b8983a9b1caae4ca08a492b881b0 type=CONTAINER_CREATED_EVENT
+Sep 18 17:44:42 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:42.530883512+02:00" level=info msg="container event discarded" container=543f1dcbc30cf878e9ea1b982b939e20be80b8983a9b1caae4ca08a492b881b0 type=CONTAINER_STARTED_EVENT
+Sep 18 17:44:42 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:42.722838313+02:00" level=info msg="container event discarded" container=543f1dcbc30cf878e9ea1b982b939e20be80b8983a9b1caae4ca08a492b881b0 type=CONTAINER_STOPPED_EVENT
+Sep 18 17:44:43 k8s-master-01 containerd[222730]: time="2026-09-18T17:44:43.648567566+02:00" level=info msg="container event discarded" container=01e761c2dd6f00f95a934c17d10338551e699061180f43741db29cdb75ad03e0 type=CONTAINER_DELETED_EVENT
+Sep 18 17:45:00 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:00.462279729+02:00" level=info msg="CreateContainer within sandbox \"411ac07d16c6366c5a33fd395ef8e8ee2c58c2bd1d9dbbb9d51bb555463973ab\" for container name:\"calico-node\" attempt:6"
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.117965000+02:00" level=info msg="CreateContainer within sandbox \"411ac07d16c6366c5a33fd395ef8e8ee2c58c2bd1d9dbbb9d51bb555463973ab\" for name:\"calico-node\" attempt:6 returns container id \"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a\""
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.119699080+02:00" level=info msg="StartContainer for \"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a\""
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.125492298+02:00" level=info msg="connecting to shim daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a" address="unix:///run/containerd/s/1a1a33bb9a94ec0ebe1b0f7eb92bed97863a126b881d95cd9d4a1585e066bb31" protocol=ttrpc version=3
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.407587890+02:00" level=info msg="StartContainer for \"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a\" returns successfully"
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.582346538+02:00" level=info msg="received container exit event container_id:\"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a\" id:\"daf6a27da96ffbec39f16331897fc15ed1cd008812e7466313551c9f762cb26a\" pid:781632 exit_status:1 exited_at:{seconds:1789746305 nanos:581146603}"
+Sep 18 17:45:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:05.979022677+02:00" level=info msg="RemoveContainer for \"e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6\""
+Sep 18 17:45:06 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:06.898364923+02:00" level=info msg="RemoveContainer for \"e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6\" returns successfully"
+Sep 18 17:45:25 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:25.338111859+02:00" level=info msg="container event discarded" container=b5f892be5639c11103c8ceb507698add6eb486c1c4adf7029de92f5215f7737e type=CONTAINER_STOPPED_EVENT
+Sep 18 17:45:25 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:25.912268851+02:00" level=info msg="container event discarded" container=018dc226fbe3ce69ba5db519525fe10fc362de4d0c00603a21fc4b5d6cd4f18c type=CONTAINER_DELETED_EVENT
+Sep 18 17:45:29 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:29.071109333+02:00" level=info msg="container event discarded" container=5e6bd52c814ec5793fd2810d1fa7bbe28b3c9ca86f569b6320b049a4e7ff9a84 type=CONTAINER_CREATED_EVENT
+Sep 18 17:45:29 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:29.394286353+02:00" level=info msg="container event discarded" container=5e6bd52c814ec5793fd2810d1fa7bbe28b3c9ca86f569b6320b049a4e7ff9a84 type=CONTAINER_STARTED_EVENT
+Sep 18 17:45:29 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:29.672667267+02:00" level=info msg="container event discarded" container=5e6bd52c814ec5793fd2810d1fa7bbe28b3c9ca86f569b6320b049a4e7ff9a84 type=CONTAINER_STOPPED_EVENT
+Sep 18 17:45:29 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:29.989056632+02:00" level=info msg="container event discarded" container=543f1dcbc30cf878e9ea1b982b939e20be80b8983a9b1caae4ca08a492b881b0 type=CONTAINER_DELETED_EVENT
+Sep 18 17:45:41 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:41.709330152+02:00" level=info msg="container event discarded" container=205255b4f4179d142e853191af5286c75d7ec4780b456168dc2a0da150dec2af type=CONTAINER_CREATED_EVENT
+Sep 18 17:45:42 k8s-master-01 containerd[222730]: time="2026-09-18T17:45:42.014321837+02:00" level=info msg="container event discarded" container=205255b4f4179d142e853191af5286c75d7ec4780b456168dc2a0da150dec2af type=CONTAINER_STARTED_EVENT
+Sep 18 17:46:59 k8s-master-01 containerd[222730]: time="2026-09-18T17:46:59.630288502+02:00" level=info msg="container event discarded" container=e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6 type=CONTAINER_CREATED_EVENT
+Sep 18 17:47:00 k8s-master-01 containerd[222730]: time="2026-09-18T17:47:00.729567996+02:00" level=info msg="container event discarded" container=e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6 type=CONTAINER_STARTED_EVENT
+Sep 18 17:47:01 k8s-master-01 containerd[222730]: time="2026-09-18T17:47:01.516896358+02:00" level=info msg="container event discarded" container=e0fc863a91ec5d2e345affa477b1d6f51a7a30fac449de0c80e64a24d47220c6 type=CONTAINER_STOPPED_EVENT
+Sep 18 17:47:05 k8s-master-01 containerd[222730]: time="2026-09-18T17:47:05.035579005+02:00" level=info msg="container event discarded" container=5e6bd52c814ec5793fd2810d1fa7bbe28b3c9ca86f569b6320b049a4e7ff9a84 type=CONTAINER_DELETED_EVENT
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ 
+
+ubuntu@k8s-db-01:~$ 
+ubuntu@k8s-db-01:~$ 
+ubuntu@k8s-db-01:~$ grep -E 'HEARTBEAT_INTERVAL|ELECTION_TIMEOUT' /etc/etcd.env
+sudo systemctl status etcd --no-pager | head -15
+sudo journalctl -u etcd -n 60 --no-pager | grep -Ei 'elect|leader|lost|slow|took too long'
+grep: /etc/etcd.env: Permission denied
+● etcd.service - etcd
+     Loaded: loaded (/etc/systemd/system/etcd.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-09-18 16:43:28 CEST; 1h 9min ago
+ Invocation: 33c8a476ec66464e87e73fdbab9c2be0
+   Main PID: 818374 (etcd)
+      Tasks: 15 (limit: 10395)
+     Memory: 287.8M (peak: 288.7M)
+        CPU: 5min 26.671s
+     CGroup: /system.slice/etcd.service
+             └─818374 /usr/local/bin/etcd
+
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"info","ts":"2026-09-18T17:53:17.567676+0200","caller":"traceutil/trace.go:171","msg":"trace[1689984514] range","detail":"{range_begin:/registry/validatingwebhookconfigurations; range_end:; response_count:0; response_revision:213619; }","duration":"425.841671ms","start":"2026-09-18T17:53:17.141823+0200","end":"2026-09-18T17:53:17.567664+0200","steps":["trace[1689984514] 'agreement among raft nodes before linearized reading'  (duration: 425.757847ms)"],"step_count":1}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567722+0200","caller":"v3rpc/interceptor.go:197","msg":"request stats","start time":"2026-09-18T17:53:17.141782+0200","time spent":"425.927594ms","remote":"10.0.20.1:57424","response type":"/etcdserverpb.KV/Range","request count":0,"request size":45,"response count":0,"response size":29,"request content":"key:\"/registry/validatingwebhookconfigurations\" limit:1 "}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"info","ts":"2026-09-18T17:53:17.567640+0200","caller":"traceutil/trace.go:171","msg":"trace[1882226466] range","detail":"{range_begin:/registry/health; range_end:; response_count:0; response_revision:213619; }","duration":"1.258444788s","start":"2026-09-18T17:53:16.309157+0200","end":"2026-09-18T17:53:17.567601+0200","steps":["trace[1882226466] 'agreement among raft nodes before linearized reading'  (duration: 1.25835258s)"],"step_count":1}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567815+0200","caller":"v3rpc/interceptor.go:197","msg":"request stats","start time":"2026-09-18T17:53:16.309084+0200","time spent":"1.258712439s","remote":"10.0.20.1:56516","response type":"/etcdserverpb.KV/Range","request count":0,"request size":18,"response count":0,"response size":29,"request content":"key:\"/registry/health\" "}
+Sep 18 17:53:10 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:10.941244+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":10572658299358672648,"retry-timeout":"500ms"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.307999+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.66611253s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/minions\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.308087+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"609.994344ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/crd.projectcalico.org/bgpconfigurations\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.308106+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.837868436s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/runtimeclasses\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.307999+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"690.746855ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/priorityclasses\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.308898+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"2.312420237s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/events/\" range_end:\"/registry/events0\" count_only:true ","response":"range_response_count:0 size:9"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.308173+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.565437336s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/leases/kube-system/kube-controller-manager\" limit:1 ","response":"range_response_count:1 size:515"}
+Sep 18 17:53:11 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:11.308084+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"585.054125ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/leases/kube-system/kube-controller-manager\" limit:1 ","response":"range_response_count:1 size:515"}
+Sep 18 17:53:16 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:16.094767+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":10572658299358672677,"retry-timeout":"500ms"}
+Sep 18 17:53:16 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:16.596236+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":10572658299358672677,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.097319+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":10572658299358672677,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.531348+0200","caller":"wal/wal.go:805","msg":"slow fdatasync","took":"2.226198812s","expected-duration":"1s"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.531647+0200","caller":"etcdserver/raft.go:428","msg":"leader failed to send out heartbeat on time; took too long, leader is o
+verloaded likely from slow disk","to":"a0988f5997b99aa9","heartbeat-interval":"600ms","expected-duration":"1.2s","exceeded-duration":"1.507905356s"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.531750+0200","caller":"etcdserver/raft.go:428","msg":"leader failed to send out heartbeat on time; took too long, leader is o
+verloaded likely from slow disk","to":"79488f27f936d5b0","heartbeat-interval":"600ms","expected-duration":"1.2s","exceeded-duration":"1.508015199s"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567244+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.973450594s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/endpointslices\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567473+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.773170832s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/mutatingwebhookconfigurations/\" range_end:\"/registry/mutatingwebhookconfigurations0\" limit:10000 revision:213616 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567554+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.258386746s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567611+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"425.779425ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/validatingwebhookconfigurations\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-01 etcd[818374]: {"level":"warn","ts":"2026-09-18T17:53:17.567555+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.044344658s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/ranges/servicenodeports\" limit:1 ","response":"range_response_count:1 size:119"}
+ubuntu@k8s-db-01:~$ 
+
+
+ubuntu@k8s-db-02:~$ 
+ubuntu@k8s-db-02:~$ 
+ubuntu@k8s-db-02:~$ 
+ubuntu@k8s-db-02:~$ grep -E 'HEARTBEAT_INTERVAL|ELECTION_TIMEOUT' /etc/etcd.env
+sudo systemctl status etcd --no-pager | head -15
+sudo journalctl -u etcd -n 60 --no-pager | grep -Ei 'elect|leader|lost|slow|took too long'
+grep: /etc/etcd.env: Permission denied
+● etcd.service - etcd
+     Loaded: loaded (/etc/systemd/system/etcd.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-09-18 16:43:18 CEST; 1h 10min ago
+ Invocation: b8cc28ef8e0d4576950303a022041167
+   Main PID: 213350 (etcd)
+      Tasks: 16 (limit: 10395)
+     Memory: 285.8M (peak: 286.1M)
+        CPU: 5min 12.587s
+     CGroup: /system.slice/etcd.service
+             └─213350 /usr/local/bin/etcd
+
+Sep 18 17:53:21 k8s-db-02 etcd[213350]: {"level":"info","ts":"2026-09-18T17:53:21.853421+0200","caller":"traceutil/trace.go:171","msg":"trace[1553318081] transaction","detail":"{read_only:false; response_revision:213636; number_of_response:1; }","duration":"259.445291ms","start":"2026-09-18T17:53:21.593961+0200","end":"2026-09-18T17:53:21.853407+0200","steps":["trace[1553318081] 'process raft request'  (duration: 258.78783ms)"],"step_count":1}
+Sep 18 17:53:23 k8s-db-02 etcd[213350]: {"level":"info","ts":"2026-09-18T17:53:23.228017+0200","caller":"traceutil/trace.go:171","msg":"trace[1199705778] linearizableReadLoop","detail":"{readStateIndex:244213; appliedIndex:244214; }","duration":"328.358864ms","start":"2026-09-18T17:53:22.899626+0200","end":"2026-09-18T17:53:23.227984+0200","steps":["trace[1199705778] 'read index received'  (duration: 328.346785ms)","trace[1199705778] 'applied index is now lower than readState.Index'  (duration: 9.827µs)"],"step_count":2}
+Sep 18 17:53:23 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:23.228252+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"328.593227ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:23 k8s-db-02 etcd[213350]: {"level":"info","ts":"2026-09-18T17:53:23.228321+0200","caller":"traceutil/trace.go:171","msg":"trace[1176608812] range","detail":"{range_begin:/registry/health; range_end:; response_count:0; response_revision:213648; }","duration":"328.689166ms","start":"2026-09-18T17:53:22.899614+0200","end":"2026-09-18T17:53:23.228303+0200","steps":["trace[1176608812] 'agreement among raft nodes before linearized reading'  (duration: 328.543007ms)"],"step_count":1}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.307901+0200","caller":"etcdserver/v3_server.go:897","msg":"ignored out-of-date read index response; local node read indexes q
+ueueing up and waiting to be in sync with leader","sent-request-id":11144615452033103820,"received-request-id":11144615452033103814}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.320042+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"431.299726ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.320079+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"358.488991ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/events/kube-system/kube-apiserver-k8s-master-03.18d6607f4ea2b050\" limit:1 ","response":"range_response_count:1 size:803"}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.320107+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"633.067225ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/masterleases/10.0.30.1\" limit:1 ","response":"range_response_count:1 size:128"}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.320172+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"952.842434ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/leases/kube-system/kube-scheduler\" limit:1 ","response":"range_response_count:1 size:488"}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.587889+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"180.342929ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/masterleases/\" range_end:\"/registry/masterleases0\" ","response":"range_response_count:3 size:368"}
+Sep 18 17:53:11 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:11.588069+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"145.527126ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/masterleases/\" range_end:\"/registry/masterleases0\" ","response":"range_response_count:3 size:368"}
+Sep 18 17:53:16 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:16.742415+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":11144615452033103847,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:17.243816+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":11144615452033103847,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:17.542609+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.300831446s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/resourceclaimtemplates\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:17.554754+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"539.078526ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/flowschemas\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:17.554778+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.151137348s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/certificatesigningrequests\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:21 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:21.811199+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":11144615452033103868,"retry-timeout":"500ms"}
+Sep 18 17:53:21 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:21.852926+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"542.706673ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:23 k8s-db-02 etcd[213350]: {"level":"warn","ts":"2026-09-18T17:53:23.228252+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"328.593227ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+ubuntu@k8s-db-02:~$ 
+
+
+ubuntu@k8s-db-03:~$ 
+ubuntu@k8s-db-03:~$ 
+ubuntu@k8s-db-03:~$ grep -E 'HEARTBEAT_INTERVAL|ELECTION_TIMEOUT' /etc/etcd.env
+sudo systemctl status etcd --no-pager | head -15
+sudo journalctl -u etcd -n 60 --no-pager | grep -Ei 'elect|leader|lost|slow|took too long'
+grep: /etc/etcd.env: Permission denied
+● etcd.service - etcd
+     Loaded: loaded (/etc/systemd/system/etcd.service; enabled; preset: enabled)
+     Active: active (running) since Fri 2026-09-18 16:42:48 CEST; 1h 10min ago
+ Invocation: 8a357a89c69b432da56f5385c00aab72
+   Main PID: 209481 (etcd)
+      Tasks: 15 (limit: 10395)
+     Memory: 275.3M (peak: 275.5M)
+        CPU: 5min 24.516s
+     CGroup: /system.slice/etcd.service
+             └─209481 /usr/local/bin/etcd
+
+Sep 18 17:53:21 k8s-db-03 etcd[209481]: {"level":"info","ts":"2026-09-18T17:53:21.818994+0200","caller":"traceutil/trace.go:171","msg":"trace[1837860217] transaction","detail":"{read_only:false; response_revision:213633; number_of_response:1; }","duration":"128.452654ms","start":"2026-09-18T17:53:21.690527+0200","end":"2026-09-18T17:53:21.818980+0200","steps":["trace[1837860217] 'process raft request'  (duration: 128.360401ms)"],"step_count":1}
+Sep 18 17:53:23 k8s-db-03 etcd[209481]: {"level":"info","ts":"2026-09-18T17:53:23.239077+0200","caller":"traceutil/trace.go:171","msg":"trace[954135677] transaction","detail":"{read_only:false; response_revision:213648; number_of_response:1; }","duration":"513.863388ms","start":"2026-09-18T17:53:22.725163+0200","end":"2026-09-18T17:53:23.239026+0200","steps":["trace[954135677] 'process raft request'  (duration: 513.49474ms)"],"step_count":1}
+Sep 18 17:53:23 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:23.239359+0200","caller":"v3rpc/interceptor.go:197","msg":"request stats","start time":"2026-09-18T17:53:22.725119+0200","time spent":"514.098856ms","remote":"10.0.20.1:48010","response type":"/etcdserverpb.KV/Txn","request count":1,"request size":525,"response count":0,"response size":41,"request content":"compare:<target:MOD key:\"/registry/leases/kube-node-lease/k8s-db-02\" mod_revision:213601 > success:<request_put:<key:\"/registry/leases/kube-node-lease/k8s-db-02\" value_size:475 >> failure:<request_range:<key:\"/registry/leases/kube-node-lease/k8s-db-02\" > >"}
+Sep 18 17:53:23 k8s-db-03 etcd[209481]: {"level":"info","ts":"2026-09-18T17:53:23.256527+0200","caller":"traceutil/trace.go:171","msg":"trace[579002900] transaction","detail":"{read_only:false; response_revision:213654; number_of_response:1; }","duration":"429.500623ms","start":"2026-09-18T17:53:22.826998+0200","end":"2026-09-18T17:53:23.256498+0200","steps":["trace[579002900] 'process raft request'  (duration: 429.175365ms)"],"step_count":1}
+Sep 18 17:53:10 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:10.820198+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":15397983825100396193,"retry-timeout":"500ms"}
+Sep 18 17:53:11 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:11.302798+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.98512161s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:11.322104+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.256092279s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/priorityclasses\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:11.322200+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"301.4827ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/crd.projectcalico.org/felixconfigurations\" limit:1 ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:11.322237+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"497.785414ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:11 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:11.322108+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"283.430491ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:16 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:16.394004+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":15397983825100396230,"retry-timeout":"500ms"}
+Sep 18 17:53:16 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:16.895484+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":15397983825100396230,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:17.396038+0200","caller":"etcdserver/v3_server.go:920","msg":"waiting for ReadIndex response took too long, retrying","sent-request-id":15397983825100396230,"retry-timeout":"500ms"}
+Sep 18 17:53:17 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:17.546628+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.653071122s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:17.652438+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"105.7026ms","expected-duration":"100ms","prefix":"","request":"header:<ID:10572658299358672681 > lease_revoke:<id:1aa9a0b4f8c33798>","response":"size:29"}
+Sep 18 17:53:17 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:17.660369+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"1.75060935s","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/health\" ","response":"range_response_count:0 size:6"}
+Sep 18 17:53:17 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:17.660408+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"753.593338ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/leases/kube-system/kube-controller-manager\" limit:1 ","response":"range_response_count:1 size:515"}
+Sep 18 17:53:21 k8s-db-03 etcd[209481]: {"level":"warn","ts":"2026-09-18T17:53:21.818299+0200","caller":"etcdserver/util.go:170","msg":"apply request took too long","took":"314.377043ms","expected-duration":"100ms","prefix":"read-only range ","request":"key:\"/registry/validatingadmissionpolicies\" limit:1 ","response":"range_response_count:0 size:6"}
+ubuntu@k8s-db-03:~$ 
+ubuntu@k8s-db-03:~$ 
+ubuntu@k8s-db-03:~$ 
+
