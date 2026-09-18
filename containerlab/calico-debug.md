@@ -82,3 +82,107 @@ sudo journalctl -u etcd -n 60 --no-pager | grep -Ei 'elect|leader|lost|slow|took
 Paste back the `== NODES ==`, `== DS STATUS/DESCRIBE ==`, and `== PODS ==` output and I'll pinpoint the exact fix. My current strongest hypothesis: the single node is `NotReady` (no CNI conf in `/etc/cni/net.d`), which makes the DaemonSet report `desired=0` — a bootstrap ordering issue rather than RBAC.
 
 Made changes.
+
+
+
+Now I have everything I need. This log set is decisive — let me pin down the two distinct failures before fixing. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml#168-168), lines 168 to 190
+
+The RBAC fix worked (install-cni now exits clean and writes `10-calico.conflist`), which uncovered the *actual* two problems. Let me apply the fixes: switch IP autodetection off the fragile `ens2` guess onto the known-good node InternalIP, and make diagnostics capture the calico-node (Felix) container logs, not just install-cni.  
+
+Replacing 15 lines with 19 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=$PWD/ansible.cfg && ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-check && echo CALICO_SYNTAX_OK'
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/OTI0ZDZiNDEtMmMwOC00MTZhLTgzOTktNWViOTA4ZGQ0MTM4/lab-controlpath.md)
+
+Playbook fixes are in and syntax-checked green. Here's the full deep dive.
+
+## What the logs actually prove
+
+Your logs let us peel this apart cleanly. The RBAC fix worked — the story has moved on:
+
+1. **install-cni now succeeds.** Its log ends with `Created /host/etc/cni/net.d/10-calico.conflist … Done configuring CNI. Sleep= false`, and `crictl ps -a` shows `install-cni … Exited` with the init containers (`upgrade-ipam`, `install-cni`, `mount-bpffs`) all exiting **0**. On the master, `/etc/cni/net.d/10-calico.conflist` and `calico-kubeconfig` exist. So the token-RBAC chapter is closed.
+
+2. **All 16 nodes are `Ready`.** That's why the convergence string went from `''` to `16 16` — kubelet marks the node Ready once the CNI conf file is on disk, independent of the pod.
+
+3. **The thing crash-looping now is the *main* `calico-node` (Felix) container, not an init container.** The pod describe shows `spec.containers{calico-node}` and `crictl` shows `calico-node … Exited … 6` with `exit_status:1`. The readiness message `felix is not ready: … dial tcp 127.0.0.1:9099: connect: connection refused` is a *symptom*: the container exits during startup, so nothing is listening on Felix's port 9099.
+
+A container that exits `1` deterministically on **all 16 nodes**, 6–7 times each over 16 minutes, is a **config failure**, not slowness. That points straight at one env var.
+
+## Root cause #1 — the IP-autodetection guess (deterministic Calico killer)
+
+The `Repair the global Calico DaemonSet env` task was setting:
+
+```
+IP_AUTODETECTION_METHOD=interface=^ens2$
+```
+
+`ens2` was a **guess**. `calico/node` startup (`startup.go`) runs IP autodetection *before* Felix starts; if no interface matches that regex, it logs `Unable to autodetect an IPv4 address using interface regex 'ens2'` and **exits 1** → CrashLoopBackOff on every node → `AVAILABLE 0` → your assert fails. It doesn't matter that the CNI is installed; the pod can never go Ready.
+
+**Fix applied:** switched to the NIC-name-independent method that uses the address Kubernetes already assigned each node (the `10.0.x.y` InternalIPs you saw in `get nodes -o wide`):
+
+```yaml
+IP_AUTODETECTION_METHOD={{ calico_ip_autodetect_method | default('kubernetes-internal-ip') }}
+```
+
+This can't miss — every node has a valid InternalIP, and it's independent of whether the interface is `ens2`, `ens3`, `enp1s0`, etc. I also made the diagnostic dump the `calico-node` container logs (current **and** `--previous`), so future failures show the Felix error directly instead of only install-cni.
+
+**Confirm the theory in 5 seconds** (before/after re-run):
+```bash
+kubectl -n kube-system logs $(kubectl -n kube-system get pod -l k8s-app=calico-node -o name | head -1) -c calico-node --previous | head -40
+```
+You should see the `Unable to autodetect` line. After the fix + re-run, that same command shows Felix starting normally.
+
+## Root cause #2 — etcd is disk-bound (the systemic stressor)
+
+This is real and independent, and it's why the *whole control plane* is twitchy. Every etcd VM shows:
+
+```
+slow fdatasync   took 2.226s  expected 1s
+leader failed to send out heartbeat on time; ... overloaded likely from slow disk   heartbeat-interval 600ms
+apply request took too long   took 1.9s–2.3s   expected 100ms
+waiting for ReadIndex response took too long, retrying
+```
+
+Interpretation:
+- Your **600/6000 tuning did take effect** (`heartbeat-interval: 600ms` is right there in the log), and it's what's keeping quorum from collapsing. Good.
+- But the **backing disk fsync takes 2+ seconds**. etcd must `fdatasync` every raft commit to the WAL; when that takes 2s, apiserver reads/writes stall, which is exactly why you also saw `kube-apiserver Readiness probe failed: statuscode 500`, `kube-controller-manager … connection refused`, and scheduler/controller **leader elections churning**. Calico's startup talking to that browning-out apiserver adds intermittent slowness on top of the deterministic `ens2` crash.
+
+Widening timeouts can't fix a 2-second fsync — you have to make fsync cheap. For a **virtual lab**, the highest-leverage, in-guest knob is to tell etcd to stop waiting on physical sync:
+
+On **each** of `k8s-db-01/02/03` (note `/etc/etcd.env` is root-only — use `sudo`), one member at a time:
+
+```bash
+sudo grep -q UNSAFE_NO_FSYNC /etc/etcd.env || \
+  echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
+sudo systemctl restart etcd
+# wait for this member to report healthy before moving to the next:
+sudo systemctl status etcd --no-pager | head -5
+```
+
+Do them **serially** (restart db-01, confirm healthy, then db-02, then db-03) so you never drop quorum. This turns the 2s WAL sync into microseconds and the `apply request took too long` / heartbeat warnings disappear.
+
+> Trade-off, stated plainly: `unsafe-no-fsync` means an abrupt power-loss of an etcd VM can lose its last few writes. For a lab that's acceptable; do **not** carry this into production. The permanent/production-grade alternative is to fix it at the hypervisor: give the etcd data disk `cache=writeback` (or `unsafe`) and, ideally, back it with SSD/NVMe rather than a qcow2 on spinning/overcommitted storage.
+
+Optional extra relief while stressed: keep the `logSeverityScreen: Warning` you already set, and avoid running multiple heavy playbooks against the cluster simultaneously.
+
+## Do this next (in order)
+
+1. **Sync** this repo edit into your run repo (`/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab`) — the `IP_AUTODETECTION_METHOD` change is the actual fix.
+2. Apply the **etcd `UNSAFE_NO_FSYNC`** change on the three db VMs (serial restarts) to calm the datastore.
+3. Re-run:
+   ```bash
+   ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+   ```
+
+Expected result: `calico-node` pods go `1/1 Running`, the DaemonSet converges to `16 16 16`, the assert passes, and CoreDNS (currently blocked by no CNI) schedules right after. If anything still fails, the new diagnostic will now print the Felix (`calico-node`) crash reason directly in the assert message.
+
+Made changes.
