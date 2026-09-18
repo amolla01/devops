@@ -363,3 +363,82 @@ I don't think there's a fourth Calico playbook tweak worth making until Step A s
 One thing I noticed but deliberately did **not** touch (to avoid adding another variable): `CALICO_NETWORKING_BACKEND` renders **empty**, not `none`, while `CLUSTER_TYPE=k8s,bgp` — which would make Calico try to run BIRD. If the un-blinded log implicates BGP/BIRD rather than the datastore, that's our next lead. Send me the Step A output and I'll pinpoint it instead of guessing.
 
 Made changes.
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+**That's it. We finally have the real error** — and it is 100% deterministic, not etcd, not autodetection:
+
+```
+startup/startup.go 456: Connection to the datastore is unauthorized
+error=... nodes "foo" is forbidden: User "system:serviceaccount:kube-system:calico-node"
+cannot get resource "nodes" in API group "" at the cluster scope
+```
+
+The `calico-node` ServiceAccount is **missing `get nodes` at cluster scope**. calico/node's very first startup step is a datastore check (`kubectl get nodes/foo` equivalent) — it's denied, so it terminates immediately with the generic "Calico node failed to start". This is why *every* node fails identically. The `calico-node` **ClusterRole** in the live cluster is broken/incomplete — almost certainly collateral damage from the earlier RBAC clobbering. We repaired `calico-cni-plugin` but never repaired `calico-node` itself.
+
+Let me get the exact upstream v3.29.2 `calico-node` ClusterRole so I enforce it byte-accurately. 
+
+
+
+Fetched https://raw.githubusercontent.com/projectcalico/calico/v3.29.2/manifests/calico.yaml
+
+That is the definitive fix. I now have the exact upstream v3.29.2 `calico-node` ClusterRole, and I can confirm it grants `nodes: [get, list, watch]` — which the live cluster's role is missing. Our earlier RBAC repair fixed `calico-cni-plugin` but never repaired `calico-node` itself, so the SA the DaemonSet actually runs as lost its datastore permissions.
+
+Let me look at the existing CNI-plugin repair task to mirror its structure.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml#96-96), lines 96 to 180
+
+Now I'll add the `calico-node` ClusterRole/Binding repair task right after the CNI-plugin repair. 
+
+Replacing 18 lines with 127 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=$PWD/ansible.cfg && ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-check && echo CALICO_SYNTAX_OK'
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/OTI0ZDZiNDEtMmMwOC00MTZhLTgzOTktNWViOTA4ZGQ0MTM4/lab-controlpath.md)
+
+We are **out of the loop.** The un-blinding did its job and gave us the actual, deterministic root cause — no more guessing.
+
+## The real problem (finally visible)
+
+```
+startup/startup.go 456: Connection to the datastore is unauthorized
+error=... nodes "foo" is forbidden: User "system:serviceaccount:kube-system:calico-node"
+cannot get resource "nodes" in API group "" at the cluster scope
+```
+
+calico/node runs as the `calico-node` ServiceAccount. Its **first** startup action is a datastore health check — `get nodes`. In your live cluster that permission is **missing**, so it terminates instantly on all 16 nodes. That's why the failure was perfectly uniform and why the generic "Calico node failed to start" appeared everywhere.
+
+**Why it was missing:** the earlier RBAC clobbering damaged the `calico-node` ClusterRole. We previously repaired `calico-cni-plugin` (the CNI plugin's identity) but never repaired `calico-node` (the identity the DaemonSet actually runs as). So we fixed the wrong role. This is **not** etcd and **not** autodetection — both of which were already handled (and your `etcd unsafe-no-fsync` did apply cleanly on all three db VMs, which is still a good thing).
+
+## The fix (permanent, in the playbook)
+
+I fetched the exact upstream **v3.29.2** `calico-node` ClusterRole and added a new task, `Ensure the Calico calico-node ClusterRole/Binding match upstream (repair prior clobbering)`, right after the CNI-plugin repair. It re-asserts the full role — critically including:
+
+```yaml
+- apiGroups: [""]
+  resources: [nodes]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [pods, nodes, namespaces]
+  verbs: [get]
+```
+
+…plus `serviceaccounts/token` create, all the `crd.projectcalico.org` resources (ippools, felixconfigurations, blockaffinities, ipamblocks/handles/configs, caliconodestatuses, tiers, etc.), `nodes/status` patch/update, and `apps/daemonsets get` — bound to `calico-node` / `kube-system`. Because it runs **before** the convergence wait, the RBAC is correct by the time the pods restart. Syntax-checked green.
+
+## What you do next
+
+1. Sync your run repo (`/mnt/c/Users/nh1221/dc_lab/...`) with these edits.
+2. Run it:
+   ```bash
+   ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+   ```
+
+The new task grants `calico-node` its `get nodes` permission, the datastore check passes, Felix starts and opens `:9099`, and the DaemonSet should go `16/16` ready. If any single node still crashes after this, grab `sudo crictl logs <cid>` on that node again — but the startup binary should now get past the datastore check.
+
+One residual observation I did **not** change (to avoid introducing a new variable): `CALICO_NETWORKING_BACKEND` renders empty rather than `none`. That doesn't affect startup, so it won't block convergence — but if Felix later complains about BGP/BIRD once it's actually running, that's the next thread to pull.
+
+Made changes.
