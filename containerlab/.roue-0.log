@@ -385,3 +385,99 @@ PLAY RECAP *********************************************************************
 k8s-master-01              : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ sudo systemctl status kubelet
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXX
+Your calico-config ConfigMap is perfectly intact and formatting correctly, which is excellent news. However, look closely at your very first configuration key:
+
+data:
+  calico_backend: none
+
+## The Root Cause
+A value of calico_backend: none completely changes how Calico initializes. It explicitly tells the calico-node container not to run its internal BGP routing engine (Bird). Instead, it commands Calico to act only as a local policy engine, forcing the cluster to rely on a separate, external framework—like your FRRouting (FRR) configuration—to handle the actual inter-pod routing.
+When calico_backend is set to none, Calico's Felix engine requires eBPF mode or a strict host-routing interface map to match against. Because your environment variables are simultaneously passing explicit BGP clustering methods, the container's shell script validation loops hit a direct logical contradiction, panicking silently on startup with the message "Calico node failed to start".
+------------------------------
+## The Definitive Fix
+Depending on your intentional architectural goal for this lab, you have two options to align your backend config with your routing reality.
+## Option A: If you want Calico to handle BGP natively
+If your plan was to let Calico run its own standard internal BGP routing network (which is standard for Kubespray deployments), change your global ConfigMap to activate the default BGP engine:
+
+   1. Open your ConfigMap template for editing:
+   
+   kubectl edit configmap -n kube-system calico-config --kubeconfig=.kube/config
+   
+   2. Locate calico_backend: none and change it to:
+   
+   calico_backend: bird
+   
+   3. Save and close the editor.
+
+## Option B: If you are routing via your Host FRRouting daemons
+If your architectural intent is to use the active host FRR daemons we verified earlier to handle all cluster routes (un-containerized networking):
+
+   1. You must update your Calico DaemonSet environment variables to cleanly tell it to stop trying to auto-detect a BGP cluster interface (ens2).
+   2. Open the DaemonSet template:
+   
+   kubectl edit daemonset -n kube-system calico-node --kubeconfig=.kube/config
+   
+   3. Locate your CLUSTER_TYPE and IP_AUTODETECTION_METHOD variables, and ensure they are modified to safely disable standard BGP peering lookups, allowing none to run as a flat policy controller.
+
+------------------------------
+## Step 2: Flush and Force Pull the Fresh State
+Once you choose and save Option A or Option B, flush the dead container cache strings across your 16 compute nodes by deleting the stuck loops:
+
+kubectl delete pods -n kube-system -l k8s-app=calico-node --kubeconfig=.kube/config
+
+The fresh instances will boot up, parse the aligned backend metrics matching your network architecture, and initialize smoothly.
+Is your lab architecture intended to use native Calico BGP (bird), or are you designing an infrastructure that integrates directly with your host-level FRRouting switches (none)?
+
+
+
+
+Thank you for clarifying your architectural intent! Knowing that you are explicitly running calico_backend: none because you use FRR for BGP and Calico strictly for IPAM (IP Address Management) changes the diagnosis completely.
+## The Conflict: Why it says "Calico node failed to start"
+When Calico is set to none, the main application container expects a flat policy/IPAM environment. However, if you look back at your initial kubectl describe pod configuration output (lines 61-63), your environment variables are still instructing Calico to initialize a BGP cluster structure:
+
+      DATASTORE_TYPE:                         kubernetes
+      WAIT_FOR_DATASTORE:                     true
+      CLUSTER_TYPE:                           k8s,bgp  <-- THIS IS THE CRITICAL FLIP
+
+Because CLUSTER_TYPE is explicitly passing bgp, Calico's internal initialization script (startup.sh) performs a validation sweep looking for a running BGP engine. Because calico_backend: none disabled that engine, the script throws an immediate validation panic and prints your silent exit error: "Calico node failed to start".
+------------------------------
+## How to Fix It
+To make Calico happy running purely as an IPAM tool alongside your host FRR infrastructure, you need to strip out the lingering BGP configuration flags from your DaemonSet manifest.
+## Step 1: Edit the Calico DaemonSet
+Run this command from your workstation terminal:
+
+kubectl edit daemonset -n kube-system calico-node --kubeconfig=.kube/config
+
+## Step 2: Strip BGP Markers from the Environment Variables
+Scroll down to the env: array inside the calico-node container section and make these three precise updates:
+
+   1. Change the Cluster Type: Find CLUSTER_TYPE and change its value from k8s,bgp to plain k8s.
+   
+   - name: CLUSTER_TYPE
+     value: "k8s"
+   
+   2. Remove the Duplicate/Conflicting Autodetection Variables: Since FRR handles all interface routing on the host, Calico doesn't need to bind to a specific physical BGP interface line. Completely delete both of these overlapping blocks from the array:
+   
+   # Delete this block entirely:
+   - name: IP_AUTODETECTION_METHOD
+     value: can-reach=$(NODEIP)
+   # Delete this block entirely as well:
+   - name: IP_AUTODETECTION_METHOD
+     value: interface=ens2
+   
+   
+## Step 3: Save and Force a Restart
+
+   1. Save and close your editor (:wq in vim).
+   2. Delete the current stuck pods to force the DaemonSet to immediately roll out your clean IPAM-only configuration:
+   
+   kubectl delete pods -n kube-system -l k8s-app=calico-node --kubeconfig=.kube/config
+   
+   
+## What Happens Next
+The fresh calico-node containers will initialize, read cluster_type: k8s alongside calico_backend: none, skip all BGP network checks, and successfully mount your IPAM driver modules.
+Once the BGP environment variables are removed, do the new calico-node pods successfully transition into a healthy, green 1/1 READY and Running state?
+
+
