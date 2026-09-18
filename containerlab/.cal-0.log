@@ -1,104 +1,71 @@
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ rm -rf ~/.ansible/cp/* ~/.ansible/tmp/*
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
 
-PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/registry.yml
 
-TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
-ok: [k8s-master-01]
+PLAY [Deploy air-gapped registry mirror on R810 host] ******************************************************************************************************
 
-TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
-ok: [k8s-master-01]
+TASK [registry_deploy : Ensure Docker is installed] ********************************************************************************************************
+ok: [poweredge_r810]
 
-TASK [Ensure Calico CNI token RBAC exists] *****************************************************************************************************************
-changed: [k8s-master-01]
+TASK [registry_deploy : Enable and start Docker] ***********************************************************************************************************
+ok: [poweredge_r810]
 
-TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
-changed: [k8s-master-01]
+TASK [registry_deploy : Create registry data directory] ****************************************************************************************************
+ok: [poweredge_r810]
 
-TASK [Restart Calico node daemonset after env correction] **************************************************************************************************
-changed: [k8s-master-01]
+TASK [registry_deploy : Check for registry image] **********************************************************************************************************
+ok: [poweredge_r810]
 
-TASK [Wait for Calico DaemonSet to become ready] ***********************************************************************************************************
-fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["kubectl", "rollout", "status", "daemonset/calico-node", "-n", "kube-system", "--timeout=300s"], "delta": "0:05:00.276037", "end": "2026-09-17 16:35:20.273094", "msg": "non-zero return code", "rc": 1, "start": "2026-09-17 16:30:19.997057", "stderr": "E0917 16:34:59.384622  285675 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nerror: timed out waiting for the condition", "stderr_lines": ["E0917 16:34:59.384622  285675 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "error: timed out waiting for the condition"], "stdout": "Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "stdout_lines": ["Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available..."]}
+TASK [registry_deploy : Pull registry image if missing] ****************************************************************************************************
+skipping: [poweredge_r810]
+
+TASK [registry_deploy : Check for registry container] ******************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Create or restart registry container] **********************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Wait for registry port] ************************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Confirm registry endpoint responds] ************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Deploy air-gapped flat binary HTTP file server] ************************************************************************************
+ok: [poweredge_r810]
+
+PLAY [Seed registry from /opt/fabric-cache/images] *********************************************************************************************************
+
+TASK [registry_seed : Check for cached image tarballs on the control node] *********************************************************************************
+ok: [poweredge_r810 -> localhost]
+
+TASK [registry_seed : Display cached image count] **********************************************************************************************************
+ok: [poweredge_r810] => {
+    "msg": "Found 68 image tarballs in /opt/fabric-cache/images/"
+}
+
+TASK [registry_seed : Guardrail - detect unreadable image tarballs on control node] ************************************************************************
+ok: [poweredge_r810 -> localhost]
+
+TASK [registry_seed : Guardrail - fix cache permissions when unreadable tarballs are detected] *************************************************************
+skipping: [poweredge_r810]
+
+TASK [registry_seed : Guardrail - fail if tarballs are still unreadable after auto-fix] ********************************************************************
+ok: [poweredge_r810] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [registry_seed : Ensure skopeo is available on the registry host] *************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_seed : Create staging directory on registry host] *******************************************************************************************
+changed: [poweredge_r810]
+
+TASK [registry_seed : Guardrail - verify Docker can push to registry seed endpoint on R810] ****************************************************************
+fatal: [poweredge_r810]: FAILED! => {"changed": false, "cmd": "set -e\nSEED_REGISTRY=\"172.16.2.1:5000\"\nif ! docker info 2>/dev/null | grep -A20 'Insecure Registries' | grep -q \"$SEED_REGISTRY\"; then\n  echo \"Docker on registry host is missing insecure-registry entry for $SEED_REGISTRY\"\n  echo \"Add it to /etc/docker/daemon.json and restart docker, e.g.:\"\n  echo '{\"insecure-registries\": [\"'$SEED_REGISTRY'\", \"192.168.9.198:5000\", \"172.16.2.1\"]}'\n  exit 1\nfi\n", "delta": "0:00:11.243866", "end": "2026-09-18 04:37:21.847988", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 04:37:10.604122", "stderr": "", "stderr_lines": [], "stdout": "Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000\nAdd it to /etc/docker/daemon.json and restart docker, e.g.:\n{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}", "stdout_lines": ["Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000", "Add it to /etc/docker/daemon.json and restart docker, e.g.:", "{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}"]}
 
 PLAY RECAP *************************************************************************************************************************************************
-k8s-master-01              : ok=5    changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo clab ins -a
-+----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
-| #  |                   Topo Path                    | Lab Name |      Name       | Container ID |               Image                |    Kind    |  State  |  IPv4 Address   | IPv6 Address |
-+----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
-|  1 | ../../opt/containerlab/sheba/topology.clab.yml | sheba    | Border-Leaf1    | 9feb5de9684b | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-|  2 |                                                |          | Border-Leaf2    | 412bb0067164 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-|  3 |                                                |          | Exit-Router1    | 9ffbbb21b56d | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-|  4 |                                                |          | Exit-Router2    | c2a9704cefbe | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-|  5 |                                                |          | External-Router | 797698e15bb1 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.254/24 | N/A          |
-|  6 |                                                |          | ISP-1           | 1010e3252704 | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.98/24  | N/A          |
-|  7 |                                                |          | ISP-2           | fb1b636dbe8d | quay.io/frrouting/frr:10.0.1       | linux      | running | 172.16.2.99/24  | N/A          |
-|  8 |                                                |          | Leaf-L1         | 528b0740a67c | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-|  9 |                                                |          | Leaf-L2         | 9d5f01aca4ca | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.22/24  | N/A          |
-| 10 |                                                |          | Leaf-L3         | 69ff22a9ae58 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-| 11 |                                                |          | Leaf-L4         | 53ff904255ed | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | running | 172.16.2.24/24  | N/A          |
-| 12 |                                                |          | MonSrv          | 442d025c749b | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 13 |                                                |          | Spine-S1        | 8216e68436b9 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-| 14 |                                                |          | Spine-S2        | f3c27616da43 | vrnetlab/sonic_sonic-vs:202605     | sonic-vm   | exited  | N/A             | N/A          |
-| 15 |                                                |          | k8s-db-01       | 164f065c6e3c | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 16 |                                                |          | k8s-db-02       | e4605dadb932 | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.62/24  | N/A          |
-| 17 |                                                |          | k8s-db-03       | 4479ac5a0f66 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 18 |                                                |          | k8s-master-01   | 182c02e0df97 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 19 |                                                |          | k8s-master-02   | fc2d83efa367 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 20 |                                                |          | k8s-master-03   | 5223c9a335bc | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 21 |                                                |          | oob-mgmt-node   | 5308b69af1cc | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 22 |                                                |          | osh-comp-01     | 61ab65415e2a | vrnetlab/canonical_ubuntu:resolute | generic_vm | running | 172.16.2.55/24  | N/A          |
-| 23 |                                                |          | osh-comp-02     | 5d960f55ec62 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 24 |                                                |          | osh-comp-03     | cbb9cd784f44 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 25 |                                                |          | osh-comp-04     | 5010741cc24d | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 26 |                                                |          | osh-ctrl-01     | 14ac2c85e773 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 27 |                                                |          | osh-ctrl-02     | 6ad347340cd5 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 28 |                                                |          | osh-ctrl-03     | 3f5594b915bb | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 29 |                                                |          | osh-net-01      | adc6b5db260a | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-| 30 |                                                |          | osh-net-02      | 73e9649887a1 | vrnetlab/canonical_ubuntu:resolute | generic_vm | exited  | N/A             | N/A          |
-+----+------------------------------------------------+----------+-----------------+--------------+------------------------------------+------------+---------+-----------------+--------------+
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo docker ps -a
-CONTAINER ID   IMAGE                                COMMAND                  CREATED        STATUS                      PORTS                                         NAMES
-f3c27616da43   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 Spine-S2
-9d5f01aca4ca   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 Leaf-L2
-53ff904255ed   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Up 24 hours (healthy)       22/tcp, 443/tcp, 5000/tcp, 8080/tcp           Leaf-L4
-14ac2c85e773   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 osh-ctrl-01
-8216e68436b9   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 Spine-S1
-73e9649887a1   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 osh-net-02
-69ff22a9ae58   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 Leaf-L3
-412bb0067164   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 Border-Leaf2
-5223c9a335bc   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 k8s-master-03
-cbb9cd784f44   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 osh-comp-03
-164f065c6e3c   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 k8s-db-01
-528b0740a67c   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 Leaf-L1
-6ad347340cd5   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 osh-ctrl-02
-442d025c749b   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 MonSrv
-3f5594b915bb   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 osh-ctrl-03
-5d960f55ec62   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 osh-comp-02
-9feb5de9684b   vrnetlab/sonic_sonic-vs:202605       "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 Border-Leaf1
-c2a9704cefbe   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 Exit-Router2
-9ffbbb21b56d   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 Exit-Router1
-5308b69af1cc   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 oob-mgmt-node
-182c02e0df97   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 k8s-master-01
-fc2d83efa367   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 k8s-master-02
-61ab65415e2a   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 osh-comp-01
-e4605dadb932   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 k8s-db-02
-1010e3252704   quay.io/frrouting/frr:10.0.1         "/sbin/tini -- /usr/…"   24 hours ago   Up 24 hours                                                               ISP-1
-5010741cc24d   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 osh-comp-04
-4479ac5a0f66   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 11 minutes ago                                                 k8s-db-03
-adc6b5db260a   vrnetlab/canonical_ubuntu:resolute   "uv run /launch.py -…"   24 hours ago   Exited (1) 12 minutes ago                                                 osh-net-01
-fb1b636dbe8d   quay.io/frrouting/frr:10.0.1         "/sbin/tini -- /usr/…"   24 hours ago   Up 24 hours                                                               ISP-2
-797698e15bb1   quay.io/frrouting/frr:10.0.1         "/sbin/tini -- /usr/…"   24 hours ago   Up 24 hours                                                               External-Router
-a0a91e191bd1   nginx:alpine                         "/docker-entrypoint.…"   2 weeks ago    Up 2 weeks                  0.0.0.0:8080->80/tcp                          sheba-file-server
-429c15b35825   registry:2                           "/entrypoint.sh /etc…"   3 weeks ago    Up 3 weeks                  0.0.0.0:5000->5000/tcp, [::]:5000->5000/tcp   sheba-registry
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~
+poweredge_r810             : ok=15   changed=1    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
 
@@ -120,642 +87,9 @@ TASK [Restart Calico node daemonset after env correction] **********************
 changed: [k8s-master-01]
 
 TASK [Wait for Calico DaemonSet to become ready] ***********************************************************************************************************
-fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["kubectl", "rollout", "status", "daemonset/calico-node", "-n", "kube-system", "--timeout=300s"], "delta": "0:05:00.276037", "end": "2026-09-17 16:35:20.273094", "msg": "non-zero return code", "rc": 1, "start": "2026-09-17 16:30:19.997057", "stderr": "E0917 16:34:59.384622  285675 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nerror: timed out waiting for the condition", "stderr_lines": ["E0917 16:34:59.384622  285675 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "error: timed out waiting for the condition"], "stdout": "Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "stdout_lines": ["Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available..."]}
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["kubectl", "rollout", "status", "daemonset/calico-node", "-n", "kube-system", "--timeout=300s"], "delta": "0:05:00.292543", "end": "2026-09-18 11:51:17.610489", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 11:46:17.317946", "stderr": "E0918 11:48:54.231155  473183 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nE0918 11:50:15.072647  473183 reflector.go:204] \"Failed to watch\" err=\"failed to list *unstructured.Unstructured: daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot list resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nerror: timed out waiting for the condition", "stderr_lines": ["E0918 11:48:54.231155  473183 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "E0918 11:50:15.072647  473183 reflector.go:204] \"Failed to watch\" err=\"failed to list *unstructured.Unstructured: daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot list resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "error: timed out waiting for the condition"], "stdout": "Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "stdout_lines": ["Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available..."]}
 
 PLAY RECAP *************************************************************************************************************************************************
 k8s-master-01              : ok=5    changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/lab/enable-autostart.yml
-
-PLAY [Enable containerlab topology autostart on R810 host] *************************************************************************************************
-
-TASK [Confirm topology file exists on R810] ****************************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [Confirm containerlab binary is present] **************************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [Deploy clab-sheba systemd service unit] **************************************************************************************************************
-fatal: [poweredge_r810]: UNREACHABLE! => {"changed": false, "msg": "mkdir: No space left on device\n", "unreachable": true}
-
-PLAY RECAP *************************************************************************************************************************************************
-poweredge_r810             : ok=2    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh R810
-Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-29-generic x86_64)
-
- * Documentation:  https://docs.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/pro
-
-Expanded Security Maintenance for Applications is not enabled.
-
-168 updates can be applied immediately.
-To see these additional updates run: apt list --upgradable
-
-2 additional security updates can be applied with ESM Apps.
-Learn more about enabling ESM Apps service at https://ubuntu.com/esm
-
-*** System restart required ***
-Last login: Thu Sep 17 06:29:11 2026 from 192.168.9.200
-nh1221@PowerEdge-R810:~$ exit
-logout
-Connection to 192.168.9.198 closed.
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/lab/enable-autostart.yml
-
-PLAY [Enable containerlab topology autostart on R810 host] *************************************************************************************************
-
-TASK [Confirm topology file exists on R810] ****************************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [Confirm containerlab binary is present] **************************************************************************************************************
-ok: [poweredge_r810]
-
-TASK [Deploy clab-sheba systemd service unit] **************************************************************************************************************
-fatal: [poweredge_r810]: UNREACHABLE! => {"changed": false, "msg": "mkdir: No space left on device\n", "unreachable": true}
-
-PLAY RECAP *************************************************************************************************************************************************
-poweredge_r810             : ok=2    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
-
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-
-XXXXXXXXXXXXXX
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ lsblk
-NAME                   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
-loop1                    7:1    0     4K  1 loop /snap/bare/5
-loop2                    7:2    0  66.8M  1 loop /snap/core24/1643
-loop3                    7:3    0  19.6M  1 loop /snap/desktop-security-center/150
-loop4                    7:4    0    20M  1 loop /snap/desktop-security-center/151
-loop5                    7:5    0 221.5M  1 loop /snap/thunderbird/1240
-loop6                    7:6    0  50.3M  1 loop /snap/snapd/27738
-loop7                    7:7    0  16.5M  1 loop /snap/firmware-updater/226
-loop8                    7:8    0 606.1M  1 loop /snap/gnome-46-2404/153
-loop9                    7:9    0 614.5M  1 loop /snap/gnome-46-2404/164
-loop10                   7:10   0  91.7M  1 loop /snap/gtk-common-themes/1535
-loop11                   7:11   0   395M  1 loop /snap/mesa-2404/1165
-loop12                   7:12   0   402M  1 loop /snap/mesa-2404/1839
-loop13                   7:13   0  18.8M  1 loop /snap/prompting-client/204
-loop14                   7:14   0  18.8M  1 loop /snap/prompting-client/222
-loop15                   7:15   0  15.7M  1 loop /snap/snap-store/1367
-loop16                   7:16   0  11.8M  1 loop /snap/snap-store/1390
-loop17                   7:17   0 221.4M  1 loop /snap/thunderbird/1255
-loop18                   7:18   0  50.1M  1 loop /snap/snapd/27710
-loop19                   7:19   0   828K  1 loop /snap/snapd-desktop-integration/387
-loop20                   7:20   0   828K  1 loop /snap/snapd-desktop-integration/391
-loop21                   7:21   0 260.8M  1 loop /snap/firefox/8863
-loop22                   7:22   0  66.8M  1 loop /snap/core24/2124
-loop23                   7:23   0 261.1M  1 loop /snap/firefox/8803
-sda                      8:0    0 465.3G  0 disk 
-├─sda1                   8:1    0     1G  0 part /boot/efi
-└─sda2                   8:2    0 464.2G  0 part /
-sdb                      8:16   0 837.8G  0 disk 
-sdc                      8:32   0   931G  0 disk 
-sdd                      8:48   0   931G  0 disk 
-sde                      8:64   0   931G  0 disk 
-└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
-sdf                      8:80   0   1.1T  0 disk 
-└─vg--data-lv--storage 252:0    0     2T  0 lvm  /data
-sr0                     11:0    1  1024M  1 rom  
-nh1221@PowerEdge-R810:~$ df -h
-Filesystem                        Size  Used Avail Use% Mounted on
-tmpfs                              50G  257M   50G   1% /run
-/dev/sda2                         456G  456G     0 100% /
-tmpfs                             124G  8.0K  124G   1% /dev/shm
-efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs                             124G  104M  124G   1% /tmp
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
-/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
-tmpfs                              25G   88K   25G   1% /run/user/1000
-/dev/mapper/vg--data-lv--storage  2.0T   25M  1.9T   1% /data
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ mount
-tmpfs on /run type tmpfs (rw,nosuid,nodev,size=51884348k,nr_inodes=819200,mode=755,inode64)
-/dev/sda2 on / type ext4 (rw,relatime)
-devtmpfs on /dev type devtmpfs (rw,nosuid,size=116217572k,nr_inodes=29054393,mode=755,inode64)
-tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev,inode64,usrquota)
-devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=600,ptmxmode=000)
-sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
-securityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)
-cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot,memory_hugetlb_accounting)
-none on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)
-efivarfs on /sys/firmware/efi/efivars type efivarfs (rw,nosuid,nodev,noexec,relatime)
-bpf on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime,mode=700)
-configfs on /sys/kernel/config type configfs (rw,nosuid,nodev,noexec,relatime)
-proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
-systemd-1 on /proc/sys/fs/binfmt_misc type autofs (rw,relatime,fd=36,pgrp=1,timeout=0,minproto=5,maxproto=5,direct,pipe_ino=27750)
-none on /run/credentials/systemd-journald.service type tmpfs (ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap)
-tracefs on /sys/kernel/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)
-mqueue on /dev/mqueue type mqueue (rw,nosuid,nodev,noexec,relatime)
-fusectl on /sys/fs/fuse/connections type fusectl (rw,nosuid,nodev,noexec,relatime)
-hugetlbfs on /dev/hugepages type hugetlbfs (rw,nosuid,nodev,relatime,pagesize=2M)
-debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)
-tmpfs on /tmp type tmpfs (rw,nosuid,nodev,nr_inodes=1048576,inode64,usrquota)
-none on /run/credentials/systemd-resolved.service type tmpfs (ro,nosuid,nodev,noexec,relatime,nosymfollow,size=1024k,nr_inodes=1024,mode=700,inode64,noswap)
-/var/lib/snapd/snaps/bare_5.snap on /snap/bare/5 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/core24_1643.snap on /snap/core24/1643 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/desktop-security-center_151.snap on /snap/desktop-security-center/151 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/desktop-security-center_150.snap on /snap/desktop-security-center/150 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/gtk-common-themes_1535.snap on /snap/gtk-common-themes/1535 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/gnome-46-2404_164.snap on /snap/gnome-46-2404/164 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/prompting-client_222.snap on /snap/prompting-client/222 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/firmware-updater_226.snap on /snap/firmware-updater/226 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/prompting-client_204.snap on /snap/prompting-client/204 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/gnome-46-2404_153.snap on /snap/gnome-46-2404/153 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snap-store_1367.snap on /snap/snap-store/1367 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/mesa-2404_1165.snap on /snap/mesa-2404/1165 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/mesa-2404_1839.snap on /snap/mesa-2404/1839 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snap-store_1390.snap on /snap/snap-store/1390 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snapd_27710.snap on /snap/snapd/27710 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snapd-desktop-integration_391.snap on /snap/snapd-desktop-integration/391 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snapd-desktop-integration_387.snap on /snap/snapd-desktop-integration/387 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/dev/sda1 on /boot/efi type vfat (rw,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)
-binfmt_misc on /proc/sys/fs/binfmt_misc type binfmt_misc (rw,nosuid,nodev,noexec,relatime)
-tmpfs on /run/snapd/ns type tmpfs (rw,nosuid,nodev,size=51884348k,nr_inodes=819200,mode=755,inode64)
-nsfs on /run/snapd/ns/snapd-desktop-integration.mnt type nsfs (rw)
-tmpfs on /run/user/1000 type tmpfs (rw,nosuid,nodev,relatime,size=25942172k,nr_inodes=6485543,mode=700,uid=1000,gid=1000,inode64)
-portal on /run/user/1000/doc type fuse.portal (rw,nosuid,nodev,relatime,user_id=1000,group_id=1000)
-gvfsd-fuse on /run/user/1000/gvfs type fuse.gvfsd-fuse (rw,nosuid,nodev,relatime,user_id=1000,group_id=1000)
-/dev/mapper/vg--data-lv--storage on /data type ext4 (rw,relatime)
-overlay on /data/docker/rootfs/overlayfs/429c15b3582510709d9412dddfe7e307aec404de2284ec2d0aaf09739a9306f2 type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8068/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7148/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7147/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7146/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7145/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7144/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8069/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8069/work,nouserxattr)
-nsfs on /run/docker/netns/57839a9d6ca8 type nsfs (rw)
-overlay on /data/docker/rootfs/overlayfs/a0a91e191bd1df4d8cec06e83d4013a9210a8028f030a2ebe7c3a86fa912f5aa type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/11933/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10236/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10235/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10234/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10233/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10232/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10231/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10230/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/10229/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/11934/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/11934/work,nouserxattr)
-nsfs on /run/docker/netns/fa9325346b41 type nsfs (rw)
-/var/lib/snapd/snaps/firefox_8803.snap on /snap/firefox/8803 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/thunderbird_1240.snap on /snap/thunderbird/1240 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/firefox_8863.snap on /snap/firefox/8863 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/snapd_27738.snap on /snap/snapd/27738 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-/var/lib/snapd/snaps/thunderbird_1255.snap on /snap/thunderbird/1255 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-nsfs on /run/snapd/ns/thunderbird.mnt type nsfs (rw)
-/var/lib/snapd/snaps/core24_2124.snap on /snap/core24/2124 type squashfs (ro,nodev,relatime,errors=continue,threads=single,x-gdu.hide,x-gvfs-hide)
-nsfs on /run/snapd/ns/firmware-updater.mnt type nsfs (rw)
-tracefs on /sys/kernel/debug/tracing type tracefs (rw,nosuid,nodev,noexec,relatime)
-overlay on /data/docker/rootfs/overlayfs/797698e15bb15ff5cd06feed4585aec8ccc254f1d3f0ccf911bf05f454ce3bb6 type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19144/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/9/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19174/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19174/work,nouserxattr)
-overlay on /data/docker/rootfs/overlayfs/fb1b636dbe8dedcc91460fa12130be049f3151f47f928380f773dbcfa656b992 type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19146/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/9/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19176/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19176/work,nouserxattr)
-overlay on /data/docker/rootfs/overlayfs/1010e3252704f5ddb41f4b26b53a021e8f70d955428c215d14a631681957aa17 type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19149/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/9/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/7/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/6/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/5/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/4/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/3/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19179/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19179/work,nouserxattr)
-overlay on /data/docker/rootfs/overlayfs/53ff904255edcd96f866877444f7df6a0d2a4e7be21ab62f683a049b25fb316d type overlay (rw,relatime,lowerdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19169/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8308/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8307/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/8306/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/55/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/45/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/44/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/43/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/42/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/41/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/40/fs:/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/39/fs,upperdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19199/fs,workdir=/var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/19199/work,nouserxattr)
-nsfs on /run/docker/netns/68b977faf6ca type nsfs (rw)
-nsfs on /run/docker/netns/edf1714ce86a type nsfs (rw)
-nsfs on /run/docker/netns/1c1fd6c99ef9 type nsfs (rw)
-nsfs on /run/docker/netns/db1039fe006c type nsfs (rw)
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo docker system df
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          92        5         120.6GB   105.8GB (87%)
-Containers      32        6         8.658GB   7.842GB (90%)
-Local Volumes   1         0         0B        0B
-Build Cache     13        0         12.28GB   0B
-nh1221@PowerEdge-R810:~$ du -sh /var/lib/docker /var/lib/containerd /opt/containerlab /tmp 2>/dev/null
-4.0K/var/lib/docker
-4.0K/var/lib/containerd
-213G/opt/containerlab
-12K/tmp
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo pvdisplay
-  --- Physical volume ---
-  PV Name               /dev/sde
-  VG Name               vg-data
-  PV Size               931.00 GiB / not usable 4.00 MiB
-  Allocatable           yes (but full)
-  PE Size               4.00 MiB
-  Total PE              238335
-  Free PE               0
-  Allocated PE          238335
-  PV UUID               5DMs7i-OqWt-pndT-zZ75-G7GQ-zR4u-rAgCsu
-   
-  --- Physical volume ---
-  PV Name               /dev/sdf
-  VG Name               vg-data
-  PV Size               1.09 TiB / not usable 4.00 MiB
-  Allocatable           yes (but full)
-  PE Size               4.00 MiB
-  Total PE              286015
-  Free PE               0
-  Allocated PE          286015
-  PV UUID               LPjBH5-N23w-VBax-KlWV-5535-fMEU-oikD0u
-   
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo vg display
-sudo: 'vg': command not found
-nh1221@PowerEdge-R810:~$ sudo vgdisplay
-  --- Volume group ---
-  VG Name               vg-data
-  System ID             
-  Format                lvm2
-  Metadata Areas        2
-  Metadata Sequence No  2
-  VG Access             read/write
-  VG Status             resizable
-  MAX LV                0
-  Cur LV                1
-  Open LV               1
-  Max PV                0
-  Cur PV                2
-  Act PV                2
-  VG Size               2.00 TiB
-  PE Size               4.00 MiB
-  Total PE              524350
-  Alloc PE / Size       524350 / 2.00 TiB
-  Free  PE / Size       0 / 0   
-  VG UUID               W8lTrN-if0I-v1cf-y00G-kcLQ-HYGJ-UChAG5
-   
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ 
-nh1221@PowerEdge-R810:~$ sudo lvdisplay
-  --- Logical volume ---
-  LV Path                /dev/vg-data/lv-storage
-  LV Name                lv-storage
-  VG Name                vg-data
-  LV UUID                3YUA1r-E4GT-MmZG-WCVx-byHv-5MH1-U5kFkY
-  LV Write Access        read/write
-  LV Creation host, time PowerEdge-R810, 2026-08-20 22:16:03 -0500
-  LV Status              available
-  # open                 1
-  LV Size                2.00 TiB
-  Current LE             524350
-  Segments               2
-  Allocation             inherit
-  Read ahead sectors     auto
-  - currently set to     512
-  Block device           252:0
-   
-nh1221@PowerEdge-R810:~$ 
-
-
-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-nh1221@PowerEdge-R810:~$ sudo du -xhd1 / 2>/dev/null | sort -h | tail -20
-4.0K    /cdrom
-4.0K    /media
-4.0K    /srv
-16K     /lost+found
-64K     /snap
-68K     /mnt
-20M     /root
-26M     /etc
-141M    /boot
-6.4G    /usr
-62G     /home
-136G    /var
-244G    /opt
-456G    /
-nh1221@PowerEdge-R810:~$ df -h
-Filesystem                        Size  Used Avail Use% Mounted on
-tmpfs                              50G  1.8G   48G   4% /run
-/dev/sda2                         456G  456G     0 100% /
-tmpfs                             124G  8.0K  124G   1% /dev/shm
-efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs                             124G  104M  124G   1% /tmp
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
-/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
-tmpfs                              25G   88K   25G   1% /run/user/1000
-/dev/mapper/vg--data-lv--storage  2.0T   25M  1.9T   1% /data
-nh1221@PowerEdge-R810:~$ sudo docker system df
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          92        5         120.6GB   105.8GB (87%)
-Containers      32        6         8.658GB   7.842GB (90%)
-Local Volumes   1         0         0B        0B
-Build Cache     13        0         12.28GB   0B
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ sudo journalctl --disk-usage
-Archived and active journals take up 5.6G in the file system.
-nh1221@PowerEdge-R810:~$
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-nh1221@PowerEdge-R810:~$ sudo du -xhd1 / 2>/dev/null | sort -h | tail -20
-4.0K    /cdrom
-4.0K    /media
-4.0K    /srv
-16K     /lost+found
-64K     /snap
-68K     /mnt
-20M     /root
-26M     /etc
-141M    /boot
-6.4G    /usr
-62G     /home
-136G    /var
-244G    /opt
-456G    /
-nh1221@PowerEdge-R810:~$ df -h
-Filesystem                        Size  Used Avail Use% Mounted on
-tmpfs                              50G  1.8G   48G   4% /run
-/dev/sda2                         456G  456G     0 100% /
-tmpfs                             124G  8.0K  124G   1% /dev/shm
-efivarfs                           64K   59K   361 100% /sys/firmware/efi/efivars
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
-tmpfs                             124G  104M  124G   1% /tmp
-none                              1.0M     0  1.0M   0% /run/credentials/systemd-resolved.service
-/dev/sda1                         1.1G  6.4M  1.1G   1% /boot/efi
-tmpfs                              25G   88K   25G   1% /run/user/1000
-/dev/mapper/vg--data-lv--storage  2.0T   25M  1.9T   1% /data
-nh1221@PowerEdge-R810:~$ sudo docker system df
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          92        5         120.6GB   105.8GB (87%)
-Containers      32        6         8.658GB   7.842GB (90%)
-Local Volumes   1         0         0B        0B
-Build Cache     13        0         12.28GB   0B
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ sudo journalctl --disk-usage
-Archived and active journals take up 5.6G in the file system.
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ sudo journalctl --vacuum-time=2d
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000924e25-00065a95e93d8346.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000934ce4-00065aa5c3a79c5a.journal (43.4M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-000000000094515e-00065ab2271c3fd5.journal (43M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000955ef5-00065aba01f04059.journal (43.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009565b6-00065aba08350e30.journal (41.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-000000000096749d-00065abf471ddc57.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-000000000097831a-00065ac4997c7617.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009885be-00065acf107c3ed9.journal (43.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000998d45-00065ad3d13be104.journal (43M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009a0daa-00065ad5c054c0c1.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009a8ae8-00065ad7760a01c4.journal (42.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009b88b8-00065adaddcfb1c5.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009c8b90-00065adda409a908.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009d908e-00065adfc7ccbfd5.journal (42.7M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009de216-00065ae04fb7dde1.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009e9124-00065ae2b65c01c7.journal (43M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-00000000009f8bb6-00065ae6dd0b801b.journal (42.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a08d07-00065aea1ee48883.journal (42.4M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a17fac-00065aefab9e1ce7.journal (42M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a277a6-00065af48d09015b.journal (42M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a36016-00065afc778addf8.journal (42.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a3abba-00065afdb1c05502.journal (41.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a45b8d-00065b02a753c2b1.journal (42.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a55174-00065b09f30212ea.journal (42M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a63d2b-00065b116d231f33.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a73bc6-00065b150ba33b6e.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a84324-00065b172339047b.journal (42.8M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a9463e-00065b19d434c2e6.journal (42.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000a9e5de-00065b1ef2949814.journal (41.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000aa36b1-00065b1fe1dfe33a.journal (43.2M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000ab3bea-00065b238cb4f649.journal (42.6M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000ac2cff-00065b29dc433173.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000ad3489-00065b2c098a4f6d.journal (42.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000ae2882-00065b3339f17b47.journal (42.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000af25f1-00065b37c9fd8f01.journal (42.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000af923b-00065b3941c10ace.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b02227-00065b3be420c01b.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b121f2-00065b3f444b4d91.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b22662-00065b4199386a23.journal (41.7M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b30d20-00065b497a9f4c61.journal (42.4M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b40b3c-00065b4c962205a0.journal (42.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b4831e-00065b4e28bbccbd.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b506e8-00065b4fb0a48669.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b60166-00065b53f61255f2.journal (43.2M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b70167-00065b566756d725.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b7fa7c-00065b5ae814148c.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b8c097-00065b5cd6237d4a.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b8fe3a-00065b5d25a02ab7.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000b9ff72-00065b6072f2694e.journal (42.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000bb05b1-00065b6217d8851e.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000bc0c63-00065b643175fe90.journal (43M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000bc6309-00065b64b4ab4f91.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000bd1331-00065b65d70fc26d.journal (43.3M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000be0f47-00065b69fabdd999.journal (42.7M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000bf0e35-00065b6d1bed36b7.journal (42.9M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c009bb-00065b710b07f45e.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c08f84-00065b725ecb8ef6.journal (40M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c10e24-00065b737b3dcb4f.journal (42.7M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c2117e-00065b754e7da775.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c3162b-00065b77787dfa98.journal (42.8M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c40a57-00065b7d0f36d6d5.journal (42.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c5015c-00065b806c56fccb.journal (43.1M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/user-1000@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c5597b-00065b827a0e4590.journal (39.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c5fad7-00065b83d01e708f.journal (43.5M).
-Deleted archived journal /var/log/journal/92321a2ff98644ba81e5ed64201c3056/system@debafbc1cb1e44e3ac8a5e65ca4d142f-0000000000c70166-00065b85a9e89c28.journal (42.7M).
-Vacuuming done, freed 2.7G of archived journals from /var/log/journal/92321a2ff98644ba81e5ed64201c3056.
-Vacuuming done, freed 0B of archived journals from /var/log/journal.
-Vacuuming done, freed 0B of archived journals from /run/log/journal/92321a2ff98644ba81e5ed64201c3056.
-Vacuuming done, freed 0B of archived journals from /run/log/journal.
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ sudo du -xhd1 / 2>/dev/null | sort -h
-4.0K    /cdrom
-4.0K    /media
-4.0K    /srv
-16K     /lost+found
-64K     /snap
-68K     /mnt
-20M     /root
-26M     /etc
-141M    /boot
-6.4G    /usr
-62G     /home
-134G    /var
-244G    /opt
-453G    /
-nh1221@PowerEdge-R810:~$
-nh1221@PowerEdge-R810:~$ sudo docker system df
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          92        5         120.6GB   105.8GB (87%)
-Containers      32        6         8.658GB   7.842GB (90%)
-Local Volumes   1         0         0B        0B
-Build Cache     13        0         12.28GB   0B
-nh1221@PowerEdge-R810:~$ sudo docker image ls
-                                                                                                                                        i Info →   U  In Use
-IMAGE                                                                    ID             DISK USAGE   CONTENT SIZE   EXTRA
-127.0.0.1:5000/brancz/kube-rbac-proxy:v0.18.1                            0e66baf34f64        107MB         32.1MB
-127.0.0.1:5000/calico/cni:v3.28.2                                        04bd5d80c32a        304MB         94.7MB
-127.0.0.1:5000/calico/cni:v3.29.2                                        5c7827667dab        319MB         99.3MB
-127.0.0.1:5000/calico/kube-controllers:v3.28.2                           7de855fcbff8        114MB         34.9MB
-127.0.0.1:5000/calico/kube-controllers:v3.29.2                           4313495b1ce8        119MB         36.3MB
-127.0.0.1:5000/calico/node:v3.28.2                                       856ac0c26116        499MB          120MB
-127.0.0.1:5000/calico/node:v3.29.2                                       97dfd69511ab        520MB          142MB
-127.0.0.1:5000/calico/pod2daemon-flexvol:v3.28.2                         884a37672683       20.3MB         6.63MB
-127.0.0.1:5000/calico/pod2daemon-flexvol:v3.29.2                         ba44244500bf       20.9MB         6.86MB
-127.0.0.1:5000/calico/typha:v3.28.2                                      58c09de1af1c        102MB         30.9MB
-127.0.0.1:5000/calico/typha:v3.29.2                                      54134801a39c        106MB         31.9MB
-127.0.0.1:5000/ceph/ceph:v19.2.0                                         200087c35811       1.81GB          457MB
-127.0.0.1:5000/coredns/coredns:v1.11.3                                   9caabbf6238b       85.1MB         18.6MB
-127.0.0.1:5000/coredns/coredns:v1.12.0                                   2c3f515bffd2       93.8MB         20.8MB
-127.0.0.1:5000/cpa/cluster-proportional-autoscaler:v1.9.0                8f3b4e4beb62       64.2MB         13.4MB
-127.0.0.1:5000/dns/k8s-dns-node-cache:1.23.1                             e3dccb1a21d1        117MB         35.1MB
-127.0.0.1:5000/etcd:v3.5.16                                              1bd8edbbdb21       85.2MB         21.7MB
-127.0.0.1:5000/etcd:v3.5.17                                              ac1bfd8985f4       85.2MB         21.7MB
-127.0.0.1:5000/fossbilling/fossbilling:latest                            81eea9624261        952MB          231MB
-127.0.0.1:5000/grafana/grafana:11.3.1                                    fa801ab6e1ae        646MB          133MB
-127.0.0.1:5000/ingress-nginx/controller:v1.12.0                          e6b8de175acd        415MB          108MB
-127.0.0.1:5000/ingress-nginx/kube-webhook-certgen:v1.4.4                 3f6f0a764592       92.9MB           26MB
-127.0.0.1:5000/jetstack/cert-manager-cainjector:v1.16.2                  b72b33172d09       71.4MB         15.4MB
-127.0.0.1:5000/jetstack/cert-manager-controller:v1.16.2                  4705286cd4e5       96.8MB         21.2MB
-127.0.0.1:5000/jetstack/cert-manager-startupapicheck:v1.16.2             2ae926cbcd0b       59.8MB         14.1MB
-127.0.0.1:5000/jetstack/cert-manager-webhook:v1.16.2                     2ba472fab666       82.7MB         18.2MB
-127.0.0.1:5000/k8snetworkplumbingwg/multus-cni:v4.1.0                    189f6955481b        598MB          182MB
-127.0.0.1:5000/kube-apiserver:v1.31.4                                    ace6a943b058        125MB           28MB
-127.0.0.1:5000/kube-apiserver:v1.33.3                                    125a8b488def        135MB         30.1MB
-127.0.0.1:5000/kube-controller-manager:v1.31.4                           4bd1d4a449e7        118MB         26.1MB
-127.0.0.1:5000/kube-controller-manager:v1.33.3                           96091626e37c        126MB         27.6MB
-127.0.0.1:5000/kube-proxy:v1.31.4                                        1739b3febca3        126MB         30.2MB
-127.0.0.1:5000/kube-proxy:v1.33.3                                        c69929cfba9e        134MB         31.9MB
-127.0.0.1:5000/kube-scheduler:v1.31.4                                    1a3081cb7d21       90.8MB         20.1MB
-127.0.0.1:5000/kube-scheduler:v1.33.3                                    f3a2ffdd7483       98.5MB         21.8MB
-127.0.0.1:5000/kube-state-metrics/kube-state-metrics:v2.14.0             37d841299325       69.9MB         15.4MB
-127.0.0.1:5000/kubernetesui/dashboard:v2.7.0                             2e500d29e9d5        334MB         75.8MB
-127.0.0.1:5000/kubernetesui/metrics-scraper:v1.0.9                       92a7659b554e       63.6MB         19.7MB
-127.0.0.1:5000/mariadb:10.11                                             de61fed4a40d        458MB          109MB
-127.0.0.1:5000/mariadb:11                                                d9f7eb263729        466MB          111MB
-127.0.0.1:5000/memcached:1.6                                             eeb9eaa939ff        128MB         34.2MB
-127.0.0.1:5000/metallb/controller:v0.14.9                                4cd4edf97021        103MB           29MB
-127.0.0.1:5000/metallb/speaker:v0.14.9                                   de0829bd1fb7        186MB         55.1MB
-127.0.0.1:5000/metrics-server/metrics-server:v0.7.2                      ffcb2bf004d6       89.8MB         19.5MB
-127.0.0.1:5000/metrics-server/metrics-server:v0.8.0                      89258156d0e9        108MB         22.5MB
-127.0.0.1:5000/nginx:1.27-alpine                                         65645c7bb6a0       74.5MB         21.9MB
-127.0.0.1:5000/pause:3.10                                                bb8c9648cc56       1.08MB          318kB
-127.0.0.1:5000/prometheus-operator/prometheus-config-reloader:v0.78.2    944b2c67345c       61.7MB         14.7MB
-127.0.0.1:5000/prometheus-operator/prometheus-operator:v0.78.2           bfcc5d6058be       86.2MB         18.8MB
-127.0.0.1:5000/prometheus/alertmanager:v0.27.0                           e13b6ed5cb92        106MB         32.4MB
-127.0.0.1:5000/prometheus/node-exporter:v1.8.2                           4032c6d5bfd7       38.2MB           12MB
-127.0.0.1:5000/prometheus/prometheus:v2.55.1                             2659f4c2ebb7        407MB          114MB
-127.0.0.1:5000/rabbitmq:3.13-management                                  e582c0bc7766        392MB          118MB
-127.0.0.1:5000/registry:2                                                a3d8aaa63ed8       37.4MB         10.3MB    U
-127.0.0.1:5000/rook/ceph:v1.15.5                                         b94b23ecaf32       1.89GB          471MB
-127.0.0.1:5000/sig-storage/csi-attacher:v4.7.0                           6e54dae32284        109MB           31MB
-127.0.0.1:5000/sig-storage/csi-node-driver-registrar:v2.12.0             0d23a6fd60c4       45.9MB           14MB
-127.0.0.1:5000/sig-storage/csi-provisioner:v5.1.0                        672e45d6a556        113MB         32.2MB
-127.0.0.1:5000/sig-storage/csi-resizer:v1.12.0                           ab774734705a        109MB         30.9MB
-127.0.0.1:5000/sig-storage/csi-snapshotter:v8.1.0                        b3e90b337816        108MB         30.6MB
-172.16.2.1:5000/brancz/kube-rbac-proxy:v0.18.1                           20f297c4cf6f        107MB         32.1MB
-172.16.2.1:5000/calico/cni:v3.28.2                                       04bd5d80c32a        304MB         94.7MB
-172.16.2.1:5000/calico/cni:v3.29.2                                       5c7827667dab        319MB         99.3MB
-172.16.2.1:5000/calico/kube-controllers:v3.28.2                          7de855fcbff8        114MB         34.9MB
-172.16.2.1:5000/calico/kube-controllers:v3.29.2                          4313495b1ce8        119MB         36.3MB
-172.16.2.1:5000/calico/node:v3.28.2                                      856ac0c26116        499MB          120MB
-172.16.2.1:5000/calico/node:v3.29.2                                      97dfd69511ab        520MB          142MB
-172.16.2.1:5000/calico/pod2daemon-flexvol:v3.28.2                        884a37672683       20.3MB         6.63MB
-172.16.2.1:5000/calico/pod2daemon-flexvol:v3.29.2                        ba44244500bf       20.9MB         6.86MB
-172.16.2.1:5000/calico/typha:v3.28.2                                     58c09de1af1c        102MB         30.9MB
-172.16.2.1:5000/calico/typha:v3.29.2                                     54134801a39c        106MB         31.9MB
-172.16.2.1:5000/ceph/ceph:v19.2.0                                        200087c35811       1.81GB          457MB
-172.16.2.1:5000/coredns/coredns:v1.11.3                                  9caabbf6238b       85.1MB         18.6MB
-172.16.2.1:5000/coredns/coredns:v1.12.0                                  f5e03bc00912       93.8MB         20.8MB
-172.16.2.1:5000/cpa/cluster-proportional-autoscaler:v1.8.8               69bf675e3567         54MB         11.6MB
-172.16.2.1:5000/cpa/cluster-proportional-autoscaler:v1.9.0               8f3b4e4beb62       64.2MB         13.4MB
-172.16.2.1:5000/dns/k8s-dns-node-cache:1.23.1                            e3dccb1a21d1        117MB         35.1MB
-172.16.2.1:5000/dns/k8s-dns-node-cache:1.25.0                            c10362235fc2        126MB         37.8MB
-172.16.2.1:5000/etcd:v3.5.16                                             88ae68f558b8       85.2MB         21.7MB
-172.16.2.1:5000/etcd:v3.5.17                                             329f6ea0dcdd       85.2MB         21.7MB
-172.16.2.1:5000/fossbilling/fossbilling:latest                           81eea9624261        952MB          231MB
-172.16.2.1:5000/grafana/grafana:11.3.1                                   fa801ab6e1ae        646MB          133MB
-172.16.2.1:5000/ingress-nginx/controller:v1.12.0                         e6b8de175acd        415MB          108MB
-172.16.2.1:5000/ingress-nginx/kube-webhook-certgen:v1.4.4                a21358af9f10       92.9MB           26MB
-172.16.2.1:5000/jetstack/cert-manager-cainjector:v1.16.2                 b453439c7f32       71.4MB         15.4MB
-172.16.2.1:5000/jetstack/cert-manager-controller:v1.16.2                 db778c9a9be4       96.8MB         21.2MB
-172.16.2.1:5000/jetstack/cert-manager-startupapicheck:v1.16.2            17398546a4bd       59.8MB         14.1MB
-172.16.2.1:5000/jetstack/cert-manager-webhook:v1.16.2                    ac3eebb05f95       82.7MB         18.2MB
-172.16.2.1:5000/k8snetworkplumbingwg/multus-cni:v4.1.0                   80b1139b833f        598MB          182MB
-172.16.2.1:5000/kube-apiserver:v1.31.4                                   ace6a943b058        125MB           28MB
-172.16.2.1:5000/kube-apiserver:v1.33.3                                   125a8b488def        135MB         30.1MB
-172.16.2.1:5000/kube-apiserver:v1.35.4                                   06b4bb208634        121MB         27.6MB
-172.16.2.1:5000/kube-apiserver:v1.36.4                                   cfcdb0165330        129MB         29.8MB
-172.16.2.1:5000/kube-controller-manager:v1.31.4                          4bd1d4a449e7        118MB         26.1MB
-172.16.2.1:5000/kube-controller-manager:v1.33.3                          96091626e37c        126MB         27.6MB
-172.16.2.1:5000/kube-controller-manager:v1.35.4                          7b036c805d57        102MB           23MB
-172.16.2.1:5000/kube-controller-manager:v1.36.4                          232878d552ad        115MB         26.5MB
-172.16.2.1:5000/kube-proxy:v1.31.4                                       1739b3febca3        126MB         30.2MB
-172.16.2.1:5000/kube-proxy:v1.33.3                                       c69929cfba9e        134MB         31.9MB
-172.16.2.1:5000/kube-proxy:v1.35.4                                       c5daa23c7247       99.9MB         25.7MB
-172.16.2.1:5000/kube-proxy:v1.36.4                                       b33fcdd83192        114MB         30.1MB
-172.16.2.1:5000/kube-scheduler:v1.31.4                                   1a3081cb7d21       90.8MB         20.1MB
-172.16.2.1:5000/kube-scheduler:v1.33.3                                   f3a2ffdd7483       98.5MB         21.8MB
-172.16.2.1:5000/kube-scheduler:v1.35.4                                   9054fecb4fa0       72.2MB         17.1MB
-172.16.2.1:5000/kube-scheduler:v1.36.4                                   7d84d58f091f       83.6MB         20.5MB
-172.16.2.1:5000/kube-state-metrics/kube-state-metrics:v2.14.0            37d841299325       69.9MB         15.4MB
-172.16.2.1:5000/kubernetesui/dashboard:v2.7.0                            2e500d29e9d5        334MB         75.8MB
-172.16.2.1:5000/kubernetesui/metrics-scraper:v1.0.9                      92a7659b554e       63.6MB         19.7MB
-172.16.2.1:5000/library/nginx:1.28.2-alpine                              db35bfc6b295       94.2MB         27.2MB    U
-172.16.2.1:5000/mariadb:10.11                                            de61fed4a40d        458MB          109MB
-172.16.2.1:5000/mariadb:11                                               d9f7eb263729        466MB          111MB
-172.16.2.1:5000/memcached:1.6                                            eeb9eaa939ff        128MB         34.2MB
-172.16.2.1:5000/metallb/controller:v0.13.9                               c9ffd7215dcf       92.6MB         27.8MB
-172.16.2.1:5000/metallb/controller:v0.14.9                               b6a224a3e827        103MB           29MB
-172.16.2.1:5000/metallb/speaker:v0.13.9                                  ed242e213112        165MB         50.1MB
-172.16.2.1:5000/metallb/speaker:v0.14.9                                  997d3f3c09db        186MB         55.1MB
-172.16.2.1:5000/metrics-server/metrics-server:v0.7.2                     ffcb2bf004d6       89.8MB         19.5MB
-172.16.2.1:5000/metrics-server/metrics-server:v0.8.0                     89258156d0e9        108MB         22.5MB
-172.16.2.1:5000/nginx:1.27-alpine                                        65645c7bb6a0       74.5MB         21.9MB
-172.16.2.1:5000/nginx:1.28.2-alpine                                      db35bfc6b295       94.2MB         27.2MB    U
-172.16.2.1:5000/pause:3.10                                               f65dd6a8a8d9       1.08MB          318kB
-172.16.2.1:5000/pause:3.10.1                                             278fb9dbcca9       1.06MB          318kB
-172.16.2.1:5000/prometheus-operator/prometheus-config-reloader:v0.78.2   944b2c67345c       61.7MB         14.7MB
-172.16.2.1:5000/prometheus-operator/prometheus-operator:v0.78.2          bfcc5d6058be       86.2MB         18.8MB
-172.16.2.1:5000/prometheus/alertmanager:v0.27.0                          e13b6ed5cb92        106MB         32.4MB
-172.16.2.1:5000/prometheus/node-exporter:v1.8.2                          4032c6d5bfd7       38.2MB           12MB
-172.16.2.1:5000/prometheus/prometheus:v2.55.1                            2659f4c2ebb7        407MB          114MB
-172.16.2.1:5000/rabbitmq:3.13-management                                 e582c0bc7766        392MB          118MB
-172.16.2.1:5000/registry.k8s.io/k8snetworkplumbingwg/multus-cni:v4.1.0   8133d5ff41bd        598MB          182MB
-172.16.2.1:5000/registry:2                                               a3d8aaa63ed8       37.4MB         10.3MB    U
-172.16.2.1:5000/rook/ceph:v1.15.5                                        b94b23ecaf32       1.89GB          471MB
-172.16.2.1:5000/sig-storage/csi-attacher:v4.7.0                          6e54dae32284        109MB           31MB
-172.16.2.1:5000/sig-storage/csi-node-driver-registrar:v2.12.0            0d23a6fd60c4       45.9MB           14MB
-172.16.2.1:5000/sig-storage/csi-provisioner:v5.1.0                       672e45d6a556        113MB         32.2MB
-172.16.2.1:5000/sig-storage/csi-resizer:v1.12.0                          ab774734705a        109MB         30.9MB
-172.16.2.1:5000/sig-storage/csi-snapshotter:v8.1.0                       b3e90b337816        108MB         30.6MB
-calico/cni:v3.28.2                                                       04bd5d80c32a        304MB         94.7MB
-calico/cni:v3.29.2                                                       5c7827667dab        319MB         99.3MB
-calico/kube-controllers:v3.28.2                                          7de855fcbff8        114MB         34.9MB
-calico/kube-controllers:v3.29.2                                          4313495b1ce8        119MB         36.3MB
-calico/node:v3.28.2                                                      856ac0c26116        499MB          120MB
-calico/node:v3.29.2                                                      97dfd69511ab        520MB          142MB
-calico/pod2daemon-flexvol:v3.28.2                                        884a37672683       20.3MB         6.63MB
-calico/pod2daemon-flexvol:v3.29.2                                        ba44244500bf       20.9MB         6.86MB
-calico/typha:v3.28.2                                                     58c09de1af1c        102MB         30.9MB
-calico/typha:v3.29.2                                                     54134801a39c        106MB         31.9MB
-fossbilling/fossbilling:latest                                           81eea9624261        952MB          231MB
-ghcr.io/hellt/network-multitool:latest                                   a8d96c19e593        274MB         6.86kB
-grafana/grafana:11.3.1                                                   fa801ab6e1ae        646MB          133MB
-kubernetesui/dashboard:v2.7.0                                            2e500d29e9d5        334MB         75.8MB
-kubernetesui/metrics-scraper:v1.0.9                                      92a7659b554e       63.6MB         19.7MB
-mariadb:10.11                                                            de61fed4a40d        458MB          109MB
-mariadb:11                                                               d9f7eb263729        466MB          111MB
-memcached:1.6                                                            eeb9eaa939ff        128MB         34.2MB
-nginx:1.27-alpine                                                        65645c7bb6a0       74.5MB         21.9MB
-nginx:alpine                                                             db35bfc6b295       94.2MB         27.2MB    U
-quay.io/ceph/ceph:v19.2.0                                                200087c35811       1.81GB          457MB
-quay.io/frrouting/frr:10.0.1                                             8ab9fe2ded0b        169MB         4.59kB    U
-quay.io/metallb/controller:v0.13.9                                       c9ffd7215dcf       92.6MB         27.8MB
-quay.io/metallb/speaker:v0.13.9                                          ed242e213112        165MB         50.1MB
-quay.io/prometheus-operator/prometheus-config-reloader:v0.78.2           944b2c67345c       61.7MB         14.7MB
-quay.io/prometheus-operator/prometheus-operator:v0.78.2                  bfcc5d6058be       86.2MB         18.8MB
-quay.io/prometheus/alertmanager:v0.27.0                                  e13b6ed5cb92        106MB         32.4MB
-quay.io/prometheus/node-exporter:v1.8.2                                  4032c6d5bfd7       38.2MB           12MB
-quay.io/prometheus/prometheus:v2.55.1                                    2659f4c2ebb7        407MB          114MB
-rabbitmq:3.13-management                                                 e582c0bc7766        392MB          118MB
-registry.k8s.io/coredns/coredns:v1.11.3                                  9caabbf6238b       85.1MB         18.6MB
-registry.k8s.io/cpa/cluster-proportional-autoscaler:v1.8.8               69bf675e3567         54MB         11.6MB
-registry.k8s.io/cpa/cluster-proportional-autoscaler:v1.9.0               8f3b4e4beb62       64.2MB         13.4MB
-registry.k8s.io/dns/k8s-dns-node-cache:1.23.1                            e3dccb1a21d1        117MB         35.1MB
-registry.k8s.io/dns/k8s-dns-node-cache:1.25.0                            c10362235fc2        126MB         37.8MB
-registry.k8s.io/ingress-nginx/controller:v1.12.0                         e6b8de175acd        415MB          108MB
-registry.k8s.io/kube-apiserver:v1.31.4                                   ace6a943b058        125MB           28MB
-registry.k8s.io/kube-apiserver:v1.33.3                                   125a8b488def        135MB         30.1MB
-registry.k8s.io/kube-apiserver:v1.35.4                                   06b4bb208634        121MB         27.6MB
-registry.k8s.io/kube-apiserver:v1.36.4                                   cfcdb0165330        129MB         29.8MB
-registry.k8s.io/kube-controller-manager:v1.31.4                          4bd1d4a449e7        118MB         26.1MB
-registry.k8s.io/kube-controller-manager:v1.33.3                          96091626e37c        126MB         27.6MB
-registry.k8s.io/kube-controller-manager:v1.35.4                          7b036c805d57        102MB           23MB
-registry.k8s.io/kube-controller-manager:v1.36.4                          232878d552ad        115MB         26.5MB
-registry.k8s.io/kube-proxy:v1.31.4                                       1739b3febca3        126MB         30.2MB
-registry.k8s.io/kube-proxy:v1.33.3                                       c69929cfba9e        134MB         31.9MB
-registry.k8s.io/kube-proxy:v1.35.4                                       c5daa23c7247       99.9MB         25.7MB
-registry.k8s.io/kube-proxy:v1.36.4                                       b33fcdd83192        114MB         30.1MB
-registry.k8s.io/kube-scheduler:v1.31.4                                   1a3081cb7d21       90.8MB         20.1MB
-registry.k8s.io/kube-scheduler:v1.33.3                                   f3a2ffdd7483       98.5MB         21.8MB
-registry.k8s.io/kube-scheduler:v1.35.4                                   9054fecb4fa0       72.2MB         17.1MB
-registry.k8s.io/kube-scheduler:v1.36.4                                   7d84d58f091f       83.6MB         20.5MB
-registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0            37d841299325       69.9MB         15.4MB
-registry.k8s.io/metrics-server/metrics-server:v0.7.2                     ffcb2bf004d6       89.8MB         19.5MB
-registry.k8s.io/metrics-server/metrics-server:v0.8.0                     89258156d0e9        108MB         22.5MB
-registry.k8s.io/pause:3.10.1                                             278fb9dbcca9       1.06MB          318kB
-registry.k8s.io/sig-storage/csi-attacher:v4.7.0                          6e54dae32284        109MB           31MB
-registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.12.0            0d23a6fd60c4       45.9MB           14MB
-registry.k8s.io/sig-storage/csi-provisioner:v5.1.0                       672e45d6a556        113MB         32.2MB
-registry.k8s.io/sig-storage/csi-resizer:v1.12.0                          ab774734705a        109MB         30.9MB
-registry.k8s.io/sig-storage/csi-snapshotter:v8.1.0                       b3e90b337816        108MB         30.6MB
-registry:2                                                               a3d8aaa63ed8       37.4MB         10.3MB    U
-rook/ceph:v1.15.5                                                        b94b23ecaf32       1.89GB          471MB
-vrnetlab/canonical_ubuntu:resolute                                       cd8a41eb9024        3.2GB          1.3GB    U
-vrnetlab/sonic_sonic-vs:202605                                           c25d55237da0       10.3GB         2.47GB    U
-nh1221@PowerEdge-R810:~$
