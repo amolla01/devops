@@ -1,157 +1,72 @@
-Hopefully this time we will have a solution if there is a fix for the below auth issues as per og:
+Looks like we have made some mistakes in the process of bgp configuration,
 
-ubuntu@k8s-db-03:~$ sudo grep -q '^ETCD_UNSAFE_NO_FSYNC=' /etc/etcd.env || echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
-sudo systemctl restart etcd
-sudo systemctl is-active etcd && sudo journalctl -u etcd -n 15 --no-pager | grep -Ei 'took too long|fdatasync' || echo 'etcd quiet - proceed to next member'
-active
-etcd quiet - proceed to next member
-ubuntu@k8s-db-03:~$ 
-ubuntu@k8s-db-02:~$ sudo grep -q '^ETCD_UNSAFE_NO_FSYNC=' /etc/etcd.env || echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
-sudo systemctl restart etcd
-sudo systemctl is-active etcd && sudo journalctl -u etcd -n 15 --no-pager | grep -Ei 'took too long|fdatasync' || echo 'etcd quiet - proceed to next member'
-active
-etcd quiet - proceed to next member
-ubuntu@k8s-db-02:~$ 
-ubuntu@k8s-db-01:~$ sudo grep -q '^ETCD_UNSAFE_NO_FSYNC=' /etc/etcd.env || echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
-sudo systemctl restart etcd
-sudo systemctl is-active etcd && sudo journalctl -u etcd -n 15 --no-pager | grep -Ei 'took too long|fdatasync' || echo 'etcd quiet - proceed to next member'
-active
-etcd quiet - proceed to next member
-ubuntu@k8s-db-01:~$ 
-C:\Users\nh1221>ssh -J nh1221@R810 ubuntu@172.16.2.51 -N -L 8443:172.16.2.51:6443
-Warning: Permanently added '172.16.2.51' (ED25519) to the list of known hosts.
-
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ kubectl -n kube-system set env ds/calico-node CALICO_STARTUP_LOGLEVEL=info FELIX_LOGSEVERITYSCREEN=info
-kubectl -n kube-system rollout restart ds/calico-node
-sleep 60
-pod=$(kubectl -n kube-system get pod -l k8s-app=calico-node -o jsonpath='{.items[0].metadata.name}')
-kubectl -n kube-system logs "$pod" -c calico-node --previous
-E0918 14:21:27.728144  630549 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:21:57.730774  630549 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:22:27.733362  630549 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:22:57.735259  630549 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-E0918 14:23:27.948468  631280 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:23:57.949758  631280 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:24:27.951363  631280 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:24:57.953595  631280 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-E0918 14:26:28.250615  632404 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:26:58.252385  632404 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:27:28.255037  632404 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:27:58.256217  632404 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:28:28.258175  632404 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-error: You must provide one or more resources by argument or filename.
-Example resource specifications include:
-   '-f rsrc.yaml'
-   '--filename=rsrc.json'
-   '<resource> <name>'
-   '<resource>'
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ kubectl -n kube-system set env ds/calico-node CALICO_STARTUP_LOGLEVEL=info FELIX_LOGSEVERITYSCREEN=info
-kubectl -n kube-system rollout restart ds/calico-node
-sleep 60
-pod=$(kubectl -n kube-system get pod -l k8s-app=calico-node -o jsonpath='{.items[0].metadata.name}')
-kubectl -n kube-system logs "$pod" -c calico-node --previous
-E0918 14:34:25.466582  634898 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:34:55.469963  634898 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:35:25.474173  634898 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:35:55.476531  634898 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-E0918 14:36:25.681288  635398 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:36:55.683169  635398 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:37:25.684293  635398 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:37:55.685410  635398 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-E0918 14:39:25.944519  636454 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:39:55.945453  636454 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:40:25.947726  636454 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:40:55.948668  636454 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-E0918 14:41:25.952233  636454 memcache.go:265] couldn't get current server API group list: Get "https://localhost:6443/api?timeout=32s": dial tcp [::1]:6443: connect: connection refused
-The connection to the server localhost:6443 was refused - did you specify the right host or port?
-error: You must provide one or more resources by argument or filename.
-Example resource specifications include:
-   '-f rsrc.yaml'
-   '--filename=rsrc.json'
-   '<resource> <name>'
-   '<resource>'
-(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
-
-ubuntu@k8s-master-01:~$ 
-ubuntu@k8s-master-01:~$ kubectl -n kube-system set env ds/calico-node CALICO_STARTUP_LOGLEVEL=info FELIX_LOGSEVERITYSCREEN=info
-kubectl -n kube-system rollout restart ds/calico-node
-sleep 60
-pod=$(kubectl -n kube-system get pod -l k8s-app=calico-node -o jsonpath='{.items[0].metadata.name}')
-kubectl -n kube-system logs "$pod" -c calico-node --previous
-daemonset.apps/calico-node env updated
-daemonset.apps/calico-node restarted
-Error from server (BadRequest): container "calico-node" in pod "calico-node-2f5c5" is not available
-ubuntu@k8s-master-01:~$  kubectl -n kube-system set env ds/calico-node CALICO_STARTUP_LOGLEVEL=info FELIX_LOGSEVERITYSCREEN=info
-kubectl -n kube-system rollout restart ds/calico-node
-sleep 60
-pod=$(kubectl -n kube-system get pod -l k8s-app=calico-node -o jsonpath='{.items[0].metadata.name}')
-kubectl -n kube-system logs "$pod" -c calico-node --previous
-daemonset.apps/calico-node restarted
-Error from server (BadRequest): previous terminated container "calico-node" in pod "calico-node-245kj" not found
-ubuntu@k8s-master-01:~$
-
-ubuntu@k8s-master-01:~$ # on k8s-master-01 (or any node):
-cid=$(sudo crictl ps -a --state exited --name calico-node -q | head -1)
-sudo crictl logs "$cid" 2>&1 | tail -80
-sudo tail -n 60 /var/log/calico/cni/cni.log 2>/dev/null
-2026-09-18 19:43:00.167 [INFO][9] startup/startup.go 439: Early log level set to info
-2026-09-18 19:43:00.168 [INFO][9] startup/utils.go 126: Using NODENAME environment for node name k8s-master-01
-2026-09-18 19:43:00.168 [INFO][9] startup/utils.go 138: Determined node name: k8s-master-01
-2026-09-18 19:43:00.168 [INFO][9] startup/startup.go 95: Starting node k8s-master-01 with version v3.29.2
-2026-09-18 19:43:00.170 [INFO][9] startup/startup.go 444: Checking datastore connection
-2026-09-18 19:43:00.204 [WARNING][9] startup/startup.go 456: Connection to the datastore is unauthorized error=connection is unauthorized: nodes "foo" is forbidden: User "system:serviceaccount:kube-system:calico-node" cannot get resource "nodes" in API group "" at the cluster scope
-2026-09-18 19:43:00.204 [WARNING][9] startup/utils.go 48: Terminating
-Calico node failed to start
-ubuntu@k8s-master-01:~$ 
-
-ubuntu@k8s-master-02:~$ 
-ubuntu@k8s-master-02:~$ # on k8s-master-01 (or any node):
-cid=$(sudo crictl ps -a --state exited --name calico-node -q | head -1)
-sudo crictl logs "$cid" 2>&1 | tail -80
-sudo tail -n 60 /var/log/calico/cni/cni.log 2>/dev/null
-Calico node failed to start
-ubuntu@k8s-master-02:~$ 
-ubuntu@k8s-master-02:~$ 
-ubuntu@k8s-master-02:~$ # on k8s-master-01 (or any node):
-cid=$(sudo crictl ps -a --state exited --name calico-node -q | head -1)
-sudo crictl logs "$cid" 2>&1 | tail -80
-sudo tail -n 60 /var/log/calico/cni/cni.log 2>/dev/null
-2026-09-18 19:43:02.291 [INFO][9] startup/startup.go 439: Early log level set to info
-2026-09-18 19:43:02.292 [INFO][9] startup/utils.go 126: Using NODENAME environment for node name k8s-master-02
-2026-09-18 19:43:02.293 [INFO][9] startup/utils.go 138: Determined node name: k8s-master-02
-2026-09-18 19:43:02.293 [INFO][9] startup/startup.go 95: Starting node k8s-master-02 with version v3.29.2
-2026-09-18 19:43:02.296 [INFO][9] startup/startup.go 444: Checking datastore connection
-2026-09-18 19:43:02.332 [WARNING][9] startup/startup.go 456: Connection to the datastore is unauthorized error=connection is unauthorized: nodes "foo" is forbidden: User "system:serviceaccount:kube-system:calico-node" cannot get resource "nodes" in API group "" at the cluster scope
-2026-09-18 19:43:02.332 [WARNING][9] startup/utils.go 48: Terminating
-Calico node failed to start
-ubuntu@k8s-master-02:~$ 
+No Nodes are directly connected as peer with the Exit Router, so the following is not right. Exit router only connects to Border-Leaf1/2 and ISP-1/2. No other systems are connected
 
 ubuntu@k8s-master-03:~$ 
-ubuntu@k8s-master-03:~$ # on k8s-master-01 (or any node):
-cid=$(sudo crictl ps -a --state exited --name calico-node -q | head -1)
-sudo crictl logs "$cid" 2>&1 | tail -80
-sudo tail -n 60 /var/log/calico/cni/cni.log 2>/dev/null
-2026-09-18 19:45:09.515 [INFO][10] startup/startup.go 439: Early log level set to info
-2026-09-18 19:45:09.515 [INFO][10] startup/utils.go 126: Using NODENAME environment for node name k8s-master-03
-2026-09-18 19:45:09.515 [INFO][10] startup/utils.go 138: Determined node name: k8s-master-03
-2026-09-18 19:45:09.515 [INFO][10] startup/startup.go 95: Starting node k8s-master-03 with version v3.29.2
-2026-09-18 19:45:09.518 [INFO][10] startup/startup.go 444: Checking datastore connection
-2026-09-18 19:45:09.532 [WARNING][10] startup/startup.go 456: Connection to the datastore is unauthorized error=connection is unauthorized: nodes "foo" is forbidden: User "system:serviceaccount:kube-system:calico-node" cannot get resource "nodes" in API group "" at the cluster scope
-2026-09-18 19:45:09.532 [WARNING][10] startup/utils.go 48: Terminating
-Calico node failed to start
-ubuntu@k8s-master-03:~$ 
+ubuntu@k8s-master-03:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+k8s-master-03# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.30.1, local AS number 65231 VRF default vrf-id 0
+BGP table version 136
+RIB entries 81, using 10368 bytes of memory
+Peers 4, using 94 KiB of memory
+
+Neighbor           V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Border-Leaf1(ens2) 4      65031     15102     15101      136    0    0 12:31:41           41       42 To-Border-Leaf1-Ethe
+Border-Leaf2(ens3) 4      65032     15103     15093      136    0    0 12:31:39           41       42 To-Border-Leaf2-Ethe
+172.16.2.41        4      65251         0       372        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+172.16.2.42        4      65252         0       374        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+
+Total number of neighbors 4
+k8s-master-03# 
+
+ubuntu@k8s-master-02:~$ 
+ubuntu@k8s-master-02:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+k8s-master-02# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.20.1, local AS number 65221 VRF default vrf-id 0
+BGP table version 141
+RIB entries 81, using 10368 bytes of memory
+Peers 4, using 94 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Leaf-L3(ens2)   4      65021     15088     15087      141    0    0 12:30:54           40       42 To-Leaf-L3-Ethernet0
+Leaf-L4(ens3)   4      65022     15086     15079      141    0    0 12:30:49           40       42 To-Leaf-L4-Ethernet0
+172.16.2.41     4      65251         0       371        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+172.16.2.42     4      65252         0       377        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+
+Total number of neighbors 4
+k8s-master-02# 
+
+ubuntu@k8s-master-01:~$ sudo vtysh
+
+Hello, this is FRRouting (version 10.5.1).
+Copyright 1996-2005 Kunihiro Ishiguro, et al.
+
+k8s-master-01# show ip bgp summary
+
+IPv4 Unicast Summary:
+BGP router identifier 10.0.10.1, local AS number 65211 VRF default vrf-id 0
+BGP table version 144
+RIB entries 81, using 10368 bytes of memory
+Peers 4, using 94 KiB of memory
+
+Neighbor        V         AS   MsgRcvd   MsgSent   TblVer  InQ OutQ  Up/Down State/PfxRcd   PfxSnt Desc
+Leaf-L1(ens2)   4      65011     15065     15067      144    0    0 12:29:45           40       42 To-Leaf-L1-Ethernet0
+Leaf-L2(ens3)   4      65012     15059     15059      144    0    0 12:29:42           40       42 To-Leaf-L2-Ethernet0
+172.16.2.41     4      65251         0       373        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+172.16.2.42     4      65252         0       371        0    0    0    never       Active        0 To-ExitRouter-mgmt-1
+
+Total number of neighbors 4
+k8s-master-01# 
+
