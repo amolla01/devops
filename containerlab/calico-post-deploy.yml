@@ -285,6 +285,17 @@
         EOF
       changed_when: true
 
+    - name: Read calico-node DaemonSet health before mutating (used to skip a needless restart)
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        kubectl get daemonset/calico-node -n kube-system
+        -o jsonpath='{.status.desiredNumberScheduled} {.status.numberAvailable}'
+      args:
+        executable: /bin/bash
+      register: calico_ds_pre
+      changed_when: false
+      failed_when: false
+
     # CALICO_STARTUP_LOGLEVEL defaults to "error" in the kubespray manifest, which
     # suppresses the startup binary's diagnostics - when the node fails to start we
     # only see the generic "Calico node failed to start" wrapper line with no cause.
@@ -300,9 +311,18 @@
       changed_when: true
       failed_when: false
 
-    - name: Restart Calico node daemonset after env correction
+    # Only force a rolling restart when the DaemonSet is actually unhealthy. An
+    # unconditional `rollout restart` rewrites the pod-template annotation every run
+    # and re-rolls all nodes, so on an already-converged cluster the gate below times
+    # out mid-roll. `kubectl set env` above still triggers its own rollout whenever
+    # the env genuinely changes, so a healthy DS with correct env is left untouched.
+    - name: Restart Calico node daemonset when it is not already converged
       ansible.builtin.command: kubectl rollout restart daemonset/calico-node -n kube-system
       changed_when: true
+      when: >-
+        (calico_ds_pre.stdout.split() | length) != 2
+        or (calico_ds_pre.stdout.split()[0] | int) == 0
+        or calico_ds_pre.stdout.split()[0] != calico_ds_pre.stdout.split()[1]
 
     # A rolling restart recreates pods gradually (maxUnavailable: 1); a pod that
     # was already crash-looping on install-cni sits in an exponential back-off
@@ -333,8 +353,8 @@
       register: calico_ds_conv
       changed_when: false
       failed_when: false
-      retries: 30
-      delay: 10
+      retries: "{{ calico_converge_retries | default(90) }}"
+      delay: "{{ calico_converge_delay | default(10) }}"
       until: >-
         calico_ds_conv.rc == 0
         and (calico_ds_conv.stdout.split() | length) == 3
@@ -403,10 +423,17 @@
           {{ calico_diag.stdout | default('(none captured)') }}
         success_msg: "calico-node converged: {{ calico_ds_conv.stdout | trim }} (desired/updated/available)."
 
+    # This kubespray install ships only the raw Calico CRDs (crd.projectcalico.org);
+    # the aggregated projectcalico.org/v3 API (calico-apiserver) is NOT deployed,
+    # so `kubectl` cannot resolve kind IPPool in projectcalico.org/v3 ("no matches
+    # for kind ... ensure CRDs are installed first"). Write the backing CRD
+    # (crd.projectcalico.org/v1) directly - Felix/kube-controllers consume it
+    # identically. Field names must match the CRD schema exactly, since the CRDs
+    # set preserveUnknownFields:false and reject unknown keys.
     - name: Apply Calico IPPool — no encapsulation
       ansible.builtin.shell: |
         kubectl apply -f - <<'EOF'
-        apiVersion: projectcalico.org/v3
+        apiVersion: crd.projectcalico.org/v1
         kind: IPPool
         metadata:
           name: {{ calico_pool_name | default('default-ipv4-ippool') }}
@@ -420,17 +447,19 @@
         EOF
       changed_when: true
 
-    - name: Apply Calico FelixConfiguration — no tunnel, explicit MTU
+    # FelixConfiguration CRD field is `ipipEnabled` (NOT ipInIpEnabled), and there
+    # is no plain `mtu` field - with encapsulation disabled Felix auto-detects the
+    # pod MTU from the host data-plane interface (9000), so no MTU key is set here.
+    - name: Apply Calico FelixConfiguration — disable tunnels
       ansible.builtin.shell: |
         kubectl apply -f - <<'EOF'
-        apiVersion: projectcalico.org/v3
+        apiVersion: crd.projectcalico.org/v1
         kind: FelixConfiguration
         metadata:
           name: default
         spec:
-          ipInIpEnabled: false
+          ipipEnabled: false
           vxlanEnabled: false
-          mtu: {{ host_data_mtu | default(9000) }}
           logSeverityScreen: Warning
           routeSource: WorkloadIPs
         EOF
@@ -439,7 +468,7 @@
     - name: Apply Calico BGPConfiguration — disable node-to-node mesh
       ansible.builtin.shell: |
         kubectl apply -f - <<'EOF'
-        apiVersion: projectcalico.org/v3
+        apiVersion: crd.projectcalico.org/v1
         kind: BGPConfiguration
         metadata:
           name: default
