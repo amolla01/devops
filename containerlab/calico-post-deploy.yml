@@ -1,0 +1,363 @@
+---
+# =============================================================================
+# calico-post-deploy.yml
+#
+# Must run AFTER kubespray.yml (Calico is installed) and BEFORE metallb.yml
+# (MetalLB BGP peers depend on FRR having the 127.0.0.1 neighbor already).
+#
+# Play 1 — Apply Calico CRs that Kubespray does not set:
+#   - IPPool: ipipMode/vxlanMode=Never, blockSize=26 (no encap, full MTU)
+#   - FelixConfiguration: disable tunnel interfaces, auto MTU
+#   - BGPConfiguration: nodeToNodeMeshEnabled=false (belt-and-braces)
+#
+# Play 2 — Install pod-block blackhole routes on every K8s node.
+#   FRR will not advertise `network <cidr>` unless a matching kernel route
+#   exists. A blackhole /26 on lo satisfies this without routing real traffic.
+# =============================================================================
+
+- name: Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)
+  hosts: kube_control_plane
+  gather_facts: false
+  run_once: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    # SSH reachability comes from the single static jump pattern in
+    # group_vars/all.yml (ProxyCommand via the R810). Do NOT re-add a play-level
+    # ansible_ssh_common_args override here — in native mode the socks conditional
+    # collapses to no ProxyCommand, overriding the jump and dialing 172.16.2.x
+    # directly (times out on every host reached through the R810).
+  tasks:
+    # ── Preflight: fail fast if the control plane / datastore is degraded ──────
+    # calico-node readiness is `-felix-ready`, which requires a healthy, in-sync
+    # Kubernetes datastore. If apiserver↔etcd is flapping (typically the fabric
+    # IPv6-ND / ECMP routing blackhole), pods never reach Ready and the client's
+    # own watch intermittently returns "forbidden" — a confusing 5-minute timeout.
+    # Gate on real health so any failure names the actual cause.
+    - name: Preflight - wait for kube-apiserver /readyz to report ok
+      ansible.builtin.command: kubectl get --raw=/readyz
+      register: calico_pre_readyz
+      changed_when: false
+      failed_when: false
+      retries: 6
+      delay: 10
+      until: calico_pre_readyz.rc == 0 and (calico_pre_readyz.stdout | trim) == 'ok'
+
+    - name: Preflight - confirm admin RBAC can manage the calico DaemonSet
+      ansible.builtin.command: kubectl auth can-i watch daemonsets.apps -n kube-system
+      register: calico_pre_caniwatch
+      changed_when: false
+      failed_when: false
+
+    - name: Preflight - collect control-plane node readiness
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        kubectl get nodes -l node-role.kubernetes.io/control-plane
+        -o jsonpath='{range .items[*]}{.metadata.name}={.status.conditions[?(@.type=="Ready")].status};{end}'
+      args:
+        executable: /bin/bash
+      register: calico_pre_cpready
+      changed_when: false
+      failed_when: false
+
+    - name: Preflight - assert the control plane is healthy before mutating Calico
+      ansible.builtin.assert:
+        that:
+          - calico_pre_readyz.rc == 0
+          - (calico_pre_readyz.stdout | trim) == 'ok'
+          - (calico_pre_caniwatch.stdout | trim) == 'yes'
+          - "'=False' not in calico_pre_cpready.stdout"
+          - "'=Unknown' not in calico_pre_cpready.stdout"
+        fail_msg: |
+          Control plane is NOT healthy — refusing to mutate Calico.
+            apiserver /readyz  : {{ calico_pre_readyz.stdout | default('') | trim }} (rc={{ calico_pre_readyz.rc }})
+            can-i watch ds     : {{ calico_pre_caniwatch.stdout | default('') | trim }}
+            control-plane nodes: {{ calico_pre_cpready.stdout | default('') | trim }}
+          calico-node readiness (-felix-ready) needs a stable, in-sync datastore. A flapping
+          apiserver<->etcd makes pods hang NotReady and the client watch return "forbidden".
+          This is almost always the fabric IPv6-ND / ECMP routing blackhole. Fix it first:
+            1) ansible-playbook -i inventory.yml playbooks/linux-bgp.yml     # refresh node FRR + ND-stability sysctl
+            2) kubectl get --raw='/readyz?verbose'                           # expect every check ok
+            3) for ip in 10.0.10.2 10.0.20.2 10.0.30.2; do ping -c2 $ip; done  # etcd reachable
+          then re-run this playbook.
+        success_msg: "Control plane healthy (readyz=ok, can-i watch ds=yes, all control-plane nodes Ready)."
+
+    - name: Wait for Calico CRDs to be registered
+      ansible.builtin.command: >
+        kubectl wait --for=condition=Established crd/ippools.crd.projectcalico.org
+        --timeout=180s
+      changed_when: false
+
+    - name: Wait for Calico Felix CRD to be registered
+      ansible.builtin.command: >
+        kubectl wait --for=condition=Established crd/felixconfigurations.crd.projectcalico.org
+        --timeout=180s
+      changed_when: false
+
+    # ── RBAC: install-cni mints a bound ServiceAccount token for the
+    # calico-cni-plugin SA via the TokenRequest API, authenticating as the pod's
+    # own SA (calico-node). That needs `create serviceaccounts/token`
+    # (resourceName calico-cni-plugin) on the calico-node identity; without it the
+    # init container exits non-zero -> "Back-off restarting failed container
+    # install-cni" and the DaemonSet never becomes Ready.
+    #
+    # DO NOT `kubectl apply` over the Calico-shipped calico-cni-plugin
+    # ClusterRole/Binding to add this: apply replaces the atomic rules list and
+    # rebinds the subject, stripping the CNI plugin's real pod/node/IPAM perms and
+    # breaking runtime CNI ADD. Grant the token perm with a SEPARATE additive role
+    # bound to calico-node, and re-assert the shipped cni-plugin RBAC intact.
+    - name: Grant CNI token-request permission to the calico-node ServiceAccount
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: calico-cni-token-request
+        rules:
+          - apiGroups: [""]
+            resources:
+              - serviceaccounts/token
+            resourceNames:
+              - calico-cni-plugin
+            verbs:
+              - create
+        ---
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: calico-cni-token-request
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: calico-cni-token-request
+        subjects:
+          - kind: ServiceAccount
+            name: calico-node
+            namespace: kube-system
+        EOF
+      changed_when: true
+
+    - name: Ensure the Calico CNI-plugin ClusterRole/Binding match upstream (repair prior clobbering)
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRole
+        metadata:
+          name: calico-cni-plugin
+        rules:
+          - apiGroups: [""]
+            resources: [pods, nodes, namespaces]
+            verbs: [get]
+          - apiGroups: [""]
+            resources: [pods/status]
+            verbs: [patch]
+          - apiGroups: ["crd.projectcalico.org"]
+            resources:
+              - blockaffinities
+              - ipamblocks
+              - ipamhandles
+              - clusterinformations
+              - ippools
+              - ipreservations
+              - ipamconfigs
+            verbs: [get, list, create, update, delete]
+        ---
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: ClusterRoleBinding
+        metadata:
+          name: calico-cni-plugin
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: ClusterRole
+          name: calico-cni-plugin
+        subjects:
+          - kind: ServiceAccount
+            name: calico-cni-plugin
+            namespace: kube-system
+        EOF
+      changed_when: true
+
+    - name: Repair the global Calico DaemonSet env for this lab
+      ansible.builtin.shell: |
+        kubectl set env daemonset/calico-node -n kube-system \
+          IP_AUTODETECTION_METHOD=interface=^ens2$ \
+          CALICO_IPV4POOL_IPIP=Off \
+          CALICO_IPV4POOL_VXLAN=Never \
+          FELIX_IPV6SUPPORT=False
+      changed_when: true
+      failed_when: false
+
+    - name: Restart Calico node daemonset after env correction
+      ansible.builtin.command: kubectl rollout restart daemonset/calico-node -n kube-system
+      changed_when: true
+
+    # A rolling restart recreates pods gradually (maxUnavailable: 1); a pod that
+    # was already crash-looping on install-cni sits in an exponential back-off
+    # and can stall the rollout for minutes. Deleting it resets the back-off so
+    # it retries immediately with the corrected RBAC above.
+    - name: Force-recycle calico-node pods stuck on the install-cni init container
+      ansible.builtin.shell: |
+        set -o pipefail
+        kubectl -n kube-system get pods -l k8s-app=calico-node \
+          -o jsonpath='{range .items[*]}{.metadata.name}{" "}{range .status.initContainerStatuses[*]}{.state.waiting.reason}{" "}{end}{"\n"}{end}' \
+          | awk '/CrashLoopBackOff|RunContainerError|Error/ {print $1}' \
+          | xargs -r kubectl -n kube-system delete pod --wait=false
+      args:
+        executable: /bin/bash
+      changed_when: true
+      failed_when: false
+
+    # `kubectl rollout status` opens a long-lived watch; a single transient
+    # apiserver hiccup kills it with a reflector error. Poll the DaemonSet status
+    # instead — each retry is an independent read, tolerant of brief flaps.
+    - name: Wait for Calico DaemonSet to converge (desired == updated == available)
+      ansible.builtin.shell: >-
+        set -o pipefail;
+        kubectl get daemonset/calico-node -n kube-system
+        -o jsonpath='{.status.desiredNumberScheduled} {.status.updatedNumberScheduled} {.status.numberAvailable}'
+      args:
+        executable: /bin/bash
+      register: calico_ds_conv
+      changed_when: false
+      failed_when: false
+      retries: 30
+      delay: 10
+      until: >-
+        calico_ds_conv.rc == 0
+        and (calico_ds_conv.stdout.split() | length) == 3
+        and (calico_ds_conv.stdout.split()[0] | int) > 0
+        and calico_ds_conv.stdout.split()[0] == calico_ds_conv.stdout.split()[1]
+        and calico_ds_conv.stdout.split()[0] == calico_ds_conv.stdout.split()[2]
+
+    # Capture the actual failure evidence. kubectl read errors (not-found, no
+    # pods, apiserver 5xx) go to STDERR, so merge 2>&1 on every probe or the
+    # dump comes back blank. Also surface nodes/describe/events, since an empty
+    # convergence string means the DaemonSet has desired=0 (nothing scheduling)
+    # rather than pods stuck starting.
+    - name: Collect calico-node diagnostics when it has not converged
+      when: >-
+        not ((calico_ds_conv.stdout.split() | length) == 3
+             and (calico_ds_conv.stdout.split()[0] | int) > 0
+             and calico_ds_conv.stdout.split()[0] == calico_ds_conv.stdout.split()[2])
+      ansible.builtin.shell: |
+        set -o pipefail
+        echo '### nodes:'
+        kubectl get nodes -o wide 2>&1 || true
+        echo '### calico-node DaemonSet:'
+        kubectl -n kube-system get ds calico-node -o wide 2>&1 || true
+        kubectl -n kube-system describe ds calico-node 2>&1 | tail -n 25 || true
+        echo '### kube-system calico/coredns pods:'
+        kubectl -n kube-system get pods -o wide 2>&1 | grep -Ei 'NAME|calico|coredns' || true
+        echo '### recent kube-system events:'
+        kubectl -n kube-system get events --sort-by=.lastTimestamp 2>&1 | tail -n 25 || true
+        pod=$(kubectl -n kube-system get pods -l k8s-app=calico-node \
+          -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | head -n1)
+        if [ -n "$pod" ]; then
+          echo "### describe $pod (tail):"
+          kubectl -n kube-system describe pod "$pod" 2>&1 | tail -n 40 || true
+          echo "### install-cni init logs ($pod):"
+          kubectl -n kube-system logs "$pod" -c install-cni --tail=40 2>&1 || true
+        else
+          echo '### no calico-node pods exist -> DaemonSet desired=0 (scheduling/nodeSelector/taint) or DS missing in kube-system'
+        fi
+      args:
+        executable: /bin/bash
+      register: calico_diag
+      changed_when: false
+      failed_when: false
+
+    - name: Assert Calico DaemonSet fully converged
+      ansible.builtin.assert:
+        that:
+          - (calico_ds_conv.stdout.split() | length) == 3
+          - (calico_ds_conv.stdout.split()[0] | int) > 0
+          - calico_ds_conv.stdout.split()[0] == calico_ds_conv.stdout.split()[2]
+        fail_msg: >-
+          calico-node did not converge (desired/updated/available =
+          '{{ calico_ds_conv.stdout | default('') | trim }}', rc={{ calico_ds_conv.rc | default('?') }},
+          stderr='{{ calico_ds_conv.stderr | default('') | trim }}'). An EMPTY string means the
+          DaemonSet is scheduling onto zero nodes (or the read is erroring) - inspect the nodes/events
+          block below, not just install-cni. If install-cni is backing off, it is the CNI token RBAC
+          (fixed by the tasks above - re-run once); if felix-ready never passes with a healthy control
+          plane, fix fabric routing (playbooks/linux-bgp.yml). Diagnostics:
+          {{ calico_diag.stdout | default('(none captured)') }}
+        success_msg: "calico-node converged: {{ calico_ds_conv.stdout | trim }} (desired/updated/available)."
+
+    - name: Apply Calico IPPool — no encapsulation
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: IPPool
+        metadata:
+          name: {{ calico_pool_name | default('default-ipv4-ippool') }}
+        spec:
+          cidr: {{ k8s_pod_cidr }}
+          ipipMode: Never
+          vxlanMode: Never
+          natOutgoing: true
+          blockSize: {{ calico_pool_blocksize | default(26) }}
+          nodeSelector: "all()"
+        EOF
+      changed_when: true
+
+    - name: Apply Calico FelixConfiguration — no tunnel, explicit MTU
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: FelixConfiguration
+        metadata:
+          name: default
+        spec:
+          ipInIpEnabled: false
+          vxlanEnabled: false
+          mtu: {{ host_data_mtu | default(9000) }}
+          logSeverityScreen: Warning
+          routeSource: WorkloadIPs
+        EOF
+      changed_when: true
+
+    - name: Apply Calico BGPConfiguration — disable node-to-node mesh
+      ansible.builtin.shell: |
+        kubectl apply -f - <<'EOF'
+        apiVersion: projectcalico.org/v3
+        kind: BGPConfiguration
+        metadata:
+          name: default
+        spec:
+          nodeToNodeMeshEnabled: false
+          logSeverityScreen: Warning
+        EOF
+      changed_when: true
+
+- name: Install pod-block blackhole routes on all K8s nodes
+  hosts: k8s_cluster
+  gather_facts: false
+  become: true
+  vars:
+    ansible_connection: ansible.builtin.ssh
+    # SSH reachability comes from the single static jump pattern in
+    # group_vars/all.yml (ProxyCommand via the R810). Do NOT re-add a play-level
+    # ansible_ssh_common_args override here — in native mode the socks conditional
+    # collapses to no ProxyCommand, overriding the jump and dialing 172.16.2.x
+    # directly (times out on every host reached through the R810).
+  tasks:
+    - name: Add pod-block blackhole route (FRR network stmt requires a kernel match)
+      ansible.builtin.command: >
+        ip route replace blackhole {{ k8s_pod_block_cidr }}
+      when: k8s_pod_block_cidr is defined
+      changed_when: true
+
+    - name: Persist pod-block blackhole route via /etc/network/if-up.d hook
+      ansible.builtin.copy:
+        dest: /etc/network/if-up.d/k8s-pod-block-route
+        mode: "0755"
+        content: |
+          #!/bin/sh
+          # Added by calico-post-deploy.yml — FRR network statement requires kernel route
+          ip route replace blackhole {{ k8s_pod_block_cidr }} 2>/dev/null || true
+      when: k8s_pod_block_cidr is defined
+
+    - name: Reload FRR so pod-block network statement activates
+      ansible.builtin.command: vtysh -c "clear ip bgp * soft out"
+      when: k8s_pod_block_cidr is defined
+      changed_when: true
+      failed_when: false
