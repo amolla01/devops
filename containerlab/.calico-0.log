@@ -2,13 +2,123 @@
 
 PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
 
+TASK [Preflight - wait for kube-apiserver /readyz to report ok] ********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - confirm admin RBAC can manage the calico DaemonSet] **************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - collect control-plane node readiness] ****************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - assert the control plane is healthy before mutating Calico] ******************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "Control plane healthy (readyz=ok, can-i watch ds=yes, all control-plane nodes Ready)."
+}
+
+TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
+ok: [k8s-master-01]
+
 TASK [Ensure Calico CNI token RBAC exists] *****************************************************************************************************************
 changed: [k8s-master-01]
 
-TASK [Apply Calico IPPool — no encapsulation] **************************************************************************************************************
-fatal: [k8s-master-01]: FAILED! => {"changed": true, "cmd": "kubectl apply -f - <<'EOF'\napiVersion: projectcalico.org/v3\nkind: IPPool\nmetadata:\n  name: default-ipv4-ippool\nspec:\n  cidr: 10.233.64.0/18\n  ipipMode: Never\n  vxlanMode: Never\n  natOutgoing: true\n  blockSize: 26\n  nodeSelector: \"all()\"\nEOF\n", "delta": "0:00:02.701142", "end": "2026-09-17 14:42:08.388993", "msg": "non-zero return code", "rc": 1, "start": "2026-09-17 14:42:05.687851", "stderr": "error: resource mapping not found for name: \"default-ipv4-ippool\" namespace: \"\" from \"STDIN\": no matches for kind \"IPPool\" in version \"projectcalico.org/v3\"\nensure CRDs are installed first", "stderr_lines": ["error: resource mapping not found for name: \"default-ipv4-ippool\" namespace: \"\" from \"STDIN\": no matches for kind \"IPPool\" in version \"projectcalico.org/v3\"", "ensure CRDs are installed first"], "stdout": "", "stdout_lines": []}
+TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Restart Calico node daemonset after env correction] **************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Wait for Calico DaemonSet to converge (desired == updated == available)] *****************************************************************************
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (30 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (29 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (28 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (27 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (26 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (25 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (24 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (23 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (22 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (21 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (20 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (19 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (18 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (17 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (16 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (15 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (14 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (13 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (12 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (11 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (10 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (9 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (8 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (7 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (6 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (5 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (4 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (3 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (2 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for Calico DaemonSet to converge (desired == updated == available) (1 retries left).
+ok: [k8s-master-01]
+
+TASK [Assert Calico DaemonSet fully converged] *************************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {
+    "assertion": "(calico_ds_conv.stdout.split() | length) == 3",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "calico-node did not converge (desired/updated/available = '16 16'). Pods are scheduled but not becoming Ready (-felix-ready). Inspect: kubectl -n kube-system describe ds calico-node, and kubectl -n kube-system logs <a calico-node pod>. If the datastore is flapping, fix fabric routing (playbooks/linux-bgp.yml) as described in the preflight message, then re-run."
+}
 
 PLAY RECAP *************************************************************************************************************************************************
-k8s-master-01              : ok=1    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+k8s-master-01              : ok=10   changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+
+We probably have see this error before, let us have a concrete solution for calico:
+
+
+
+Back-off restarting failed container install-cni in pod calico-node-2x7hh_kube-system(d7f36227-371e-42d9-a619-1237fba45e33)
+
+We are right back to the original error we started with on the install-cni init container (which must complete successfully before the main calico-node container can start).
+However, there is a massive clue here: this is a new pod (calico-node-2x7hh) spawned during our recent updates. Because the control plane (kube-apiserver) is now stable, the root cause is no longer a database timeout. Instead, the init container is crashing because of the Token Creation RBAC issue we uncovered earlier.
+------------------------------
+## Why this is happening right now
+When you edited the DaemonSet to clean up the BGP flags, Kubernetes destroyed the old pods and created fresh ones (like 2x7hh).
+During its installation phase, Calico tries to use the Kubernetes TokenRequest API to provision short-lived security tokens for the CNI plugin. If the calico-node cluster role lacks explicit permission to generate these tokens, the init container crashes instantly, throwing your Back-off restarting failed container install-cni error.
+------------------------------
+## The Fix: Apply the Missing RBAC Permissions
+You can fix this globally in under 60 seconds by granting the missing token permission to the Calico cluster role.
+## Step 1: Open the ClusterRole for Editing
+Run this command from your Windows workstation terminal:
+
+kubectl edit clusterrole calico-node --kubeconfig=.kube/config
+
+## Step 2: Append the Token Request Rules
+Scroll to the very bottom of the rules: array and add this block exactly as written:
+
+- apiGroups: [""]
+  resources:
+    - serviceaccounts/token
+  resourceNames:
+    - calico-cni-plugin
+  verbs:
+    - create
+
+Note: Ensure your spacing matches the existing blocks perfectly (Kubernetes uses 2-space indentation).
+## Step 3: Save and Force an Immediate Cycle
+
+   1. Save and close your text editor (:wq in vim).
+   2. Delete the stuck pod to force it to retry with its new security clearance immediately:
+   
+   kubectl delete pod -n kube-system calico-node-2x7hh --kubeconfig=.kube/config
+   
+   
+## What to Expect Next
+The fresh init container will boot up, successfully generate its security tokens, write the CNI binaries, exit with a clean 0 code, and hand over execution to your newly optimized IPAM-only calico-node container.
+Once you apply the ClusterRole token update, does the install-cni init container successfully finish its job and pass execution forward to a healthy 1/1 READY status?
+
