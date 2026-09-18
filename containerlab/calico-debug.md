@@ -186,3 +186,111 @@ Optional extra relief while stressed: keep the `logSeverityScreen: Warning` you 
 Expected result: `calico-node` pods go `1/1 Running`, the DaemonSet converges to `16 16 16`, the assert passes, and CoreDNS (currently blocked by no CNI) schedules right after. If anything still fails, the new diagnostic will now print the Felix (`calico-node`) crash reason directly in the assert message.
 
 Made changes.
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+This run is the breakthrough — it rules out the CNI/RBAC layer entirely and points at one systemic root cause. Let me improve the diagnostic to stop landing on the useless one-liner, then give you the analysis and the fix. 
+
+Replacing 1 lines with 1 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml#238-238), lines 238 to 262
+
+Replacing 9 lines with 12 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=$PWD/ansible.cfg && ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-check && echo CALICO_SYNTAX_OK'
+
+Green. Let me record the finding, then give you the deep dive. 
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/OTI0ZDZiNDEtMmMwOC00MTZhLTgzOTktNWViOTA4ZGQ0MTM4/lab-controlpath.md)
+
+Diagnostic hardened and syntax-checked. Here's the full analysis.
+
+## The layers have peeled back — this is now an infrastructure problem, not a Calico problem
+
+Walk the evidence with me:
+
+1. **CNI layer: fully healthy.** All init containers (`upgrade-ipam`, `install-cni`, `mount-bpffs`) show `Exited 0`; `10-calico.conflist` and `calico-kubeconfig` are on disk; all 16 nodes are `Ready`. The RBAC/install-cni chapters are closed.
+
+2. **The crash is the main `calico-node` (Felix) container, exiting `1` *immediately* on all 16 nodes.** `crictl` shows `calico-node … Exited … exit_status:1`, and the container log is a single generic line: `Calico node failed to start`. That one-liner is calico/node's wrapper message — the *real* error is either above it or in `/var/log/calico`, and `--tail=50` landed past it (I've bumped the diagnostic to `--tail=200` + an env dump so future runs capture it).
+
+3. **The smoking gun is in the kubelet log**, tied directly to a calico-node pod:
+   ```
+   Failed to update status for pod "kube-system/calico-node-zcjmv": etcdserver: request timed out
+   ```
+
+4. **etcd is still disk-strangled on all three db VMs**, even with 600/6000:
+   ```
+   apply request took too long   took 0.5s–2.0s   expected 100ms
+   waiting for ReadIndex response took too long, retrying
+   ignored out-of-date read index; local node read indexes queueing up and waiting to be in sync with leader
+   ```
+   And the fallout upstream: `kube-apiserver Readiness probe failed: statuscode 500`, `kube-controller-manager`/`kube-scheduler` leader elections churning.
+
+**Conclusion:** Calico is a *victim*, not the culprit. `calico/node` startup performs several datastore writes (create/update its Node resource, IPAM/BGP config). Under an etcd that takes 0.5–2 s per apply and returns `request timed out`, those writes fail → `Calico node failed to start` → exit 1 → CrashLoopBackOff **simultaneously on every node**. The identical, cluster-wide failure pattern is the signature of a shared-dependency (etcd) brownout, not a per-node CNI/config bug. You cannot get Calico to converge while the datastore is timing out — and importantly, **you haven't applied the etcd fsync fix yet** (the `grep /etc/etcd.env` returned `Permission denied` — it needs `sudo`).
+
+## The fix — in order
+
+### Step 1 (mandatory, do this first): make etcd's fsync cheap
+
+The 600/6000 timing kept quorum alive, but it can't fix a disk where a single `fdatasync` takes 2 s. For a resource-constrained virtual lab the correct knob is to stop etcd waiting on physical sync. On **each** db VM (`k8s-db-01`, then `-02`, then `-03`), **one at a time**:
+
+```bash
+sudo grep -q '^ETCD_UNSAFE_NO_FSYNC=' /etc/etcd.env || \
+  echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
+sudo systemctl restart etcd
+# confirm this member is healthy BEFORE touching the next one:
+sudo systemctl is-active etcd
+sudo journalctl -u etcd -n 20 --no-pager | grep -Ei 'ready to serve|took too long' || echo 'no slow lines - good'
+```
+
+Do them serially so you never lose quorum. Within a minute of the third restart, the `apply request took too long` / `ReadIndex` warnings should stop and the apiserver 500s and leader churn should quiet down.
+
+> Trade-off, stated plainly: `unsafe-no-fsync` risks losing the last few writes if an etcd VM loses power abruptly. Fine for a lab; not for production. The durable fix is hypervisor-side: back the etcd data disk with SSD/NVMe and set `cache=writeback` on that virtio disk.
+
+### Step 2: confirm the Calico autodetection fix actually synced
+
+The `ens2 → kubernetes-internal-ip` change only helps if your run repo picked it up. Verify:
+
+```bash
+kubectl -n kube-system get ds calico-node \
+  -o jsonpath='{range .spec.template.spec.containers[0].env[*]}{.name}={.value}{"\n"}{end}' | grep -i autodet
+```
+Expect `IP_AUTODETECTION_METHOD=kubernetes-internal-ip`. If it still says `interface=^ens2$`, your run repo (`/mnt/c/Users/nh1221/dc_lab/...`) hasn't synced the edit.
+
+### Step 3: get the real Calico startup error (in case there's a second issue hiding behind etcd)
+
+`kubectl logs` only gave the generic wrapper line. On any node, read the full container log directly:
+
+```bash
+# on k8s-master-01 (or any node):
+cid=$(sudo crictl ps -a --state exited --name calico-node -q | head -1)
+sudo crictl logs "$cid" 2>&1 | tail -80
+sudo tail -n 60 /var/log/calico/cni/cni.log 2>/dev/null
+```
+
+That output is authoritative. If it says anything about **datastore / connection / timeout**, Step 1 resolves it. If it says **"Unable to autodetect an IPv4 address"**, Step 2 wasn't applied.
+
+### Step 4: once etcd is calm, kick Calico and reconverge
+
+```bash
+kubectl -n kube-system rollout restart daemonset/calico-node
+kubectl -n kube-system delete pod -l k8s-app=calico-node --wait=false   # reset the backoff timers
+watch -n5 'kubectl -n kube-system get ds calico-node; kubectl -n kube-system get pods -l k8s-app=calico-node | grep -c " 1/1 "'
+```
+
+Then re-run the playbook:
+```bash
+ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+```
+
+## What I changed in code this round
+- Diagnostic now dumps the **effective `calico-node` env** (so a failure immediately shows whether `IP_AUTODETECTION_METHOD` is the new value) and captures **200 lines** of the Felix container log instead of 50 (so it stops truncating to the generic message). Syntax-checked green.
+
+The playbook itself is now correct; the remaining blocker is the etcd disk. Fix Step 1 and the cluster-wide Calico crash should clear. Send me the `crictl logs` output from Step 3 if it still crashes after etcd is calm and I'll pinpoint any residual issue.
+
+Made changes.
