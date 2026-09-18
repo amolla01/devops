@@ -1,0 +1,452 @@
+How to fix the frr bgp error from the calicp playook which is trying to peering now with exit routers?:
+
+
+
+Below playbooks were fixed before but still throwing error (monitoring playbook not even moving forward):
+From thes plays only the name spaces got created in the cluster but no effort observed creating any pod.
+Please validate that since we moved /opt to /data for the image repo and if there is any issue finding the images, it seems there are some error thrown along that line.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+
+PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+
+TASK [Preflight - wait for kube-apiserver /readyz to report ok] ********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - confirm admin RBAC can manage the calico DaemonSet] **************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - collect control-plane node readiness] ****************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - assert the control plane is healthy before mutating Calico] ******************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "Control plane healthy (readyz=ok, can-i watch ds=yes, all control-plane nodes Ready)."
+}
+
+TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Grant CNI token-request permission to the calico-node ServiceAccount] ********************************************************************************
+changed: [k8s-master-01]
+
+TASK [Ensure the Calico CNI-plugin ClusterRole/Binding match upstream (repair prior clobbering)] ***********************************************************
+changed: [k8s-master-01]
+
+TASK [Ensure the Calico calico-node ClusterRole/Binding match upstream (repair prior clobbering)] **********************************************************
+changed: [k8s-master-01]
+
+TASK [Read calico-node DaemonSet health before mutating (used to skip a needless restart)] *****************************************************************
+ok: [k8s-master-01]
+
+TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Restart Calico node daemonset when it is not already converged] **************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [Force-recycle calico-node pods stuck on the install-cni init container] ******************************************************************************
+changed: [k8s-master-01]
+
+TASK [Wait for Calico DaemonSet to converge (desired == updated == available)] *****************************************************************************
+ok: [k8s-master-01]
+
+TASK [Collect calico-node diagnostics when it has not converged] *******************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [Assert Calico DaemonSet fully converged] *************************************************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "calico-node converged: 16 16 16 (desired/updated/available)."
+}
+
+TASK [Apply Calico IPPool — no encapsulation] **************************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Apply Calico FelixConfiguration — disable tunnels] ***************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Apply Calico BGPConfiguration — disable node-to-node mesh] *******************************************************************************************
+changed: [k8s-master-01]
+
+PLAY [Install pod-block blackhole routes on all K8s nodes] *************************************************************************************************
+
+TASK [Add pod-block blackhole route (FRR network stmt requires a kernel match)] ****************************************************************************
+skipping: [k8s-master-02]
+skipping: [k8s-master-01]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Persist pod-block blackhole route via /etc/network/if-up.d hook] *************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Reload FRR so pod-block network statement activates] *************************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY RECAP *************************************************************************************************************************************************
+MonSrv                     : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-master-01              : ok=17   changed=8    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+
+PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+
+TASK [Preflight - wait for kube-apiserver /readyz to report ok] ********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - confirm admin RBAC can manage the calico DaemonSet] **************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - collect control-plane node readiness] ****************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Preflight - assert the control plane is healthy before mutating Calico] ******************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "Control plane healthy (readyz=ok, can-i watch ds=yes, all control-plane nodes Ready)."
+}
+
+TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Grant CNI token-request permission to the calico-node ServiceAccount] ********************************************************************************
+changed: [k8s-master-01]
+
+TASK [Ensure the Calico CNI-plugin ClusterRole/Binding match upstream (repair prior clobbering)] ***********************************************************
+changed: [k8s-master-01]
+
+TASK [Ensure the Calico calico-node ClusterRole/Binding match upstream (repair prior clobbering)] **********************************************************
+changed: [k8s-master-01]
+
+TASK [Read calico-node DaemonSet health before mutating (used to skip a needless restart)] *****************************************************************
+ok: [k8s-master-01]
+
+TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Restart Calico node daemonset when it is not already converged] **************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [Force-recycle calico-node pods stuck on the install-cni init container] ******************************************************************************
+changed: [k8s-master-01]
+
+TASK [Wait for Calico DaemonSet to converge (desired == updated == available)] *****************************************************************************
+ok: [k8s-master-01]
+
+TASK [Collect calico-node diagnostics when it has not converged] *******************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [Assert Calico DaemonSet fully converged] *************************************************************************************************************
+ok: [k8s-master-01] => {
+    "changed": false,
+    "msg": "calico-node converged: 16 16 16 (desired/updated/available)."
+}
+
+TASK [Apply Calico IPPool — no encapsulation] **************************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Apply Calico FelixConfiguration — disable tunnels] ***************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Apply Calico BGPConfiguration — disable node-to-node mesh] *******************************************************************************************
+changed: [k8s-master-01]
+
+PLAY [Install pod-block blackhole routes on all K8s nodes] *************************************************************************************************
+
+TASK [Add pod-block blackhole route (FRR network stmt requires a kernel match)] ****************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Persist pod-block blackhole route via /etc/network/if-up.d hook] *************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+TASK [Reload FRR so pod-block network statement activates] *************************************************************************************************
+skipping: [k8s-master-01]
+skipping: [k8s-master-02]
+skipping: [k8s-master-03]
+skipping: [k8s-db-01]
+skipping: [k8s-db-02]
+skipping: [k8s-db-03]
+skipping: [osh-ctrl-01]
+skipping: [osh-ctrl-02]
+skipping: [osh-ctrl-03]
+skipping: [osh-net-01]
+skipping: [osh-net-02]
+skipping: [MonSrv]
+skipping: [osh-comp-01]
+skipping: [osh-comp-02]
+skipping: [osh-comp-03]
+skipping: [osh-comp-04]
+
+PLAY RECAP *************************************************************************************************************************************************
+MonSrv                     : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-01                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-02                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-db-03                  : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-master-01              : ok=17   changed=8    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0
+k8s-master-02              : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+k8s-master-03              : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-comp-04                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-01                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-02                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-ctrl-03                : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-net-01                 : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+osh-net-02                 : ok=0    changed=0    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Poll for the Multus NetworkAttachmentDefinition CRD to exist] ****************************************************************************************
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (12 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (11 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (10 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (9 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (8 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (7 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (6 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (5 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (4 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (3 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (2 retries left).
+FAILED - RETRYING: [localhost -> k8s-master-01]: Poll for the Multus NetworkAttachmentDefinition CRD to exist (1 retries left).
+ok: [localhost -> k8s-master-01(172.16.2.51)]
+
+TASK [Fail with guidance when Multus is not deployed] ******************************************************************************************************
+fatal: [localhost]: FAILED! => {"changed": false, "msg": "Multus CRD network-attachment-definitions.k8s.cni.cncf.io is absent.\nMultus is a Kubespray addon (kube_network_plugin_multus: true) applied\nonly AFTER Calico converges. A missing CRD means the Kubespray addon\nphase never ran — almost always because the primary CNI never became\nhealthy. Fix Calico first, then deploy Multus:\n  1) ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml   # repair Calico RBAC\n  2) kubectl -n kube-system rollout status ds/calico-node                 # expect fully rolled out\n  3) re-run Kubespray cluster.yml (or its addon phase) to deploy Multus\n  4) kubectl -n kube-system get ds kube-multus-ds                         # expect DESIRED==READY\nthen re-run this playbook.\n"}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/metallb.yml
+
+PLAY [Deploy MetalLB (controller-only IPAM; node FRR advertises the VIPs)] *********************************************************************************
+
+TASK [metallb_deploy : Check for cached Helm binary on the control node] ***********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from cache] ********************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from upstream] *****************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Check for cached MetalLB chart tarball] *********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Add MetalLB chart repository] *******************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Update Helm repositories] ***********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Create MetalLB namespace] ***********************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Install MetalLB via Helm (controller-only, speaker disabled)] ***********************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Collect MetalLB controller diagnostics when the install did not settle] *************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Assert MetalLB installed successfully] **********************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {
+    "assertion": "mlb_install.rc == 0",
+    "changed": false,
+    "evaluated_to": false,
+    "msg": "MetalLB helm install did not settle (rc=1, stderr='Error: UPGRADE FAILED: context deadline exceeded'). \"context deadline exceeded\" means the metallb-controller pod never became Ready within 300s — almost always because the primary CNI (Calico) is unhealthy so the pod has no network. Fix Calico first (playbooks/calico-post-deploy.yml), confirm `kubectl -n kube-system rollout status ds/calico-node`, then re-run. Diagnostics: ### metallb-system pods:\nNAME                                 READY   STATUS             RESTARTS       AGE    IP               NODE          NOMINATED NODE   READINESS GATES\nmetallb-controller-5b67b77ff-hptns   0/1     CrashLoopBackOff   30 (49s ago)   130m   10.233.115.128   osh-comp-02   <none>           <none>\n### describe metallb-controller (tail):\n  Service Account:  metallb-controller\n  Containers:\n   controller:\n    Image:       quay.io/metallb/controller:v0.14.9\n    Ports:       7472/TCP (monitoring), 9443/TCP (webhook-server)\n    Host Ports:  0/TCP (monitoring), 0/TCP (webhook-server)\n    Args:\n      --port=7472\n      --log-level=info\n      --tls-min-version=VersionTLS12\n    Liveness:     http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Readiness:    http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Environment:  <none>\n    Mounts:\n      /tmp/k8s-webhook-server/serving-certs from cert (ro)\n  Volumes:\n   cert:\n    Type:          Secret (a volume populated by a Secret)\n    SecretName:    metallb-webhook-cert\n    Optional:      false\n  Node-Selectors:  kubernetes.io/os=linux\n  Tolerations:     <none>\nConditions:\n  Type           Status  Reason\n  ----           ------  ------\n  Available      False   MinimumReplicasUnavailable\n  Progressing    False   ProgressDeadlineExceeded\nOldReplicaSets:  <none>\nNewReplicaSet:   metallb-controller-5b67b77ff (1/1 replicas created)\nEvents:          <none>\n    Mounts:\n      /tmp/k8s-webhook-server/serving-certs from cert (ro)\n      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-4wkls (ro)\nConditions:\n  Type                        Status\n  PodReadyToStartContainers   True \n  Initialized                 True \n  Ready                       False \n  ContainersReady             False \n  PodScheduled                True \nVolumes:\n  cert:\n    Type:        Secret (a volume populated by a Secret)\n    SecretName:  metallb-webhook-cert\n    Optional:    false\n  kube-api-access-4wkls:\n    Type:                    Projected (a volume that contains injected data from multiple sources)\n    TokenExpirationSeconds:  3607\n    ConfigMapName:           kube-root-ca.crt\n    Optional:                false\n    DownwardAPI:             true\nQoS Class:                   BestEffort\nNode-Selectors:              kubernetes.io/os=linux\nTolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s\n                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s\nEvents:\n  Type     Reason   Age                     From     Message\n  ----     ------   ----                    ----     -------\n  Warning  BackOff  4m43s (x121 over 130m)  kubelet  spec.containers{controller}: Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)\n  Normal   Pulled   51s (x53 over 130m)     kubelet  spec.containers{controller}: Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod\n### recent metallb-system events:\nLAST SEEN   TYPE      REASON    OBJECT                                   MESSAGE\n4m43s       Warning   BackOff   pod/metallb-controller-5b67b77ff-hptns   Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)\n51s         Normal    Pulled    pod/metallb-controller-5b67b77ff-hptns   Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod"
+}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=6    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/rook-ceph.yml
+
+PLAY [Deploy Rook-Ceph on Kubernetes cluster] **************************************************************************************************************
+
+TASK [Label Ceph OSD nodes] ********************************************************************************************************************************
+ok: [k8s-master-01] => (item=osh-comp-01)
+ok: [k8s-master-01] => (item=osh-comp-02)
+ok: [k8s-master-01] => (item=osh-comp-03)
+
+TASK [rook_ceph_deploy : Check for cached Helm binary on the control node] *********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [rook_ceph_deploy : Install Helm on primary control-plane node from cache] ****************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Install Helm on primary control-plane node from upstream] *************************************************************************
+skipping: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Check for cached Rook chart tarballs] *********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Add Rook chart repository] ********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Update Helm repositories] *********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Create rook-ceph namespace] *******************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Install Rook-Ceph operator via Helm] **********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Wait for Rook operator to become ready] *******************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Render CephCluster manifest] ******************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Apply CephCluster CR] *************************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Wait for the Rook toolbox deployment to be ready] *********************************************************************************
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (12 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (11 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (10 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (9 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (8 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (7 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (6 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (5 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (4 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (3 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (2 retries left).
+FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (1 retries left).
+fatal: [k8s-master-01]: FAILED! => {"attempts": 12, "changed": false, "cmd": ["kubectl", "-n", "rook-ceph", "rollout", "status", "deployment/rook-ceph-tools", "--timeout=120s"], "delta": "0:00:00.236763", "end": "2026-09-19 00:27:33.821112", "msg": "non-zero return code", "rc": 1, "start": "2026-09-19 00:27:33.584349", "stderr": "Error from server (NotFound): deployments.apps \"rook-ceph-tools\" not found", "stderr_lines": ["Error from server (NotFound): deployments.apps \"rook-ceph-tools\" not found"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=9    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/monitoring.yml
+
+PLAY [Deploy the monitoring stack (kube-prometheus-stack) on the cluster] **********************************************************************************
+
+TASK [monitoring_stack : Check for cached Helm binary on the control node] *********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [monitoring_stack : Ensure Helm is present on primary control-plane node from cache] ******************************************************************
+ok: [k8s-master-01]
+
+TASK [monitoring_stack : Ensure Helm is present on primary control-plane node from upstream] ***************************************************************
+skipping: [k8s-master-01]
+
+TASK [monitoring_stack : Check for cached kube-prometheus-stack chart tarball] *****************************************************************************
+ok: [k8s-master-01]
+
+TASK [monitoring_stack : Add prometheus-community chart repository] ****************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [monitoring_stack : Update Helm repositories] *********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [monitoring_stack : Create monitoring namespace] ******************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [monitoring_stack : Label monitoring node(s)] *********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [monitoring_stack : Render kube-prometheus-stack values] **********************************************************************************************
+changed: [k8s-master-01]
+
+TASK [monitoring_stack : Install kube-prometheus-stack via Helm] *******************************************************************************************
