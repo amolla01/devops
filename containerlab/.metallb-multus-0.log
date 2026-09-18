@@ -1,0 +1,52 @@
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Wait for Multus CRD to be available] *****************************************************************************************************************
+fatal: [localhost -> k8s-master-01(172.16.2.51)]: FAILED! => {"changed": false, "cmd": ["kubectl", "wait", "crd/network-attachment-definitions.k8s.cni.cncf.io", "--for=condition=Established", "--timeout=120s"], "delta": "0:00:00.280055", "end": "2026-09-18 22:06:01.273394", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 22:06:00.993339", "stderr": "Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io \"network-attachment-definitions.k8s.cni.cncf.io\" not found", "stderr_lines": ["Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io \"network-attachment-definitions.k8s.cni.cncf.io\" not found"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Wait for Multus CRD to be available] *****************************************************************************************************************
+fatal: [localhost -> k8s-master-01(172.16.2.51)]: FAILED! => {"changed": false, "cmd": ["kubectl", "wait", "crd/network-attachment-definitions.k8s.cni.cncf.io", "--for=condition=Established", "--timeout=120s"], "delta": "0:00:00.218692", "end": "2026-09-18 22:08:13.614180", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 22:08:13.395488", "stderr": "Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io \"network-attachment-definitions.k8s.cni.cncf.io\" not found", "stderr_lines": ["Error from server (NotFound): customresourcedefinitions.apiextensions.k8s.io \"network-attachment-definitions.k8s.cni.cncf.io\" not found"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/metallb.yml
+
+PLAY [Deploy MetalLB (controller-only IPAM; node FRR advertises the VIPs)] *********************************************************************************
+
+TASK [metallb_deploy : Check for cached Helm binary on the control node] ***********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from cache] ********************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from upstream] *****************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Check for cached MetalLB chart tarball] *********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Add MetalLB chart repository] *******************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Update Helm repositories] ***********************************************************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Create MetalLB namespace] ***********************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [metallb_deploy : Install MetalLB via Helm (controller-only, speaker disabled)] ***********************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["helm", "upgrade", "--install", "metallb", "/opt/fabric-charts/metallb-0.14.9.tgz", "--namespace", "metallb-system", "--set", "speaker.enabled=false", "--wait"], "delta": "0:05:03.047615", "end": "2026-09-18 22:14:47.696742", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 22:09:44.649127", "stderr": "Error: context deadline exceeded", "stderr_lines": ["Error: context deadline exceeded"], "stdout": "Release \"metallb\" does not exist. Installing it now.", "stdout_lines": ["Release \"metallb\" does not exist. Installing it now."]}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=4    changed=1    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
