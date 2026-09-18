@@ -294,3 +294,72 @@ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/cali
 The playbook itself is now correct; the remaining blocker is the etcd disk. Fix Step 1 and the cluster-wide Calico crash should clear. Send me the `crictl logs` output from Step 3 if it still crashes after etcd is calm and I'll pinpoint any residual issue.
 
 Made changes.
+ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
+Compacted conversationYou're right — we're in a loop, and I've been treating the symptom (Calico) instead of the thing the logs are actually screaming. Let me be blunt about what changed in *this* run, because it points somewhere different.
+
+Let me look at the exact repair task so I can make one targeted change. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml#175-175), lines 175 to 205
+
+Replacing 9 lines with 14 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/calico-post-deploy.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=$PWD/ansible.cfg && ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-check && echo CALICO_SYNTAX_OK'
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/OTI0ZDZiNDEtMmMwOC00MTZhLTgzOTktNWViOTA4ZGQ0MTM4/lab-controlpath.md)
+
+Yes — we're in a loop, and I own that. I've been tuning the Calico playbook for three rounds while **flying blind**. This run's logs finally show why, and it's two things that aren't "Calico config":
+
+## What this run actually proved
+
+1. **The autodetection fix landed correctly.** The env dump confirms `IP_AUTODETECTION_METHOD=kubernetes-internal-ip` and `IP=autodetect`. So that's off the table — it is *not* the cause.
+
+2. **We literally cannot see the failure.** Every `calico-node` log — current *and* previous, on every node — prints exactly one line: `Calico node failed to start`. That's because the DaemonSet env has `CALICO_STARTUP_LOGLEVEL=error` (baked in by the kubespray manifest). At `error` level the startup binary swallows its own diagnostics and only the generic wrapper line survives. We've been reading a censored log the whole time. **That's the loop.**
+
+3. **The substrate is I/O-starved — this is host-level, not Calico.** Look at the pod describe, not the Calico log:
+   ```
+   Warning  Failed  spec.containers{calico-node}: Error: context deadline exceeded
+   Warning  Failed  ... failed to reserve container name "..."; ... is reserved for "<id>"
+   ```
+   `context deadline exceeded` on *container creation* and `failed to reserve container name` mean **containerd itself is timing out** — combined with the earlier etcd `slow fdatasync 2s` and `etcdserver: request timed out`, the disks under this cluster are saturated. Everything downstream (etcd, containerd, calico startup writes) times out.
+
+4. **Your `crictl` commands failed for a mechanical reason, not a real error.** `$cid` came back empty (`level=fatal msg="ID cannot be empty"`), and when it did have a value the container was already garbage-collected (`NotFound`). The pods crash and get reaped faster than you can query the exited container. `crictl` on a stale ID will never work here — and note `CALICO_DISABLE_FILE_LOGGING=true` means there's no felix file log either, so the container stdout is the *only* place the reason exists.
+
+## Break the loop — do these in order
+
+I already changed the playbook so `CALICO_STARTUP_LOGLEVEL` is forced to `info` on every run (syntax-checked green). But you don't need to wait for a repo sync to see the truth right now.
+
+**Step A — un-blind, then read the REAL reason.** Run on the ControlNode (WSL bash, where `kubectl` + pipes work):
+```bash
+kubectl -n kube-system set env ds/calico-node CALICO_STARTUP_LOGLEVEL=info FELIX_LOGSEVERITYSCREEN=info
+kubectl -n kube-system rollout restart ds/calico-node
+sleep 60
+pod=$(kubectl -n kube-system get pod -l k8s-app=calico-node -o jsonpath='{.items[0].metadata.name}')
+kubectl -n kube-system logs "$pod" -c calico-node --previous
+```
+That last command will finally print the actual failure line (expect either a datastore write timeout — which ties straight back to etcd — or a specific startup error). **Paste that output back to me.**
+
+**Step B — apply the etcd disk fix you haven't done yet.** This is still the systemic root cause and it's still not applied. On **each** db VM one at a time (`k8s-db-01`, confirm healthy, then `-02`, then `-03`):
+```bash
+sudo grep -q '^ETCD_UNSAFE_NO_FSYNC=' /etc/etcd.env || echo 'ETCD_UNSAFE_NO_FSYNC=true' | sudo tee -a /etc/etcd.env
+sudo systemctl restart etcd
+sudo systemctl is-active etcd && sudo journalctl -u etcd -n 15 --no-pager | grep -Ei 'took too long|fdatasync' || echo 'etcd quiet - proceed to next member'
+```
+
+**Step C — recycle and re-converge** once etcd is quiet:
+```bash
+kubectl -n kube-system delete pod -l k8s-app=calico-node --wait=false
+```
+
+## The honest bottom line
+
+I don't think there's a fourth Calico playbook tweak worth making until Step A shows us the real error. My strong read is: the log will say a **datastore/timeout**, and that maps directly to the etcd/disk starvation in Step B — the two are the same problem. The Calico manifest is now correct; the cluster it's running on is I/O-bound.
+
+One thing I noticed but deliberately did **not** touch (to avoid adding another variable): `CALICO_NETWORKING_BACKEND` renders **empty**, not `none`, while `CLUSTER_TYPE=k8s,bgp` — which would make Calico try to run BIRD. If the un-blinded log implicates BGP/BIRD rather than the datastore, that's our next lead. Send me the Step A output and I'll pinpoint it instead of guessing.
+
+Made changes.
