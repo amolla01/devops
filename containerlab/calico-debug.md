@@ -504,3 +504,70 @@ ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-chec
 but that only proves the YAML is valid. It does not prove the live Kubernetes cluster has working Calico CRDs. The live failure you pasted confirms the cluster itself is still failing before the CRDs are available.
 
 > The loop is broken only once the live `calico-node` RBAC is repaired and the Calico DaemonSet is actually healthy. After that, the IPPool step should work normally.
+
+
+VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+Good questions — let me check exactly what your local wrappers do so I give you the right command.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml#1-1), lines 1 to 80
+
+Searched for files matching `**/playbooks/k8s-addons-metallb.yml`, 1 match
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml#80-80), lines 80 to 200
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/k8s-addons-metallb.yml#1-1), lines 1 to 80
+
+Now I can answer precisely. Neither of your guesses — but let me first give you a targeted option so you don't have to run the whole cluster build.
+
+## 1. Multus — not k8s-addons-metallb.yml, and you don't need the full run
+
+- playbooks/k8s-addons-metallb.yml only patches **Service annotations** (Dashboard/Prometheus/ingress VIPs) onto already-running add-ons. It has nothing to do with Multus.
+- Multus is installed by **Kubespray's `cluster.yml`**, which your wrapper playbooks/kubespray.yml runs (`kube_network_plugin_multus: true`). So the "addon phase" lives inside that wrapper, not in a local playbook.
+
+Your wrapper already supports `kubespray_start_at_task` and `kubespray_limit` but not tag scoping, so today you'd have to re-run the whole `cluster.yml`. Let me add a `kubespray_tags` passthrough so you can deploy *just* Multus against the live cluster:   
+
+Replacing 4 lines with 8 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/kubespray.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=$PWD/ansible.cfg && ansible-playbook -i inventory.yml playbooks/kubespray.yml --syntax-check && echo KUBESPRAY_SYNTAX_OK'
+
+Syntax green. So for Multus, run **either**:
+- Scoped (fast): `ansible-playbook -i inventory.yml playbooks/kubespray.yml -e kubespray_tags=multus`
+- Full converge (also fine, idempotent): `ansible-playbook -i inventory.yml playbooks/kubespray.yml`
+
+Then re-run `multus-nad-deploy.yml`. Note: Multus doesn't block metallb/rook/monitoring — only `multus-nad-deploy.yml` needs it — so you can defer it.
+
+## 2. "No pods created, only namespaces" — important correction
+
+That observation doesn't fully match the run output: the MetalLB run showed a real `metallb-controller` pod that was **130 minutes old** and had a Calico IP, sitting in `CrashLoopBackOff`. So pods *were* being created (the scheduler and controller-manager work) — what you saw in Lens was the *re-run*, where the namespace already existed and Helm just hung on the **already-broken, old pod** rather than making a new one. No new creation event = nothing new appears in Lens.
+
+Two distinct things are going on:
+
+- **MetalLB**: the Deployment/pod exist; the `controller` container keeps crashing. This is a container-level failure, not "no pod." My added `kubectl logs -c controller --previous` will show why on the next run.
+- **Monitoring / Rook**: Helm creates the namespace early, then blocks on `--wait`. If it stalls before the workload objects are created, Lens shows only the namespace. The usual causes after a rough first bring-up are (a) an **orphaned admission webhook** with `failurePolicy: Fail` whose backing pod isn't Ready (rejects/hangs every create), or (b) **PVCs Pending** because Ceph storage isn't `HEALTH_OK` yet.
+
+To pin it down, please run these and share the output:
+
+```bash
+# control plane actually healthy? (proves pods CAN be created)
+kubectl -n kube-system get pods -o wide | egrep 'scheduler|controller-manager|kube-proxy|coredns'
+
+# orphaned webhooks that block all creates?
+kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations
+
+# what exists in each stuck namespace (deploy/rs/pods/events)?
+kubectl -n metallb-system get deploy,rs,pods
+kubectl -n monitoring   get all,pvc,events --sort-by=.lastTimestamp | tail -n 40
+kubectl -n rook-ceph    get pods,pvc
+```
+
+If `kubectl get validatingwebhookconfigurations` lists a `metallb` or `prometheus`/`kube-prometheus-stack` webhook while its controller pod is not Ready, that orphaned webhook is what's freezing new creates — deleting that stale webhook config (or fixing the controller) unblocks everything.
+
+**Recommended sequence now:** sync the repo → `rook-ceph.yml` (now creates the toolbox) → `metallb.yml` (grab the new controller logs) → paste the 5 diagnostic outputs above so we pin the "namespace-only" stall → then Multus + monitoring. All four file edits are syntax-green.
+
+Made changes.
