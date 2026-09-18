@@ -482,47 +482,72 @@ Once the BGP environment variables are removed, do the new calico-node pods succ
 
 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-Your calico-config ConfigMap is perfectly intact and formatting correctly, which is excellent news. However, look closely at your very first configuration key:
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/registry.yml
 
-data:
-  calico_backend: none
+PLAY [Deploy air-gapped registry mirror on R810 host] ******************************************************************************************************
 
-## The Root Cause
-A value of calico_backend: none completely changes how Calico initializes. It explicitly tells the calico-node container not to run its internal BGP routing engine (Bird). Instead, it commands Calico to act only as a local policy engine, forcing the cluster to rely on a separate, external framework—like your FRRouting (FRR) configuration—to handle the actual inter-pod routing.
-When calico_backend is set to none, Calico's Felix engine requires eBPF mode or a strict host-routing interface map to match against. Because your environment variables are simultaneously passing explicit BGP clustering methods, the container's shell script validation loops hit a direct logical contradiction, panicking silently on startup with the message "Calico node failed to start".
-------------------------------
-## The Definitive Fix
-Depending on your intentional architectural goal for this lab, you have two options to align your backend config with your routing reality.
-## Option A: If you want Calico to handle BGP natively
-If your plan was to let Calico run its own standard internal BGP routing network (which is standard for Kubespray deployments), change your global ConfigMap to activate the default BGP engine:
+TASK [registry_deploy : Ensure Docker is installed] ********************************************************************************************************
+ok: [poweredge_r810]
 
-   1. Open your ConfigMap template for editing:
-   
-   kubectl edit configmap -n kube-system calico-config --kubeconfig=.kube/config
-   
-   2. Locate calico_backend: none and change it to:
-   
-   calico_backend: bird
-   
-   3. Save and close the editor.
+TASK [registry_deploy : Enable and start Docker] ***********************************************************************************************************
+ok: [poweredge_r810]
 
-## Option B: If you are routing via your Host FRRouting daemons
-If your architectural intent is to use the active host FRR daemons we verified earlier to handle all cluster routes (un-containerized networking):
+TASK [registry_deploy : Create registry data directory] ****************************************************************************************************
+ok: [poweredge_r810]
 
-   1. You must update your Calico DaemonSet environment variables to cleanly tell it to stop trying to auto-detect a BGP cluster interface (ens2).
-   2. Open the DaemonSet template:
-   
-   kubectl edit daemonset -n kube-system calico-node --kubeconfig=.kube/config
-   
-   3. Locate your CLUSTER_TYPE and IP_AUTODETECTION_METHOD variables, and ensure they are modified to safely disable standard BGP peering lookups, allowing none to run as a flat policy controller.
+TASK [registry_deploy : Check for registry image] **********************************************************************************************************
+ok: [poweredge_r810]
 
-------------------------------
-## Step 2: Flush and Force Pull the Fresh State
-Once you choose and save Option A or Option B, flush the dead container cache strings across your 16 compute nodes by deleting the stuck loops:
+TASK [registry_deploy : Pull registry image if missing] ****************************************************************************************************
+skipping: [poweredge_r810]
 
-kubectl delete pods -n kube-system -l k8s-app=calico-node --kubeconfig=.kube/config
+TASK [registry_deploy : Check for registry container] ******************************************************************************************************
+ok: [poweredge_r810]
 
-The fresh instances will boot up, parse the aligned backend metrics matching your network architecture, and initialize smoothly.
-Is your lab architecture intended to use native Calico BGP (bird), or are you designing an infrastructure that integrates directly with your host-level FRRouting switches (none)?
+TASK [registry_deploy : Create or restart registry container] **********************************************************************************************
+ok: [poweredge_r810]
 
+TASK [registry_deploy : Wait for registry port] ************************************************************************************************************
+ok: [poweredge_r810]
 
+TASK [registry_deploy : Confirm registry endpoint responds] ************************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_deploy : Deploy air-gapped flat binary HTTP file server] ************************************************************************************
+ok: [poweredge_r810]
+
+PLAY [Seed registry from /opt/fabric-cache/images] *********************************************************************************************************
+
+TASK [registry_seed : Check for cached image tarballs on the control node] *********************************************************************************
+ok: [poweredge_r810 -> localhost]
+
+TASK [registry_seed : Display cached image count] **********************************************************************************************************
+ok: [poweredge_r810] => {
+    "msg": "Found 68 image tarballs in /opt/fabric-cache/images/"
+}
+
+TASK [registry_seed : Guardrail - detect unreadable image tarballs on control node] ************************************************************************
+ok: [poweredge_r810 -> localhost]
+
+TASK [registry_seed : Guardrail - fix cache permissions when unreadable tarballs are detected] *************************************************************
+skipping: [poweredge_r810]
+
+TASK [registry_seed : Guardrail - fail if tarballs are still unreadable after auto-fix] ********************************************************************
+ok: [poweredge_r810] => {
+    "changed": false,
+    "msg": "All assertions passed"
+}
+
+TASK [registry_seed : Ensure skopeo is available on the registry host] *************************************************************************************
+ok: [poweredge_r810]
+
+TASK [registry_seed : Create staging directory on registry host] *******************************************************************************************
+changed: [poweredge_r810]
+
+TASK [registry_seed : Guardrail - verify Docker can push to registry seed endpoint on R810] ****************************************************************
+fatal: [poweredge_r810]: FAILED! => {"changed": false, "cmd": "set -e\nSEED_REGISTRY=\"172.16.2.1:5000\"\nif ! docker info 2>/dev/null | grep -A20 'Insecure Registries' | grep -q \"$SEED_REGISTRY\"; then\n  echo \"Docker on registry host is missing insecure-registry entry for $SEED_REGISTRY\"\n  echo \"Add it to /etc/docker/daemon.json and restart docker, e.g.:\"\n  echo '{\"insecure-registries\": [\"'$SEED_REGISTRY'\", \"192.168.9.198:5000\", \"172.16.2.1\"]}'\n  exit 1\nfi\n", "delta": "0:00:11.243866", "end": "2026-09-18 04:37:21.847988", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 04:37:10.604122", "stderr": "", "stderr_lines": [], "stdout": "Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000\nAdd it to /etc/docker/daemon.json and restart docker, e.g.:\n{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}", "stdout_lines": ["Docker on registry host is missing insecure-registry entry for 172.16.2.1:5000", "Add it to /etc/docker/daemon.json and restart docker, e.g.:", "{\"insecure-registries\": [\"172.16.2.1:5000\", \"192.168.9.198:5000\", \"172.16.2.1\"]}"]}
+
+PLAY RECAP *************************************************************************************************************************************************
+poweredge_r810             : ok=15   changed=1    unreachable=0    failed=1    skipped=2    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
