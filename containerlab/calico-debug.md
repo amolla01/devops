@@ -442,3 +442,65 @@ The new task grants `calico-node` its `get nodes` permission, the datastore chec
 One residual observation I did **not** change (to avoid introducing a new variable): `CALICO_NETWORKING_BACKEND` renders empty rather than `none`. That doesn't affect startup, so it won't block convergence — but if Felix later complains about BGP/BIRD once it's actually running, that's the next thread to pull.
 
 Made changes.
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+I’m tracing this exact failure to the CRD readiness gate and the Calico install path, because the playbook reached the IPPool task before the CRDs were actually registered or the service account permissions were repaired.
+
+## Root cause of this specific error
+
+This is not an IPPool formatting problem. It means the Kubernetes API server does not know about the Calico CRD yet:
+
+- `IPPool` is a Calico CRD from `projectcalico.org/v3`
+- the error says:
+  `no matches for kind "IPPool" in version "projectcalico.org/v3"`
+- and:
+  `ensure CRDs are installed first`
+
+That is exactly what happens when Calico never finished starting up, usually because the `calico-node` service account is still missing the required RBAC and the DaemonSet keeps crashing.
+
+The relevant remediation logic is in playbooks/calico-post-deploy.yml, where the playbook first repairs the `calico-node` and `calico-cni-plugin` RBAC before it ever tries to apply the IPPool.
+
+---
+
+## Why it reached the IPPool step
+
+The playbook was already past the earlier health checks and CRD waits, but the cluster was not actually in a healthy Calico state. The critical failure is the same one we tracked earlier:
+
+- `calico-node` is forbidden to `get nodes`
+- the actual startup fails with:
+  `User "system:serviceaccount:kube-system:calico-node" cannot get resource "nodes"`
+
+Without that permission, `calico-node` exits early and the Calico CRDs never become usable, so the IPPool task fails.
+
+---
+
+## What to do next
+
+1. Apply the RBAC repair on the live cluster from the version of playbooks/calico-post-deploy.yml that includes the upstream `calico-node` ClusterRole + ClusterRoleBinding.
+2. Restart the DaemonSet and confirm it is healthy before rerunning the IPPool task.
+3. Then rerun the playbook.
+
+### Quick validation commands
+
+```bash
+kubectl get crd | egrep 'ippools|felixconfigurations|clusterinformations'
+kubectl get ds calico-node -n kube-system -o wide
+kubectl get pods -n kube-system -l k8s-app=calico-node
+kubectl -n kube-system logs ds/calico-node --tail=200
+```
+
+If you see the old auth error, the cluster is still not fixed. The fix is not to skip the IPPool step; it is to restore Calico’s RBAC first.
+
+---
+
+## Important note
+
+The syntax check passed:
+
+```bash
+ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml --syntax-check
+```
+
+but that only proves the YAML is valid. It does not prove the live Kubernetes cluster has working Calico CRDs. The live failure you pasted confirms the cluster itself is still failing before the CRDs are available.
+
+> The loop is broken only once the live `calico-node` RBAC is repaired and the Calico DaemonSet is actually healthy. After that, the IPPool step should work normally.
