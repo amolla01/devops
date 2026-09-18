@@ -207,3 +207,178 @@ exit
 !
 end
 k8s-master-01# 
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Wait for Multus CRD to be available] *****************************************************************************************************************
+fatal: [localhost -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.51 port 22: Connection timed out", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Wait for Multus CRD to be available] *****************************************************************************************************************
+fatal: [localhost -> k8s-master-01]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: ssh: connect to host 172.16.2.51 port 22: Connection timed out", "unreachable": true}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ssh k8s-master-01
+Welcome to Ubuntu 26.04 LTS (GNU/Linux 7.0.0-28-generic x86_64)
+
+ * Documentation:  https://docs.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Fri Sep 18 03:20:31 CEST 2026
+
+  System load:    0.77      Processes:               144
+  Usage of /home: unknown   Users logged in:         0
+  Memory usage:   13%       IPv4 address for enp1s0: 10.0.0.15
+  Swap usage:     0%        IPv4 address for enp1s0: 172.16.2.51
+
+ * Canonical Workshop gives developers fast, composable, reproducible, and
+   secure developer environments that are perfect for agentic workflows.
+
+   https://ubuntu.com/workshop
+
+Expanded Security Maintenance for Applications is not enabled.
+
+140 updates can be applied immediately.
+111 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+1 additional security update can be applied with ESM Apps.
+Learn more about enabling ESM Apps service at https://ubuntu.com/esm
+
+Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings
+
+
+Last login: Fri Sep 18 03:20:32 2026 from 172.16.2.1
+ubuntu@k8s-master-01:~$ exit
+logout
+Connection to 172.16.2.51 closed.
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/calico-post-deploy.yml
+
+PLAY [Apply Calico post-deploy CRs (IPPool, FelixConfig, BGPConfig)] ***************************************************************************************
+
+TASK [Wait for Calico CRDs to be registered] ***************************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Wait for Calico Felix CRD to be registered] **********************************************************************************************************
+ok: [k8s-master-01]
+
+TASK [Ensure Calico CNI token RBAC exists] *****************************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Repair the global Calico DaemonSet env for this lab] *************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Restart Calico node daemonset after env correction] **************************************************************************************************
+changed: [k8s-master-01]
+
+TASK [Wait for Calico DaemonSet to become ready] ***********************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["kubectl", "rollout", "status", "daemonset/calico-node", "-n", "kube-system", "--timeout=300s"], "delta": "0:05:34.586766", "end": "2026-09-18 05:26:33.860169", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:20:59.273403", "stderr": "E0918 05:24:14.019396  153758 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"\nerror: timed out waiting for the condition", "stderr_lines": ["E0918 05:24:14.019396  153758 reflector.go:204] \"Failed to watch\" err=\"daemonsets.apps \\\"calico-node\\\" is forbidden: User \\\"kubernetes-admin\\\" cannot watch resource \\\"daemonsets\\\" in API group \\\"apps\\\" in the namespace \\\"kube-system\\\"\" reflector=\"k8s.io/client-go/tools/watch/informerwatcher.go:162\" type=\"*unstructured.Unstructured\"", "error: timed out waiting for the condition"], "stdout": "Waiting for daemon set spec update to be observed...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...\nWaiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available...", "stdout_lines": ["Waiting for daemon set spec update to be observed...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 15 out of 16 new pods have been updated...", "Waiting for daemon set \"calico-node\" rollout to finish: 0 of 16 updated pods are available..."]}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=5    changed=3    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Wait for Multus CRD to be available] *****************************************************************************************************************
+fatal: [localhost -> k8s-master-01(172.16.2.51)]: FAILED! => {"changed": false, "cmd": ["kubectl", "wait", "crd/network-attachment-definitions.k8s.cni.cncf.io", "--for=condition=Established", "--timeout=120s"], "delta": "0:00:28.522694", "end": "2026-09-18 05:35:34.068639", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:35:05.545945", "stderr": "error: Get \"https://10.0.10.1:6443/apis/apiextensions.k8s.io/v1/customresourcedefinitions/network-attachment-definitions.k8s.cni.cncf.io\": dial tcp 10.0.10.1:6443: connect: connection refused - error from a previous attempt: unexpected EOF", "stderr_lines": ["error: Get \"https://10.0.10.1:6443/apis/apiextensions.k8s.io/v1/customresourcedefinitions/network-attachment-definitions.k8s.cni.cncf.io\": dial tcp 10.0.10.1:6443: connect: connection refused - error from a previous attempt: unexpected EOF"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/meallb.yml
+ERROR! the playbook: playbooks/meallb.yml could not be found
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/metall
+b.yml
+
+PLAY [Deploy MetalLB (controller-only IPAM; node FRR advertises the VIPs)] *********************************************************************************
+
+TASK [metallb_deploy : Check for cached Helm binary on the control node] ***********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from cache] ********************************************************************
+changed: [k8s-master-01]
+
+TASK [metallb_deploy : Ensure Helm is present on primary control-plane node from upstream] *****************************************************************
+skipping: [k8s-master-01]
+
+TASK [metallb_deploy : Check for cached MetalLB chart tarball] *********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [metallb_deploy : Add MetalLB chart repository] *******************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["helm", "repo", "add", "metallb", "https://metallb.github.io/metallb"], "delta": "0:00:10.115034", "end": "2026-09-18 05:39:07.171518", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:38:57.056484", "stderr": "Error: looks like \"https://metallb.github.io/metallb\" is not a valid chart repository or cannot be reached: Get \"https://metallb.github.io/metallb/index.yaml\": dial tcp: lookup metallb.github.io on 127.0.0.53:53: read udp 127.0.0.1:50078->127.0.0.53:53: i/o timeout", "stderr_lines": ["Error: looks like \"https://metallb.github.io/metallb\" is not a valid chart repository or cannot be reached: Get \"https://metallb.github.io/metallb/index.yaml\": dial tcp: lookup metallb.github.io on 127.0.0.53:53: read udp 127.0.0.1:50078->127.0.0.53:53: i/o timeout"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=3    changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/rook-ceph.yml
+
+PLAY [Deploy Rook-Ceph on Kubernetes cluster] **************************************************************************************************************
+
+TASK [Label Ceph OSD nodes] ********************************************************************************************************************************
+ok: [k8s-master-01] => (item=osh-comp-01)
+ok: [k8s-master-01] => (item=osh-comp-02)
+ok: [k8s-master-01] => (item=osh-comp-03)
+
+TASK [rook_ceph_deploy : Check for cached Helm binary on the control node] *********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [rook_ceph_deploy : Install Helm on primary control-plane node from cache] ****************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Install Helm on primary control-plane node from upstream] *************************************************************************
+skipping: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Check for cached Rook chart tarballs] *********************************************************************************************
+ok: [k8s-master-01]
+
+TASK [rook_ceph_deploy : Add Rook chart repository] ********************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["helm", "repo", "add", "rook-release", "https://charts.rook.io/release"], "delta": "0:00:10.119440", "end": "2026-09-18 05:40:34.085599", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:40:23.966159", "stderr": "Error: looks like \"https://charts.rook.io/release\" is not a valid chart repository or cannot be reached: Get \"https://charts.rook.io/release/index.yaml\": dial tcp: lookup charts.rook.io on 127.0.0.53:53: read udp 127.0.0.1:59304->127.0.0.53:53: i/o timeout", "stderr_lines": ["Error: looks like \"https://charts.rook.io/release\" is not a valid chart repository or cannot be reached: Get \"https://charts.rook.io/release/index.yaml\": dial tcp: lookup charts.rook.io on 127.0.0.53:53: read udp 127.0.0.1:59304->127.0.0.53:53: i/o timeout"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=4    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/monitoring.yml
+
+PLAY [Deploy the monitoring stack (kube-prometheus-stack) on the cluster] **********************************************************************************
+
+TASK [monitoring_stack : Check for cached Helm binary on the control node] *********************************************************************************
+ok: [k8s-master-01 -> localhost]
+
+TASK [monitoring_stack : Ensure Helm is present on primary control-plane node from cache] ******************************************************************
+ok: [k8s-master-01]
+
+TASK [monitoring_stack : Ensure Helm is present on primary control-plane node from upstream] ***************************************************************
+skipping: [k8s-master-01]
+
+TASK [monitoring_stack : Check for cached kube-prometheus-stack chart tarball] *****************************************************************************
+ok: [k8s-master-01]
+
+TASK [monitoring_stack : Add prometheus-community chart repository] ****************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"changed": false, "cmd": ["helm", "repo", "add", "prometheus-community", "https://prometheus-community.github.io/helm-charts"], "delta": "0:00:10.161035", "end": "2026-09-18 05:42:36.569915", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:42:26.408880", "stderr": "Error: looks like \"https://prometheus-community.github.io/helm-charts\" is not a valid chart repository or cannot be reached: Get \"https://prometheus-community.github.io/helm-charts/index.yaml\": dial tcp: lookup prometheus-community.github.io on 127.0.0.53:53: read udp 127.0.0.1:46029->127.0.0.53:53: i/o timeout", "stderr_lines": ["Error: looks like \"https://prometheus-community.github.io/helm-charts\" is not a valid chart repository or cannot be reached: Get \"https://prometheus-community.github.io/helm-charts/index.yaml\": dial tcp: lookup prometheus-community.github.io on 127.0.0.53:53: read udp 127.0.0.1:46029->127.0.0.53:53: i/o timeout"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=3    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/k8s-addons-metallb.yml
+
+PLAY [Patch K8s add-on Services to use MetalLB pools] ******************************************************************************************************
+
+TASK [Apply cert-manager self-signed ClusterIssuer] ********************************************************************************************************
+fatal: [k8s-master-01]: FAILED! => {"ansible_facts": {"discovered_interpreter_python": "/usr/bin/python3"}, "changed": true, "cmd": "kubectl apply -f - <<'EOF'\napiVersion: cert-manager.io/v1\nkind: ClusterIssuer\nmetadata:\n  name: selfsigned-issuer\nspec:\n  selfSigned: {}\n---\napiVersion: cert-manager.io/v1\nkind: ClusterIssuer\nmetadata:\n  name: sheba-ca-issuer\nspec:\n  ca:\n    secretName: sheba-ca-secret\nEOF\n", "delta": "0:00:02.675783", "end": "2026-09-18 05:44:00.972524", "msg": "non-zero return code", "rc": 1, "start": "2026-09-18 05:43:58.296741", "stderr": "resource mapping not found for name: \"selfsigned-issuer\" namespace: \"\" from \"STDIN\": no matches for kind \"ClusterIssuer\" in version \"cert-manager.io/v1\"\nensure CRDs are installed first\nresource mapping not found for name: \"sheba-ca-issuer\" namespace: \"\" from \"STDIN\": no matches for kind \"ClusterIssuer\" in version \"cert-manager.io/v1\"\nensure CRDs are installed first", "stderr_lines": ["resource mapping not found for name: \"selfsigned-issuer\" namespace: \"\" from \"STDIN\": no matches for kind \"ClusterIssuer\" in version \"cert-manager.io/v1\"", "ensure CRDs are installed first", "resource mapping not found for name: \"sheba-ca-issuer\" namespace: \"\" from \"STDIN\": no matches for kind \"ClusterIssuer\" in version \"cert-manager.io/v1\"", "ensure CRDs are installed first"], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+k8s-master-01              : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ sudo systemctl status kubelet
