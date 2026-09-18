@@ -82,6 +82,11 @@
         dest: "{{ remote_lab_dir }}/"
         recursive: true
         delete: true
+        # qcow2 disks + clab runtime state exist only on R810; never let --delete
+        # wipe them (that recreates empty disks and loses all VM/k8s data).
+        rsync_opts:
+          - "--exclude=*.qcow2"
+          - "--exclude=clab-*"
       become: false
 
     - name: Ensure genisoimage is installed (for cloud-init seed ISO)
@@ -165,15 +170,55 @@
 
     - name: Destroy existing topology if present
       ansible.builtin.command: "containerlab destroy -t {{ remote_topo_file }} --cleanup"
+      when: clab_redeploy | default(true) | bool
       failed_when: false
       changed_when: true
 
     - name: Remove stale containerlab state directories
       ansible.builtin.shell: "find {{ remote_lab_dir }} -maxdepth 1 -type d -name 'clab-*' -exec rm -rf {} +"
+      when: clab_redeploy | default(true) | bool
       changed_when: true
 
+    - name: Detect running node count when the lab may already be up (non-destructive path)
+      ansible.builtin.shell: |
+        containerlab inspect -t {{ remote_topo_file }} -f json 2>/dev/null | python3 -c '
+        import sys, json
+        try:
+            d = json.load(sys.stdin)
+        except Exception:
+            print(0); sys.exit(0)
+        if isinstance(d, dict):
+            d = d.get("containers", [])
+        print(sum(1 for c in d if str(c.get("state", "")).lower().startswith("running")))
+        '
+      args:
+        executable: /bin/bash
+      register: clab_running_probe
+      changed_when: false
+      failed_when: false
+      when: not (clab_redeploy | default(true) | bool)
+
+    # A fresh `containerlab deploy` errors on the pre-existing br-internet host
+    # veths when every node is already up; skip it so provisioning can still run.
+    - name: Decide whether the lab is already fully deployed
+      ansible.builtin.set_fact:
+        clab_already_up: "{{ (((clab_running_probe.stdout | default('0') | trim) or '0') | int) >= (groups['sonic_switches'] | length) }}"
+      when: not (clab_redeploy | default(true) | bool)
+
     - name: Deploy topology on R810
-      ansible.builtin.command: "containerlab deploy -t {{ remote_topo_file }} --reconfigure"
+      # clab_redeploy=false → idempotent reconcile (bring up missing nodes, leave
+      # running ones); default true → full --reconfigure after the destroy above.
+      ansible.builtin.command: >-
+        containerlab deploy -t {{ remote_topo_file }}
+        {{ '--reconfigure' if (clab_redeploy | default(true) | bool) else '' }}
+      when: not (clab_already_up | default(false) | bool)
+
+    - name: Report that deploy was skipped (lab already running)
+      ansible.builtin.debug:
+        msg: >-
+          Lab already fully deployed ({{ clab_running_probe.stdout | default('?') | trim }}
+          nodes running) — skipped containerlab deploy; continuing to provisioning.
+      when: clab_already_up | default(false) | bool
 
     - name: Probe All Datacenter SSH Ports Concurrently (Non-Blocking)
       ansible.builtin.wait_for:
