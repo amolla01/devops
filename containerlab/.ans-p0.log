@@ -1,156 +1,4 @@
-In our inventory.yml we have specified raw osd disks for ceph, and thathas been declared and attached through pci in topology.yml.
-However, we are not seeing at all any osd contaner. Please see below for details:
-
-ubuntu@k8s-master-01:~$ kubectl get pods -n rook-ceph
-NAME                                            READY   STATUS              RESTARTS         AGE
-csi-cephfsplugin-4fln4                          0/2     ImagePullBackOff    28 (5m51s ago)   3h2m
-csi-cephfsplugin-5ltgp                          0/2     ImagePullBackOff    28 (6m58s ago)   3h2m
-csi-cephfsplugin-6kx86                          0/2     ImagePullBackOff    24 (5m24s ago)   3h2m
-csi-cephfsplugin-747sq                          0/2     ImagePullBackOff    28 (2m33s ago)   3h2m
-csi-cephfsplugin-772tb                          1/2     ImagePullBackOff    29 (5m24s ago)   3h2m
-csi-cephfsplugin-cgksj                          0/2     ImagePullBackOff    24 (102s ago)    3h2m
-csi-cephfsplugin-cndq2                          0/2     ImagePullBackOff    24 (96s ago)     3h2m
-csi-cephfsplugin-d4gp5                          0/2     ImagePullBackOff    26 (5m4s ago)    3h2m
-csi-cephfsplugin-fsm8w                          0/2     ErrImagePull        27 (5m8s ago)    3h2m
-csi-cephfsplugin-h4pv8                          0/2     ImagePullBackOff    29 (6m35s ago)   3h2m
-csi-cephfsplugin-hsxxt                          0/2     ImagePullBackOff    21 (4m ago)      3h2m
-csi-cephfsplugin-mz8bk                          0/2     ImagePullBackOff    28 (6m37s ago)   3h2m
-csi-cephfsplugin-provisioner-7b85687c6c-8k6bd   0/5     CrashLoopBackOff    65 (2m54s ago)   3h2m
-csi-cephfsplugin-provisioner-7b85687c6c-vjkqm   0/5     CrashLoopBackOff    84 (17s ago)     3h2m
-csi-cephfsplugin-z7xfk                          1/2     ImagePullBackOff    30 (5m38s ago)   3h2m
-csi-rbdplugin-48c2h                             0/2     ImagePullBackOff    22 (7m55s ago)   3h2m
-csi-rbdplugin-4w6wj                             0/2     ImagePullBackOff    28 (2m32s ago)   3h2m
-csi-rbdplugin-55rbp                             0/2     ImagePullBackOff    25 (5m46s ago)   3h2m
-csi-rbdplugin-9ntp6                             0/2     ImagePullBackOff    28 (2m34s ago)   3h2m
-csi-rbdplugin-ghwz6                             0/2     ImagePullBackOff    27 (3m12s ago)   3h2m
-csi-rbdplugin-mfp9c                             0/2     ImagePullBackOff    28 (75s ago)     3h2m
-csi-rbdplugin-mpghx                             0/2     ImagePullBackOff    31 (4m43s ago)   3h2m
-csi-rbdplugin-nsj72                             0/2     ImagePullBackOff    25 (2m50s ago)   3h2m
-csi-rbdplugin-provisioner-56486d5b65-d9sml      4/5     ImagePullBackOff    76 (9m40s ago)   3h2m
-csi-rbdplugin-provisioner-56486d5b65-fzrn4      0/5     Error               64 (12s ago)     3h2m
-csi-rbdplugin-rf7k5                             0/2     ImagePullBackOff    25 (6m5s ago)    3h2m
-csi-rbdplugin-scs5x                             0/2     ErrImagePull        28 (3m23s ago)   3h2m
-csi-rbdplugin-wswmt                             0/2     ImagePullBackOff    29 (5m42s ago)   3h2m
-csi-rbdplugin-zl7vs                             1/2     ImagePullBackOff    28 (5m22s ago)   3h2m
-csi-rbdplugin-zrftw                             0/2     ImagePullBackOff    29 (5m44s ago)   3h2m
-rook-ceph-detect-version-dnpf8                  0/1     ImagePullBackOff    0                3m22s
-rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running             0                3h7m
-rook-ceph-tools-754bcbfdf9-lrwb8                0/1     ContainerCreating   0                6m19s
-rook-discover-42st7                             1/1     Running             0                3h3m
-rook-discover-56rxk                             1/1     Running             1                3h3m
-rook-discover-5rcpg                             1/1     Running             0                3h3m
-rook-discover-82gzq                             1/1     Running             1                3h3m
-rook-discover-b7zgw                             1/1     Running             0                3h3m
-rook-discover-dj4pr                             1/1     Running             0                3h3m
-rook-discover-j9jz2                             1/1     Running             0                3h3m
-rook-discover-jrffw                             1/1     Running             1                3h3m
-rook-discover-nlmnm                             1/1     Running             2                3h3m
-rook-discover-qqd6j                             1/1     Running             1                3h3m
-rook-discover-rg47w                             1/1     Running             2                3h3m
-rook-discover-vdsnt                             1/1     Running             2                3h3m
-rook-discover-ztmw7                             1/1     Running             2                3h3m
-ubuntu@k8s-master-01:~$ kubectl get pods -n rook-ceph
-NAME                                            READY   STATUS              RESTARTS         AGE
-csi-cephfsplugin-4fln4                          0/2     ImagePullBackOff    29 (2m46s ago)   3h11m
-csi-cephfsplugin-5ltgp                          0/2     ErrImagePull        29 (3m57s ago)   3h11m
-csi-cephfsplugin-6kx86                          0/2     ImagePullBackOff    26 (2m17s ago)   3h11m
-csi-cephfsplugin-747sq                          1/2     ImagePullBackOff    30 (5m16s ago)   3h11m
-csi-cephfsplugin-772tb                          0/2     ImagePullBackOff    30 (2m13s ago)   3h11m
-csi-cephfsplugin-cgksj                          0/2     ImagePullBackOff    25 (4m26s ago)   3h11m
-csi-cephfsplugin-cndq2                          0/2     ErrImagePull        25 (4m19s ago)   3h11m
-csi-cephfsplugin-d4gp5                          0/2     ImagePullBackOff    28 (98s ago)     3h11m
-csi-cephfsplugin-fsm8w                          0/2     ImagePullBackOff    29 (7m45s ago)   3h11m
-csi-cephfsplugin-h4pv8                          0/2     ImagePullBackOff    30 (3m44s ago)   3h11m
-csi-cephfsplugin-hsxxt                          0/2     ImagePullBackOff    23 (6m45s ago)   3h11m
-csi-cephfsplugin-mz8bk                          0/2     ImagePullBackOff    30 (3m27s ago)   3h11m
-csi-cephfsplugin-provisioner-7b85687c6c-8k6bd   0/5     CrashLoopBackOff    69 (4m50s ago)   3h11m
-csi-cephfsplugin-provisioner-7b85687c6c-vjkqm   0/5     Error               89 (3m ago)      3h11m
-csi-cephfsplugin-z7xfk                          0/2     ImagePullBackOff    31 (116s ago)    3h11m
-csi-rbdplugin-48c2h                             0/2     ImagePullBackOff    23 (3m34s ago)   3h11m
-csi-rbdplugin-4w6wj                             0/2     ImagePullBackOff    29 (4m53s ago)   3h11m
-csi-rbdplugin-55rbp                             0/2     ImagePullBackOff    26 (2m51s ago)   3h11m
-csi-rbdplugin-9ntp6                             0/2     ErrImagePull        29 (5m7s ago)    3h11m
-csi-rbdplugin-ghwz6                             0/2     ImagePullBackOff    29 (5m51s ago)   3h11m
-csi-rbdplugin-mfp9c                             0/2     ImagePullBackOff    29 (3m49s ago)   3h11m
-csi-rbdplugin-mpghx                             0/2     ImagePullBackOff    32 (5m2s ago)    3h11m
-csi-rbdplugin-nsj72                             1/2     ErrImagePull        27 (5m37s ago)   3h11m
-csi-rbdplugin-provisioner-56486d5b65-d9sml      2/5     ImagePullBackOff    88 (3m11s ago)   3h11m
-csi-rbdplugin-provisioner-56486d5b65-fzrn4      0/5     CrashLoopBackOff    67 (2m40s ago)   3h11m
-csi-rbdplugin-rf7k5                             0/2     ImagePullBackOff    26 (3m5s ago)    3h11m
-csi-rbdplugin-scs5x                             0/2     ImagePullBackOff    30 (6m1s ago)    3h11m
-csi-rbdplugin-wswmt                             0/2     ImagePullBackOff    30 (2m38s ago)   3h11m
-csi-rbdplugin-zl7vs                             0/2     ImagePullBackOff    29 (2m19s ago)   3h11m
-csi-rbdplugin-zrftw                             0/2     ImagePullBackOff    30 (2m31s ago)   3h11m
-rook-ceph-detect-version-dnpf8                  0/1     ImagePullBackOff    0                11m
-rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running             0                3h15m
-rook-ceph-tools-754bcbfdf9-lrwb8                0/1     ContainerCreating   0                14m
-rook-discover-42st7                             1/1     Running             0                3h11m
-rook-discover-56rxk                             1/1     Running             1                3h11m
-rook-discover-5rcpg                             1/1     Running             0                3h11m
-rook-discover-82gzq                             1/1     Running             1                3h11m
-rook-discover-b7zgw                             1/1     Running             0                3h11m
-rook-discover-dj4pr                             1/1     Running             0                3h11m
-rook-discover-j9jz2                             1/1     Running             0                3h11m
-rook-discover-jrffw                             1/1     Running             1                3h11m
-rook-discover-nlmnm                             1/1     Running             2                3h11m
-rook-discover-qqd6j                             1/1     Running             1                3h11m
-rook-discover-rg47w                             1/1     Running             2                3h11m
-rook-discover-vdsnt                             1/1     Running             2                3h11m
-rook-discover-ztmw7                             1/1     Running             2                3h11m
-ubuntu@k8s-master-01:~$ kubectl get pods -n rook-ceph
-NAME                                            READY   STATUS              RESTARTS          AGE
-csi-cephfsplugin-4fln4                          0/2     ImagePullBackOff    34 (3m57s ago)    3h40m
-csi-cephfsplugin-5ltgp                          0/2     ErrImagePull        34 (5m8s ago)     3h40m
-csi-cephfsplugin-6kx86                          0/2     ImagePullBackOff    31 (3m13s ago)    3h40m
-csi-cephfsplugin-747sq                          0/2     ImagePullBackOff    35 (6m34s ago)    3h40m
-csi-cephfsplugin-772tb                          0/2     ImagePullBackOff    35 (2m57s ago)    3h40m
-csi-cephfsplugin-cgksj                          0/2     ImagePullBackOff    30 (5m49s ago)    3h40m
-csi-cephfsplugin-cndq2                          1/2     ImagePullBackOff    31 (5m18s ago)    3h40m
-csi-cephfsplugin-d4gp5                          0/2     ImagePullBackOff    33 (3m1s ago)     3h40m
-csi-cephfsplugin-fsm8w                          0/2     ImagePullBackOff    34 (2m10s ago)    3h40m
-csi-cephfsplugin-h4pv8                          0/2     ImagePullBackOff    35 (4m58s ago)    3h40m
-csi-cephfsplugin-hsxxt                          0/2     ImagePullBackOff    28 (102s ago)     3h40m
-csi-cephfsplugin-mz8bk                          0/2     ImagePullBackOff    35 (4m39s ago)    3h40m
-csi-cephfsplugin-provisioner-7b85687c6c-8k6bd   0/5     CrashLoopBackOff    93 (28s ago)      3h40m
-csi-cephfsplugin-provisioner-7b85687c6c-vjkqm   0/5     CrashLoopBackOff    108 (3m24s ago)   3h40m
-csi-cephfsplugin-z7xfk                          1/2     ImagePullBackOff    36 (5m34s ago)    3h40m
-csi-rbdplugin-48c2h                             0/2     ImagePullBackOff    28 (3m45s ago)    3h40m
-csi-rbdplugin-4w6wj                             0/2     ImagePullBackOff    34 (6m6s ago)     3h40m
-csi-rbdplugin-55rbp                             0/2     ImagePullBackOff    31 (4m9s ago)     3h40m
-csi-rbdplugin-9ntp6                             0/2     ImagePullBackOff    35 (6m29s ago)    3h40m
-csi-rbdplugin-ghwz6                             0/2     ImagePullBackOff    34 (89s ago)      3h40m
-csi-rbdplugin-mfp9c                             0/2     ImagePullBackOff    34 (4m2s ago)     3h40m
-csi-rbdplugin-mpghx                             0/2     ImagePullBackOff    37 (2m31s ago)    3h40m
-csi-rbdplugin-nsj72                             0/2     ImagePullBackOff    32 (6m49s ago)    3h40m
-csi-rbdplugin-provisioner-56486d5b65-d9sml      0/5     CrashLoopBackOff    106 (3m50s ago)   3h40m
-csi-rbdplugin-provisioner-56486d5b65-fzrn4      0/5     CrashLoopBackOff    79 (9m23s ago)    3h40m
-csi-rbdplugin-rf7k5                             0/2     ImagePullBackOff    31 (3m36s ago)    3h40m
-csi-rbdplugin-scs5x                             0/2     ImagePullBackOff    35 (7m4s ago)     3h40m
-csi-rbdplugin-wswmt                             0/2     ImagePullBackOff    35 (3m52s ago)    3h40m
-csi-rbdplugin-zl7vs                             0/2     ImagePullBackOff    34 (3m24s ago)    3h40m
-csi-rbdplugin-zrftw                             0/2     ImagePullBackOff    35 (98s ago)      3h40m
-rook-ceph-detect-version-xhmmx                  0/1     ErrImagePull        0                 20m
-rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running             0                 3h45m
-rook-ceph-tools-754bcbfdf9-lrwb8                0/1     ContainerCreating   0                 44m
-rook-discover-42st7                             1/1     Running             0                 3h41m
-rook-discover-56rxk                             1/1     Running             1                 3h41m
-rook-discover-5rcpg                             1/1     Running             0                 3h41m
-rook-discover-82gzq                             1/1     Running             1                 3h41m
-rook-discover-b7zgw                             1/1     Running             0                 3h41m
-rook-discover-dj4pr                             1/1     Running             0                 3h41m
-rook-discover-j9jz2                             1/1     Running             0                 3h41m
-rook-discover-jrffw                             1/1     Running             1                 3h41m
-rook-discover-nlmnm                             1/1     Running             2                 3h41m
-rook-discover-qqd6j                             1/1     Running             1                 3h41m
-rook-discover-rg47w                             1/1     Running             2                 3h41m
-rook-discover-vdsnt                             1/1     Running             2                 3h41m
-rook-discover-ztmw7                             1/1     Running             2                 3h41m
-ubuntu@k8s-master-01:~$ kubectl -n rook-ceph rollout status 
-error: required resource not specified
-ubuntu@k8s-master-01:~$ kubectl -n rook-ceph rollout status "deployment/rook-ceph-tools"
-error: deployment "rook-ceph-tools" exceeded its progress deadline
-ubuntu@k8s-master-01:~$ kubectl -n rook-ceph rollout status "deployment/rook-ceph"
-Error from server (NotFound): deployments.apps "rook-ceph" not found
+ubuntu@k8s-master-01:~$ 
 ubuntu@k8s-master-01:~$ # control plane actually healthy? (proves pods CAN be created)
 kubectl -n kube-system get pods -o wide | egrep 'scheduler|controller-manager|kube-proxy|coredns'
 
@@ -161,92 +9,154 @@ kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations
 kubectl -n metallb-system get deploy,rs,pods
 kubectl -n monitoring   get all,pvc,events --sort-by=.lastTimestamp | tail -n 40
 kubectl -n rook-ceph    get pods,pvc
-kube-controller-manager-k8s-master-01   1/1     Running   63 (3h17m ago)    37h    10.0.10.1   k8s-master-01   <none>           <none>
-kube-controller-manager-k8s-master-02   1/1     Running   87 (3h15m ago)    37h    10.0.20.1   k8s-master-02   <none>           <none>
-kube-controller-manager-k8s-master-03   1/1     Running   65 (3h16m ago)    37h    10.0.30.1   k8s-master-03   <none>           <none>
-kube-proxy-6jpxk                        1/1     Running   1 (28h ago)       37h    10.0.30.1   k8s-master-03   <none>           <none>
-kube-proxy-8cvd2                        1/1     Running   1 (28h ago)       37h    10.0.20.3   osh-ctrl-02     <none>           <none>
-kube-proxy-9phxm                        1/1     Running   1 (28h ago)       37h    10.0.10.3   osh-ctrl-01     <none>           <none>
-kube-proxy-bdbcm                        1/1     Running   1 (28h ago)       37h    10.0.30.3   osh-ctrl-03     <none>           <none>
-kube-proxy-bf9mw                        1/1     Running   1 (28h ago)       37h    10.0.10.2   k8s-db-01       <none>           <none>
-kube-proxy-hrpct                        1/1     Running   1 (28h ago)       37h    10.0.10.5   osh-comp-01     <none>           <none>
-kube-proxy-kxs4s                        1/1     Running   2                 37h    10.0.20.1   k8s-master-02   <none>           <none>
-kube-proxy-mbt27                        1/1     Running   1 (28h ago)       37h    10.0.20.2   k8s-db-02       <none>           <none>
-kube-proxy-nhrvn                        1/1     Running   1 (28h ago)       37h    10.0.30.2   k8s-db-03       <none>           <none>
-kube-proxy-pr8qh                        1/1     Running   1 (28h ago)       37h    10.0.20.5   osh-comp-02     <none>           <none>
-kube-proxy-tp4rj                        1/1     Running   1 (28h ago)       37h    10.0.30.4   monsrv          <none>           <none>
-kube-proxy-tsvvk                        1/1     Running   1 (28h ago)       37h    10.0.10.4   osh-net-01      <none>           <none>
-kube-proxy-tt4sf                        1/1     Running   1 (28h ago)       37h    10.0.10.1   k8s-master-01   <none>           <none>
-kube-proxy-w2955                        1/1     Running   1 (28h ago)       37h    10.0.10.6   osh-comp-04     <none>           <none>
-kube-proxy-w42c4                        1/1     Running   1 (28h ago)       37h    10.0.30.5   osh-comp-03     <none>           <none>
-kube-proxy-w5xjj                        1/1     Running   1 (28h ago)       37h    10.0.20.4   osh-net-02      <none>           <none>
-kube-scheduler-k8s-master-01            1/1     Running   69 (3h16m ago)    37h    10.0.10.1   k8s-master-01   <none>           <none>
-kube-scheduler-k8s-master-02            1/1     Running   71 (3h17m ago)    37h    10.0.20.1   k8s-master-02   <none>           <none>
-kube-scheduler-k8s-master-03            1/1     Running   68 (3h13m ago)    37h    10.0.30.1   k8s-master-03   <none>           <none>
+kube-controller-manager-k8s-master-01   0/1     CrashLoopBackOff            174 (3m39s ago)   2d2h    10.0.10.1   k8s-master-01   <none>           <none>
+kube-controller-manager-k8s-master-02   0/1     CrashLoopBackOff            196 (27s ago)     2d2h    10.0.20.1   k8s-master-02   <none>           <none>
+kube-controller-manager-k8s-master-03   0/1     CrashLoopBackOff            165 (2m23s ago)   2d2h    10.0.30.1   k8s-master-03   <none>           <none>
+kube-proxy-6jpxk                        1/1     Running                     1 (41h ago)       2d2h    10.0.30.1   k8s-master-03   <none>           <none>
+kube-proxy-8cvd2                        1/1     Running                     1 (41h ago)       2d2h    10.0.20.3   osh-ctrl-02     <none>           <none>
+kube-proxy-9phxm                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.3   osh-ctrl-01     <none>           <none>
+kube-proxy-bdbcm                        1/1     Running                     1 (41h ago)       2d2h    10.0.30.3   osh-ctrl-03     <none>           <none>
+kube-proxy-bf9mw                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.2   k8s-db-01       <none>           <none>
+kube-proxy-hrpct                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.5   osh-comp-01     <none>           <none>
+kube-proxy-kxs4s                        1/1     Running                     2                 2d2h    10.0.20.1   k8s-master-02   <none>           <none>
+kube-proxy-mbt27                        1/1     Running                     1 (41h ago)       2d2h    10.0.20.2   k8s-db-02       <none>           <none>
+kube-proxy-nhrvn                        1/1     Running                     1 (41h ago)       2d2h    10.0.30.2   k8s-db-03       <none>           <none>
+kube-proxy-pr8qh                        1/1     Running                     1 (41h ago)       2d2h    10.0.20.5   osh-comp-02     <none>           <none>
+kube-proxy-tp4rj                        1/1     Running                     1 (41h ago)       2d2h    10.0.30.4   monsrv          <none>           <none>
+kube-proxy-tsvvk                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.4   osh-net-01      <none>           <none>
+kube-proxy-tt4sf                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.1   k8s-master-01   <none>           <none>
+kube-proxy-w2955                        1/1     Running                     1 (41h ago)       2d2h    10.0.10.6   osh-comp-04     <none>           <none>
+kube-proxy-w42c4                        1/1     Running                     1 (41h ago)       2d2h    10.0.30.5   osh-comp-03     <none>           <none>
+kube-proxy-w5xjj                        1/1     Running                     1 (41h ago)       2d2h    10.0.20.4   osh-net-02      <none>           <none>
+kube-scheduler-k8s-master-01            1/1     Running                     173 (5m58s ago)   2d2h    10.0.10.1   k8s-master-01   <none>           <none>
+kube-scheduler-k8s-master-02            0/1     CrashLoopBackOff            185 (3m42s ago)   2d2h    10.0.20.1   k8s-master-02   <none>           <none>
+kube-scheduler-k8s-master-03            0/1     CrashLoopBackOff            169 (21s ago)     2d2h    10.0.30.1   k8s-master-03   <none>           <none>
 NAME                                                                                          WEBHOOKS   AGE
-validatingwebhookconfiguration.admissionregistration.k8s.io/kube-prometheus-stack-admission   1          90m
-validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration     6          3h58m
+validatingwebhookconfiguration.admissionregistration.k8s.io/kube-prometheus-stack-admission   1          14h
+validatingwebhookconfiguration.admissionregistration.k8s.io/metallb-webhook-configuration     6          16h
 
 NAME                                                                                        WEBHOOKS   AGE
-mutatingwebhookconfiguration.admissionregistration.k8s.io/kube-prometheus-stack-admission   1          90m
+mutatingwebhookconfiguration.admissionregistration.k8s.io/kube-prometheus-stack-admission   1          14h
 NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/metallb-controller   0/1     1            0           3h58m
+deployment.apps/metallb-controller   0/1     1            0           16h
 
 NAME                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/metallb-controller-5b67b77ff   1         1         0       3h58m
+replicaset.apps/metallb-controller-5b67b77ff   1         1         0       16h
 
-NAME                                     READY   STATUS             RESTARTS       AGE
-pod/metallb-controller-5b67b77ff-hptns   0/1     CrashLoopBackOff   51 (17s ago)   3h58m
+NAME                                     READY   STATUS                 RESTARTS   AGE
+pod/metallb-controller-5b67b77ff-hptns   0/1     CreateContainerError   123        16h
 error: couldn't find any field with path "{.lastTimestamp}" in the list of objects
-NAME                                                READY   STATUS              RESTARTS          AGE
-pod/csi-cephfsplugin-4fln4                          0/2     ImagePullBackOff    35 (4m48s ago)    3h46m
-pod/csi-cephfsplugin-5ltgp                          0/2     ImagePullBackOff    36 (5m50s ago)    3h46m
-pod/csi-cephfsplugin-6kx86                          0/2     ImagePullBackOff    32 (4m3s ago)     3h46m
-pod/csi-cephfsplugin-747sq                          0/2     ImagePullBackOff    36 (72s ago)      3h46m
-pod/csi-cephfsplugin-772tb                          0/2     ImagePullBackOff    36 (3m39s ago)    3h46m
-pod/csi-cephfsplugin-cgksj                          0/2     ImagePullBackOff    31 (6m39s ago)    3h46m
-pod/csi-cephfsplugin-cndq2                          0/2     ImagePullBackOff    32 (6m5s ago)     3h46m
-pod/csi-cephfsplugin-d4gp5                          0/2     ImagePullBackOff    34 (3m46s ago)    3h46m
-pod/csi-cephfsplugin-fsm8w                          0/2     ImagePullBackOff    35 (2m58s ago)    3h46m
-pod/csi-cephfsplugin-h4pv8                          0/2     ImagePullBackOff    37 (5m42s ago)    3h46m
-pod/csi-cephfsplugin-hsxxt                          0/2     ImagePullBackOff    29 (2m18s ago)    3h46m
-pod/csi-cephfsplugin-mz8bk                          1/2     ErrImagePull        37 (5m23s ago)    3h46m
-pod/csi-cephfsplugin-provisioner-7b85687c6c-8k6bd   0/5     CrashLoopBackOff    97 (81s ago)      3h46m
-pod/csi-cephfsplugin-provisioner-7b85687c6c-vjkqm   0/5     CrashLoopBackOff    112 (4m14s ago)   3h46m
-pod/csi-cephfsplugin-z7xfk                          0/2     ImagePullBackOff    37 (6m14s ago)    3h46m
-pod/csi-rbdplugin-48c2h                             0/2     ImagePullBackOff    29 (4m37s ago)    3h46m
-pod/csi-rbdplugin-4w6wj                             0/2     ImagePullBackOff    35 (4m54s ago)    3h46m
-pod/csi-rbdplugin-55rbp                             1/2     ImagePullBackOff    32 (10m ago)      3h46m
-pod/csi-rbdplugin-9ntp6                             0/2     ImagePullBackOff    36 (106s ago)     3h46m
-pod/csi-rbdplugin-ghwz6                             0/2     ImagePullBackOff    35 (2m11s ago)    3h46m
-pod/csi-rbdplugin-mfp9c                             0/2     ImagePullBackOff    35 (4m49s ago)    3h46m
-pod/csi-rbdplugin-mpghx                             0/2     ImagePullBackOff    38 (3m18s ago)    3h46m
-pod/csi-rbdplugin-nsj72                             0/2     ImagePullBackOff    33 (98s ago)      3h46m
-pod/csi-rbdplugin-provisioner-56486d5b65-d9sml      0/5     CrashLoopBackOff    110 (4m43s ago)   3h46m
-pod/csi-rbdplugin-provisioner-56486d5b65-fzrn4      0/5     CrashLoopBackOff    79 (15m ago)      3h46m
-pod/csi-rbdplugin-rf7k5                             0/2     ImagePullBackOff    32 (4m15s ago)    3h46m
-pod/csi-rbdplugin-scs5x                             0/2     ImagePullBackOff    36 (2m6s ago)     3h46m
-pod/csi-rbdplugin-wswmt                             0/2     ImagePullBackOff    36 (4m21s ago)    3h46m
-pod/csi-rbdplugin-zl7vs                             0/2     ImagePullBackOff    35 (4m11s ago)    3h46m
-pod/csi-rbdplugin-zrftw                             0/2     ImagePullBackOff    36 (2m24s ago)    3h46m
-pod/rook-ceph-detect-version-xhmmx                  0/1     Terminating         0                 26m
-pod/rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running             0                 3h51m
-pod/rook-ceph-tools-754bcbfdf9-lrwb8                0/1     ContainerCreating   0                 50m
-pod/rook-discover-42st7                             1/1     Running             0                 3h47m
-pod/rook-discover-56rxk                             1/1     Running             1                 3h47m
-pod/rook-discover-5rcpg                             1/1     Running             0                 3h47m
-pod/rook-discover-82gzq                             1/1     Running             1                 3h47m
-pod/rook-discover-b7zgw                             1/1     Running             0                 3h47m
-pod/rook-discover-dj4pr                             1/1     Running             0                 3h47m
-pod/rook-discover-j9jz2                             1/1     Running             0                 3h47m
-pod/rook-discover-jrffw                             1/1     Running             1                 3h47m
-pod/rook-discover-nlmnm                             1/1     Running             2                 3h47m
-pod/rook-discover-qqd6j                             1/1     Running             1                 3h47m
-pod/rook-discover-rg47w                             1/1     Running             2                 3h47m
-pod/rook-discover-vdsnt                             1/1     Running             2                 3h47m
-pod/rook-discover-ztmw7                             1/1     Running             2                 3h47m
+NAME                                                READY   STATUS                 RESTARTS         AGE
+pod/csi-cephfsplugin-2wp9d                          0/2     CreateContainerError   83               11h
+pod/csi-cephfsplugin-5556c                          0/2     CreateContainerError   171              11h
+pod/csi-cephfsplugin-5rtwr                          0/2     CreateContainerError   63 (32m ago)     10h
+pod/csi-cephfsplugin-c6wzr                          0/2     CreateContainerError   67               11h
+pod/csi-cephfsplugin-cwkdr                          2/2     Running                14 (10h ago)     11h
+pod/csi-cephfsplugin-f8psb                          2/2     Running                10               11h
+pod/csi-cephfsplugin-flzt4                          1/2     CreateContainerError   142              10h
+pod/csi-cephfsplugin-glrmv                          0/2     CreateContainerError   66               10h
+pod/csi-cephfsplugin-lwg54                          2/2     Running                4                11h
+pod/csi-cephfsplugin-provisioner-7b85687c6c-9f62s   0/5     CreateContainerError   81               10h
+pod/csi-cephfsplugin-provisioner-7b85687c6c-lb4gc   0/5     ErrImagePull           4                10h
+pod/csi-cephfsplugin-qc6nj                          0/2     CreateContainerError   100              11h
+pod/csi-cephfsplugin-qzrjt                          2/2     Running                15 (7h10m ago)   11h
+pod/csi-cephfsplugin-x486v                          0/2     CreateContainerError   73               11h
+pod/csi-cephfsplugin-x6rch                          0/2     CreateContainerError   78               11h
+pod/csi-rbdplugin-48c2h                             0/2     CreateContainerError   131              16h
+pod/csi-rbdplugin-4k2qb                             0/2     CreateContainerError   93               10h
+pod/csi-rbdplugin-4m5zk                             0/2     CreateContainerError   64               11h
+pod/csi-rbdplugin-562st                             2/2     Running                16 (10h ago)     11h
+pod/csi-rbdplugin-67xcr                             2/2     Running                15 (7h10m ago)   11h
+pod/csi-rbdplugin-7bmh2                             0/2     CreateContainerError   75               11h
+pod/csi-rbdplugin-b4vnh                             0/2     CreateContainerError   57 (9m44s ago)   10h
+pod/csi-rbdplugin-bv59b                             0/2     CreateContainerError   137              10h
+pod/csi-rbdplugin-h8m4p                             2/2     Running                5 (11h ago)      11h
+pod/csi-rbdplugin-lflcl                             0/2     CreateContainerError   91               11h
+pod/csi-rbdplugin-mttf4                             0/2     CreateContainerError   69               11h
+pod/csi-rbdplugin-provisioner-56486d5b65-9ttlx      0/5     CreateContainerError   103 (32m ago)    10h
+pod/csi-rbdplugin-provisioner-56486d5b65-c58nr      0/5     ErrImagePull           1                10h
+pod/csi-rbdplugin-v455t                             2/2     Running                5 (10h ago)      11h
+pod/csi-rbdplugin-x2qjt                             0/2     CreateContainerError   177              11h
+pod/rook-ceph-detect-version-6jk6j                  0/1     Pending                0                111s
+pod/rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running                0                16h
+pod/rook-ceph-tools-754bcbfdf9-lkfq7                0/1     ContainerCreating      0                160m
+pod/rook-ceph-tools-79b9d5fd9b-pc69j                0/1     ContainerCreating      0                11h
+pod/rook-discover-2gvzz                             0/1     ContainerCreating      0                10h
+pod/rook-discover-56rxk                             1/1     Running                1                16h
+pod/rook-discover-82gzq                             1/1     Running                1                16h
+pod/rook-discover-b7zgw                             1/1     Running                0                16h
+pod/rook-discover-d5pr2                             0/1     ContainerCreating      0                38m
+pod/rook-discover-dj4pr                             1/1     Running                0                16h
+pod/rook-discover-qqd6j                             1/1     Running                1                16h
+pod/rook-discover-rg47w                             1/1     Running                2                16h
+pod/rook-discover-sbwsj                             0/1     ContainerCreating      0                27m
+pod/rook-discover-vdsnt                             1/1     Running                2                16h
+pod/rook-discover-zfzds                             0/1     ContainerCreating      0                4h50m
+pod/rook-discover-zgk8r                             0/1     ContainerCreating      0                75m
+pod/rook-discover-ztmw7                             1/1     Running                2                16h
 ubuntu@k8s-master-01:~$ 
-
+ubuntu@k8s-master-01:~$ 
+ubuntu@k8s-master-01:~$ kubectl -n rook-ceph get pods -w
+NAME                                            READY   STATUS                 RESTARTS         AGE
+csi-cephfsplugin-2wp9d                          0/2     CreateContainerError   83               11h
+csi-cephfsplugin-5556c                          0/2     CreateContainerError   171              11h
+csi-cephfsplugin-5rtwr                          0/2     CreateContainerError   64               10h
+csi-cephfsplugin-c6wzr                          0/2     CreateContainerError   67               11h
+csi-cephfsplugin-cwkdr                          2/2     Running                14 (10h ago)     11h
+csi-cephfsplugin-f8psb                          2/2     Running                10               11h
+csi-cephfsplugin-flzt4                          1/2     CreateContainerError   142              10h
+csi-cephfsplugin-glrmv                          0/2     CreateContainerError   66               10h
+csi-cephfsplugin-lwg54                          2/2     Running                4                11h
+csi-cephfsplugin-provisioner-7b85687c6c-9f62s   0/5     CreateContainerError   81               10h
+csi-cephfsplugin-provisioner-7b85687c6c-lb4gc   0/5     ErrImagePull           4                10h
+csi-cephfsplugin-qc6nj                          0/2     CreateContainerError   100              11h
+csi-cephfsplugin-qzrjt                          2/2     Running                15 (7h11m ago)   11h
+csi-cephfsplugin-x486v                          0/2     CreateContainerError   73               11h
+csi-cephfsplugin-x6rch                          0/2     CreateContainerError   78               11h
+csi-rbdplugin-48c2h                             0/2     CreateContainerError   132              16h
+csi-rbdplugin-4k2qb                             0/2     CreateContainerError   93               11h
+csi-rbdplugin-4m5zk                             0/2     CreateContainerError   64               11h
+csi-rbdplugin-562st                             2/2     Running                16 (10h ago)     11h
+csi-rbdplugin-67xcr                             2/2     Running                15 (7h12m ago)   11h
+csi-rbdplugin-7bmh2                             0/2     CreateContainerError   75               11h
+csi-rbdplugin-b4vnh                             0/2     CreateContainerError   57 (11m ago)     10h
+csi-rbdplugin-bv59b                             0/2     CreateContainerError   137              10h
+csi-rbdplugin-h8m4p                             2/2     Running                5 (11h ago)      11h
+csi-rbdplugin-lflcl                             0/2     CreateContainerError   91               11h
+csi-rbdplugin-mttf4                             0/2     CreateContainerError   69               11h
+csi-rbdplugin-provisioner-56486d5b65-9ttlx      0/5     CreateContainerError   103 (33m ago)    10h
+csi-rbdplugin-provisioner-56486d5b65-c58nr      0/5     ErrImagePull           1                10h
+csi-rbdplugin-v455t                             2/2     Running                5 (10h ago)      11h
+csi-rbdplugin-x2qjt                             0/2     CreateContainerError   178              11h
+rook-ceph-detect-version-6jk6j                  0/1     Init:0/1               0                3m25s
+rook-ceph-operator-5fc44465d9-tx2r7             1/1     Running                0                16h
+rook-ceph-tools-754bcbfdf9-lkfq7                0/1     ContainerCreating      0                161m
+rook-ceph-tools-79b9d5fd9b-pc69j                0/1     ContainerCreating      0                11h
+rook-discover-2gvzz                             0/1     ContainerCreating      0                10h
+rook-discover-56rxk                             1/1     Running                1                16h
+rook-discover-82gzq                             1/1     Running                1                16h
+rook-discover-b7zgw                             1/1     Running                0                16h
+rook-discover-d5pr2                             0/1     ContainerCreating      0                39m
+rook-discover-dj4pr                             1/1     Running                0                16h
+rook-discover-qqd6j                             1/1     Running                1                16h
+rook-discover-rg47w                             1/1     Running                2                16h
+rook-discover-sbwsj                             0/1     ContainerCreating      0                28m
+rook-discover-vdsnt                             1/1     Running                2                16h
+rook-discover-zfzds                             0/1     ContainerCreating      0                4h52m
+rook-discover-zgk8r                             0/1     ContainerCreating      0                77m
+rook-discover-ztmw7                             1/1     Running                2                16h
+csi-rbdplugin-b4vnh                             0/2     CreateContainerError   58 (11m ago)     10h
+csi-rbdplugin-4k2qb                             0/2     CreateContainerError   94               11h
+csi-cephfsplugin-qc6nj                          0/2     CreateContainerError   101              11h
+csi-cephfsplugin-5556c                          0/2     CreateContainerError   172              11h
+csi-rbdplugin-7bmh2                             0/2     CreateContainerError   76               11h
+csi-cephfsplugin-c6wzr                          0/2     CreateContainerError   67               11h
+csi-cephfsplugin-glrmv                          0/2     CreateContainerError   67               10h
+csi-rbdplugin-x2qjt                             0/2     CreateContainerError   179              11h
+csi-rbdplugin-48c2h                             0/2     CreateContainerError   132              16h
+csi-rbdplugin-48c2h                             0/2     CreateContainerError   132              16h
+csi-cephfsplugin-flzt4                          0/2     CreateContainerError   142              10h
+^Cubuntu@k8s-master-01:~$ 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/rook-ceph.yml
 
 PLAY [Deploy Rook-Ceph on Kubernetes cluster] **************************************************************************************************************
@@ -284,7 +194,7 @@ TASK [rook_ceph_deploy : Wait for Rook operator to become ready] ***************
 ok: [k8s-master-01]
 
 TASK [rook_ceph_deploy : Render CephCluster manifest] ******************************************************************************************************
-ok: [k8s-master-01]
+changed: [k8s-master-01]
 
 TASK [rook_ceph_deploy : Apply CephCluster CR] *************************************************************************************************************
 ok: [k8s-master-01]
@@ -308,10 +218,10 @@ FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be r
 FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (3 retries left).
 FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (2 retries left).
 FAILED - RETRYING: [k8s-master-01]: Wait for the Rook toolbox deployment to be ready (1 retries left).
-fatal: [k8s-master-01]: FAILED! => {"attempts": 12, "changed": false, "cmd": ["kubectl", "-n", "rook-ceph", "rollout", "status", "deployment/rook-ceph-tools", "--timeout=120s"], "delta": "0:00:00.259277", "end": "2026-09-19 01:29:30.726864", "msg": "non-zero return code", "rc": 1, "start": "2026-09-19 01:29:30.467587", "stderr": "error: deployment \"rook-ceph-tools\" exceeded its progress deadline", "stderr_lines": ["error: deployment \"rook-ceph-tools\" exceeded its progress deadline"], "stdout": "", "stdout_lines": []}
+fatal: [k8s-master-01]: FAILED! => {"attempts": 12, "changed": false, "cmd": ["kubectl", "-n", "rook-ceph", "rollout", "status", "deployment/rook-ceph-tools", "--timeout=120s"], "delta": "0:00:02.883202", "end": "2026-09-19 03:35:01.518875", "msg": "non-zero return code", "rc": 1, "start": "2026-09-19 03:34:58.635673", "stderr": "error: deployment \"rook-ceph-tools\" exceeded its progress deadline", "stderr_lines": ["error: deployment \"rook-ceph-tools\" exceeded its progress deadline"], "stdout": "", "stdout_lines": []}
 
 PLAY RECAP *************************************************************************************************************************************************
-k8s-master-01              : ok=11   changed=1    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+k8s-master-01              : ok=11   changed=2    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ANSIBLE_CONFIG=$PWD/ansible.cfg ansible-playbook -i inventory.yml playbooks/metallb.yml
 
@@ -349,10 +259,51 @@ fatal: [k8s-master-01]: FAILED! => {
     "assertion": "mlb_install.rc == 0",
     "changed": false,
     "evaluated_to": false,
-    "msg": "MetalLB helm install did not settle (rc=1, stderr='Error: UPGRADE FAILED: context deadline exceeded'). \"context deadline exceeded\" means the metallb-controller pod never became Ready within 300s. If the pod has NO IP / stays ContainerCreating, the primary CNI (Calico) is unhealthy — fix Calico first (playbooks/calico-post-deploy.yml) and confirm `kubectl -n kube-system rollout status ds/calico-node`. If the pod HAS an IP but the controller container is CrashLoopBackOff, read the container logs below (it usually cannot reach the kube-apiserver ClusterIP, i.e. kube-proxy / service routing, or the webhook cert secret is stale). Diagnostics: ### metallb-system pods:\nNAME                                 READY   STATUS             RESTARTS         AGE    IP               NODE          NOMINATED NODE   READINESS GATES\nmetallb-controller-5b67b77ff-hptns   0/1     CrashLoopBackOff   52 (4m11s ago)   4h7m   10.233.115.128   osh-comp-02   <none>           <none>\n### describe metallb-controller (tail):\n  Service Account:  metallb-controller\n  Containers:\n   controller:\n    Image:       quay.io/metallb/controller:v0.14.9\n    Ports:       7472/TCP (monitoring), 9443/TCP (webhook-server)\n    Host Ports:  0/TCP (monitoring), 0/TCP (webhook-server)\n    Args:\n      --port=7472\n      --log-level=info\n      --tls-min-version=VersionTLS12\n    Liveness:     http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Readiness:    http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Environment:  <none>\n    Mounts:\n      /tmp/k8s-webhook-server/serving-certs from cert (ro)\n  Volumes:\n   cert:\n    Type:          Secret (a volume populated by a Secret)\n    SecretName:    metallb-webhook-cert\n    Optional:      false\n  Node-Selectors:  kubernetes.io/os=linux\n  Tolerations:     <none>\nConditions:\n  Type           Status  Reason\n  ----           ------  ------\n  Available      False   MinimumReplicasUnavailable\n  Progressing    False   ProgressDeadlineExceeded\nOldReplicaSets:  <none>\nNewReplicaSet:   metallb-controller-5b67b77ff (1/1 replicas created)\nEvents:          <none>\n    Mounts:\n      /tmp/k8s-webhook-server/serving-certs from cert (ro)\n      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-4wkls (ro)\nConditions:\n  Type                        Status\n  PodReadyToStartContainers   True \n  Initialized                 True \n  Ready                       False \n  ContainersReady             False \n  PodScheduled                True \nVolumes:\n  cert:\n    Type:        Secret (a volume populated by a Secret)\n    SecretName:  metallb-webhook-cert\n    Optional:    false\n  kube-api-access-4wkls:\n    Type:                    Projected (a volume that contains injected data from multiple sources)\n    TokenExpirationSeconds:  3607\n    ConfigMapName:           kube-root-ca.crt\n    Optional:                false\n    DownwardAPI:             true\nQoS Class:                   BestEffort\nNode-Selectors:              kubernetes.io/os=linux\nTolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s\n                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s\nEvents:\n  Type     Reason   Age                    From     Message\n  ----     ------   ----                   ----     -------\n  Normal   Pulled   4m13s (x75 over 4h7m)  kubelet  spec.containers{controller}: Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod\n  Warning  BackOff  102s (x246 over 4h7m)  kubelet  spec.containers{controller}: Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)\n### metallb-controller current logs (tail):\n### metallb-controller previous (crashed) logs (tail):\n### recent metallb-system events:\nLAST SEEN   TYPE      REASON    OBJECT                                   MESSAGE\n4m14s       Normal    Pulled    pod/metallb-controller-5b67b77ff-hptns   Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod\n103s        Warning   BackOff   pod/metallb-controller-5b67b77ff-hptns   Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)"
+    "msg": "MetalLB helm install did not settle (rc=1, stderr='Error: UPGRADE FAILED: context deadline exceeded'). \"context deadline exceeded\" means the metallb-controller pod never became Ready within 300s. If the pod has NO IP / stays ContainerCreating, the primary CNI (Calico) is unhealthy — fix Calico first (playbooks/calico-post-deploy.yml) and confirm `kubectl -n kube-system rollout status ds/calico-node`. If the pod HAS an IP but the controller container is CrashLoopBackOff, read the container logs below (it usually cannot reach the kube-apiserver ClusterIP, i.e. kube-proxy / service routing, or the webhook cert secret is stale). Diagnostics: ### metallb-system pods:\nNAME                                 READY   STATUS                 RESTARTS   AGE     IP               NODE          NOMINATED NODE   READINESS GATES\nmetallb-controller-5b67b77ff-hptns   0/1     CreateContainerError   78         7h35m   10.233.115.128   osh-comp-02   <none>           <none>\n### describe metallb-controller (tail):\n  Service Account:  metallb-controller\n  Containers:\n   controller:\n    Image:       quay.io/metallb/controller:v0.14.9\n    Ports:       7472/TCP (monitoring), 9443/TCP (webhook-server)\n    Host Ports:  0/TCP (monitoring), 0/TCP (webhook-server)\n    Args:\n      --port=7472\n      --log-level=info\n      --tls-min-version=VersionTLS12\n    Liveness:     http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Readiness:    http-get http://:monitoring/metrics delay=10s timeout=1s period=10s #success=1 #failure=3\n    Environment:  <none>\n    Mounts:\n      /tmp/k8s-webhook-server/serving-certs from cert (ro)\n  Volumes:\n   cert:\n    Type:          Secret (a volume populated by a Secret)\n    SecretName:    metallb-webhook-cert\n    Optional:      false\n  Node-Selectors:  kubernetes.io/os=linux\n  Tolerations:     <none>\nConditions:\n  Type           Status  Reason\n  ----           ------  ------\n  Available      False   MinimumReplicasUnavailable\n  Progressing    False   ProgressDeadlineExceeded\nOldReplicaSets:  <none>\nNewReplicaSet:   metallb-controller-5b67b77ff (1/1 replicas created)\nEvents:          <none>\n  kube-api-access-4wkls:\n    Type:                    Projected (a volume that contains injected data from multiple sources)\n    TokenExpirationSeconds:  3607\n    ConfigMapName:           kube-root-ca.crt\n    Optional:                false\n    DownwardAPI:             true\nQoS Class:                   BestEffort\nNode-Selectors:              kubernetes.io/os=linux\nTolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s\n                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s\nEvents:\n  Type     Reason   Age                     From     Message\n  ----     ------   ----                    ----     -------\n  Normal   Created  176m (x56 over 7h36m)   kubelet  spec.containers{controller}: Container created\n  Warning  Failed   150m (x58 over 7h36m)   kubelet  spec.containers{controller}: Error: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"--port=7472\": executable file not found in $PATH\n  Warning  Failed   140m (x12 over 145m)    kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_64\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_64\" is reserved for \"6a1f64e0f82ff517be0022a38b451fc17e0a2845fa68cf83d828da44290578e7\"\n  Warning  Failed   136m (x2 over 136m)     kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_65\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_65\" is reserved for \"f990a44119e4fbefb3c3f668a5fb6fd7e067fe04fab68bd65de615364716066f\"\n  Warning  BackOff  126m (x308 over 7h36m)  kubelet  spec.containers{controller}: Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)\n  Warning  Failed   111m (x9 over 115m)     kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_69\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_69\" is reserved for \"41c26877dcf6cc992f59b927cc2ef1e2cb41892b5b388cabf535bf4e5ad7f259\"\n  Warning  Failed   105m (x3 over 106m)     kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_70\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_70\" is reserved for \"189950ce91766127c466548fe41889d7d914f01be129801f6c1f1fb229428527\"\n  Warning  Failed   91m (x17 over 98m)      kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_71\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_71\" is reserved for \"2a216077bfdc5994a83c7f7eb7b8409ee31782a1d1d6cb1dc2f9686d611d1339\"\n  Warning  Failed   81m (x13 over 86m)      kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_72\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_72\" is reserved for \"966a085baa3478f7889b5143673d126cfb2271d047efd6125b817f692a227cad\"\n  Warning  Failed   63m (x15 over 77m)      kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_73\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_73\" is reserved for \"f31714d3ffced3331d913156460d0b33c36a1f6e1dc9a28fe0c7c420afa6dec3\"\n  Warning  Failed   61m (x13 over 136m)     kubelet  spec.containers{controller}: (combined from similar events): Error: context deadline exceeded\n  Warning  Failed   46m (x27 over 60m)      kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_74\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_74\" is reserved for \"6eaf885d0724bddf199bb02cf79a29aaf2ac4e740e5fbfa82acdb5c3ce9328d3\"\n  Warning  Failed   31m (x4 over 33m)       kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_77\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_77\" is reserved for \"d07ab2651a61907fd267a0bf5a9e91650d1d62c93ff0619776383792af0ec2b3\"\n  Warning  Failed   11m (x31 over 24m)      kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_78\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_78\" is reserved for \"5bd9f60fa93a6c37439edbe8a0f86035de61d852fc4e8d058d72479b13da39f7\"\n  Warning  Failed   4m22s (x16 over 7h18m)  kubelet  spec.containers{controller}: Error: context deadline exceeded\n  Normal   Pulled   79s (x337 over 7h36m)   kubelet  spec.containers{controller}: Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod\n  Warning  Failed   72s (x7 over 3m50s)     kubelet  spec.containers{controller}: Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_79\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_79\" is reserved for \"e55f3e810ce65a2088062839c1a63ae01369cb273be39b948bd06775ea87c9bb\"\n### metallb-controller current logs (tail):\nError from server (BadRequest): container \"controller\" in pod \"metallb-controller-5b67b77ff-hptns\" is waiting to start: CreateContainerError\n### metallb-controller previous (crashed) logs (tail):\nError from server (BadRequest): previous terminated container \"controller\" in pod \"metallb-controller-5b67b77ff-hptns\" not found\n### recent metallb-system events:\nLAST SEEN   TYPE      REASON    OBJECT                                   MESSAGE\n176m        Normal    Created   pod/metallb-controller-5b67b77ff-hptns   Container created\n150m        Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"--port=7472\": executable file not found in $PATH\n140m        Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_64\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_64\" is reserved for \"6a1f64e0f82ff517be0022a38b451fc17e0a2845fa68cf83d828da44290578e7\"\n136m        Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_65\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_65\" is reserved for \"f990a44119e4fbefb3c3f668a5fb6fd7e067fe04fab68bd65de615364716066f\"\n126m        Warning   BackOff   pod/metallb-controller-5b67b77ff-hptns   Back-off restarting failed container controller in pod metallb-controller-5b67b77ff-hptns_metallb-system(6b3b3029-31ec-4a5c-ab5f-67c2fe343688)\n111m        Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_69\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_69\" is reserved for \"41c26877dcf6cc992f59b927cc2ef1e2cb41892b5b388cabf535bf4e5ad7f259\"\n105m        Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_70\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_70\" is reserved for \"189950ce91766127c466548fe41889d7d914f01be129801f6c1f1fb229428527\"\n91m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_71\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_71\" is reserved for \"2a216077bfdc5994a83c7f7eb7b8409ee31782a1d1d6cb1dc2f9686d611d1339\"\n81m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_72\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_72\" is reserved for \"966a085baa3478f7889b5143673d126cfb2271d047efd6125b817f692a227cad\"\n63m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_73\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_73\" is reserved for \"f31714d3ffced3331d913156460d0b33c36a1f6e1dc9a28fe0c7c420afa6dec3\"\n61m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   (combined from similar events): Error: context deadline exceeded\n46m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_74\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_74\" is reserved for \"6eaf885d0724bddf199bb02cf79a29aaf2ac4e740e5fbfa82acdb5c3ce9328d3\"\n31m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_77\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_77\" is reserved for \"d07ab2651a61907fd267a0bf5a9e91650d1d62c93ff0619776383792af0ec2b3\"\n11m         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_78\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_78\" is reserved for \"5bd9f60fa93a6c37439edbe8a0f86035de61d852fc4e8d058d72479b13da39f7\"\n4m24s       Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: context deadline exceeded\n81s         Normal    Pulled    pod/metallb-controller-5b67b77ff-hptns   Container image \"quay.io/metallb/controller:v0.14.9\" already present on machine and can be accessed by the pod\n74s         Warning   Failed    pod/metallb-controller-5b67b77ff-hptns   Error: failed to reserve container name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_79\"; check if another CreateContainer request is in progress: name \"controller_metallb-controller-5b67b77ff-hptns_metallb-system_6b3b3029-31ec-4a5c-ab5f-67c2fe343688_79\" is reserved for \"e55f3e810ce65a2088062839c1a63ae01369cb273be39b948bd06775ea87c9bb\""
 }
 
 PLAY RECAP *************************************************************************************************************************************************
 k8s-master-01              : ok=6    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/kubespray.yml -e kubespray_tags=multus
+
+PLAY [Deploy Kubernetes cluster via Kubespray] *************************************************************************************************************
+
+TASK [Clone Kubespray repository] **************************************************************************************************************************
+changed: [localhost]
+
+TASK [Install Kubespray Python requirements] ***************************************************************************************************************
+ok: [localhost]
+
+TASK [Patch Kubespray containerd template for local image pull] ********************************************************************************************
+changed: [localhost]
+
+TASK [Run Kubespray cluster.yml (Fixed Multi-Layer Isolation)] *********************************************************************************************
+ASYNC POLL on localhost: jid=j914687912464.704550 started=1 finished=0
+
+ASYNC FAILED on localhost: jid=j914687912464.704550
+fatal: [localhost]: FAILED! => {"ansible_job_id": "j914687912464.704550", "changed": true, "cmd": "# Explicitly clear out any inherited environment clutter before running\nset -euo pipefail\nunset ANSIBLE_CONFIG\nunset download_container\nunset download_container_engine\n\nmkdir -p /opt/fabric-cache/logs\nmkdir -p /opt/fabric-cache/ansible/kubespray-factcache\nrun_ts=\"$(date +%Y%m%d-%H%M%S)\"\nrun_log=\"/opt/fabric-cache/logs/kubespray-inner-${run_ts}.log\"\n\n# Fire the execution pass using only clean explicit target parameters\ncmd=(\n  ansible-playbook\n  -i inventory/sheba-cluster/hosts.yaml\n  playbooks/cluster.yml\n  -b\n  -f 2\n  -e ansible_user=ubuntu\n  -e ansible_password=ubuntu\n  -e ansible_sudo_pass=ubuntu\n  -e ansible_ssh_private_key_file=/home/nh1221/.ssh/id_dc_lab\n  --extra-vars @inventory/sheba-cluster/group_vars/k8s_cluster/overrides.yaml\n)\n\nif [ -n \"\" ]; then\n  limit_value=\"\"\n  if [ \"$limit_value\" = \"kube_node\" ]; then\n    limit_value=\"kube_node:k8s-master-01\"\n  fi\n  cmd+=(--limit \"$limit_value\")\nfi\n\nif [ -n \"\" ]; then\n  cmd+=(--start-at-task \"\")\nfi\n\nif [ -n \"multus\" ]; then\n  cmd+=(--tags \"multus\")\nfi\n\n\"${cmd[@]}\" > \"$run_log\" 2>&1\ncp \"$run_log\" /opt/fabric-cache/logs/kubespray-inner.log\n", "delta": "0:54:35.180048", "end": "2026-09-18 23:45:19.324417", "finished": 1, "msg": "non-zero return code", "rc": 2, "results_file": "/home/nh1221/.ansible_async/j914687912464.704550", "start": "2026-09-18 22:50:44.144369", "started": 1, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=3    changed=2    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0
+
+(venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$ ansible-playbook -i inventory.yml playbooks/multus-nad-deploy.yml
+
+PLAY [Apply Multus NetworkAttachmentDefinition CRs] ********************************************************************************************************
+
+TASK [Poll for the Multus NetworkAttachmentDefinition CRD to exist] ****************************************************************************************
+ok: [localhost -> k8s-master-01(172.16.2.51)]
+
+TASK [Fail with guidance when Multus is not deployed] ******************************************************************************************************
+skipping: [localhost]
+
+TASK [Wait for Multus CRD to be Established] ***************************************************************************************************************
+ok: [localhost -> k8s-master-01(172.16.2.51)]
+
+TASK [Apply all Multus NADs] *******************************************************************************************************************************
+fatal: [localhost -> k8s-master-01(172.16.2.51)]: FAILED! => {"changed": false, "cmd": "kubectl apply -f - <<'EOF'\n---\n# ── fabric-data-plane — macvlan on ens2 (SONiC fabric data plane) ────\napiVersion: k8s.cni.cncf.io/v1\nkind: NetworkAttachmentDefinition\nmetadata:\n  name: fabric-data-plane\n  namespace: default\nspec:\n  config: |\n    {\n      \"cniVersion\": \"0.3.1\",\n      \"name\": \"fabric-data-plane\",\n      \"type\": \"macvlan\",\n      \"master\": \"ens2\",\n      \"mode\": \"bridge\",\n      \"ipam\": {\n        \"type\": \"host-local\",\n        \"subnet\": \"10.0.0.0/8\",\n        \"rangeStart\": \"10.0.100.1\",\n        \"rangeEnd\": \"10.0.100.254\"\n      }\n    }\n---\napiVersion: k8s.cni.cncf.io/v1\nkind: NetworkAttachmentDefinition\nmetadata:\n  name: fabric-data-plane\n  namespace: openstack\nspec:\n  config: |\n    {\n      \"cniVersion\": \"0.3.1\",\n      \"name\": \"fabric-data-plane\",\n      \"type\": \"macvlan\",\n      \"master\": \"ens2\",\n      \"mode\": \"bridge\",\n      \"ipam\": {}\n    }\n---\n# ── storage-vlan100 — host-device ens2.100 (vrf-storage, VLAN 100) ───\napiVersion: k8s.cni.cncf.io/v1\nkind: NetworkAttachmentDefinition\nmetadata:\n  name: storage-vlan100\n  namespace: rook-ceph\nspec:\n  config: |\n    {\n      \"cniVersion\": \"0.3.1\",\n      \"name\": \"storage-vlan100\",\n      \"type\": \"macvlan\",\n      \"master\": \"ens2.100\",\n      \"mode\": \"bridge\",\n      \"ipam\": {\n        \"type\": \"host-local\",\n        \"subnet\": \"20.0.56.0/24\"\n      }\n    }\n---\n# ── oob-management — macvlan on enp1s0 (OOB 172.16.2.0/24) ──────────\napiVersion: k8s.cni.cncf.io/v1\nkind: NetworkAttachmentDefinition\nmetadata:\n  name: oob-management\n  namespace: openstack\nspec:\n  config: |\n    {\n      \"cniVersion\": \"0.3.1\",\n      \"name\": \"oob-management\",\n      \"type\": \"macvlan\",\n      \"master\": \"enp1s0\",\n      \"mode\": \"bridge\",\n      \"ipam\": {\n        \"type\": \"host-local\",\n        \"subnet\": \"172.16.2.0/24\",\n        \"rangeStart\": \"172.16.2.100\",\n        \"rangeEnd\": \"172.16.2.199\"\n      }\n    }\n---\napiVersion: k8s.cni.cncf.io/v1\nkind: NetworkAttachmentDefinition\nmetadata:\n  name: oob-management\n  namespace: monitoring\nspec:\n  config: |\n    {\n      \"cniVersion\": \"0.3.1\",\n      \"name\": \"oob-management\",\n      \"type\": \"macvlan\",\n      \"master\": \"enp1s0\",\n      \"mode\": \"bridge\",\n      \"ipam\": {\n        \"type\": \"host-local\",\n        \"subnet\": \"172.16.2.0/24\",\n        \"rangeStart\": \"172.16.2.100\",\n        \"rangeEnd\": \"172.16.2.199\"\n      }\n    }\nEOF\n", "delta": "0:02:12.543118", "end": "2026-09-19 14:32:03.279145", "msg": "non-zero return code", "rc": 1, "start": "2026-09-19 14:29:50.736027", "stderr": "Error from server: error when creating \"STDIN\": etcdserver: request timed out\nError from server (Timeout): error when creating \"STDIN\": Timeout: request did not complete within requested timeout - context deadline exceeded\nError from server: error when creating \"STDIN\": etcdserver: request timed out\nError from server (NotFound): error when creating \"STDIN\": namespaces \"openstack\" not found", "stderr_lines": ["Error from server: error when creating \"STDIN\": etcdserver: request timed out", "Error from server (Timeout): error when creating \"STDIN\": Timeout: request did not complete within requested timeout - context deadline exceeded", "Error from server: error when creating \"STDIN\": etcdserver: request timed out", "Error from server (NotFound): error when creating \"STDIN\": namespaces \"openstack\" not found"], "stdout": "networkattachmentdefinition.k8s.cni.cncf.io/oob-management created", "stdout_lines": ["networkattachmentdefinition.k8s.cni.cncf.io/oob-management created"]}
+
+PLAY RECAP *************************************************************************************************************************************************
+localhost                  : ok=2    changed=0    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0
 
 (venv) nh1221@Lab-ControlNode:/mnt/c/Users/nh1221/dc_lab/clab/sonic-clab$
