@@ -3729,3 +3729,63 @@ Summary of what was added, with the all-in-one/single-R810 content left as the d
 Defaults preserved: `topology_variant: allinone` and `oob_access_mode: r810_jump`, so the virtual all-in-one lab renders byte-identical. The single-R810 code path is untouched and remains the documented default until the NVMe fsync fix lands.
 
 Made changes.
+
+
+Let me check what's actually documented about the servers (Kss/k8s-db) and whether the run order covers landing on the Mgmt-Switch to launch the fabric.  
+
+Searched for regex `Kss|k8s-db|kss-|Server-A|Server-B|Server-C|etcd_node|kube_control|control-node|land on|launch`, 435 results
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/clab_topology_prep/templates/topology.clab.distributed.yml.j2#1-1), lines 1 to 80
+
+Let me look at how the fabric deploy and site orchestration work, plus the Mgmt-Switch "land on" semantics, so I detail the individual runs accurately.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Mgmt-Switch1.yml#1-1), lines 1 to 40
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/lab/site.yml)
+
+`lab/site.yml` is fabric-only (preflight → deploy → provision → verify) — it does **not** cover the servers/etcd/Kubespray. So there's a real gap. Let me check the overlay/edge rerun plays to detail the individual runs accurately.    
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/lab/overlay-k8s.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/lab/leaf-server-edge.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/inventory.yml#20-20), lines 20 to 75
+
+I have the full accurate picture now. Here's the honest answer, then I'll close the gap.
+
+**Short answer: partially — no.** Steps 1–4 (MT-1/2 → ER1 → Mgmt-Switch → ER2) were detailed as individual runs, but the tail was collapsed into a single `lab/site.yml` line that is actually **fabric-only** and never mentioned landing on the Mgmt-Switch to launch the R810 clab, nor the 3 Dell servers (Kss-1/2/3 = `k8s-master-01/02/03`) + etcd (`k8s-db-01/02/03`) bring-up + Kubespray. Let me fix §13 and the runbook. 
+
+Replacing 6 lines with 21 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/distributed-lab-hardware-plan.html)
+
+
+```
+
+```
+Now mirror the expansion into the runbook's distributed table so the fabric/servers/etcd steps are explicit there too. 
+
+Replacing 5 lines with 7 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/runbook-chronological.html)
+
+
+```
+
+```
+
+
+Ran terminal command: foreach ($f in 'runbook-chronological.html','distributed-lab-hardware-plan.html') { $c = Get-Content "wiki\$f" -Raw; "{0}: body={1} html={2} table-open={3} table-close={4}" -f $f, ([regex]::Matches($c,'</body>').Count), ([regex]::Matches($c,'</html>').Count), ([regex]::Matches($c,'<table>').Count), ([regex]::Matches($c,'</table>').Count) }
+
+Fixed. The gap you flagged was real — now closed in both docs.
+
+**What was missing and is now detailed as individual runs:**
+
+In wiki/distributed-lab-hardware-plan.html §13 and the runbook's compound-vs-solo table, the tail past the edge is now broken into three explicit steps instead of one collapsed (and inaccurate) site.yml line:
+
+1. **Steps 1–4** (already there): MT-1/2 → ER1 bastion → Dell F-60 Mgmt-Switch → ER2, each a solo run.
+2. **Step 5 — land on OOB, deploy R810 clab fabric**: `lab/site.yml -e topology_variant=distributed` — the 8 SONiC switches + OSH worker VMs (osh-ctrl/net/comp + MonSrv). Now explicitly noted as fabric-only (preflight→deploy→provision→verify) and that the ControlNode lands on the OOB/Mgmt-Switch subnet via the ER1 bastion to reach R810.
+3. **Step 6 — the 3 Dell servers + etcd**: `lab/leaf-server-edge.yml` — Kss-1/2/3 = `k8s-master-01/02/03` (172.16.2.51/61/71) and etcd `k8s-db-01/02/03` (172.16.2.52/62/72) + OSH VMs: host BGP, VRFs, and the pre-Kubespray etcd network gate.
+4. **Step 7 — Kubespray + overlay**: `lab/overlay-k8s.yml` — etcd placed on `k8s-db-*`, control-plane on `k8s-master-*`, then CNI/MetalLB/Ceph/monitoring/OpenStack.
+
+I corrected the earlier inaccuracy: `lab/site.yml` is **fabric-only**, so the servers/etcd/Kubespray now correctly map to leaf-server-edge.yml and overlay-k8s.yml. A note also explains the 3 Dell servers host `k8s-master`/`k8s-db` as external physical nodes stitched via macvlan, so etcd's fsync-critical Raft log lands on dedicated server disk rather than R810. HTML validated (balanced body/html/table tags).
+
+Made changes.
+
+
