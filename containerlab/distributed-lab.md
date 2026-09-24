@@ -2887,5 +2887,689 @@ There's also an **asymmetry worth reconciling**: `k8s-master-01/02` and `k8s-db-
 
 Want me to (a) add the `.link` name-pinning task so exit-routers + the externalized servers keep `ens2/ens3/enp1s0`, and/or (b) capture these four playbook impacts as a section in the distributed wiki doc so the build sheet is complete?
 
+# Can I simulate TWO ISPs by two physical mikrotik routers where the exit-routers (ubuntu servers) are connected, however these TWO mikrotik, only one of them is connected to internet but these two mikrotik is connected tbetween them and runs iBGP between them as discussed in our architecture? If YES, provide details how it can be accomplished??
+
+Great question — this maps almost 1:1 onto the existing virtual ISP-1/ISP-2 design. Let me read the exact ASNs, subnets, and the iBGP-sync/default-origination logic the lab already encodes so the MikroTik config mirrors it precisely.       
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/ISP-1.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/ISP-2.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/roles/linux_isp_router/templates/frr.conf.j2)
+
+Short answer: **yes, absolutely** — and it's almost exactly what the lab already models virtually with ISP‑1/ISP‑2. But there's one important terminology nuance to settle first, because it changes the config.
+
+## The nuance: "iBGP between them" vs "two distinct ISPs"
+
+iBGP requires **both routers to share the same AS**. Your existing plan gives the two ISPs **different** ASes:
+
+- ISP‑1 = **AS 65401** (`10.255.255.11`), from host_vars/ISP-1.yml
+- ISP‑2 = **AS 65402** (`10.255.255.12`), from host_vars/ISP-2.yml
+
+So a session **between** them is eBGP, not iBGP. (Heads‑up: the lab's own `isp_sync_interface` block labels this "iBGP‑Sync" but sets `neighbor_asn` = the *local* ASN — 65401 on one side, 65402 on the other. Those don't match, so that "iBGP sync" as written would never establish. It's a latent inconsistency worth fixing regardless of which path you pick.)
+
+That gives you two clean, correct designs:
+
+| | **Path A — Two distinct ISPs (recommended)** | **Path B — One ISP, two PoPs (true iBGP)** |
+|---|---|---|
+| MikroTik‑1 / ‑2 AS | 65401 / 65402 | **65400 / 65400** |
+| Inter‑box session | **eBGP** (65401↔65402) | **iBGP** (65400↔65400) |
+| Exit‑router host_vars | **unchanged** (ens4→65401, ens5→65402) | must change *both* legs to remote‑as 65400 |
+| Simulates | genuine dual‑homing / failover | single provider, dual edge |
+| Matches your ASN plan | ✅ zero edits | ✗ needs host_vars edits |
+
+**I recommend Path A.** It keeps your entire exit‑router config untouched, and it still delivers exactly your goal — *only one MikroTik has real internet, the other reaches it over the inter‑box link* — while giving the exit‑routers a natural **primary/backup** via AS‑path length. Below is the full Path A build; the Path B delta is at the end.
+
+## Topology (Path A)
+
+```mermaid
+graph LR
+  NET(("Real Internet")) --- MT1
+  MT1["MikroTik-1 = ISP-1<br/>AS 65401<br/>has WAN + NAT"]
+  MT2["MikroTik-2 = ISP-2<br/>AS 65402<br/>no WAN"]
+  MT1 ---|eBGP 192.168.254.0/30| MT2
+  MT1 ---|eBGP 192.0.2.0/30| ER1
+  MT1 ---|eBGP 192.0.2.4/30| ER2
+  MT2 ---|eBGP 198.51.100.0/30| ER1
+  MT2 ---|eBGP 198.51.100.4/30| ER2
+  ER1["Exit-Router1 (R610)<br/>AS 65251"]
+  ER2["Exit-Router2 (R610)<br/>AS 65252"]
+  ER1 --- BL["Border-Leaf1/2 fabric"]
+  ER2 --- BL
+```
+
+## Cabling & addressing (mirrors the existing host_vars)
+
+| Link | MikroTik side | Exit‑router side (unchanged) |
+|---|---|---|
+| MT1 ↔ ER1 | `ether2` `192.0.2.1/30` | ER1 `ens4` `192.0.2.2/30`, AS 65251 |
+| MT1 ↔ ER2 | `ether3` `192.0.2.5/30` | ER2 `ens4` `192.0.2.6/30`, AS 65252 |
+| MT2 ↔ ER1 | `ether2` `198.51.100.1/30` | ER1 `ens5` `198.51.100.2/30`, AS 65251 |
+| MT2 ↔ ER2 | `ether3` `198.51.100.5/30` | ER2 `ens5` `198.51.100.6/30`, AS 65252 |
+| MT1 ↔ MT2 | `ether4` `192.168.254.1/30` ↔ `192.168.254.2/30` | — |
+| MT1 ↔ Internet | `ether1` (DHCP/static from your ONT/home router) | — |
+
+Note `192.0.2.0/24` and `198.51.100.0/24` are RFC‑5737 TEST‑NET ranges — perfect here because MikroTik‑1 masquerades everything to its real WAN IP, so they never need to be internet‑routable.
+
+## MikroTik‑1 (the one with internet) — RouterOS v7
+
+```rsc
+/interface bridge add name=loopback
+/ip address add address=10.255.255.11 interface=loopback
+# WAN to your real internet handoff (adjust to your uplink)
+/ip dhcp-client add interface=ether1 add-default-route=yes use-peer-dns=yes
+# P2P to exit-routers + inter-ISP link
+/ip address add address=192.0.2.1/30       interface=ether2 comment="To-Exit-Router1"
+/ip address add address=192.0.2.5/30       interface=ether3 comment="To-Exit-Router2"
+/ip address add address=192.168.254.1/30   interface=ether4 comment="To-ISP-2"
+# NAT the whole lab out the real WAN
+/ip firewall nat add chain=srcnat out-interface=ether1 action=masquerade
+# BGP: AS 65401, originate a default to everyone, redistribute connected for return paths
+/routing/bgp/connection
+add name=to-ER1  remote.address=192.0.2.2     remote.as=65251 as=65401 local.role=ebgp \
+    router-id=10.255.255.11 output.default-originate=always output.redistribute=connected
+add name=to-ER2  remote.address=192.0.2.6     remote.as=65252 as=65401 local.role=ebgp \
+    output.default-originate=always output.redistribute=connected
+add name=to-ISP2 remote.address=192.168.254.2 remote.as=65402 as=65401 local.role=ebgp \
+    output.default-originate=always output.redistribute=connected
+```
+
+## MikroTik‑2 (no internet, rides MT1) — RouterOS v7
+
+```rsc
+/interface bridge add name=loopback
+/ip address add address=10.255.255.12 interface=loopback
+/ip address add address=198.51.100.1/30   interface=ether2 comment="To-Exit-Router1"
+/ip address add address=198.51.100.5/30   interface=ether3 comment="To-Exit-Router2"
+/ip address add address=192.168.254.2/30  interface=ether4 comment="To-ISP-1"
+# BGP: AS 65402. It LEARNS the default from MT1 and re-advertises to the ERs.
+/routing/bgp/connection
+add name=to-ER1  remote.address=198.51.100.2  remote.as=65251 as=65402 local.role=ebgp \
+    router-id=10.255.255.12 output.redistribute=connected
+add name=to-ER2  remote.address=198.51.100.6  remote.as=65252 as=65402 local.role=ebgp \
+    output.redistribute=connected
+add name=to-ISP1 remote.address=192.168.254.1 remote.as=65401 as=65402 local.role=ebgp \
+    output.redistribute=connected
+```
+
+## How the internet actually flows (and why it's primary/backup)
+
+1. **Default origination:** MT1 originates `0.0.0.0/0` to ER1, ER2, and MT2. MT2 does **not** originate its own default — it **learns** MT1's default over the inter‑ISP link and **re‑advertises** it to the exit‑routers (normal eBGP behavior).
+2. **AS‑path makes it automatic:** the exit‑routers see two defaults — via ISP‑1 (`AS‑path 65401`) and via ISP‑2 (`AS‑path 65402 65401`). The ISP‑1 path is shorter, so **ISP‑1 is primary, ISP‑2 is backup** with zero policy. Pull MT1's ER links (or the box) and traffic shifts to ISP‑2 → MT2 → inter‑ISP link → MT1 → internet.
+3. **Two NAT hops (fine for a lab):** the exit‑router SNATs tenant traffic to its ISP‑facing IP; MT1 masquerades again to the real WAN. `output.redistribute=connected` on both boxes is what makes the **return path** work — MT1 must know a route back to `198.51.100.4/30` (MT2's ER2 subnet), which it learns from MT2.
+
+## Exit‑router side — nothing changes (Path A)
+
+Your host_vars/Exit-Router1.yml `isp_interfaces` already say `ens4 → 192.0.2.1 AS 65401` and `ens5 → 198.51.100.1 AS 65402`. Because the MikroTiks present those exact IPs/ASNs, playbooks/exit-routers.yml runs unmodified. The only build‑time change is the NIC name‑pin we discussed (so `ens4/ens5` stay `ens4/ens5` on the R610s).
+
+## If you truly want iBGP (Path B delta)
+
+- Set **both** MikroTiks to `as=65400`, and on the inter‑box connection use `local.role=ibgp` with `output.default-originate` + `nexthop-choice=force-self` on MT1.
+- MT2 needs a route to reach MT1's WAN next‑hop — simplest is a static default on MT2 via `192.168.254.1` (iBGP won't recurse a usable next‑hop otherwise).
+- Change **both** exit‑routers' `isp_interfaces[].neighbor_asn` from `65401`/`65402` to **`65400`** on both `ens4` and `ens5`. That's the only host_vars edit, but note the exit‑routers now see a *single* upstream AS, so you lose the free AS‑path primary/backup and must express preference with local‑pref/weight instead.
+
+## Validation
+
+```rsc
+# On each MikroTik
+/routing/bgp/session print
+/ip route print where dst-address=0.0.0.0/0
+```
+```bash
+# On an exit-router
+vtysh -c "show bgp ipv4 summary"
+vtysh -c "show ip route 0.0.0.0/0"     # expect 2 defaults, ISP-1 path shorter
+mtr -n 1.1.1.1                          # egress rides MT1; kill MT1's ER links -> reroutes via MT2
+```
+
+Want me to (a) fix the `isp_sync_interface` ASN‑mismatch in the two ISP host_vars, and/or (b) add a "Simulated ISP edge on two MikroTiks" section to wiki/distributed-lab-hardware-plan.html with this addressing table and the RouterOS snippets so the hardware build sheet is complete?
+
+# I prefer eBGP since that is the practice we followed through out our architecture for the complete L3 route-to-host topology. And this also simplifies I believe for TWO ISP line presence as well I believe. Now, what do I need to do meaning do we have a playbook that I can run in Lab-Cotrolnode which will connect through wifi to one of the Mikrotik and then push the above mikrotik configuration in both of them. How can I achive them through ansible instead logging in to mikrotik and manually configuring the system. And also consider at the same time both Exit-Routers + Mgmt-Switches as well since they are also already connected to ISP routers. I want to see, I can push the configuration since they are all becoming physical now.
+
+Let me look at what's already in place — collections, inventory connection patterns, and whether Mgmt-Switch has any definition — so I build the automation to fit your existing conventions rather than bolt on something foreign.           
+
+Searched for files matching `**/requirements.yml`, no matches
+
+Searched for regex `routeros|mikrotik|Mgmt-Switch|mgmt_switch|network_os|ansible_connection`, 128 results
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/ansible.cfg)
+
+Right now there's **no** MikroTik automation in the repo — no `community.routeros` collection, no `requirements.yml`, and the whole ansible.cfg is wired for SSH-to-Linux only. The Exit-Routers are already covered by playbooks/exit-routers.yml (Ubuntu over SSH), and the current `Mgmt-Switch` is just a `kind: linux` L2 container with **no sshd**. So to push RouterOS config from the Lab-ControlNode I need to add a small, purpose-built automation layer.
+
+Here's the approach I'd build, then a few blocking details I need from you before I write it (getting BGP wrong on the internet-facing MikroTik could cut the ControlNode's own WiFi uplink, so I want to confirm rather than guess):
+
+**The plan (Ansible → RouterOS):**
+- Add the `community.routeros` collection via a new `requirements.yml` (it ships `community.routeros.api_modify` / `command` modules + the `routeros` network_cli plugin).
+- New inventory group `mikrotik_isps` (MikroTik-1, MikroTik-2) with `ansible_connection` set for RouterOS, reached over WiFi. If only MT‑1 is directly reachable, MT‑2 is configured through an SSH/API jump via MT‑1.
+- New role `mikrotik_isp` with a RouterOS config template rendered from `host_vars` (the exact eBGP/IP/AS plan we just designed — idempotent via `api_modify` where possible, or ordered `/routing/bgp/connection add` command sets).
+- `host_vars/MikroTik-1.yml` + `MikroTik-2.yml` carrying the addressing/ASN/NAT/default-origination facts.
+- A `playbooks/mikrotik-isp.yml` play, plus an umbrella `playbooks/lab/physical-edge.yml` that runs MikroTiks → Exit-Routers (existing SSH role) → Mgmt-Switch in order.
+- Mgmt-Switch handled the same way **if** it's a manageable MikroTik/RouterOS device.
+
+I need these to make it real and safe: 
+
+Analyzing your answers...
+
+Thanks — that's enough to build it safely. Key constraints I'm honoring: **RouterOS v7**, **MT‑2 and the Mgmt‑Switch reached *through* MT‑1** (only WiFi‑capable box), **SSH/network_cli**, and critically — **MT‑1 also carries the ControlNode's own WiFi internet**, so the config push must be strictly **additive** (never touch the WiFi/WAN/mgmt interfaces or the default route that keeps you online).
+
+Let me read the inventory and exit-router group structure so the new groups slot in cleanly. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/inventory.yml#1-1), lines 1 to 130
+
+Perfect — additive-only it is, with a dry-run default so nothing touches the box until you explicitly apply. Let me build the automation layer: collection requirements, a dedicated physical-edge inventory, a `mikrotik_routeros` role with WAN-safety guardrails, host_vars encoding the exact eBGP plan, and the playbook. 
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/requirements.yml)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/inv-physical-edge.yml)
+
+Now the host_vars encoding the eBGP plan for each device: 
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/MikroTik-1.yml)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/MikroTik-2.yml)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Mgmt-Switch1.yml)
+
+Now the role — templates first, then tasks with the safety guardrails:  
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/roles/mikrotik_routeros/templates/edge_router.rsc.j2)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/roles/mikrotik_routeros/templates/mgmt_switch.rsc.j2)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/roles/mikrotik_routeros/tasks/main.yml)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/mikrotik-edge.yml)
+
+Now let me validate the new playbook and templates.  
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=\$PWD/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -20 && echo '---JINJA---' && for f in edge_router mgmt_switch; do python3 - <<PY
+import jinja2
+jinja2.Environment().parse(open('roles/mikrotik_routeros/templates/'+'$f'+'.rsc.j2').read())
+print('$f OK')
+PY
+done"
+Completed with input: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=\$PWD/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -20 && echo '---JINJA---' && for f in edge_router mgmt_switch; do python3 - <<PY
+import jinja2
+jinja2.Environment().parse(open('roles/mikrotik_routeros/templates/'+'$f'+'.rsc.j2').read())
+print('$f OK')
+PY
+done"
+
+The `\$PWD` got escaped to a literal, so ansible.cfg wasn't loaded (hence the wrong roles path). Let me re-run with an absolute config path and simpler template checks.   
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -15 && echo "---JINJA---" && python3 -c "import jinja2; jinja2.Environment().parse(open("roles/mikrotik_routeros/templates/edge_router.rsc.j2").read()); jinja2.Environment().parse(open("roles/mikrotik_routeros/templates/mgmt_switch.rsc.j2").read()); print("TEMPLATES_OK")"'
+Completed with input: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -15 && echo "---JINJA---" && python3 -c "import jinja2; jinja2.Environment().parse(open("roles/mikrotik_routeros/templates/edge_router.rsc.j2").read()); jinja2.Environment().parse(open("roles/mikrotik_routeros/templates/mgmt_switch.rsc.j2").read()); print("TEMPLATES_OK")"'
+
+Nested quotes again. Let me split into two clean steps.  
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -15'
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && python3 - <<'PY'
+import jinja2
+for f in ['edge_router','mgmt_switch']:
+    jinja2.Environment().parse(open('roles/mikrotik_routeros/templates/%s.rsc.j2' % f).read())
+    print(f, 'OK')
+PY"
+
+Both templates parse. Let me preview the actual RouterOS output the role would push for MikroTik-1, by rendering the template against its host_vars — so you can eyeball the exact commands.   
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && python3 - <<'PY'
+import yaml, jinja2
+v = yaml.safe_load(open('host_vars/MikroTik-1.yml'))
+tpl = jinja2.Environment(trim_blocks=True, lstrip_blocks=True).from_string(open('roles/mikrotik_routeros/templates/edge_router.rsc.j2').read())
+out = tpl.render(**v)
+for line in out.splitlines():
+    if line.strip() and not line.lstrip().startswith('#'):
+        print(line)
+PY"
+
+Everything validates and the rendered output is exactly right — clean, idempotent, additive RouterOS v7. Here's what I built and how you run it.
+
+## What I created
+
+| File | Purpose |
+|---|---|
+| requirements.yml | `community.routeros` + `ansible.netcommon` collections |
+| inv-physical-edge.yml | New inventory: `mikrotik_isps` (MT‑1/MT‑2) + `mgmt_switches` (Mgmt‑Switch1), with `network_cli` + `routeros` connection over WiFi |
+| host_vars/MikroTik-1.yml | ISP‑1 AS 65401, internet uplink, default‑originate, NAT |
+| host_vars/MikroTik-2.yml | ISP‑2 AS 65402, no uplink, relays default |
+| host_vars/Mgmt-Switch1.yml | OOB L2 bridge + mgmt IP + dual failover uplinks |
+| roles/mikrotik_routeros/tasks/main.yml | Assertions, **WAN‑safety guardrail**, render → dry‑run → apply → verify |
+| roles/mikrotik_routeros/templates/edge_router.rsc.j2 | Idempotent BGP/NAT/filter commands |
+| roles/mikrotik_routeros/templates/mgmt_switch.rsc.j2 | Idempotent bridge commands |
+| playbooks/mikrotik-edge.yml | The play targeting `physical_edge` |
+
+## How to run it (from Lab‑ControlNode)
+
+```bash
+cd /mnt/c/dc-lab/clab/sonic-clab
+ansible-galaxy collection install -r requirements.yml
+# 1) DRY-RUN (default) — prints the exact RouterOS commands, changes nothing:
+ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml
+# 2) APPLY for real:
+ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml -e mikrotik_dry_run=false
+```
+
+MT‑1 is the WiFi gateway; MT‑2 and Mgmt‑Switch1 are reached **by IP through MT‑1** (normal forwarding, not an SSH jump — RouterOS SSH can't proxy), so Ansible connects to each device's mgmt IP directly.
+
+## Safety built in (because MT‑1 carries your WiFi internet)
+
+The verified render shows the role is **strictly additive**:
+- It never writes `ether1` (WAN/WiFi), the mgmt LAN, or the default route.
+- The role **refuses to run** if any lab interface is mapped onto `wan_interface`.
+- A `LAB-OUT` BGP filter‑chain **rejects `192.168.88.0/24`** (and optional `wan_subnet`) so your OOB/WiFi never leaks into the lab fabric.
+- Default is `mikrotik_dry_run: true` — first run only prints.
+
+## What you must fill in before applying
+
+1. Real **mgmt IPs** in inv-physical-edge.yml and the **`admin` password** (plain for now — move to vault later).
+2. Confirm the **ether port numbers** in the host_vars match your actual cabling (I used ether2/3/4 for the P2P links, ether1 as WAN).
+3. All three devices must share a reachable **mgmt LAN** so the ControlNode (on MT‑1's WiFi) can reach `.2`/`.3`.
+
+## Exit‑Routers — deliberately separate
+
+The two Exit‑Routers are Ubuntu and already fully automated by playbooks/exit-routers.yml over SSH on the OOB path — a **different connection plane** than the WiFi/RouterOS one. Folding them into this WiFi play would mismatch transports, so keep running them via their existing playbook (with the NIC name‑pin we discussed). If you want, I can add an umbrella wrapper that calls both in sequence, plus a short "Simulated ISP edge on two MikroTiks" section in wiki/distributed-lab-hardware-plan.html documenting the addressing + run commands.
+
+Made changes.
+
+# Let's enhance our implementation with a physical Mgmt-Switch which is Dell F-60. All the switches and servers are connected to that bytheir management port. So, in essence , we can land on that switch and push all our sonic and ubuntu / netplan/frr configuration from their to real or virtual devices. Please integrate this as a physical and practical architecture.
+
+Compacted conversationBefore I build this, let me ground myself in the current OOB/mgmt facts so the Dell switch integrates cleanly rather than conflicting with what's already there.   
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Mgmt-Switch1.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/inv-physical-edge.yml)
+
+Read memory [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+This is a meaningful architectural change, and one detail drives everything (the CLI dialect of the Dell box). Before I build the role/templates, let me confirm three things so I don't generate the wrong config syntax or conflict with what's already there.
+
+Context I already have: you currently have a MikroTik `Mgmt-Switch1` defined as the OOB L2 switch (172.16.2.0/24, gateway on the Exit-Routers), and the two MikroTiks are the ISP simulation. Your new message says the real OOB mgmt switch is a Dell F‑60. 
+
+Analyzing your answers...
+
+Got it — Force10 S60 (FTOS/dellos9), it replaces the MikroTik OOB switch, and it owns the `172.16.2.0/24` SVI/gateway. Let me set up the work and build it. 
+
+Added 2 todos
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/roles/dell_ftos_mgmt/templates/mgmt_switch.ftos.j2)
+
+Starting: *dell_ftos_mgmt role tasks* (2/8)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/roles/dell_ftos_mgmt/tasks/main.yml)
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Mgmt-Switch1.yml)
+
+Replacing 21 lines with 48 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Mgmt-Switch1.yml)
 
 
+```
+
+```
+
+
+Starting: *Restructure inv-physical-edge groups* (4/8)
+
+Now restructure the inventory: MikroTiks become ISP-only with their own connection vars, and the Dell gets a dellos9 group. 
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/inv-physical-edge.yml)
+
+Replacing 43 lines with 53 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/inv-physical-edge.yml)
+
+
+```
+
+```
+Now the Dell playbook, scope mikrotik-edge to ISPs only, and add the collection to requirements. 
+
+Created [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/dell-mgmt-switch.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/mikrotik-edge.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/requirements.yml)
+
+Replacing 26 lines with 32 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/mikrotik-edge.yml), [](file:///c%3A/dc-lab/clab/sonic-clab/requirements.yml)
+
+
+```
+
+```
+
+```
+
+```
+
+
+Starting: *Validate syntax + templates* (8/8)
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && for p in playbooks/dell-mgmt-switch.yml playbooks/mikrotik-edge.yml; do echo "== $p =="; ansible-playbook -i inv-physical-edge.yml $p --syntax-check 2>&1 | tail -4; done'
+Completed with input: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && for p in playbooks/dell-mgmt-switch.yml playbooks/mikrotik-edge.yml; do echo "== $p =="; ansible-playbook -i inv-physical-edge.yml $p --syntax-check 2>&1 | tail -4; done'
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml --syntax-check 2>&1 | tail -6'
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml --syntax-check 2>&1 | head -20'
+
+Expected — the `dellemc.os9` collection isn't installed yet (that's what makes syntax-check resolve the module). Let me install it and re-check.  
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && ansible-galaxy collection install dellemc.os9 2>&1 | tail -8'
+
+WSL is air-gapped (no galaxy DNS), so the module only resolves once you install the collection on the ControlNode. Let me remove an unnecessary `ansible.utils` dependency from my safety assert (plain split is enough), then validate everything I can locally.  
+
+Replacing 10 lines with 10 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/roles/dell_ftos_mgmt/tasks/main.yml)
+
+
+```
+
+```
+
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && python3 - <<'PY'
+import yaml, jinja2
+# YAML validity of all new/changed files
+for f in ['roles/dell_ftos_mgmt/tasks/main.yml','playbooks/dell-mgmt-switch.yml','playbooks/mikrotik-edge.yml','host_vars/Mgmt-Switch1.yml','inv-physical-edge.yml','requirements.yml']:
+    yaml.safe_load(open(f)); print('YAML OK ', f)
+# Jinja parse
+jinja2.Environment().parse(open('roles/dell_ftos_mgmt/templates/mgmt_switch.ftos.j2').read())
+print('JINJA OK  mgmt_switch.ftos.j2')
+# Render FTOS with the host_vars to preview real output
+v = yaml.safe_load(open('host_vars/Mgmt-Switch1.yml'))
+tpl = jinja2.Environment(trim_blocks=True, lstrip_blocks=True).from_string(open('roles/dell_ftos_mgmt/templates/mgmt_switch.ftos.j2').read())
+print('----- RENDERED FTOS (Mgmt-Switch1) -----')
+print(tpl.render(**v))
+PY"
+
+Both playbooks are valid YAML and the FTOS renders as correct Force10 S60 config. Let me confirm the rescoped MikroTik playbook still passes its full syntax-check (its collection *is* installed).   
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml --syntax-check 2>&1 | tail -5'
+
+Completed: *Validate syntax + templates* (8/8)
+
+Let me record this integration in repo memory, then summarize.   
+
+Updated memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Done. I integrated the Dell Force10 S60 as the physical OOB management-plane switch.
+
+## What the F-60 is in the architecture
+
+It's the physical realization of the `172.16.2.0/24` OOB network. Every device's management port lands on it — SONiC switches (virtual, via the R810's containerlab mgmt bridge trunked onto an F‑60 port) plus every server/router mgmt + iDRAC port — and the F‑60 **owns the `.254` SVI, the gateway your hosts' `netplan_mgmt_gateway` already points at**. The Lab‑ControlNode sits on this OOB VLAN and pushes SONiC / netplan / FRR config to every device by its mgmt IP. The gateway moves off the Exit‑Routers onto the F‑60, as you chose.
+
+## Files
+
+| File | Change |
+|---|---|
+| roles/dell_ftos_mgmt/templates/mgmt_switch.ftos.j2 | New — renders FTOS: L2 access ports, VLAN SVI gateway, ssh |
+| roles/dell_ftos_mgmt/tasks/main.yml | New — render → dry-run → idempotent apply → save → verify, with SVI safety assert |
+| host_vars/Mgmt-Switch1.yml | Rewritten MikroTik→FTOS: vlan 2, SVI `172.16.2.254/24`, port↔device cabling map |
+| inv-physical-edge.yml | Split groups: `mikrotik_isps` (routeros) + `dell_mgmt_switches` (dellos9), each with own connection vars |
+| playbooks/dell-mgmt-switch.yml | New — targets `dell_mgmt_switches` |
+| playbooks/mikrotik-edge.yml | Rescoped to `mikrotik_isps` (MikroTiks are now ISP-only) |
+| requirements.yml | Added `dellemc.os9` |
+
+## How to run (from Lab-ControlNode)
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+# dry-run (default) — prints the exact FTOS lines, changes nothing:
+ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml
+# apply for real (idempotent diff against running-config, then save):
+ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml -e ftos_dry_run=false
+```
+
+## Validation
+
+All YAML valid, the template parses, and the rendered FTOS is correct (hostname, L2 `switchport` ports emitted **before** VLAN membership, `interface Vlan 2` SVI `172.16.2.254/24` with untagged members, `ip ssh server enable`). The MikroTik playbook still passes `--syntax-check`. The Dell playbook's `--syntax-check` needs `dellemc.os9` installed — my WSL is air‑gapped (no galaxy DNS), so run that install on the ControlNode (which has WiFi) and it'll resolve.
+
+## Notes / fill-ins before you apply
+
+- Edit the `oob_port_map` in host_vars/Mgmt-Switch1.yml to your real cabling (S60 = `Gi 0/0‑0/47` + `Te 0/48‑0/51`).
+- First bring‑up is a chicken‑and‑egg: the SVI you're creating is how you'll reach it in‑band. Configure it via console (or uncomment `ftos_mgmt_interface_ip` for the ManagementEthernet port) the first time, then it's reachable at `172.16.2.254`.
+- For the virtual SONiC switches to be reachable through the F‑60, the R810 needs a physical NIC in the OOB VLAN with the containerlab mgmt bridge (`172.16.2.0/24`) attached to it.
+- Set the real `admin` password (move to `ansible-vault` later).
+
+The old MikroTik `mgmt_switch` profile in the `mikrotik_routeros` role is now unused (harmless). Want me to also update the OOB section of wiki/distributed-lab-hardware-plan.html to reflect the F‑60, or remove the dead MikroTik mgmt_switch path?
+
+Made changes.
+
+The Dell F‑60 (Force10 S60 / FTOS) OOB management switch is now fully integrated. Everything validated locally; here's what was built.
+
+## What I created / changed
+
+| File | Change |
+|---|---|
+| roles/dell_ftos_mgmt/templates/mgmt_switch.ftos.j2 | FTOS config: L2 access ports, OOB VLAN + SVI gateway, SSH |
+| roles/dell_ftos_mgmt/tasks/main.yml | Render → dry-run → `os9_config` idempotent apply → save → verify, with SVI safety assert |
+| host_vars/Mgmt-Switch1.yml | Rewritten MikroTik → FTOS (VLAN 2, SVI `172.16.2.254/24`, port↔device map) |
+| inv-physical-edge.yml | Split into `mikrotik_isps` (routeros) + `dell_mgmt_switches` (dellos9), each with own connection vars |
+| playbooks/dell-mgmt-switch.yml | New play targeting `dell_mgmt_switches` |
+| playbooks/mikrotik-edge.yml | Rescoped to `mikrotik_isps` only (MikroTiks are ISP-only now) |
+| requirements.yml | Added `dellemc.os9` |
+
+## The architecture
+
+The F‑60 is now the physical `172.16.2.0/24` OOB plane. Every SONiC switch (virtual, via the R810 clab mgmt bridge trunked onto an F‑60 port) and every server/router mgmt + iDRAC port lands on it. The F‑60 owns the `.254` SVI — the exact gateway your hosts' `netplan_mgmt_gateway: 172.16.2.254` already points at, so **no host-side change is needed**. The ControlNode sits on the same OOB VLAN and, from there, pushes SONiC / netplan / FRR config to every real or virtual device by its mgmt IP. The MikroTiks stay purely as the simulated ISPs.
+
+## How to run it
+
+```bash
+ansible-galaxy collection install -r requirements.yml
+# dry-run (default) — prints the FTOS it would push, changes nothing:
+ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml
+# apply for real:
+ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml -e ftos_dry_run=false
+```
+
+## Validation
+
+- All changed YAML parses; the FTOS template renders to correct Force10 syntax (hostname → L2 `switchport` ports → `interface Vlan 2` SVI `.254` with untagged members → `ip ssh server enable`).
+- playbooks/mikrotik-edge.yml `--syntax-check` passes (its `community.routeros` is installed).
+- The Dell play's `--syntax-check` needs `dellemc.os9` installed first — WSL here is air-gapped (no galaxy DNS), so run `ansible-galaxy collection install -r requirements.yml` on the ControlNode (which has WiFi) before its first syntax-check/run.
+
+## Two things to adjust before applying
+
+1. The `oob_port_map` in host_vars/Mgmt-Switch1.yml is a representative S60 cabling sheet (Gi 0/0–0/13) — set it to your real port↔device wiring.
+2. `ansible_host: 172.16.2.254` for the switch assumes the SVI already exists; on first bring-up reach it via console or uncomment `ftos_mgmt_interface_ip` (ManagementEthernet 0/0).
+
+Note: the `mikrotik_routeros` role still carries its now-unused `mgmt_switch` profile/template — harmless, left in place to avoid churn. Want me to add a short "OOB management plane — Dell F‑60" section to wiki/distributed-lab-hardware-plan.html so the hardware build sheet reflects this?
+
+# Even though Exit-Routers1/2 are connected to Mikrotik (considered ISP's), our Exit-Routers( two R610 server) mgmt-ip is now connected to Mgmt-Switch, so which playbook I can run from Lab-controlNode that will land on Mgmt-Switch now and connect to Exit-Routers and does all the netaplan/frr configuration necessary for activating wireguard and all other vrfs and bgp configuration?
+
+
+Good question. The playbook itself already exists — but the *reachability model* changes now that the R610s sit on the physical Dell OOB switch instead of behind the R810/clab jump. Let me check exactly how the SSH path is wired so I give you the precise command and the one setting that matters.    
+
+Searched for regex `lab_network_mode|socks_bind_addr|socks_port|ProxyCommand|ansible_ssh_common_args|jump` (`**/group_vars/all.yml`), 17 results
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/playbooks/exit-routers-preflight.yml)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/group_vars/all.yml#88-88), lines 88 to 125
+
+The playbook you want already exists: **playbooks/exit-routers.yml** (run playbooks/exit-routers-preflight.yml first if FRR/tooling isn't installed yet). It runs the `linux_exit_router` role, which does exactly what you listed on each R610:
+
+- **netplan** — `35-bdrl-linklocal.yaml` (IPv6 link-local on the Border-Leaf uplinks for unnumbered eBGP) + `40-isp-vrf.yaml` (ISP interfaces in `vrf-internet`)
+- **FRR / BGP / VRFs** — default-VRF eBGP to the Border-Leaves (with `next-hop-self`) + `vrf-internet` eBGP to the ISPs with the `RM-TO-ISP-OUT` egress air-gap filter
+- **WireGuard** — `wg0` + per-peer client profiles + the ops→mgmt forwarding/MASQUERADE rules
+- **NAT** — tenant MASQUERADE and the storefront DNAT/hairpin
+
+```bash
+ansible-playbook -i inventory.yml playbooks/exit-routers-preflight.yml   # installs frr/wireguard/iptables
+ansible-playbook -i inventory.yml playbooks/exit-routers.yml             # full netplan+frr+vrf+wireguard+nat
+```
+
+## The catch: the reachability model must change for the physical R610s
+
+Right now group_vars/all.yml forces **every** host through the R810 jump host:
+
+```yaml
+ansible_ssh_common_args: >-
+  ... -o ProxyCommand="ssh -W [%h]:%p ... {{ lab_jump_user }}@{{ lab_server_ip }}"
+```
+
+That was correct when the Exit-Routers were vrnetlab VMs on the R810's clab bridge. Now they're **physical R610s on the Dell F‑60 OOB switch**, and the ControlNode reaches `172.16.2.41/.42` **directly through the F‑60** (whose SVI `.254` is the gateway) — the R810 jump is no longer the path and would actually break it. So exit-routers.yml will only "land via the Mgmt‑Switch" once you override the connection for that group to go **direct** (no ProxyCommand).
+
+The clean way is a group override file, e.g. `group_vars/exit_routers.yml`:
+
+```yaml
+# Physical R610 Exit-Routers hang off the Dell F-60 OOB plane; the ControlNode
+# is on the same 172.16.2.0/24, so reach them directly (no R810 jump).
+ansible_ssh_common_args: >-
+  -F /dev/null
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=3
+ansible_user: ubuntu            # set to the real R610 login
+ansible_ssh_private_key_file: ~/.ssh/id_dc_lab
+```
+
+## Two prerequisites before it "just works"
+
+1. **NIC names.** The role/host_vars are pinned to `ens2/ens3` (Border-Leaf uplinks) and `ens4/ens5` (ISP links) — those are vrnetlab names. On a real R610 the NICs enumerate differently, so either pin them with a systemd `.link` rule to `ens2–ens5`, or edit the `bdrl_interfaces`/`isp_interfaces` device names in host_vars/Exit-Router1.yml / Exit-Router2.yml.
+2. **ISP peers match the MikroTiks.** Already handled — the MikroTik config we built presents `192.0.2.1 / 192.0.2.5` (AS 65401) and `198.51.100.1 / 198.51.100.5` (AS 65402), which is exactly what the Exit-Routers' `isp_interfaces` expect.
+
+Two things I need from you before I wire the direct-connection override (and optional `.link` name-pin): **is the Lab-ControlNode itself attached to the OOB VLAN** (a NIC in `172.16.2.0/24`, gateway `.254`), and **what SSH user/key do the physical R610s use**? With those I'll create `group_vars/exit_routers.yml` and the name-pin so exit-routers.yml runs end-to-end over the F‑60 path. Want me to?
+
+## **Lab-ControlNode** connects through Mikrotik wifi subnet  which is not connected to OOB VLAN at all in our production scenario. For  'Lab-ControlNod' to reach to Mgmt-Switch will be routed through Mikrotik-1 router to exit router to  Mgmt-Switch as I understand. However, it looks like we are at a chicken-egg situation for Exit-Router configuration as we can't reach to Mgmt-Switch without configuring Exit-Router first from Mikrotik Routers. Correct me if I am not understanding this right??
+
+Compacted conversationYou've understood the topology correctly, and your instinct that there's a dependency tension is right — but it's a **layered bootstrap ordering problem, not a true deadlock**. Two facts break the loop:
+
+## Fact 1 — the Exit-Router is reachable *without* the OOB plane
+
+The Exit-Router (R610) has three independent legs:
+
+| Leg | Interface | Network | Reachable from ControlNode? |
+|-----|-----------|---------|------------------------------|
+| Fabric | `ens2/ens3` | Border-Leaf uplinks | no (SONiC side) |
+| **ISP** | `ens4/ens5` | `192.0.2.0/30` / `198.51.100.0/30` → MikroTik | **yes — via MT-1 WiFi routing** |
+| **OOB mgmt** | `enp1s0` | `172.16.2.41` → Dell F-60 | only once on OOB |
+
+Because the ControlNode sits on MikroTik-1's WiFi (`192.168.88.0/24`) and MT-1 also terminates the ISP p2p link to the Exit-Router (`192.0.2.1 ↔ 192.0.2.2`), the ControlNode can reach the Exit-Router **directly over the ISP path** — MT-1 → `192.0.2.2`. So you configure the Exit-Router **first**, and you never needed the Mgmt-Switch to do it. (Caveat below on how sshd/VRF actually affects that first touch.)
+
+## Fact 2 — the OOB plane is *not* meant to be routed into from the internet side
+
+This is the important correction. Your air-gap design deliberately puts `ens4/ens5` in **`vrf-internet`** so that internet/ISP traffic **cannot** cross into the internal/OOB networks. If you set up `ControlNode → WiFi → ISP → Exit-Router → OOB` as a *routed* management path, you'd be punching a hole straight through the air-gap you built. So the OOB plane should be reached one of two safe ways:
+
+- **(A) Give the Lab-ControlNode a second NIC** patched into the F-60 OOB VLAN. Then OOB devices (Mgmt-Switch, SONiC, servers, iDRACs) are managed directly on `172.16.2.0/24`. Cleanest for production.
+- **(B) Use the Exit-Router as an SSH *bastion* (ProxyJump), not a router.** You SSH to the Exit-Router over the ISP link, then hop from its OOB leg (`enp1s0`, `172.16.2.41`) into the OOB devices. Only interactive SSH hops cross the boundary — no open routing — so the air-gap holds.
+
+Option B maps **exactly** onto the jump-host pattern already in group_vars/all.yml — today every OOB host is reached via a `ProxyCommand` through the R810. In the physical build you just **repoint that jump host from the R810 to the Exit-Router**.
+
+## Correct bootstrap order (physical)
+
+```mermaid
+flowchart LR
+  CN[Lab-ControlNode<br/>WiFi 192.168.88.x] --> MT1[1. MikroTik-1<br/>direct WiFi]
+  MT1 --> ER[2. Exit-Routers R610<br/>via ISP link 192.0.2.2/.6]
+  ER -. SSH jump via enp1s0 .-> F60[3. Dell F-60<br/>OOB SVI .254]
+  F60 --> OOB[4. SONiC / Servers / iDRACs<br/>172.16.2.0/24]
+```
+
+1. **MikroTik-1** — playbooks/mikrotik-edge.yml, reached directly on WiFi `192.168.88.1`. (Also open a route/firewall rule on MT-1 so WiFi → `192.0.2.0/30` is permitted if you'll use the ISP-link bootstrap.)
+2. **Exit-Routers** — playbooks/exit-routers.yml, reached over the ISP link (`192.0.2.2`/`198.51.100.2`) — **or, more realistically, over console/iDRAC for the very first touch** (see the sshd/VRF caveat below). This brings up `enp1s0` and makes the Exit-Router a working OOB bastion.
+3. **Dell F-60** — its *first-ever* config is a **serial-console or ManagementEthernet 0/0 bootstrap** (you can't Ansible a switch that has no reachable IP yet). After that, playbooks/dell-mgmt-switch.yml runs jumped through the Exit-Router.
+4. **Everything else on OOB** — SONiC provisioning, servers, iDRACs — jumped through the Exit-Router (option B) or directly if the ControlNode has an OOB NIC (option A).
+
+## The one real caveat on "reach the Exit-Router over the ISP link"
+
+`ens4/ens5` live in `vrf-internet`, and `sshd` by default only listens in the **default** VRF. So SSH to `192.0.2.2` won't answer unless sshd is bound into `vrf-internet` (or that interface is temporarily in the default VRF). For that reason the **first** Exit-Router config in a real build is normally done via **console or the R610's iDRAC**, and only *subsequent* runs use the ISP link or the OOB leg. That's the piece that actually resolves your chicken-and-egg: the first touch is out-of-band (console/iDRAC), not through any of the routed paths.
+
+---
+
+So, to answer directly: **playbooks/exit-routers.yml is still the playbook**, but you run it against the Exit-Router's **ISP-side IP (or console/iDRAC) for the first pass — not through the Mgmt-Switch** — and thereafter the Exit-Router becomes your jump host onto the OOB plane.
+
+Want me to wire this up concretely? I can:
+1. Add a `group_vars/exit_routers.yml` **bootstrap profile** that connects to the ISP-side IPs (`192.0.2.2`/`198.51.100.2`) with no jump, and
+2. Repoint the OOB jump host in group_vars/all.yml from the R810 to Exit-Router1 (so `dell-mgmt-switch.yml` and SONiC/server plays hop through it — option B).
+
+Tell me whether the ControlNode will get a second OOB NIC (option A) or you want the Exit-Router bastion path (option B), and I'll implement it.
+
+
+## Let's follow the option B now since that allows 'Lab-ControlNode' to be anywhere on the net for now. Once I am insid ethe lab, I can pretty easily hook-up cable from Lab-ControlNode to Mgmt-Switch if that is what I want or since wifi from MT-1 is already running there, accessing is available that way as well.
+
+Option B it is. Let me read the current inventory and the top of group_vars/all.yml so I wire the bastion cleanly into the existing pattern.  
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/group_vars/all.yml#1-1), lines 1 to 90
+
+Searched for regex `exit_routers|Exit-Router|ansible_host|generic_vm_nodes` (`**/inventory.yml`), 37 results
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/inventory.yml#78-78), lines 78 to 160
+
+Now let me look at the Exit-Router1 host_vars so I add the bastion override in the right place. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Exit-Router1.yml)
+
+Now I'll implement option B — make the OOB jump host mode-driven (default unchanged for the virtual lab, `exit_bastion` for the physical build) and have Exit-Router1 dial directly as the bastion. 
+
+Replacing 10 lines with 40 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/group_vars/all.yml)
+
+ 
+
+Replacing 5 lines with 12 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/host_vars/Exit-Router1.yml)
+
+
+```
+
+```
+
+```
+
+```
+Let me validate that the mode-driven vars render correctly in both modes using Ansible's own evaluator. 
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab && export ANSIBLE_CONFIG=/mnt/c/dc-lab/clab/sonic-clab/ansible.cfg && echo '=== ER1 exit_bastion ===' && ansible -i inventory.yml Exit-Router1 -m debug -a 'var=ansible_ssh_common_args' --connection local -e oob_access_mode=exit_bastion 2>&1 | head -25 && echo '=== ER1 exit_bastion host ===' && ansible -i inventory.yml Exit-Router1 -m debug -a 'var=ansible_host' --connection local -e oob_access_mode=exit_bastion 2>&1 | head -10 && echo '=== ER2 exit_bastion ===' && ansible -i inventory.yml Exit-Router2 -m debug -a 'var=ansible_ssh_common_args' --connection local -e oob_access_mode=exit_bastion 2>&1 | head -25 && echo '=== ER1 default (r810_jump) ===' && ansible -i inventory.yml Exit-Router1 -m debug -a 'var=ansible_ssh_common_args' --connection local 2>&1 | head -25"
+
+All four render cases are correct:
+
+| Case | Result |
+|------|--------|
+| ER1 (`exit_bastion`) | direct — no proxy, `ansible_host` → `192.0.2.2` ✅ |
+| ER2 (`exit_bastion`) | jumps through `ubuntu@192.0.2.2` (ER1) ✅ |
+| ER1 (default `r810_jump`) | unchanged — jumps through `nh1221@192.168.9.198` (R810) ✅ |
+
+The virtual lab is untouched (default mode renders identically to before). Let me record this in repo memory. 
+
+Read memory [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Read memory [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Read memory [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Inserted into memory file [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/memory-tool/memories/repo/notes.md)
+
+Option B is wired up and validated. Here's what changed and how to run it.
+
+## What I changed
+
+**group_vars/all.yml** — the global OOB jump host is now mode-driven:
+- `oob_access_mode: r810_jump` (default) — virtual lab, unchanged behavior.
+- `oob_access_mode: exit_bastion` — physical build, jumps every OOB host through **Exit-Router1**.
+- `exit_bastion_addr: "192.0.2.2"` — the address the ControlNode currently reaches ER1 on. Leave it at the ISP/WiFi IP for "anywhere via MT‑1", or flip to `172.16.2.41` once you cable the ControlNode into the OOB switch.
+
+**host_vars/Exit-Router1.yml** — ER1 dials **directly** (it can't jump through itself) in `exit_bastion` mode, and resolves identically to the virtual lab in the default mode.
+
+Exit-Router2 and every other OOB device (Dell F‑60, SONiC, servers, iDRACs) inherit the global args and are reached **through ER1** — only SSH hops cross the boundary, so the `vrf-internet` air-gap stays intact.
+
+## How to run (physical build)
+
+Bootstrap ER1 **first** (ER2 is reached through ER1's OOB leg):
+
+```bash
+# 1) ISP edge
+ansible-playbook -i inv-physical-edge.yml playbooks/mikrotik-edge.yml -e mikrotik_dry_run=false
+
+# 2) Exit-Router1 — the bastion (reach it directly; first-ever touch via console/iDRAC)
+ansible-playbook -i inventory.yml playbooks/exit-routers-preflight.yml -e oob_access_mode=exit_bastion --limit Exit-Router1
+ansible-playbook -i inventory.yml playbooks/exit-routers.yml            -e oob_access_mode=exit_bastion --limit Exit-Router1
+
+# 3) Everything else on OOB now flows through ER1
+ansible-playbook -i inventory.yml playbooks/exit-routers.yml            -e oob_access_mode=exit_bastion   # ER2
+ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml -e oob_access_mode=exit_bastion -e ftos_dry_run=false
+```
+
+## Two caveats baked into the design
+
+1. **First touch of ER1 is out-of-band (console/iDRAC).** `ens4` lives in `vrf-internet`, and `sshd` listens in the default VRF, so `192.0.2.2` won't answer over SSH until you either do the first config via console/iDRAC or bind sshd into the VRF. After that, the direct dial works.
+2. **NIC name-pin on the R610s** (`ens2–ens5`/`enp1s0`) is still required so the netplan/FRR templates land on the right interfaces — unchanged from before.
+
+Validated all four render cases with Ansible's own evaluator (ER1 direct, ER2 jumped-through-ER1, and the default R810 path unchanged). Recorded in repo memory as note 125.
+
+Made changes.
