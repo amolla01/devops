@@ -3573,3 +3573,159 @@ ansible-playbook -i inv-physical-edge.yml playbooks/dell-mgmt-switch.yml -e oob_
 Validated all four render cases with Ansible's own evaluator (ER1 direct, ER2 jumped-through-ER1, and the default R810 path unchanged). Recorded in repo memory as note 125.
 
 Made changes.
+
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki)
+
+This is a large doc set. Let me first understand the existing structure and the docs most relevant to distributed execution, then plan the additions. Let me read the key ones. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/index.md)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/distributed-lab-hardware-plan.html#1-1), lines 1 to 120
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/oob-management-plane.html#1-1), lines 1 to 80
+
+Let me set up a plan and read the docs where distributed-execution sections belong.  
+
+Created 7 todos
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/distributed-lab-hardware-plan.html#120-120), lines 120 to 207
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md#1-1), lines 1 to 70
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/implementation-guide.md#1-1), lines 1 to 60
+
+I have what I need. Let me add the distributed-execution sections to the primary doc first, and update the now-outdated single-MikroTik mention.  
+
+Replacing 7 lines with 98 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/distributed-lab-hardware-plan.html)
+
+
+```
+
+```
+Now the OOB management plane doc. Let me find its end to append a physical-OOB section. 
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/oob-management-plane.html#150-150), lines 150 to 292
+
+Replacing 5 lines with 23 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/oob-management-plane.html)
+
+
+```
+
+```
+
+
+Starting: *Add distributed block to day0-day2-ops-checklist* (4/7)
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md#300-300), lines 300 to 400
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md#400-400), lines 400 to 520
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md#520-520), lines 520 to 620
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md#620-620), lines 620 to 660
+
+Replacing 3 lines with 75 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/day0-day2-ops-checklist.md)
+
+
+```
+
+```
+
+
+Starting: *Add distributed section to implementation-guide* (5/7)
+
+Ran terminal command: wsl bash -lc "wc -l /mnt/c/dc-lab/clab/sonic-clab/wiki/implementation-guide.md && tail -n 40 /mnt/c/dc-lab/clab/sonic-clab/wiki/implementation-guide.md"
+
+Read [](file:///c%3A/Users/nh4134/AppData/Roaming/Code/User/workspaceStorage/77d38b8fb836138bdc64636f049387ed/GitHub.copilot-chat/chat-session-resources/924d6b41-2c08-416a-8399-5eb908dd4138/toolu_01AMx9LWJ2nZVLUtubimc55B__vscode-1790262249004/content.txt)
+
+Replacing 1 lines with 17 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/implementation-guide.md)
+
+
+```
+
+```
+
+
+Starting: *Add physical notes to nic-mapping & air-gap-edge docs* (6/7)
+
+Ran terminal command: wsl bash -lc "echo '=== nic-mapping tail ==='; tail -n 20 /mnt/c/dc-lab/clab/sonic-clab/wiki/vrnetlab-nic-mapping.md; echo; echo '=== air-gap-edge tail ==='; tail -n 25 /mnt/c/dc-lab/clab/sonic-clab/wiki/air-gap-edge-validation.md"
+
+Replacing 6 lines with 48 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/vrnetlab-nic-mapping.md), [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/air-gap-edge-validation.md)
+
+
+```
+
+```
+
+```
+
+```
+
+
+Starting: *Update wiki index with distributed grouping* (7/7)
+
+Replacing 3 lines with 12 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/index.md)
+
+
+```
+
+```
+Let me mirror the index addition into the HTML index for consistency.  
+
+Searched for regex `Platform Stack Overview|distributed-lab-hardware-plan|rack-locality-clique-placement|Rack-Locality` (`**/wiki/index.html`), 2 results
+
+Read [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/index.html#36-36), lines 36 to 45
+
+Replacing 1 lines with 1 lines in [](file:///c%3A/dc-lab/clab/sonic-clab/wiki/index.html)
+
+
+```
+
+```
+Let me verify the HTML edits are well-formed (single closing tags, new anchors present, no duplicated footers). 
+
+Ran terminal command: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab/wiki; for f in distributed-lab-hardware-plan.html oob-management-plane.html index.html; do echo "== \$f =="; echo -n 'body-close: '; grep -c '</body>' \$f; echo -n 'html-close: '; grep -c '</html>' \$f; done; echo '== anchors in distributed =='; grep -o 'id="[a-z-]*"' distributed-lab-hardware-plan.html; echo '== footer count (Template:) =='; grep -c 'All-in-one original left intact' distributed-lab-hardware-plan.html"
+Completed with input: wsl bash -lc "cd /mnt/c/dc-lab/clab/sonic-clab/wiki; for f in distributed-lab-hardware-plan.html oob-management-plane.html index.html; do echo "== \$f =="; echo -n 'body-close: '; grep -c '</body>' \$f; echo -n 'html-close: '; grep -c '</html>' \$f; done; echo '== anchors in distributed =='; grep -o 'id="[a-z-]*"' distributed-lab-hardware-plan.html; echo '== footer count (Template:) =='; grep -c 'All-in-one original left intact' distributed-lab-hardware-plan.html"
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab/wiki; for f in distributed-lab-hardware-plan.html oob-management-plane.html index.html; do echo "== $f =="; echo -n "body-close: "; grep -c "</body>" "$f"; echo -n "html-close: "; grep -c "</html>" "$f"; done; echo "== anchors in distributed =="; grep -o "id="[a-z-]*"" distributed-lab-hardware-plan.html; echo "== footer count =="; grep -c "All-in-one original left intact" distributed-lab-hardware-plan.html'
+Completed with input: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab/wiki; for f in distributed-lab-hardware-plan.html oob-management-plane.html index.html; do echo "== $f =="; echo -n "body-close: "; grep -c "</body>" "$f"; echo -n "html-close: "; grep -c "</html>" "$f"; done; echo "== anchors in distributed =="; grep -o "id="[a-z-]*"" distributed-lab-hardware-plan.html; echo "== footer count =="; grep -c "All-in-one original left intact" distributed-lab-hardware-plan.html'
+
+Ran terminal command: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab/wiki; python3 - <<PY
+for f in ["distributed-lab-hardware-plan.html","oob-management-plane.html","index.html"]:
+    s=open(f).read()
+    print(f, "body_close=", s.count("</body"+">"), "html_close=", s.count("</html"+">"), "footer=", s.count("All-in-one original left intact"))
+import re
+d=open("distributed-lab-hardware-plan.html").read()
+print("anchors:", re.findall(r"id="([a-z-]+)"", d))
+PY'
+Completed with input: wsl bash -lc 'cd /mnt/c/dc-lab/clab/sonic-clab/wiki; python3 - <<PY
+for f in ["distributed-lab-hardware-plan.html","oob-management-plane.html","index.html"]:
+    s=open(f).read()
+    print(f, "body_close=", s.count("</body"+">"), "html_close=", s.count("</html"+">"), "footer=", s.count("All-in-one original left intact"))
+import re
+d=open("distributed-lab-hardware-plan.html").read()
+print("anchors:", re.findall(r"id="([a-z-]+)"", d))
+PY'
+
+Ran terminal command: $files = 'distributed-lab-hardware-plan.html','oob-management-plane.html','index.html'; foreach ($f in $files) { $c = Get-Content "wiki\$f" -Raw; "{0}: body={1} html={2} footer={3}" -f $f, ([regex]::Matches($c,'</body>').Count), ([regex]::Matches($c,'</html>').Count), ([regex]::Matches($c,'All-in-one original left intact').Count) }; "anchors: " + (([regex]::Matches((Get-Content 'wiki\distributed-lab-hardware-plan.html' -Raw),'id="([a-z-]+)"') | ForEach-Object { $_.Groups[1].Value }) -join ', ')
+
+Compacted conversation
+
+Completed: *Update wiki index with distributed grouping* (7/7)
+
+All wiki docs now carry distributed-execution sections. HTML validated: single closing tags, one footer, and all four cross-link anchors (`dual-isp`, `oob-switch`, `bastion`, `run-order`) present.
+
+Summary of what was added, with the all-in-one/single-R810 content left as the default everywhere:
+
+- wiki/distributed-lab-hardware-plan.html — new §10 dual-ISP MikroTik automation, §11 Dell F-60 OOB switch, §12 Exit-Router bastion / `oob_access_mode` toggle, §13 end-to-end run order; §6 updated to two physical MikroTiks; footer carries the NVMe/p99-fsync revisit note.
+- wiki/oob-management-plane.html — new §9 "Physical build — the OOB plane on real hardware" (virtual→physical map, `exit_bastion` path, option-B disambiguation, cross-links).
+- wiki/day0-day2-ops-checklist.md — Distributed/Physical-Stitch execution checklist (Day-0/1/2).
+- wiki/implementation-guide.md — entries 75–79 for the distributed build.
+- wiki/vrnetlab-nic-mapping.md — physical NIC name-pin section.
+- wiki/air-gap-edge-validation.md — §7 physical MikroTik ISPs.
+- wiki/index.md + wiki/index.html — distributed grouping/links with the "single-R810 stays default; revisit once NVMe clears the p99 `fdatasync` issue" framing.
+
+Defaults preserved: `topology_variant: allinone` and `oob_access_mode: r810_jump`, so the virtual all-in-one lab renders byte-identical. The single-R810 code path is untouched and remains the documented default until the NVMe fsync fix lands.
+
+Made changes.
